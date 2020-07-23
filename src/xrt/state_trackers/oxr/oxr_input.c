@@ -1229,33 +1229,48 @@ oxr_state_equal_vec2(const struct oxr_action_state *a, const struct oxr_action_s
 	return (a->value.vec2.x == b->value.vec2.x) && (a->value.vec2.y == b->value.vec2.y);
 }
 
-#define BOOL_CHECK(NAME)                                                                                               \
-	if (act_attached->NAME.current.active) {                                                                       \
-		active |= true;                                                                                        \
-		value |= act_attached->NAME.current.value.boolean;                                                     \
-		timestamp = act_attached->NAME.current.timestamp;                                                      \
+static inline void
+oxr_state_update_bool(bool *active, bool *value, XrTime *timestamp, const struct oxr_action_state *new_state)
+{
+	if (new_state->active) {
+		*active |= true;
+		*value |= new_state->value.boolean;
+		*timestamp = new_state->timestamp;
 	}
-#define VEC1_CHECK(NAME)                                                                                               \
-	if (act_attached->NAME.current.active) {                                                                       \
-		active |= true;                                                                                        \
-		if (value < act_attached->NAME.current.value.vec1.x) {                                                 \
-			value = act_attached->NAME.current.value.vec1.x;                                               \
-			timestamp = act_attached->NAME.current.timestamp;                                              \
-		}                                                                                                      \
+}
+#define BOOL_CHECK(NAME) oxr_state_update_bool(&active, &value, &timestamp, &act_attached->NAME.current);
+
+static inline void
+oxr_state_update_vec1(bool *active, float *value, XrTime *timestamp, const struct oxr_action_state *new_state)
+{
+	if (new_state->active) {
+		*active |= true;
+		if (*value < new_state->value.vec1.x) {
+			*value = new_state->value.vec1.x;
+			*timestamp = new_state->timestamp;
+		}
 	}
-#define VEC2_CHECK(NAME)                                                                                               \
-	if (act_attached->NAME.current.active) {                                                                       \
-		active |= true;                                                                                        \
-		float curr_x = act_attached->NAME.current.value.vec2.x;                                                \
-		float curr_y = act_attached->NAME.current.value.vec2.y;                                                \
-		float curr_d = curr_x * curr_x + curr_y * curr_y;                                                      \
-		if (distance < curr_d) {                                                                               \
-			x = curr_x;                                                                                    \
-			y = curr_y;                                                                                    \
-			distance = curr_d;                                                                             \
-			timestamp = act_attached->NAME.current.timestamp;                                              \
-		}                                                                                                      \
+}
+#define VEC1_CHECK(NAME) oxr_state_update_vec1(&active, &value, &timestamp, &act_attached->NAME.current);
+
+static inline void
+oxr_state_update_vec2(
+    bool *active, float *x, float *y, float *distance, XrTime *timestamp, const struct oxr_action_state *new_state)
+{
+	if (new_state->active) {
+		*active |= true;
+		float curr_x = new_state->value.vec2.x;
+		float curr_y = new_state->value.vec2.y;
+		float curr_d = curr_x * curr_x + curr_y * curr_y;
+		if (*distance < curr_d) {
+			*x = curr_x;
+			*y = curr_y;
+			*distance = curr_d;
+			*timestamp = new_state->timestamp;
+		}
 	}
+}
+#define VEC2_CHECK(NAME) oxr_state_update_vec2(&active, &x, &y, &distance, &timestamp, &act_attached->NAME.current);
 
 /*!
  * Called during each xrSyncActions.
@@ -1303,7 +1318,7 @@ oxr_action_attachment_update(struct oxr_logger *log,
 		OXR_FOR_EACH_VALID_SUBACTION_PATH(BOOL_CHECK)
 
 		act_attached->any_state.value.boolean = value;
-		changed = act_attached->any_state.active && !oxr_state_equal_bool(&last, &act_attached->any_state);
+		changed = active && !oxr_state_equal_bool(&last, &act_attached->any_state);
 		break;
 	}
 	case XR_ACTION_TYPE_FLOAT_INPUT: {
@@ -1312,7 +1327,7 @@ oxr_action_attachment_update(struct oxr_logger *log,
 		OXR_FOR_EACH_VALID_SUBACTION_PATH(VEC1_CHECK)
 
 		act_attached->any_state.value.vec1.x = value;
-		changed = act_attached->any_state.active && !oxr_state_equal_vec1(&last, &act_attached->any_state);
+		changed = active && !oxr_state_equal_vec1(&last, &act_attached->any_state);
 		break;
 	}
 	case XR_ACTION_TYPE_VECTOR2F_INPUT: {
@@ -1323,7 +1338,7 @@ oxr_action_attachment_update(struct oxr_logger *log,
 
 		act_attached->any_state.value.vec2.x = x;
 		act_attached->any_state.value.vec2.y = y;
-		changed = act_attached->any_state.active && !oxr_state_equal_vec2(&last, &act_attached->any_state);
+		changed = active && !oxr_state_equal_vec2(&last, &act_attached->any_state);
 		break;
 	}
 	default:
@@ -1334,25 +1349,23 @@ oxr_action_attachment_update(struct oxr_logger *log,
 		return;
 	}
 
-	if (!active) {
-		U_ZERO(&act_attached->any_state);
-	} else if (last.active && changed) {
+	act_attached->any_state.active = active;
+	// We're only changed if the value differs and we're not newly
+	// active.
+	act_attached->any_state.changed = last.active && changed;
+	if (active) {
 		act_attached->any_state.timestamp = timestamp;
-		act_attached->any_state.changed = true;
-		act_attached->any_state.active = true;
-	} else if (last.active) {
-		act_attached->any_state.timestamp = last.timestamp;
-		act_attached->any_state.changed = false;
-		act_attached->any_state.active = true;
-	} else {
-		act_attached->any_state.timestamp = timestamp;
-		act_attached->any_state.changed = false;
-		act_attached->any_state.active = true;
+		if (!act_attached->any_state.changed && last.active) {
+			// Use old timestamp if we're unchanged, but were active
+			// last sync
+			act_attached->any_state.timestamp = last.timestamp;
+		}
 	}
 }
+
 /*!
- * Try to produce a transform chain to convert the available input into the
- * desired input type.
+ * Try to produce a transform chain to convert the available input into
+ * the desired input type.
  *
  * Populates @p action_input->transforms and @p action_input->transform_count on
  * success.
@@ -1384,6 +1397,7 @@ oxr_action_populate_input_transform(struct oxr_logger *log,
 	    &action_input->transforms,           //
 	    &action_input->transform_count);     //
 }
+
 /*!
  * Find dpad settings in @p dpad_entry whose binding path
  * is a prefix of @p bound_path_string.
@@ -1413,8 +1427,8 @@ find_matching_dpad(struct oxr_logger *log,
 }
 
 /*!
- * Try to produce a transform chain to create a dpad button from the selected input
- * (potentially using other inputs like `/force` in the process)
+ * Try to produce a transform chain to create a dpad button from the selected
+ * input (potentially using other inputs like `/force` in the process).
  *
  * Populates @p action_input->transforms and @p action_input->transform_count on
  * success.
@@ -1606,7 +1620,8 @@ oxr_action_bind_io(struct oxr_logger *log,
  */
 
 /*!
- * Given an Action Set handle, return the @ref oxr_action_set and the associated
+ * Given an Action Set handle, return the @ref oxr_action_set and the
+ * associated
  * @ref oxr_action_set_attachment in the given Session.
  *
  * @private @memberof oxr_session
@@ -1633,8 +1648,8 @@ oxr_session_get_action_set_attachment(struct oxr_session *sess,
 }
 
 /*!
- * Given an action act_key, look up the @ref oxr_action_attachment of the
- * associated action in the given Session.
+ * Given an action act_key, look up the @ref oxr_action_attachment of
+ * the associated action in the given Session.
  *
  * @private @memberof oxr_session
  */
@@ -1802,7 +1817,8 @@ oxr_action_sync_data(struct oxr_logger *log,
 		U_ZERO(&act_set_attached->requested_subaction_paths);
 	}
 
-	// Go over all requested action sets and update their attachment.
+	// Go over all requested action sets and update their
+	// attachment.
 	//! @todo can be listed more than once with different paths!
 	for (uint32_t i = 0; i < countActionSets; i++) {
 		struct oxr_subaction_paths subaction_paths;
