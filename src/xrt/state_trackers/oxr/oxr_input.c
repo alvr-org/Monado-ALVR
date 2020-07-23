@@ -293,6 +293,7 @@ oxr_action_set_create(struct oxr_logger *log,
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, act_set, OXR_XR_DEBUG_ACTIONSET, oxr_action_set_destroy_cb, &inst->handle);
 
 	struct oxr_action_set_ref *act_set_ref = U_TYPED_CALLOC(struct oxr_action_set_ref);
+	act_set_ref->permitted_subaction_paths.any = true;
 	act_set_ref->base.destroy = oxr_action_set_ref_destroy_cb;
 	oxr_refcounted_ref(&act_set_ref->base);
 	act_set->data = act_set_ref;
@@ -397,6 +398,17 @@ oxr_action_create(struct oxr_logger *log,
 	act->act_set = act_set;
 	act_ref->subaction_paths = subaction_paths;
 	act_ref->action_type = createInfo->actionType;
+	act_ref->subaction_paths = subaction_paths;
+
+	// Any subaction paths allowed for this action are allowed for this
+	// action set. But, do not accumulate "any" - it just means none were
+	// specified for this action.
+	oxr_subaction_paths_accumulate_except_any(&(act_set->data->permitted_subaction_paths), &subaction_paths);
+
+	// Any subaction paths allowed for this action are allowed for this
+	// action set. But, do not accumulate "any" - it just means none were
+	// specified for this action.
+	oxr_sub_paths_accumulate_except_any(&(act_set->data->permitted_subaction_paths), &subaction_paths);
 
 	snprintf(act_ref->name, sizeof(act_ref->name), "%s", createInfo->actionName);
 

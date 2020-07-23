@@ -2308,6 +2308,8 @@ struct oxr_action_set_ref
 		struct u_hashset *name_store;
 		struct u_hashset *loc_store;
 	} actions;
+
+	struct oxr_subaction_paths permitted_subaction_paths;
 };
 
 /*!
