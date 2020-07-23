@@ -77,6 +77,39 @@ oxr_action_bind_io(struct oxr_logger *log,
                    struct oxr_interaction_profile *profile,
                    enum oxr_subaction_path subaction_path);
 
+/*!
+ * Helper function to combine @ref oxr_subaction_paths structs, but skipping
+ * @ref oxr_subaction_paths::any.
+ *
+ * If a real (non-"any") subaction path in @p new_subaction_paths is true, it will be
+ * true in @p subaction_paths.
+ *
+ * @private @memberof oxr_subaction_paths
+ */
+static inline void
+oxr_subaction_paths_accumulate_except_any(struct oxr_subaction_paths *subaction_paths,
+                                          const struct oxr_subaction_paths *new_subaction_paths)
+{
+#define ACCUMULATE_SUBACTION_PATHS(X) subaction_paths->X |= new_subaction_paths->X;
+	OXR_FOR_EACH_SUBACTION_PATH(ACCUMULATE_SUBACTION_PATHS)
+#undef ACCUMULATE_SUBACTION_PATHS
+}
+
+/*!
+ * Helper function to combine @ref oxr_subaction_paths structs.
+ *
+ * If a subaction path in @p new_subaction_paths is true, it will be true in @p subaction_paths.
+ *
+ * @private @memberof oxr_subaction_paths
+ */
+static inline void
+oxr_subaction_paths_accumulate(struct oxr_subaction_paths *subaction_paths,
+                               const struct oxr_subaction_paths *new_subaction_paths)
+{
+	subaction_paths->any |= new_subaction_paths->any;
+	oxr_subaction_paths_accumulate_except_any(subaction_paths, new_subaction_paths);
+}
+
 /*
  *
  * Action attachment functions
