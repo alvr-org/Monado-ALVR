@@ -1295,14 +1295,15 @@ oxr_action_attachment_update(struct oxr_logger *log,
 	bool active = false;
 	bool changed = false;
 	XrTime timestamp = time_state_monotonic_to_ts_ns(sess->sys->inst->timekeeping, time);
+	U_ZERO(&act_attached->any_state);
 
 	switch (act_attached->act_ref->action_type) {
 	case XR_ACTION_TYPE_BOOLEAN_INPUT: {
 		bool value = false;
 		OXR_FOR_EACH_VALID_SUBACTION_PATH(BOOL_CHECK)
 
-		changed = (last.value.boolean != value);
 		act_attached->any_state.value.boolean = value;
+		changed = act_attached->any_state.active && !oxr_state_equal_bool(&last, &act_attached->any_state);
 		break;
 	}
 	case XR_ACTION_TYPE_FLOAT_INPUT: {
@@ -1310,8 +1311,8 @@ oxr_action_attachment_update(struct oxr_logger *log,
 		float value = -2.0f; // NOLINT
 		OXR_FOR_EACH_VALID_SUBACTION_PATH(VEC1_CHECK)
 
-		changed = last.value.vec1.x != value;
 		act_attached->any_state.value.vec1.x = value;
+		changed = act_attached->any_state.active && !oxr_state_equal_vec1(&last, &act_attached->any_state);
 		break;
 	}
 	case XR_ACTION_TYPE_VECTOR2F_INPUT: {
@@ -1320,9 +1321,9 @@ oxr_action_attachment_update(struct oxr_logger *log,
 		float distance = -1.0f;
 		OXR_FOR_EACH_VALID_SUBACTION_PATH(VEC2_CHECK)
 
-		changed = (last.value.vec2.x != x) || (last.value.vec2.y != y);
 		act_attached->any_state.value.vec2.x = x;
 		act_attached->any_state.value.vec2.y = y;
+		changed = act_attached->any_state.active && !oxr_state_equal_vec2(&last, &act_attached->any_state);
 		break;
 	}
 	default:
