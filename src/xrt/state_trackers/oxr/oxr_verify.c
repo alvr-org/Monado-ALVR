@@ -317,28 +317,33 @@ oxr_verify_subaction_paths_create(struct oxr_logger *log,
 }
 
 XrResult
-oxr_verify_subaction_path_sync(struct oxr_logger *log, const struct oxr_instance *inst, XrPath path, uint32_t index)
+oxr_verify_subaction_path_sync(struct oxr_logger *log,
+                               const struct oxr_instance *inst,
+                               const struct oxr_action_set *act_set,
+                               XrPath path,
+                               uint32_t index)
 {
-#define VERIFY_PATH(X)                                                                                                 \
-	else if (path == inst->path_cache.X)                                                                           \
-	{                                                                                                              \
-		return XR_SUCCESS;                                                                                     \
-	}
 	if (path == XR_NULL_PATH) {
 		return XR_SUCCESS;
 	}
-	OXR_FOR_EACH_SUBACTION_PATH(VERIFY_PATH)
+	struct oxr_subaction_paths subaction_paths = {0};
+	if (!oxr_classify_subaction_paths(log, inst, 1, &path, &subaction_paths)) {
+		const char *str = NULL;
+		size_t length = 0;
 
-#undef VERIFY_PATH
-
-	const char *str = NULL;
-	size_t length = 0;
-
-	oxr_path_get_string(log, inst, path, &str, &length);
-	return oxr_error(log, XR_ERROR_PATH_INVALID,
-	                 "(actionSets[%i].subactionPath == '%s') path "
-	                 "is not a valid subaction path.",
-	                 index, str);
+		oxr_path_get_string(log, inst, path, &str, &length);
+		return oxr_error(log, XR_ERROR_PATH_INVALID,
+		                 "(actionSets[%i].subactionPath == '%s') path "
+		                 "is not a valid subaction path.",
+		                 index, str);
+	}
+	if (!oxr_subaction_paths_is_subset_of(&subaction_paths, &(act_set->data->permitted_subaction_paths))) {
+		return oxr_error(log, XR_ERROR_PATH_UNSUPPORTED,
+		                 "(actionSets[%i].subactionPath) action set '%s' has no "
+		                 "actions defined with the specified subaction path",
+		                 index, act_set != NULL ? act_set->data->name : "NULL");
+	}
+	return XR_SUCCESS;
 }
 
 XrResult
