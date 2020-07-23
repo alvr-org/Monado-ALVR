@@ -12,6 +12,7 @@
 #include "util/u_debug.h"
 #include "util/u_time.h"
 #include "util/u_misc.h"
+#include "math/m_vec2.h"
 
 #include "xrt/xrt_compiler.h"
 
@@ -1208,6 +1209,24 @@ oxr_action_cache_update(struct oxr_logger *log,
 			cache->current.changed = false;
 		}
 	}
+}
+
+static inline bool
+oxr_state_equal_bool(const struct oxr_action_state *a, const struct oxr_action_state *b)
+{
+	return a->value.boolean == b->value.boolean;
+}
+
+static inline bool
+oxr_state_equal_vec1(const struct oxr_action_state *a, const struct oxr_action_state *b)
+{
+	return a->value.vec1.x == b->value.vec1.x;
+}
+
+static inline bool
+oxr_state_equal_vec2(const struct oxr_action_state *a, const struct oxr_action_state *b)
+{
+	return (a->value.vec2.x == b->value.vec2.x) && (a->value.vec2.y == b->value.vec2.y);
 }
 
 #define BOOL_CHECK(NAME)                                                                                               \
