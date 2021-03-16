@@ -1,1 +1,2 @@
 - Move `xrt_instance_info` members to nested `xrt_application_info` struct, and add a parallel `xrt_platform_info`.
+- Add `xrt/xrt_android.h` header.
