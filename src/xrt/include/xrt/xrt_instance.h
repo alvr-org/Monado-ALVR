@@ -22,6 +22,7 @@ extern "C" {
 
 struct xrt_prober;
 struct xrt_device;
+struct xrt_instance_android;
 struct xrt_space_overseer;
 struct xrt_system;
 struct xrt_system_devices;
@@ -114,7 +115,7 @@ struct xrt_instance
 	/*!
 	 * @name Interface Methods
 	 *
-	 * All implementations of the xrt_instance implementation must
+	 * All implementations of the xrt_instance interface must
 	 * populate all these function pointers with their implementation
 	 * methods. To use this interface, see the helper functions.
 	 * @{
@@ -178,6 +179,13 @@ struct xrt_instance
 	struct xrt_instance_info instance_info;
 
 	uint64_t startup_timestamp;
+
+	/*!
+	 * An "aspect" of the xrt_instance interface, used only on Android.
+	 *
+	 * @see xrt_instance_android
+	 */
+	struct xrt_instance_android *android_instance;
 };
 
 /*!
