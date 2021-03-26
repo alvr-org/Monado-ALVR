@@ -17,6 +17,8 @@ add_library(
 	android_custom_surface.h
 	android_globals.cpp
 	android_globals.h
+	android_lifecycle_callbacks.cpp
+	android_lifecycle_callbacks.h
 	android_load_class.cpp
 	android_load_class.hpp
 	android_looper.cpp
@@ -27,7 +29,7 @@ add_library(
 	)
 target_link_libraries(
 	aux_android
-	PUBLIC aux_util
+	PUBLIC aux_util xrt-interfaces
 	PRIVATE
 		${ANDROID_LIBRARY}
 		${ANDROID_LOG_LIBRARY}
