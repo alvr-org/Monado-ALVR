@@ -242,3 +242,12 @@ target_link_libraries(
 		drv_includes
 	)
 target_include_directories(target_instance_no_comp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+####
+# Platform
+
+if(ANDROID)
+	target_link_libraries(target_instance PRIVATE aux_android)
+
+	target_link_libraries(target_instance_no_comp PRIVATE aux_android)
+endif()

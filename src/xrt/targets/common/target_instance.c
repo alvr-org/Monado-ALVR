@@ -1,14 +1,17 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Shared default implementation of the instance with compositor.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include "xrt/xrt_space.h"
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_config_build.h"
+#include "xrt/xrt_config_os.h"
+
 
 #include "os/os_time.h"
 
@@ -25,6 +28,9 @@
 
 #include <assert.h>
 
+#ifdef XRT_OS_ANDROID
+#include "android/android_instance_base.h"
+#endif
 
 #ifdef XRT_MODULE_COMPOSITOR_MAIN
 #define USE_NULL_DEFAULT (false)
@@ -168,6 +174,17 @@ xrt_instance_create(struct xrt_instance_info *ii, struct xrt_instance **out_xins
 	tinst->xp = xp;
 
 	tinst->base.startup_timestamp = os_monotonic_get_ns();
+
+#ifdef XRT_OS_ANDROID
+	if (ii != NULL) {
+		ret = android_instance_base_init(&tinst->android, &tinst->base, ii);
+		if (ret < 0) {
+			xrt_prober_destroy(&xp);
+			free(tinst);
+			return ret;
+		}
+	}
+#endif // XRT_OS_ANDROID
 
 	*out_xinst = &tinst->base;
 
