@@ -85,6 +85,11 @@ if(WIN32)
 endif()
 target_link_libraries(ipc_client PRIVATE aux_util ipc_shared)
 
+if(ANDROID)
+	# Need android_instance_base on the client side too.
+	target_link_libraries(ipc_client PRIVATE aux_android)
+endif()
+
 ###
 # Server
 
