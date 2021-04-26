@@ -1053,8 +1053,13 @@ vive_device_create(struct os_hid_device *mainboard_dev,
 
 	char *config = vive_read_config(d->sensors_dev);
 
+	// Set logging level for the config we are about to fill out.
 	d->config.log_level = d->log_level;
-	// usb connected HMD variant is known because of USB id, config parsing relies on it.
+
+	/*
+	 * The prober knows which variant is connected because of
+	 * the USB VID/PID but we use `variant` from json config.
+	 */
 	if (config != NULL) {
 		vive_config_parse(&d->config, config, d->log_level);
 		free(config);
