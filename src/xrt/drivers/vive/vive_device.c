@@ -365,12 +365,35 @@ update_imu(struct vive_device *d, const void *buffer)
 		    (int16_t)__le16_to_cpu(sample->acc[2]),
 		};
 
+		double acc_scale[3] = {
+		    d->config.imu.acc_scale.x,
+		    d->config.imu.acc_scale.y,
+		    d->config.imu.acc_scale.z,
+		};
+
+		double acc_bias[3] = {
+		    d->config.imu.acc_bias.x,
+		    d->config.imu.acc_bias.y,
+		    d->config.imu.acc_bias.z,
+		};
+
 		scale = (double)d->config.imu.acc_range / 32768.0f;
 		struct xrt_vec3 acceleration = {
-		    scale * d->config.imu.acc_scale.x * acc[0] - d->config.imu.acc_bias.x,
-		    scale * d->config.imu.acc_scale.y * acc[1] - d->config.imu.acc_bias.y,
-		    scale * d->config.imu.acc_scale.z * acc[2] - d->config.imu.acc_bias.z,
+		    scale * acc_scale[0] * acc[0] - acc_bias[0],
+		    scale * acc_scale[1] * acc[1] - acc_bias[1],
+		    scale * acc_scale[2] * acc[2] - acc_bias[2],
 		};
+
+		VIVE_TRACE(d, "ACC  %f %f %f (%f - %f, %f - %f, %f - %f)", //
+		           acceleration.x,                                 //
+		           acceleration.y,                                 //
+		           acceleration.z,                                 //
+		           scale * acc_scale[0] * acc[0],                  //
+		           acc_bias[0],                                    //
+		           scale * acc_scale[1] * acc[1],                  //
+		           acc_bias[1],                                    //
+		           scale * acc_scale[2] * acc[2],                  //
+		           acc_bias[2]);                                   //
 
 		int16_t gyro[3] = {
 		    (int16_t)__le16_to_cpu(sample->gyro[0]),
@@ -378,16 +401,36 @@ update_imu(struct vive_device *d, const void *buffer)
 		    (int16_t)__le16_to_cpu(sample->gyro[2]),
 		};
 
-		scale = (double)d->config.imu.gyro_range / 32768.0f;
-		struct xrt_vec3 angular_velocity = {
-		    scale * d->config.imu.gyro_scale.x * gyro[0] - d->config.imu.gyro_bias.x,
-		    scale * d->config.imu.gyro_scale.y * gyro[1] - d->config.imu.gyro_bias.y,
-		    scale * d->config.imu.gyro_scale.z * gyro[2] - d->config.imu.gyro_bias.z,
+		double gyro_scale[3] = {
+		    d->config.imu.gyro_scale.x,
+		    d->config.imu.gyro_scale.y,
+		    d->config.imu.gyro_scale.z,
 		};
 
-		VIVE_TRACE(d, "ACC  %f %f %f", acceleration.x, acceleration.y, acceleration.z);
+		double gyro_bias[3] = {
+		    d->config.imu.gyro_bias.x,
+		    d->config.imu.gyro_bias.y,
+		    d->config.imu.gyro_bias.z,
+		};
 
-		VIVE_TRACE(d, "GYRO %f %f %f", angular_velocity.x, angular_velocity.y, angular_velocity.z);
+		scale = (double)d->config.imu.gyro_range / 32768.0f;
+		struct xrt_vec3 angular_velocity = {
+		    scale * gyro_scale[0] * gyro[0] - gyro_bias[0],
+		    scale * gyro_scale[1] * gyro[1] - gyro_bias[1],
+		    scale * gyro_scale[2] * gyro[2] - gyro_bias[2],
+		};
+
+		VIVE_TRACE(d, "GYRO %f %f %f (%f - %f, %f - %f, %f - %f)", //
+		           angular_velocity.x,                             //
+		           angular_velocity.y,                             //
+		           angular_velocity.z,                             //
+		           scale * gyro_scale[0] * gyro[0],                //
+		           gyro_bias[0],                                   //
+		           scale * gyro_scale[1] * gyro[1],                //
+		           gyro_bias[1],                                   //
+		           scale * gyro_scale[2] * gyro[2],                //
+		           gyro_bias[2]);                                  //
+
 
 		switch (d->config.variant) {
 		case VIVE_VARIANT_VIVE:
