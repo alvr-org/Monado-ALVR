@@ -1042,12 +1042,6 @@ vive_device_create(struct os_hid_device *mainboard_dev,
 	                   &d->config.firmware.hardware_version_micro, &d->config.firmware.hardware_version_minor,
 	                   &d->config.firmware.hardware_version_major);
 
-	/*
-	VIVE_INFO(d, "Firmware version %u %s@%s FPGA %u.%u",
-	          d->firmware.firmware_version, report.string1, report.string2,
-	          report.fpga_version_major, report.fpga_version_minor);
-	*/
-
 	VIVE_INFO(d, "Firmware version %u", d->config.firmware.firmware_version);
 	VIVE_INFO(d, "Hardware revision: %d rev %d.%d.%d", d->config.firmware.hardware_revision,
 	          d->config.firmware.hardware_version_major, d->config.firmware.hardware_version_minor,
