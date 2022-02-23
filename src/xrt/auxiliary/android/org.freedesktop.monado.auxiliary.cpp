@@ -32,5 +32,11 @@ namespace org::freedesktop::monado::auxiliary {
 	      getDisplayModeIdHeight(
 	          classRef().getStaticMethod("getDisplayModeIdHeight", "(Landroid/content/Context;II)I"))
 	{}
+
+	ActivityLifecycleListener::Meta::Meta(jni::jclass clazz)
+	    : MetaBase(ActivityLifecycleListener::getTypeName(), clazz), init(classRef().getMethod("<init>", "(J)V")),
+	      registerCallback(classRef().getMethod("registerCallback", "(Landroid/app/Activity;)V")),
+	      unregisterCallback(classRef().getMethod("unregisterCallback", "(Landroid/app/Activity;)V"))
+	{}
 } // namespace org::freedesktop::monado::auxiliary
 } // namespace wrap

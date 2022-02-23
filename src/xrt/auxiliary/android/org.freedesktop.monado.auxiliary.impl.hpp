@@ -86,5 +86,23 @@ namespace org::freedesktop::monado::auxiliary {
 		    object().call<jni::Object>(Meta::data().waitGetSurfaceHolder, wait_ms));
 	}
 
+	inline ActivityLifecycleListener
+	ActivityLifecycleListener::construct(void *nativePointer)
+	{
+		return ActivityLifecycleListener(Meta::data().clazz().newInstance(
+		    Meta::data().init, static_cast<long long>(reinterpret_cast<uintptr_t>(nativePointer))));
+	}
+
+	inline void
+	ActivityLifecycleListener::registerCallback(android::app::Activity const &activity)
+	{
+		object().call<void>(Meta::data().registerCallback, activity.object());
+	}
+
+	inline void
+	ActivityLifecycleListener::unregisterCallback(android::app::Activity const &activity)
+	{
+		object().call<void>(Meta::data().unregisterCallback, activity.object());
+	}
 } // namespace org::freedesktop::monado::auxiliary
 } // namespace wrap

@@ -213,6 +213,93 @@ namespace org::freedesktop::monado::auxiliary {
 		};
 	};
 
+	class ActivityLifecycleListener : public ObjectWrapperBase
+	{
+	public:
+		using ObjectWrapperBase::ObjectWrapperBase;
+		static constexpr const char *
+		getTypeName() noexcept
+		{
+			return "org/freedesktop/monado/auxiliary/ActivityLifecycleListener";
+		}
+
+		static constexpr const char *
+		getFullyQualifiedTypeName() noexcept
+		{
+			return "org.freedesktop.monado.auxiliary.ActivityLifecycleListener";
+		}
+
+		/*!
+		 * Initialize the static metadata of this wrapper with a known
+		 * (non-null) Java class.
+		 */
+		static void
+		staticInitClass(jni::jclass clazz)
+		{
+			Meta::data(clazz);
+		}
+
+		/*!
+		 * Wrapper for a constructor
+		 *
+		 * Java prototype:
+		 * `public org.freedesktop.monado.auxiliary.ActivityLifecycleListener(long);`
+		 *
+		 * JNI signature: (J)V
+		 *
+		 */
+		static ActivityLifecycleListener
+		construct(void *nativePointer);
+
+		/*!
+		 * Wrapper for the registerCallback method
+		 *
+		 * Java prototype:
+		 * `public void registerCallback(android.app.Activity);`
+		 *
+		 * JNI signature: (Landroid/app/Activity;)V
+		 *
+		 */
+		void
+		registerCallback(android::app::Activity const &activity);
+
+		/*!
+		 * Wrapper for the unregisterCallback method
+		 *
+		 * Java prototype:
+		 * `public void unregisterCallback(android.app.Activity);`
+		 *
+		 * JNI signature: (Landroid/app/Activity;)V
+		 *
+		 */
+		void
+		unregisterCallback(android::app::Activity const &activity);
+
+		/*!
+		 * Class metadata
+		 */
+		struct Meta : public MetaBase
+		{
+			jni::method_t init;
+			jni::method_t registerCallback;
+			jni::method_t unregisterCallback;
+
+			/*!
+			 * Singleton accessor
+			 */
+			static Meta &
+			data(jni::jclass clazz = nullptr)
+			{
+				static Meta instance{clazz};
+				return instance;
+			}
+
+		private:
+			explicit Meta(jni::jclass clazz);
+		};
+	};
+
 } // namespace org::freedesktop::monado::auxiliary
 } // namespace wrap
+
 #include "org.freedesktop.monado.auxiliary.impl.hpp"
