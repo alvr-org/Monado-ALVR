@@ -80,6 +80,8 @@ if(WIN32)
 			ipc_client PUBLIC XRT_SERVICE_EXECUTABLE="${XRT_SERVICE_EXECUTABLE}.exe"
 			)
 	endif()
+
+	target_link_libraries(ipc_client PRIVATE winmm)
 endif()
 target_link_libraries(ipc_client PRIVATE aux_util ipc_shared)
 
@@ -136,4 +138,6 @@ elseif(WIN32)
 		ipc_server
 		PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/server/ipc_server_mainloop_windows.cpp
 		)
+
+	target_link_libraries(ipc_server PRIVATE winmm)
 endif()

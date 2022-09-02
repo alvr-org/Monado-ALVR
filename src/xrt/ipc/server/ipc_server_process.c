@@ -44,6 +44,11 @@
 #include <assert.h>
 #include <limits.h>
 
+#if defined(XRT_OS_WINDOWS)
+#include <timeapi.h>
+#endif
+
+
 /*
  *
  * Defines and helpers.
@@ -973,6 +978,10 @@ ipc_server_main(int argc, char **argv)
 	// Allocate the server itself.
 	struct ipc_server *s = U_TYPED_CALLOC(struct ipc_server);
 
+#ifdef XRT_OS_WINDOWS
+	timeBeginPeriod(1);
+#endif
+
 	/*
 	 * Need to create early before any vars are added. Not created in
 	 * init_all since that function is shared with Android and the debug
@@ -1008,6 +1017,10 @@ ipc_server_main(int argc, char **argv)
 	// Done after UI stopped.
 	teardown_all(s);
 	free(s);
+
+#ifdef XRT_OS_WINDOWS
+	timeEndPeriod(1);
+#endif
 
 	U_LOG_IFL_I(log_level, "Server exiting: '%i'", ret);
 

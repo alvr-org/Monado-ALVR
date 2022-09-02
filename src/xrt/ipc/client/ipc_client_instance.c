@@ -35,7 +35,9 @@
 
 
 #include <stdio.h>
-#if !defined(XRT_OS_WINDOWS)
+#if defined(XRT_OS_WINDOWS)
+#include <timeapi.h>
+#else
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
@@ -228,6 +230,10 @@ ipc_client_instance_destroy(struct xrt_instance *xinst)
 	}
 	ii->xtrack_count = 0;
 
+#ifdef XRT_OS_WINDOWS
+	timeEndPeriod(1);
+#endif
+
 	ipc_shmem_destroy(&ii->ipc_c.ism_handle, (void **)&ii->ipc_c.ism, sizeof(struct ipc_shared_memory));
 
 	free(ii);
@@ -252,6 +258,10 @@ ipc_instance_create(struct xrt_instance_info *i_info, struct xrt_instance **out_
 	ii->base.create_system = ipc_client_instance_create_system;
 	ii->base.get_prober = ipc_client_instance_get_prober;
 	ii->base.destroy = ipc_client_instance_destroy;
+
+#ifdef XRT_OS_WINDOWS
+	timeBeginPeriod(1);
+#endif
 
 	xrt_result_t xret = ipc_client_connection_init(&ii->ipc_c, debug_get_log_option_ipc_log(), i_info);
 	if (xret != XRT_SUCCESS) {
