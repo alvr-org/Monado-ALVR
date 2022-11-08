@@ -408,7 +408,7 @@ oxr_action_create(struct oxr_logger *log,
 	// Any subaction paths allowed for this action are allowed for this
 	// action set. But, do not accumulate "any" - it just means none were
 	// specified for this action.
-	oxr_sub_paths_accumulate_except_any(&(act_set->data->permitted_subaction_paths), &subaction_paths);
+	oxr_subaction_paths_accumulate_except_any(&(act_set->data->permitted_subaction_paths), &subaction_paths);
 
 	snprintf(act_ref->name, sizeof(act_ref->name), "%s", createInfo->actionName);
 
@@ -1794,15 +1794,11 @@ oxr_action_sync_data(struct oxr_logger *log,
 			return XR_ERROR_PATH_UNSUPPORTED;
 		}
 
-		act_set_attached->requested_subaction_paths.any |= subaction_paths.any;
 
 		/* never error when requesting any subactionpath */
 		bool any_action_with_subactionpath = subaction_paths.any;
 
-#define ACCUMULATE_REQUESTED(X) act_set_attached->requested_subaction_paths.X |= subaction_paths.X;
-
-		OXR_FOR_EACH_SUBACTION_PATH(ACCUMULATE_REQUESTED)
-#undef ACCUMULATE_REQUESTED
+		oxr_subaction_paths_accumulate(&(act_set_attached->requested_subaction_paths), &subaction_paths);
 
 		/* check if we have at least one action for requested subactionpath */
 		for (uint32_t k = 0; k < act_set_attached->action_attachment_count; k++) {
