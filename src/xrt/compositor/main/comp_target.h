@@ -53,6 +53,31 @@ struct comp_target_image
 };
 
 /*!
+ * Collection of semaphores needed for a target.
+ *
+ * @ingroup comp_main
+ */
+struct comp_target_semaphores
+{
+	/*!
+	 * Optional semaphore the target should signal when present is complete.
+	 */
+	VkSemaphore present_complete;
+
+	/*!
+	 * Semaphore the renderer (consuming this target)
+	 * should signal when rendering is complete.
+	 */
+	VkSemaphore render_complete;
+
+	/*!
+	 * If true, @ref render_complete is a timeline
+	 * semaphore instead of a binary semaphore.
+	 */
+	bool render_complete_is_timeline;
+};
+
+/*!
  * @brief A compositor target: where the compositor renders to.
  *
  * A target is essentially a swapchain, but it is such a overloaded term so
@@ -86,17 +111,8 @@ struct comp_target
 	//! Transformation of the current surface, required for pre-rotation
 	VkSurfaceTransformFlagBitsKHR surface_transform;
 
-	struct
-	{
-		//! Optional semaphore the target should signal when present is complete.
-		VkSemaphore present_complete;
-
-		//! Semaphore the renderer (consuming this target) should signal when rendering is complete.
-		VkSemaphore render_complete;
-
-		//! If true, @ref render_complete is a timeline semaphore instead of a binary semaphore
-		bool render_complete_is_timeline;
-	} semaphores;
+	// Holds semaphore information.
+	struct comp_target_semaphores semaphores;
 
 	/*
 	 *
@@ -140,17 +156,18 @@ struct comp_target
 	/*!
 	 * Has this target successfully had images created?
 	 *
-	 * Call before calling @ref acquire - if false but @ref check_ready is true, you'll need to call @ref
-	 * create_images
+	 * Call before calling @ref acquire - if false but @ref check_ready is
+	 * true, you'll need to call @ref create_images.
 	 */
 	bool (*has_images)(struct comp_target *ct);
 
 	/*!
 	 * Acquire the next image for rendering.
 	 *
-	 * If @ref semaphores::present_complete is not null, your use of this image should wait on it.
+	 * If @ref comp_target_semaphores::present_complete is not null,
+	 * your use of this image should wait on it..
 	 *
-	 * @pre @ref has_images returns true
+	 * @pre @ref has_images() returns true
 	 */
 	VkResult (*acquire)(struct comp_target *ct, uint32_t *out_index);
 
@@ -162,8 +179,8 @@ struct comp_target
 	 * @param ct self
 	 * @param queue The Vulkan queue being used
 	 * @param index The swapchain image index to present
-	 * @param timeline_semaphore_value The value to await on @ref semaphores::render_complete if @ref
-	 * semaphores::render_complete_is_timeline is true.
+	 * @param timeline_semaphore_value The value to await on @ref comp_target_semaphores::render_complete
+	 *                                 if @ref comp_target_semaphores::render_complete_is_timeline is true.
 	 * @param desired_present_time_ns The timestamp to present at, ideally.
 	 * @param present_slop_ns TODO
 	 */
