@@ -51,7 +51,6 @@
 #endif
 
 #ifdef XRT_OS_ANDROID
-#include "android/android_globals.h"
 #include "android/ipc_client_android.h"
 #endif // XRT_OS_ANDROID
 
@@ -60,9 +59,9 @@ DEBUG_GET_ONCE_BOOL_OPTION(ipc_ignore_version, "IPC_IGNORE_VERSION", false)
 #ifdef XRT_OS_ANDROID
 
 static bool
-ipc_client_socket_connect(struct ipc_connection *ipc_c)
+ipc_client_socket_connect(struct ipc_connection *ipc_c, struct _JavaVM *vm, void *context)
 {
-	ipc_c->ica = ipc_client_android_create(android_globals_get_vm(), android_globals_get_activity());
+	ipc_c->ica = ipc_client_android_create(vm, context);
 
 	if (ipc_c->ica == NULL) {
 		IPC_ERROR(ipc_c, "Client create error!");
@@ -356,7 +355,14 @@ ipc_client_connection_init(struct ipc_connection *ipc_c,
 	}
 
 	// Connect the service.
+#ifdef XRT_OS_ANDROID
+	struct _JavaVM *vm = i_info->platform_info.vm;
+	void *context = i_info->platform_info.context;
+
+	if (!ipc_client_socket_connect(ipc_c, vm, context)) {
+#else
 	if (!ipc_client_socket_connect(ipc_c)) {
+#endif
 		IPC_ERROR(ipc_c,
 		          "Failed to connect to monado service process\n\n"
 		          "###\n"
