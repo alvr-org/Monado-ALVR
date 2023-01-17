@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -308,7 +308,7 @@ ipc_client_check_git_tag(struct ipc_connection *ipc_c)
 }
 
 static xrt_result_t
-ipc_client_describe_client(struct ipc_connection *ipc_c, const struct xrt_instance_info *i_info)
+ipc_client_describe_client(struct ipc_connection *ipc_c, const struct xrt_application_info *a_info)
 {
 #ifdef XRT_OS_WINDOWS
 	DWORD pid = GetCurrentProcessId();
@@ -317,7 +317,7 @@ ipc_client_describe_client(struct ipc_connection *ipc_c, const struct xrt_instan
 #endif
 
 	struct ipc_client_description desc = {0};
-	desc.info = *i_info;
+	desc.info = *a_info;
 	desc.pid = pid; // Extra info.
 
 	xrt_result_t xret = ipc_call_instance_describe_client(ipc_c, &desc);
@@ -385,7 +385,7 @@ ipc_client_connection_init(struct ipc_connection *ipc_c,
 	}
 
 	// Do this last.
-	xret = ipc_client_describe_client(ipc_c, i_info);
+	xret = ipc_client_describe_client(ipc_c, &i_info->app_info);
 	if (xret != XRT_SUCCESS) {
 		goto err_fini; // Already logged.
 	}

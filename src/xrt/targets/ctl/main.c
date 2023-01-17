@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -189,7 +189,7 @@ main(int argc, char *argv[])
 	struct ipc_connection ipc_c = {0};
 
 	struct xrt_instance_info info = {
-	    .application_name = "monado-ctl",
+	    .app_info.application_name = "monado-ctl",
 	};
 
 	xrt_result_t xret = ipc_client_connection_init(&ipc_c, U_LOGGING_INFO, &info);

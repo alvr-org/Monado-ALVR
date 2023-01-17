@@ -35,9 +35,13 @@ struct xrt_system_compositor;
 #define XRT_MAX_APPLICATION_NAME_SIZE 128
 
 /*!
- * Information provided by the application at instance create time.
+ * Non-process-specific information provided by the application at instance create time.
+ *
+ * This is transported between client and server over IPC.
+ *
+ * @see xrt_instance_info
  */
-struct xrt_instance_info
+struct xrt_application_info
 {
 	char application_name[XRT_MAX_APPLICATION_NAME_SIZE];
 	bool ext_hand_tracking_enabled;
@@ -46,6 +50,16 @@ struct xrt_instance_info
 	bool htc_facial_tracking_enabled;
 	bool fb_body_tracking_enabled;
 	bool fb_face_tracking2_enabled;
+};
+
+/*!
+ * Information provided by the application at instance create time.
+ *
+ * Some information may be process-specific.
+ */
+struct xrt_instance_info
+{
+	struct xrt_application_info app_info;
 };
 
 /*!

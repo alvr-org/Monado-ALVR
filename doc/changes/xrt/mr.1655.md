@@ -1,0 +1,1 @@
+- Move `xrt_instance_info` members to nested `xrt_application_info` struct.

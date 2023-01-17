@@ -264,7 +264,8 @@ oxr_instance_create(struct oxr_logger *log,
 	// fill in our application info - @todo - replicate all createInfo
 	// fields?
 
-	struct xrt_instance_info i_info = {
+	struct xrt_instance_info i_info = {0};
+	i_info.app_info = (struct xrt_application_info){
 	    .ext_hand_tracking_enabled = extensions->EXT_hand_tracking,
 #ifdef OXR_HAVE_EXT_eye_gaze_interaction
 	    .ext_eye_gaze_interaction_enabled = extensions->EXT_eye_gaze_interaction,
@@ -282,7 +283,7 @@ oxr_instance_create(struct oxr_logger *log,
 	    .fb_face_tracking2_enabled = extensions->FB_face_tracking2,
 #endif
 	};
-	snprintf(i_info.application_name, sizeof(inst->xinst->instance_info.application_name), "%s",
+	snprintf(i_info.app_info.application_name, sizeof(i_info.app_info.application_name), "%s",
 	         createInfo->applicationInfo.applicationName);
 
 #ifdef XRT_OS_ANDROID
