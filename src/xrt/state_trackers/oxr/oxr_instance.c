@@ -287,10 +287,15 @@ oxr_instance_create(struct oxr_logger *log,
 	         createInfo->applicationInfo.applicationName);
 
 #ifdef XRT_OS_ANDROID
+	/// @todo should not depend on this, use loader init data instead
 	XrInstanceCreateInfoAndroidKHR const *create_info_android = OXR_GET_INPUT_FROM_CHAIN(
 	    createInfo, XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR, XrInstanceCreateInfoAndroidKHR);
+	/// @todo should be removed once we find a proper way to access JavaVM/context through
+	///       xrt_instance_android interface
 	android_globals_store_vm_and_activity((struct _JavaVM *)create_info_android->applicationVM,
 	                                      create_info_android->applicationActivity);
+	i_info.platform_info.vm = (struct _JavaVM *)create_info_android->applicationVM;
+	i_info.platform_info.context = create_info_android->applicationActivity;
 #endif
 
 
