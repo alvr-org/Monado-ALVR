@@ -12,6 +12,7 @@
 
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_config_os.h"
 
 
 #ifdef __cplusplus
@@ -25,6 +26,31 @@ struct xrt_space_overseer;
 struct xrt_system;
 struct xrt_system_devices;
 struct xrt_system_compositor;
+
+struct _JavaVM;
+
+/*!
+ * Platform-specific information for an instance.
+ *
+ * Does not get transported between processes.
+ *
+ * @addtogroup xrt_iface
+ */
+struct xrt_platform_info
+{
+#if defined(XRT_OS_ANDROID) || defined(XRT_DOXYGEN)
+	/*!
+	 * @name Android members
+	 * @{
+	 */
+	struct _JavaVM *vm;
+	void *context;
+	/*! @} */
+#else
+	//! To avoid empty structs.
+	uint32_t _padding;
+#endif
+};
 
 
 /*!
@@ -59,7 +85,11 @@ struct xrt_application_info
  */
 struct xrt_instance_info
 {
+	//! Generic data from application.
 	struct xrt_application_info app_info;
+
+	//! Process-specific, platform-specific data.
+	struct xrt_platform_info platform_info;
 };
 
 /*!
