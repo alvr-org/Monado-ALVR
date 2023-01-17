@@ -15,6 +15,7 @@
 #include "util/u_logging.h"
 
 #include "android/android_load_class.hpp"
+#include "android/android_looper.h"
 
 #include "wrap/android.app.h"
 
@@ -76,10 +77,14 @@ int
 ipc_client_android_blocking_connect(struct ipc_client_android *ica)
 {
 	try {
+		// Trick to avoid deadlock on main thread: only applicable to NativeActivity with app-glue.
+		// blockingConnect will block until binder is ready, the app-glue code will deadlock without this.
+		JavaVM *vm = nullptr;
+		jni::env()->GetJavaVM(&vm);
+		android_looper_poll_until_activity_resumed(vm, ica->activity.object().getHandle());
 		int fd = ica->client.blockingConnect(ica->activity, XRT_ANDROID_PACKAGE);
 		return fd;
 	} catch (std::exception const &e) {
-		// Must catch and ignore any exceptions in the destructor!
 		U_LOG_E("Failure while connecting to IPC server: %s", e.what());
 		return -1;
 	}

@@ -17,11 +17,13 @@
 extern "C" {
 #endif
 
+struct _JavaVM;
+
 /*!
  * Poll the looper until activity is in resume state.
  */
 void
-android_looper_poll_until_activity_resumed();
+android_looper_poll_until_activity_resumed(struct _JavaVM *vm, void *activity);
 
 #ifdef __cplusplus
 }

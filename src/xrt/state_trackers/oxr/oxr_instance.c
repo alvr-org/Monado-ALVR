@@ -27,7 +27,6 @@
 
 #ifdef XRT_OS_ANDROID
 #include "android/android_globals.h"
-#include "android/android_looper.h"
 #endif
 
 #include "oxr_objects.h"
@@ -291,8 +290,6 @@ oxr_instance_create(struct oxr_logger *log,
 	    createInfo, XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR, XrInstanceCreateInfoAndroidKHR);
 	android_globals_store_vm_and_activity((struct _JavaVM *)create_info_android->applicationVM,
 	                                      create_info_android->applicationActivity);
-	// Trick to avoid deadlock on main thread. Only works for NativeActivity with app-glue.
-	android_looper_poll_until_activity_resumed();
 #endif
 
 
