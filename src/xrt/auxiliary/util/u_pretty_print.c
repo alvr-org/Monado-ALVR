@@ -170,6 +170,7 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	case XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED:           DG("XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED"); return;
 	case XRT_ERROR_NOT_IMPLEMENTED:                      DG("XRT_ERROR_NOT_IMPLEMENTED"); return;
 	case XRT_ERROR_UNSUPPORTED_SPACE_TYPE:               DG("XRT_ERROR_UNSUPPORTED_SPACE_TYPE"); return;
+	case XRT_ERROR_ANDROID:                              DG("XRT_ERROR_ANDROID"); return;
 	}
 	// clang-format on
 

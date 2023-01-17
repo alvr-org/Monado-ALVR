@@ -189,4 +189,8 @@ typedef enum xrt_result
 	 * The supplied space type is not supported for this operation.
 	 */
 	XRT_ERROR_UNSUPPORTED_SPACE_TYPE = -30,
+	/*!
+	 * Some other Android error, typically a logic error that should be impossible to reach.
+	 */
+	XRT_ERROR_ANDROID = -31,
 } xrt_result_t;
