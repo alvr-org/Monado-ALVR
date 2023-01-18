@@ -76,20 +76,6 @@ android_lifecycle_callbacks_remove_callback(struct android_lifecycle_callbacks *
                                             enum xrt_android_lifecycle_event event_mask,
                                             void *userdata);
 
-
-/*!
- * Invoke all lifecycle event callbacks that match a given event.
- *
- * @param alc Pointer to self
- * @param event The event from @ref xrt_android_lifecycle_event
- *
- * @return the number of invoked callbacks on success, <0 on error.
- * @public @memberof android_lifecycle_callbacks
- */
-int
-android_lifecycle_callbacks_invoke(struct android_lifecycle_callbacks *alc, enum xrt_android_lifecycle_event event);
-
-
 #ifdef __cplusplus
 } // extern "C"
 #endif

@@ -9,13 +9,21 @@
 
 #include "android_lifecycle_callbacks.h"
 
+#include "android_load_class.hpp"
+#include "org.freedesktop.monado.auxiliary.hpp"
+
 #include "xrt/xrt_config_android.h"
 #include "xrt/xrt_android.h"
 #include "util/u_logging.h"
 #include "util/u_generic_callbacks.hpp"
 
+#include "wrap/android.app.h"
+
 #include <memory>
 
+using wrap::android::app::Activity;
+using wrap::org::freedesktop::monado::auxiliary::ActivityLifecycleListener;
+using xrt::auxiliary::android::loadClassFromRuntimeApk;
 using xrt::auxiliary::util::GenericCallbacks;
 
 struct android_lifecycle_callbacks
@@ -23,6 +31,82 @@ struct android_lifecycle_callbacks
 	explicit android_lifecycle_callbacks(xrt_instance_android *xinst_android) : instance_android(xinst_android) {}
 	xrt_instance_android *instance_android;
 	GenericCallbacks<xrt_android_lifecycle_event_handler_t, enum xrt_android_lifecycle_event> callback_collection;
+	ActivityLifecycleListener listener{};
+};
+
+int
+android_lifecycle_callbacks_invoke(struct android_lifecycle_callbacks *alc, enum xrt_android_lifecycle_event event);
+
+/*!
+ * JNI functions
+ */
+
+static void
+on_activity_created(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{
+	auto *alc = reinterpret_cast<android_lifecycle_callbacks *>(native_callback_ptr);
+	if (env->IsSameObject(activity, (jobject)xrt_instance_android_get_context(alc->instance_android))) {
+		android_lifecycle_callbacks_invoke(alc, XRT_ANDROID_LIVECYCLE_EVENT_ON_CREATE);
+	}
+}
+
+static void
+on_activity_started(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{
+	auto *alc = reinterpret_cast<android_lifecycle_callbacks *>(native_callback_ptr);
+	if (env->IsSameObject(activity, (jobject)xrt_instance_android_get_context(alc->instance_android))) {
+		android_lifecycle_callbacks_invoke(alc, XRT_ANDROID_LIVECYCLE_EVENT_ON_START);
+	}
+}
+
+static void
+on_activity_resumed(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{
+	auto *alc = reinterpret_cast<android_lifecycle_callbacks *>(native_callback_ptr);
+	if (env->IsSameObject(activity, (jobject)xrt_instance_android_get_context(alc->instance_android))) {
+		android_lifecycle_callbacks_invoke(alc, XRT_ANDROID_LIVECYCLE_EVENT_ON_RESUME);
+	}
+}
+
+static void
+on_activity_paused(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{
+	auto *alc = reinterpret_cast<android_lifecycle_callbacks *>(native_callback_ptr);
+	if (env->IsSameObject(activity, (jobject)xrt_instance_android_get_context(alc->instance_android))) {
+		android_lifecycle_callbacks_invoke(alc, XRT_ANDROID_LIVECYCLE_EVENT_ON_PAUSE);
+	}
+}
+
+static void
+on_activity_stopped(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{
+	auto *alc = reinterpret_cast<android_lifecycle_callbacks *>(native_callback_ptr);
+	if (env->IsSameObject(activity, (jobject)xrt_instance_android_get_context(alc->instance_android))) {
+		android_lifecycle_callbacks_invoke(alc, XRT_ANDROID_LIVECYCLE_EVENT_ON_STOP);
+	}
+}
+
+static void
+on_activity_save_instance_state(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{}
+
+static void
+on_activity_destroyed(JNIEnv *env, jobject thiz, jlong native_callback_ptr, jobject activity)
+{
+	auto *alc = reinterpret_cast<android_lifecycle_callbacks *>(native_callback_ptr);
+	if (env->IsSameObject(activity, (jobject)xrt_instance_android_get_context(alc->instance_android))) {
+		android_lifecycle_callbacks_invoke(alc, XRT_ANDROID_LIVECYCLE_EVENT_ON_DESTROY);
+	}
+}
+
+static JNINativeMethod methods[] = {
+    {"nativeOnActivityCreated", "(JLandroid/app/Activity;)V", (void *)&on_activity_created},
+    {"nativeOnActivityStarted", "(JLandroid/app/Activity;)V", (void *)&on_activity_started},
+    {"nativeOnActivityResumed", "(JLandroid/app/Activity;)V", (void *)&on_activity_resumed},
+    {"nativeOnActivityPaused", "(JLandroid/app/Activity;)V", (void *)&on_activity_paused},
+    {"nativeOnActivityStopped", "(JLandroid/app/Activity;)V", (void *)&on_activity_stopped},
+    {"nativeOnActivitySaveInstanceState", "(JLandroid/app/Activity;)V", (void *)&on_activity_save_instance_state},
+    {"nativeOnActivityDestroyed", "(JLandroid/app/Activity;)V", (void *)&on_activity_destroyed},
 };
 
 #define CATCH_CLAUSES(ACTION, RET)                                                                                     \
@@ -77,8 +161,29 @@ struct android_lifecycle_callbacks *
 android_lifecycle_callbacks_create(struct xrt_instance_android *xinst_android)
 {
 	try {
-		auto ret = std::make_unique<android_lifecycle_callbacks>(xinst_android);
+		jni::init(xrt_instance_android_get_vm(xinst_android));
+		jobject context = (jobject)xrt_instance_android_get_context(xinst_android);
+		if (!jni::env()->IsInstanceOf(context, jni::Class(Activity::getTypeName()).getHandle())) {
+			// skip if context is not android.app.Activity
+			U_LOG_W("Context is not Activity, skip");
+			return nullptr;
+		}
 
+		auto clazz = loadClassFromRuntimeApk(context, ActivityLifecycleListener::getFullyQualifiedTypeName());
+		if (clazz.isNull()) {
+			U_LOG_E("Could not load class '%s' from package '%s'",
+			        ActivityLifecycleListener::getFullyQualifiedTypeName(), XRT_ANDROID_PACKAGE);
+			return nullptr;
+		}
+
+		auto ret = std::make_unique<android_lifecycle_callbacks>(xinst_android);
+		// Teach the wrapper our class before we start to use it.
+		ActivityLifecycleListener::staticInitClass((jclass)clazz.object().getHandle());
+		jni::env()->RegisterNatives((jclass)clazz.object().getHandle(), methods,
+		                            sizeof(methods) / sizeof(methods[0]));
+
+		ret->listener = ActivityLifecycleListener::construct(ret.get());
+		ret->listener.registerCallback(Activity(context));
 		return ret.release();
 	}
 	CATCH_CLAUSES("creating callbacks structure", nullptr)
@@ -94,6 +199,8 @@ android_lifecycle_callbacks_destroy(struct android_lifecycle_callbacks **ptr_cal
 	if (alc == nullptr) {
 		return;
 	}
+
+	alc->listener.unregisterCallback(Activity((jobject)xrt_instance_android_get_context(alc->instance_android)));
 	delete alc;
 	*ptr_callbacks = nullptr;
 }
