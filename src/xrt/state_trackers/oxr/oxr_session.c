@@ -295,10 +295,18 @@ oxr_session_end(struct oxr_logger *log, struct oxr_session *sess)
 	if (sess->exiting) {
 		oxr_session_change_state(log, sess, XR_SESSION_STATE_EXITING, 0);
 	} else {
+#ifndef XRT_OS_ANDROID
+		// @todo In multi-clients scenario with a session being reused, changing session
+		//       state to XR_SESSION_STATE_READY would cause application to call xrBeginSession
+		//       immediately and this is not desired. On Android platform, runtime would
+		//       change session state to XR_SESSION_STATE_READY once application goes to
+		//       foreground again. But on other platform it's not handled yet.
 		oxr_session_change_state(log, sess, XR_SESSION_STATE_READY, 0);
+#endif // !XRT_OS_ANDROID
 	}
 
 	sess->has_begun = false;
+	sess->has_ended_once = false;
 
 	return oxr_session_success_result(sess);
 }
@@ -354,6 +362,36 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 	if (xs == NULL) {
 		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "xrt_session is null");
 	}
+
+#ifdef XRT_OS_ANDROID
+	// Most recent Android activity lifecycle event was OnPause: move toward stopping
+	if (sess->sys->inst->activity_state == XRT_ANDROID_LIVECYCLE_EVENT_ON_PAUSE) {
+		if (sess->state == XR_SESSION_STATE_FOCUSED) {
+			U_LOG_I("Activity paused: changing session state FOCUSED->VISIBLE");
+			oxr_session_change_state(log, sess, XR_SESSION_STATE_VISIBLE, 0);
+		}
+
+		if (sess->state == XR_SESSION_STATE_VISIBLE) {
+			U_LOG_I("Activity paused: changing session state VISIBLE->SYNCHRONIZED");
+			oxr_session_change_state(log, sess, XR_SESSION_STATE_SYNCHRONIZED, 0);
+		}
+
+		if (sess->state == XR_SESSION_STATE_SYNCHRONIZED) {
+			U_LOG_I("Activity paused: changing session state SYNCHRONIZED->STOPPING");
+			oxr_session_change_state(log, sess, XR_SESSION_STATE_STOPPING, 0);
+		}
+		// TODO return here to avoid polling other events?
+		// see https://gitlab.freedesktop.org/monado/monado/-/issues/419
+	}
+
+	// Most recent Android activity lifecycle event was OnResume: move toward ready
+	if (sess->sys->inst->activity_state == XRT_ANDROID_LIVECYCLE_EVENT_ON_RESUME) {
+		if (sess->state == XR_SESSION_STATE_IDLE) {
+			U_LOG_I("Activity resumed: changing session state IDLE->READY");
+			oxr_session_change_state(log, sess, XR_SESSION_STATE_READY, 0);
+		}
+	}
+#endif // XRT_OS_ANDROID
 
 	bool read_more_events = true;
 	while (read_more_events) {

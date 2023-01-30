@@ -51,6 +51,20 @@ DEBUG_GET_ONCE_BOOL_OPTION(debug_bindings, "OXR_DEBUG_BINDINGS", false)
 DEBUG_GET_ONCE_BOOL_OPTION(lifecycle_verbose, "OXR_LIFECYCLE_VERBOSE", false)
 
 
+#ifdef XRT_OS_ANDROID
+static bool
+on_activity_lifecycle_state_changed(struct xrt_instance_android *xinst_android,
+                                    enum xrt_android_lifecycle_event event,
+                                    void *userdata)
+{
+	struct oxr_instance *inst = (struct oxr_instance *)userdata;
+	inst->activity_state = event;
+
+	// Return false to not be removed from the list of callbacks
+	return false;
+}
+#endif // #ifdef XRT_OS_ANDROID
+
 static XrResult
 oxr_instance_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 {
@@ -309,6 +323,17 @@ oxr_instance_create(struct oxr_logger *log,
 		oxr_instance_destroy(log, &inst->handle);
 		return ret;
 	}
+
+#ifdef XRT_OS_ANDROID
+	xret = xrt_instance_android_register_activity_lifecycle_callback(
+	    inst->xinst->android_instance, on_activity_lifecycle_state_changed,
+	    XRT_ANDROID_LIVECYCLE_EVENT_ON_RESUME | XRT_ANDROID_LIVECYCLE_EVENT_ON_PAUSE, inst);
+	// overlay application might be a service instead of an activity, so do not return error if
+	// failed to register activity lifecycle callback.
+	if (xret != XRT_SUCCESS) {
+		oxr_warn(log, "Failed to register activity lifecycle callback '%i'", xret);
+	}
+#endif // XRT_OS_ANDROID
 
 	struct oxr_system *sys = &inst->system;
 

@@ -1,0 +1,1 @@
+Handle Android activity lifecycle.

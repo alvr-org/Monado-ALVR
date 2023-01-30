@@ -45,6 +45,10 @@
 #endif // !XRT_OS_WINDOWS
 #endif // XRT_FEATURE_RENDERDOC
 
+#ifdef XRT_OS_ANDROID
+#include "xrt/xrt_android.h"
+#endif // #ifdef XRT_OS_ANDROID
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1720,6 +1724,10 @@ struct oxr_instance
 #ifdef XRT_FEATURE_RENDERDOC
 	RENDERDOC_API_1_4_1 *rdoc_api;
 #endif
+
+#ifdef XRT_OS_ANDROID
+	enum xrt_android_lifecycle_event activity_state;
+#endif // XRT_OS_ANDROID
 };
 
 /*!
