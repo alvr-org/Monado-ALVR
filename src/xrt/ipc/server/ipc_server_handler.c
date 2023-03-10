@@ -1338,9 +1338,7 @@ ipc_handle_swapchain_wait_image(volatile struct ipc_client_state *ics, uint32_t 
 	uint32_t sc_index = id;
 	struct xrt_swapchain *xsc = ics->xscs[sc_index];
 
-	xrt_swapchain_wait_image(xsc, timeout_ns, index);
-
-	return XRT_SUCCESS;
+	return xrt_swapchain_wait_image(xsc, timeout_ns, index);
 }
 
 xrt_result_t
