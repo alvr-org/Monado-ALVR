@@ -354,6 +354,24 @@ compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *ou
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
+{
+	struct comp_compositor *c = comp_compositor(xc);
+
+	//! @todo: Implement the method to change display refresh rate.
+	*out_display_refresh_rate_hz = (float)(1. / time_ns_to_s(c->settings.nominal_frame_interval_ns));
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+compositor_request_display_refresh_rate(struct xrt_compositor *xc, float display_refresh_rate_hz)
+{
+	//! @todo: Implement the method to change display refresh rate.
+	return XRT_SUCCESS;
+}
+
 static void
 compositor_destroy(struct xrt_compositor *xc)
 {
@@ -942,6 +960,8 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	c->base.base.base.discard_frame = compositor_discard_frame;
 	c->base.base.base.layer_commit = compositor_layer_commit;
 	c->base.base.base.poll_events = compositor_poll_events;
+	c->base.base.base.get_display_refresh_rate = compositor_get_display_refresh_rate;
+	c->base.base.base.request_display_refresh_rate = compositor_request_display_refresh_rate;
 	c->base.base.base.destroy = compositor_destroy;
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
