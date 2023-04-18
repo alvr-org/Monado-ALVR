@@ -1078,8 +1078,8 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 
 
 	//! @todo: Query all supported refresh rates of the current mode
-	sys_info->num_refresh_rates = 1;
-	sys_info->refresh_rates[0] = (float)(1. / time_ns_to_s(c->settings.nominal_frame_interval_ns));
+	sys_info->refresh_rate_count = 1;
+	sys_info->refresh_rates_hz[0] = (float)(1. / time_ns_to_s(c->settings.nominal_frame_interval_ns));
 
 	// Needs to be delayed until after compositor's u_var has been setup.
 	if (!c->deferred_surface) {

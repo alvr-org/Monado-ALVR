@@ -577,7 +577,8 @@ oxr_xrEnumerateDisplayRefreshRatesFB(XrSession session,
 	}
 
 	OXR_TWO_CALL_HELPER(&log, displayRefreshRateCapacityInput, displayRefreshRateCountOutput, displayRefreshRates,
-	                    sess->sys->xsysc->info.num_refresh_rates, sess->sys->xsysc->info.refresh_rates, XR_SUCCESS);
+	                    sess->sys->xsysc->info.refresh_rate_count, sess->sys->xsysc->info.refresh_rates_hz,
+	                    XR_SUCCESS);
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL
@@ -594,11 +595,11 @@ oxr_xrGetDisplayRefreshRateFB(XrSession session, float *displayRefreshRate)
 		return XR_SUCCESS;
 	}
 
-	if (sess->sys->xsysc->info.num_refresh_rates < 1) {
+	if (sess->sys->xsysc->info.refresh_rate_count < 1) {
 		return XR_ERROR_RUNTIME_FAILURE;
 	}
 
-	*displayRefreshRate = sess->sys->xsysc->info.refresh_rates[0];
+	*displayRefreshRate = sess->sys->xsysc->info.refresh_rates_hz[0];
 	return XR_SUCCESS;
 }
 

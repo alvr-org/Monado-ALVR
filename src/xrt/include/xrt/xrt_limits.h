@@ -40,5 +40,10 @@
 #define XRT_MAX_SWAPCHAIN_CREATE_INFO_FORMAT_LIST_COUNT 8
 
 /*!
+ * Max number of supported display refresh rates, artificial limit.
+ */
+#define XRT_MAX_SUPPORTED_REFRESH_RATES 16
+
+/*!
  * @}
  */

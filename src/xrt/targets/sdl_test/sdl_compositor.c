@@ -299,8 +299,8 @@ compositor_init_sys_info(struct sdl_compositor *c, struct sdl_program *sp, struc
 	sys_info->supported_blend_mode_count = (uint8_t)xdev->hmd->blend_mode_count;
 
 	// Refresh rates.
-	sys_info->num_refresh_rates = 1;
-	sys_info->refresh_rates[0] = (float)(1. / time_ns_to_s(c->settings.frame_interval_ns));
+	sys_info->refresh_rate_count = 1;
+	sys_info->refresh_rates_hz[0] = (float)(1. / time_ns_to_s(c->settings.frame_interval_ns));
 
 	return true;
 }

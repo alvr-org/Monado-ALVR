@@ -2086,8 +2086,8 @@ struct xrt_system_compositor_info
 	//! Number of meaningful elements in xrt_system_compositor_info::supported_blend_modes
 	uint8_t supported_blend_mode_count;
 
-	uint32_t num_refresh_rates;
-	float refresh_rates[1];
+	uint32_t refresh_rate_count;
+	float refresh_rates_hz[XRT_MAX_SUPPORTED_REFRESH_RATES];
 
 	//! The vk device as used by the compositor, never changes.
 	xrt_uuid_t compositor_vk_deviceUUID;
