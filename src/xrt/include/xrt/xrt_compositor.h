@@ -730,6 +730,7 @@ enum xrt_compositor_event_type
 	XRT_COMPOSITOR_EVENT_OVERLAY_CHANGE = 2,
 	XRT_COMPOSITOR_EVENT_LOSS_PENDING = 3,
 	XRT_COMPOSITOR_EVENT_LOST = 4,
+	XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE = 5,
 };
 
 /*!
@@ -769,6 +770,16 @@ struct xrt_compositor_event_lost
 };
 
 /*!
+ * Display refresh rate changed event.
+ */
+struct xrt_compositor_event_display_refresh_rate_change
+{
+	enum xrt_compositor_event_type type;
+	float from_display_refresh_rate_hz;
+	float to_display_refresh_rate_hz;
+};
+
+/*!
  * Compositor events union.
  */
 union xrt_compositor_event {
@@ -777,6 +788,7 @@ union xrt_compositor_event {
 	struct xrt_compositor_event_state_change overlay;
 	struct xrt_compositor_event_loss_pending loss_pending;
 	struct xrt_compositor_event_lost lost;
+	struct xrt_compositor_event_display_refresh_rate_change display;
 };
 
 
@@ -1249,6 +1261,31 @@ struct xrt_compositor
 
 	/*! @} */
 
+
+	/*!
+	 * @name Function pointers for XR_FB_display_refresh_rate.
+	 * @{
+	 */
+
+	/*!
+	 * Get the current display refresh rate.
+	 *
+	 * @param xc          				    Self pointer
+	 * @param out_display_refresh_rate_hz   Current display refresh rate in Hertz.
+	 */
+	xrt_result_t (*get_display_refresh_rate)(struct xrt_compositor *xc, float *out_display_refresh_rate_hz);
+
+	/*!
+	 * Request system to change the display refresh rate to the requested value.
+	 *
+	 * @param xc          			     Self pointer
+	 * @param display_refresh_rate_hz    Requested display refresh rate in Hertz.
+	 */
+	xrt_result_t (*request_display_refresh_rate)(struct xrt_compositor *xc, float display_refresh_rate_hz);
+
+	/*! @} */
+
+
 	/*!
 	 * Teardown the compositor.
 	 *
@@ -1659,6 +1696,33 @@ xrt_comp_layer_commit_with_semaphore(struct xrt_compositor *xc, struct xrt_compo
 }
 
 /*! @} */
+
+/*!
+ * @copydoc xrt_compositor::get_display_refresh_rate
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
+{
+	return xc->get_display_refresh_rate(xc, out_display_refresh_rate_hz);
+}
+
+/*!
+ * @copydoc xrt_compositor::request_display_refresh_rate
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_request_display_refresh_rate(struct xrt_compositor *xc, float display_refresh_rate_hz)
+{
+	return xc->request_display_refresh_rate(xc, display_refresh_rate_hz);
+}
+
 
 /*!
  * @copydoc xrt_compositor::destroy
@@ -2150,6 +2214,14 @@ struct xrt_multi_compositor_control
 	 * Notify this client/session if the compositor lost the ability of rendering.
 	 */
 	xrt_result_t (*notify_lost)(struct xrt_system_compositor *xsc, struct xrt_compositor *xc);
+
+	/*!
+	 * Notify this client/session if the display refresh rate has been changed.
+	 */
+	xrt_result_t (*notify_display_refresh_changed)(struct xrt_system_compositor *xsc,
+	                                               struct xrt_compositor *xc,
+	                                               float from_display_refresh_rate_hz,
+	                                               float to_display_refresh_rate_hz);
 };
 
 /*!
@@ -2299,6 +2371,30 @@ xrt_syscomp_notify_lost(struct xrt_system_compositor *xsc, struct xrt_compositor
 	}
 
 	return xsc->xmcc->notify_lost(xsc, xc);
+}
+
+/*!
+ * @copydoc xrt_multi_compositor_control::notify_display_refresh_changed
+ *
+ * Helper for calling through the function pointer.
+ *
+ * If the system compositor @p xsc does not implement @ref xrt_multi_composition_control,
+ * this returns @ref XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED.
+ *
+ * @public @memberof xrt_system_compositor
+ */
+static inline xrt_result_t
+xrt_syscomp_notify_display_refresh_changed(struct xrt_system_compositor *xsc,
+                                           struct xrt_compositor *xc,
+                                           float from_display_refresh_rate_hz,
+                                           float to_display_refresh_rate_hz)
+{
+	if (xsc->xmcc == NULL) {
+		return XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED;
+	}
+
+	return xsc->xmcc->notify_display_refresh_changed(xsc, xc, from_display_refresh_rate_hz,
+	                                                 to_display_refresh_rate_hz);
 }
 
 /*!
