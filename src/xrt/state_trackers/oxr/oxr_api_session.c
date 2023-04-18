@@ -557,7 +557,7 @@ oxr_xrApplyForceFeedbackCurlMNDX(XrHandTrackerEXT handTracker, const XrForceFeed
  *
  */
 
-#ifdef XR_FB_display_refresh_rate
+#ifdef OXR_HAVE_FB_display_refresh_rate
 
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrEnumerateDisplayRefreshRatesFB(XrSession session,
@@ -599,8 +599,7 @@ oxr_xrGetDisplayRefreshRateFB(XrSession session, float *displayRefreshRate)
 		return XR_ERROR_RUNTIME_FAILURE;
 	}
 
-	*displayRefreshRate = sess->sys->xsysc->info.refresh_rates_hz[0];
-	return XR_SUCCESS;
+	return oxr_session_get_display_refresh_rate(&log, sess, displayRefreshRate);
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL
@@ -611,8 +610,26 @@ oxr_xrRequestDisplayRefreshRateFB(XrSession session, float displayRefreshRate)
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrRequestDisplayRefreshRateFB");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 
-	//! @todo support for changing refresh rates
-	return XR_SUCCESS;
+	if (displayRefreshRate == 0.0f) {
+		return XR_SUCCESS;
+	}
+
+	/*
+	 * For the requested display refresh rate, truncating to two decimal
+	 * places and checking if it's in the supported refresh rates.
+	 */
+	bool found = false;
+	for (int i = 0; i < (int)sess->sys->xsysc->info.refresh_rate_count; ++i) {
+		if ((int)(displayRefreshRate * 100.0f) == (int)(sess->sys->xsysc->info.refresh_rates_hz[i] * 100.0f)) {
+			found = true;
+			break;
+		}
+	}
+	if (!found) {
+		return XR_ERROR_DISPLAY_REFRESH_RATE_UNSUPPORTED_FB;
+	}
+
+	return oxr_session_request_display_refresh_rate(&log, sess, displayRefreshRate);
 }
 
 #endif

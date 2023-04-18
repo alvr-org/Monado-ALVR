@@ -262,3 +262,27 @@ oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuf
 
 	return ret;
 }
+
+#ifdef OXR_HAVE_FB_display_refresh_rate
+XrResult
+oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
+                                                      struct oxr_session *sess,
+                                                      float fromDisplayRefreshRate,
+                                                      float toDisplayRefreshRate)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrEventDataDisplayRefreshRateChangedFB *changed;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_DISPLAY_REFRESH_RATE_CHANGED_FB;
+	changed->fromDisplayRefreshRate = fromDisplayRefreshRate;
+	changed->toDisplayRefreshRate = toDisplayRefreshRate;
+	event->result = XR_SUCCESS;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_FB_display_refresh_rate

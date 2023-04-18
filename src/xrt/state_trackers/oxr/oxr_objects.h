@@ -951,6 +951,14 @@ oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *lo
 XrResult
 oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, struct oxr_session *sess);
 
+#ifdef OXR_HAVE_FB_display_refresh_rate
+XrResult
+oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
+                                                      struct oxr_session *sess,
+                                                      float fromDisplayRefreshRate,
+                                                      float toDisplayRefreshRate);
+#endif // OXR_HAVE_FB_display_refresh_rate
+
 /*!
  * This clears all pending events refers to the given session.
  */
@@ -1658,6 +1666,14 @@ oxr_session_success_focused_result(struct oxr_session *session)
 	default: return XR_SESSION_NOT_FOCUSED;
 	}
 }
+
+#ifdef OXR_HAVE_FB_display_refresh_rate
+XrResult
+oxr_session_get_display_refresh_rate(struct oxr_logger *log, struct oxr_session *sess, float *displayRefreshRate);
+
+XrResult
+oxr_session_request_display_refresh_rate(struct oxr_logger *log, struct oxr_session *sess, float displayRefreshRate);
+#endif // OXR_HAVE_FB_display_refresh_rate
 
 /*!
  * dpad settings we need extracted from XrInteractionProfileDpadBindingEXT

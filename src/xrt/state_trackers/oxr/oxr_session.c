@@ -257,6 +257,11 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 			    time_state_monotonic_to_ts_ns(sess->sys->inst->timekeeping, xce.loss_pending.loss_time_ns));
 			break;
 		case XRT_COMPOSITOR_EVENT_LOST: sess->has_lost = true; break;
+		case XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE:
+			oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(log, sess,
+			                                                      xce.display.from_display_refresh_rate_hz,
+			                                                      xce.display.to_display_refresh_rate_hz);
+			break;
 		default: U_LOG_W("unhandled event type! %d", xce.type); break;
 		}
 	}
@@ -1240,3 +1245,35 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
 }
 
 #endif // OXR_HAVE_KHR_visibility_mask
+
+#ifdef OXR_HAVE_FB_display_refresh_rate
+XrResult
+oxr_session_get_display_refresh_rate(struct oxr_logger *log, struct oxr_session *sess, float *displayRefreshRate)
+{
+	struct xrt_compositor *xc = &sess->xcn->base;
+
+	if (xc == NULL) {
+		return oxr_session_success_result(sess);
+	}
+
+	xrt_result_t xret = xrt_comp_get_display_refresh_rate(xc, displayRefreshRate);
+	OXR_CHECK_XRET(log, sess, xret, xrt_comp_get_display_refresh_rate);
+
+	return XR_SUCCESS;
+}
+
+XrResult
+oxr_session_request_display_refresh_rate(struct oxr_logger *log, struct oxr_session *sess, float displayRefreshRate)
+{
+	struct xrt_compositor *xc = &sess->xcn->base;
+
+	if (xc == NULL) {
+		return oxr_session_success_result(sess);
+	}
+
+	xrt_result_t xret = xrt_comp_request_display_refresh_rate(xc, displayRefreshRate);
+	OXR_CHECK_XRET(log, sess, xret, xrt_comp_request_display_refresh_rate);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_FB_display_refresh_rate
