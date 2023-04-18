@@ -792,6 +792,26 @@ ipc_compositor_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint h
 	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_set_thread_hint");
 }
 
+static xrt_result_t
+ipc_compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+
+	xret = ipc_call_compositor_get_display_refresh_rate(icc->ipc_c, out_display_refresh_rate_hz);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_get_display_refresh_rate");
+}
+
+static xrt_result_t
+ipc_compositor_request_display_refresh_rate(struct xrt_compositor *xc, float display_refresh_rate_hz)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+
+	xret = ipc_call_compositor_request_display_refresh_rate(icc->ipc_c, display_refresh_rate_hz);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_request_display_refresh_rate");
+}
+
 static void
 ipc_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -839,6 +859,8 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.destroy = ipc_compositor_destroy;
 	icc->base.base.poll_events = ipc_compositor_poll_events;
 	icc->base.base.set_thread_hint = ipc_compositor_set_thread_hint;
+	icc->base.base.get_display_refresh_rate = ipc_compositor_get_display_refresh_rate;
+	icc->base.base.request_display_refresh_rate = ipc_compositor_request_display_refresh_rate;
 
 	// Using in wait frame.
 	os_precise_sleeper_init(&icc->sleeper);

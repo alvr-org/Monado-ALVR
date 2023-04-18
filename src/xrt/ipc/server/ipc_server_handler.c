@@ -556,6 +556,31 @@ ipc_handle_compositor_discard_frame(volatile struct ipc_client_state *ics, int64
 	return xrt_comp_discard_frame(ics->xc, frame_id);
 }
 
+xrt_result_t
+ipc_handle_compositor_get_display_refresh_rate(volatile struct ipc_client_state *ics,
+                                               float *out_display_refresh_rate_hz)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_comp_get_display_refresh_rate(ics->xc, out_display_refresh_rate_hz);
+}
+
+xrt_result_t
+ipc_handle_compositor_request_display_refresh_rate(volatile struct ipc_client_state *ics, float display_refresh_rate_hz)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_comp_request_display_refresh_rate(ics->xc, display_refresh_rate_hz);
+}
+
 static bool
 _update_projection_layer(struct xrt_compositor *xc,
                          volatile struct ipc_client_state *ics,

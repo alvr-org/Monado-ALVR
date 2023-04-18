@@ -203,6 +203,18 @@
 		]
 	},
 
+	"compositor_get_display_refresh_rate": {
+		"out": [
+			{"name": "out_display_refresh_rate_hz", "type": "float"}
+		]
+	},
+
+	"compositor_request_display_refresh_rate": {
+		"in": [
+			{"name": "display_refresh_rate_hz", "type": "float"}
+		]
+	},
+
 	"swapchain_get_properties": {
 		"in": [
 			{"name": "info", "type": "struct xrt_swapchain_create_info"}
