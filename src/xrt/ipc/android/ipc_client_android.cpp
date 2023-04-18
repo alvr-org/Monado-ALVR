@@ -25,8 +25,9 @@ using xrt::auxiliary::android::loadClassFromRuntimeApk;
 
 struct ipc_client_android
 {
-	ipc_client_android(jobject act) : activity(act) {}
+	ipc_client_android(struct _JavaVM *vm_, jobject act) : vm(vm_), activity(act) {}
 	~ipc_client_android();
+	struct _JavaVM *vm;
 
 	Activity activity{};
 	Client client{nullptr};
@@ -61,7 +62,7 @@ ipc_client_android_create(struct _JavaVM *vm, void *activity)
 
 		// Teach the wrapper our class before we start to use it.
 		Client::staticInitClass((jclass)clazz.object().getHandle());
-		std::unique_ptr<ipc_client_android> ret = std::make_unique<ipc_client_android>((jobject)activity);
+		std::unique_ptr<ipc_client_android> ret = std::make_unique<ipc_client_android>(vm, (jobject)activity);
 
 		ret->client = Client::construct(ret.get());
 
@@ -79,8 +80,7 @@ ipc_client_android_blocking_connect(struct ipc_client_android *ica)
 	try {
 		// Trick to avoid deadlock on main thread: only applicable to NativeActivity with app-glue.
 		// blockingConnect will block until binder is ready, the app-glue code will deadlock without this.
-		JavaVM *vm = nullptr;
-		jni::env()->GetJavaVM(&vm);
+		JavaVM *vm = ica->vm;
 		android_looper_poll_until_activity_resumed(vm, ica->activity.object().getHandle());
 		int fd = ica->client.blockingConnect(ica->activity, XRT_ANDROID_PACKAGE);
 		return fd;
