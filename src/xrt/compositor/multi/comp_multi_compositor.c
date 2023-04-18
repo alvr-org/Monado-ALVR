@@ -882,6 +882,28 @@ multi_compositor_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+multi_compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
+{
+	COMP_TRACE_MARKER();
+
+	struct multi_compositor *mc = multi_compositor(xc);
+
+	return xrt_comp_get_display_refresh_rate(&mc->msc->xcn->base, out_display_refresh_rate_hz);
+}
+
+static xrt_result_t
+multi_compositor_request_display_refresh_rate(struct xrt_compositor *xc, float display_refresh_rate_hz)
+{
+	COMP_TRACE_MARKER();
+
+	struct multi_compositor *mc = multi_compositor(xc);
+
+	xrt_comp_request_display_refresh_rate(&mc->msc->xcn->base, display_refresh_rate_hz);
+
+	return XRT_SUCCESS;
+}
+
 static void
 multi_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -1010,6 +1032,8 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->base.base.destroy = multi_compositor_destroy;
 	mc->base.base.poll_events = multi_compositor_poll_events;
 	mc->base.base.set_thread_hint = multi_compositor_set_thread_hint;
+	mc->base.base.get_display_refresh_rate = multi_compositor_get_display_refresh_rate;
+	mc->base.base.request_display_refresh_rate = multi_compositor_request_display_refresh_rate;
 	mc->msc = msc;
 	mc->xsi = *xsi;
 

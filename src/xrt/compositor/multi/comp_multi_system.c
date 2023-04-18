@@ -631,6 +631,26 @@ system_compositor_notify_lost(struct xrt_system_compositor *xsc, struct xrt_comp
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+system_compositor_notify_display_refresh_changed(struct xrt_system_compositor *xsc,
+                                                 struct xrt_compositor *xc,
+                                                 float from_display_refresh_rate_hz,
+                                                 float to_display_refresh_rate_hz)
+{
+	struct multi_system_compositor *msc = multi_system_compositor(xsc);
+	struct multi_compositor *mc = multi_compositor(xc);
+	(void)msc;
+
+	union xrt_compositor_event xce = XRT_STRUCT_INIT;
+	xce.type = XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE;
+	xce.display.from_display_refresh_rate_hz = from_display_refresh_rate_hz;
+	xce.display.to_display_refresh_rate_hz = to_display_refresh_rate_hz;
+
+	multi_compositor_push_event(mc, &xce);
+
+	return XRT_SUCCESS;
+}
+
 
 /*
  *
@@ -706,6 +726,7 @@ comp_multi_create_system_compositor(struct xrt_compositor_native *xcn,
 	msc->xmcc.set_main_app_visibility = system_compositor_set_main_app_visibility;
 	msc->xmcc.notify_loss_pending = system_compositor_notify_loss_pending;
 	msc->xmcc.notify_lost = system_compositor_notify_lost;
+	msc->xmcc.notify_display_refresh_changed = system_compositor_notify_display_refresh_changed;
 	msc->base.xmcc = &msc->xmcc;
 	msc->base.info = *xsci;
 	msc->upaf = upaf;
