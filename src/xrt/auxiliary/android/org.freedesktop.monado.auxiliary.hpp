@@ -138,6 +138,18 @@ namespace org::freedesktop::monado::auxiliary {
 		                       int32_t displayModeId);
 
 		/*!
+		 * Wrapper for the getSupportedRefreshRates static method
+		 *
+		 * Java prototype:
+		 * `public static float[] getSupportedRefreshRates(android.content.Context);`
+		 *
+		 * JNI signature: (Landroid/content/Context;)[F;
+		 *
+		 */
+		static std::vector<float>
+		getSupportedRefreshRates(android::content::Context const &context);
+
+		/*!
 		 * Wrapper for the getNativePointer method
 		 *
 		 * Java prototype:
@@ -192,6 +204,7 @@ namespace org::freedesktop::monado::auxiliary {
 			jni::method_t removeFromWindow;
 			jni::method_t getDisplayMetrics;
 			jni::method_t getDisplayRefreshRate;
+			jni::method_t getSupportedRefreshRates;
 			jni::method_t getNativePointer;
 			jni::method_t markAsDiscardedByNative;
 			jni::method_t waitGetSurfaceHolder;

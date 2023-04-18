@@ -24,6 +24,8 @@ namespace org::freedesktop::monado::auxiliary {
 	                                                   "(Landroid/content/Context;)Landroid/util/DisplayMetrics;")),
 	      getDisplayRefreshRate(
 	          classRef().getStaticMethod("getDisplayRefreshRate", "(Landroid/content/Context;)F")),
+	      getSupportedRefreshRates(
+	          classRef().getStaticMethod("getSupportedRefreshRates", "(Landroid/content/Context;)[F")),
 	      getNativePointer(classRef().getMethod("getNativePointer", "()J")),
 	      markAsDiscardedByNative(classRef().getMethod("markAsDiscardedByNative", "()V")),
 	      waitGetSurfaceHolder(classRef().getMethod("waitGetSurfaceHolder", "(I)Landroid/view/SurfaceHolder;")),

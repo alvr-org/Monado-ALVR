@@ -13,6 +13,7 @@
 #include "wrap/android.app.h"
 #include "wrap/android.content.h"
 #include "wrap/android.view.h"
+#include <vector>
 
 
 namespace wrap {
@@ -61,6 +62,21 @@ namespace org::freedesktop::monado::auxiliary {
 	{
 		return Meta::data().clazz().call<int32_t>(Meta::data().getDisplayModeIdHeight, displayContext.object(),
 		                                          displayId, displayModeId);
+	}
+
+	inline std::vector<float>
+	MonadoView::getSupportedRefreshRates(android::content::Context const &context)
+	{
+		jni::Object refreshRateArray =
+		    Meta::data().clazz().call<jni::Object>(Meta::data().getSupportedRefreshRates, context.object());
+		jfloat *refreshRates =
+		    (jfloat *)jni::env()->GetFloatArrayElements((jfloatArray)refreshRateArray.getHandle(), 0);
+		jsize length = jni::env()->GetArrayLength((jfloatArray)refreshRateArray.getHandle());
+		std::vector<float> refreshRateVector;
+		for (int i = 0; i < length; i++) {
+			refreshRateVector.push_back(refreshRates[i]);
+		}
+		return refreshRateVector;
 	}
 
 	inline void *

@@ -218,6 +218,8 @@ android_custom_surface_get_display_metrics(struct _JavaVM *vm,
 			U_LOG_W("Could not get refresh rate, returning 60hz");
 			displayRefreshRate = 60.0f;
 		}
+		std::vector<float> supported_refresh_rates =
+		    MonadoView::getSupportedRefreshRates(Context((jobject)context));
 
 		struct xrt_android_display_metrics metrics = {
 		    .width_pixels = displayMetrics.get<int>("widthPixels"),
@@ -228,7 +230,11 @@ android_custom_surface_get_display_metrics(struct _JavaVM *vm,
 		    .xdpi = displayMetrics.get<float>("density"),
 		    .ydpi = displayMetrics.get<float>("scaledDensity"),
 		    .refresh_rate = displayRefreshRate,
+		    .refresh_rate_count = (uint32_t)supported_refresh_rates.size(),
 		};
+		for (int i = 0; i < (int)metrics.refresh_rate_count; ++i) {
+			metrics.refresh_rates[i] = supported_refresh_rates[i];
+		}
 
 		*out_metrics = metrics;
 

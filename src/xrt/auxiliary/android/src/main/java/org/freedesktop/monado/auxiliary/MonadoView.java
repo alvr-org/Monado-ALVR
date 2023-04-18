@@ -25,6 +25,7 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import java.util.TreeSet;
 
 @Keep
 public class MonadoView extends SurfaceView
@@ -192,6 +193,22 @@ public class MonadoView extends SurfaceView
             return modes[displayModeId].getPhysicalHeight();
         }
         return 0;
+    }
+
+    @Keep
+    public static float[] getSupportedRefreshRates(@NonNull Context context) {
+        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        TreeSet<Float> rateSet = new TreeSet<>();
+        Display.Mode[] modes = wm.getDefaultDisplay().getSupportedModes();
+        for (Display.Mode mode : modes) {
+            rateSet.add(mode.getRefreshRate());
+        }
+        float[] rates = new float[rateSet.size()];
+        int i = 0;
+        for (Float f : rateSet) {
+            rates[i++] = f;
+        }
+        return rates;
     }
 
     @Keep
