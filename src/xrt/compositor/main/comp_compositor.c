@@ -82,6 +82,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef XRT_OS_ANDROID
+#include "android/android_custom_surface.h"
+#include "android/android_globals.h"
+#endif
 
 #define WINDOW_TITLE "Monado"
 
@@ -1106,9 +1110,28 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 		u_var_add_native_images_debug(c, &c->scratch.views[i].unid, tmp);
 	}
 
+#ifdef XRT_OS_ANDROID
+	// Get info about display.
+	struct xrt_android_display_metrics metrics;
+	if (!android_custom_surface_get_display_metrics(android_globals_get_vm(), android_globals_get_context(),
+	                                                &metrics)) {
+		U_LOG_E("Could not get Android display metrics.");
+		/* Fallback to default values */
+		metrics.refresh_rates[0] = 60.0f;
+		metrics.refresh_rate_count = 1;
+		metrics.refresh_rate = metrics.refresh_rates[0];
+	}
+
+	// Copy data to info.
+	sys_info->refresh_rate_count = metrics.refresh_rate_count;
+	for (size_t i = 0; i < sys_info->refresh_rate_count; ++i) {
+		sys_info->refresh_rates_hz[i] = metrics.refresh_rates[i];
+	}
+#else
 	//! @todo: Query all supported refresh rates of the current mode
 	sys_info->refresh_rate_count = 1;
 	sys_info->refresh_rates_hz[0] = (float)(1. / time_ns_to_s(c->settings.nominal_frame_interval_ns));
+#endif // XRT_OS_ANDROID
 
 	// Needs to be delayed until after compositor's u_var has been setup.
 	if (!c->deferred_surface) {
