@@ -251,3 +251,25 @@ android_custom_surface_can_draw_overlays(struct _JavaVM *vm, void *context)
 	jni::init(vm);
 	return Settings::canDrawOverlays(Context{(jobject)context});
 }
+
+float
+android_custom_surface_get_display_refresh_rate(struct _JavaVM *vm, void *context)
+{
+	jni::init(vm);
+	try {
+		auto clazz = loadClassFromRuntimeApk((jobject)context, MonadoView::getFullyQualifiedTypeName());
+		if (clazz.isNull()) {
+			U_LOG_E("Could not load class '%s' from package '%s'", MonadoView::getFullyQualifiedTypeName(),
+			        XRT_ANDROID_PACKAGE);
+			return 0;
+		}
+
+		// Teach the wrapper our class before we start to use it.
+		MonadoView::staticInitClass((jclass)clazz.object().getHandle());
+
+		return MonadoView::getDisplayRefreshRate(Context((jobject)context));
+	} catch (std::exception const &e) {
+		U_LOG_E("Could not get display refresh rate: %s", e.what());
+		return 0;
+	}
+}
