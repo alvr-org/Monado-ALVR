@@ -85,6 +85,7 @@
 #ifdef XRT_OS_ANDROID
 #include "android/android_custom_surface.h"
 #include "android/android_globals.h"
+#include <dlfcn.h>
 #endif
 
 #define WINDOW_TITLE "Monado"
@@ -327,10 +328,15 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 static xrt_result_t
 compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
 {
+#ifdef XRT_OS_ANDROID
+	*out_display_refresh_rate_hz =
+	    android_custom_surface_get_display_refresh_rate(android_globals_get_vm(), android_globals_get_context());
+#else
 	struct comp_compositor *c = comp_compositor(xc);
 
 	//! @todo: Implement the method to change display refresh rate.
 	*out_display_refresh_rate_hz = (float)(1. / time_ns_to_s(c->settings.nominal_frame_interval_ns));
+#endif
 
 	return XRT_SUCCESS;
 }
@@ -338,7 +344,26 @@ compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_displa
 static xrt_result_t
 compositor_request_display_refresh_rate(struct xrt_compositor *xc, float display_refresh_rate_hz)
 {
-	//! @todo: Implement the method to change display refresh rate.
+#ifdef XRT_OS_ANDROID
+	typedef int32_t (*PF_SETFRAMERATE)(ANativeWindow * window, float frameRate, int8_t compatibility);
+
+	// Note that this will just increment the reference count, rather than actually load it again,
+	// since we are linked for other symbols too.
+	void *android_handle = dlopen("libandroid.so", RTLD_NOW);
+	PF_SETFRAMERATE set_frame_rate = (PF_SETFRAMERATE)dlsym(android_handle, "ANativeWindow_setFrameRate");
+	if (!set_frame_rate) {
+		U_LOG_E("ANativeWindow_setFrameRate not found");
+		dlclose(android_handle);
+		return XRT_SUCCESS;
+	}
+	struct ANativeWindow *window = (struct ANativeWindow *)android_globals_get_window();
+	if (window == NULL || (set_frame_rate(window, display_refresh_rate_hz, 1) != 0)) {
+		U_LOG_E("set_frame_rate error");
+	}
+	dlclose(android_handle);
+#else
+	// Currently not implemented on other platforms.
+#endif
 	return XRT_SUCCESS;
 }
 

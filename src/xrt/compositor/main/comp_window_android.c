@@ -170,6 +170,7 @@ comp_window_android_init_swapchain(struct comp_target *ct, uint32_t width, uint3
 		COMP_ERROR(cwa->base.base.c, "could not get ANativeWindow");
 		return false;
 	}
+	android_globals_store_window((struct _ANativeWindow *)window);
 
 	ret = comp_window_android_create_surface(cwa, window, &cwa->base.surface.handle);
 	if (ret != VK_SUCCESS) {
