@@ -183,6 +183,8 @@ struct multi_compositor
 	struct multi_layer_slot delivered;
 
 	struct u_pacing_app *upa;
+
+	float current_refresh_rate_hz;
 };
 
 /*!

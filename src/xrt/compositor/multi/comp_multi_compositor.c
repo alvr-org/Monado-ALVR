@@ -34,6 +34,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef XRT_OS_ANDROID
+#include "android/android_custom_surface.h"
+#include "android/android_globals.h"
+#endif
 
 /*
  *
@@ -850,6 +854,18 @@ multi_compositor_request_display_refresh_rate(struct xrt_compositor *xc, float d
 
 	xrt_comp_request_display_refresh_rate(&mc->msc->xcn->base, display_refresh_rate_hz);
 
+#ifdef XRT_OS_ANDROID
+	// TODO: notify the display refresh changed event by android display callback function.
+	float current_refresh_rate_hz =
+	    android_custom_surface_get_display_refresh_rate(android_globals_get_vm(), android_globals_get_context());
+
+	if (current_refresh_rate_hz != 0 && current_refresh_rate_hz != mc->current_refresh_rate_hz) {
+		xrt_syscomp_notify_display_refresh_changed(&mc->msc->base, xc, mc->current_refresh_rate_hz,
+		                                           current_refresh_rate_hz);
+		mc->current_refresh_rate_hz = current_refresh_rate_hz;
+	}
+#endif
+
 	return XRT_SUCCESS;
 }
 
@@ -1030,6 +1046,10 @@ multi_compositor_create(struct multi_system_compositor *msc,
 
 	os_thread_helper_unlock(&mc->wait_thread.oth);
 
+#ifdef XRT_OS_ANDROID
+	mc->current_refresh_rate_hz =
+	    android_custom_surface_get_display_refresh_rate(android_globals_get_vm(), android_globals_get_context());
+#endif
 
 	*out_xcn = &mc->base;
 
