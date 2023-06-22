@@ -1,6 +1,10 @@
 # Copyright 2018-2023, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
+if(TARGET xrt-optimized-math)
+	return()
+endif()
+
 # Target used for applying more aggressive optimizations to math-heavy code
 add_library(xrt-optimized-math INTERFACE)
 
