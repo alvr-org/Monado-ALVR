@@ -14,6 +14,7 @@
 #include "util/u_var.h"
 #include "util/u_misc.h"
 #include "util/u_sink.h"
+#include "util/u_debug.h"
 
 #ifdef XRT_HAVE_OPENCV
 #include "tracking/t_tracking.h"
@@ -117,6 +118,8 @@ struct plot_state
 	//! When now is, all entries are made relative to this.
 	uint64_t now;
 };
+
+DEBUG_GET_ONCE_BOOL_OPTION(curated_gui, "XRT_CURATED_GUI", false)
 
 
 /*
@@ -635,6 +638,246 @@ on_root_exit(struct u_var_root_info *info, void *priv)
 
 /*
  *
+ * Advanced UI.
+ *
+ */
+
+static bool g_show_advanced_gui = false;
+
+static void
+advanced_scene_render(struct debug_scene *ds, struct gui_program *p)
+{
+	struct draw_state state = {p, ds, {0}, 0, false};
+
+	u_var_visit(on_root_enter, on_root_exit, on_elem, &state);
+
+	igBegin("Advanced UI", NULL, 0);
+	igCheckbox("Show advanced UI", &g_show_advanced_gui);
+	igEnd();
+}
+
+
+/*
+ *
+ * Curated UI.
+ *
+ */
+
+/*!
+ * Which window are we searching.
+ */
+enum search_type
+{
+	SEARCH_INVALID,
+	SEARCH_GUI_CONTROL,
+	SEARCH_IPC_SERVER,
+	SEARCH_SPACE_OVERSEER,
+	SEARCH_SLAM_TRACKER,
+	SEARCH_READBACK,
+	SEARCH_HAND_TRACKER,
+	SEARCH_APP_TIMING,
+	SEARCH_COMPOSITOR_TIMING,
+};
+
+/*!
+ * Extra state for curated debug UI.
+ */
+struct curated_state
+{
+	//! Has the be first.
+	struct draw_state ds;
+
+	enum search_type search;
+
+	struct
+	{
+		struct u_var_info *sink;
+		struct u_var_info *enable;
+	} readback; //!< Compositor readback variables.
+
+	struct
+	{
+		struct
+		{
+			struct u_var_info *min;
+		} apps[4];
+		uint32_t app_count;
+
+		struct u_var_info *present_to_display;
+	} timing; //!< Both compositor and app timing related things.
+
+	struct
+	{
+		struct u_var_info *size;
+		struct u_var_info *detect;
+		struct u_var_info *cams;
+		struct u_var_info *graph;
+	} hand_tracking;
+
+	struct u_var_info *clear;
+
+	struct u_var_info *ipc_running;
+};
+
+#define CHECK_RAW(NAME, TYPE)                                                                                          \
+	if (strcmp(info->raw_name, NAME) == 0) {                                                                       \
+		cs->search = TYPE;                                                                                     \
+	}
+
+#define CHECK(NAME, FIELD)                                                                                             \
+	if (strcmp(info->name, NAME) == 0) {                                                                           \
+		cs->FIELD = info;                                                                                      \
+	}
+
+#define DRAW(FIELD)                                                                                                    \
+	if (cs.FIELD != NULL) {                                                                                        \
+		on_elem(cs.FIELD, &cs.ds);                                                                             \
+	}
+
+static void
+curated_on_root_enter(struct u_var_root_info *info, void *priv)
+{
+	struct curated_state *cs = (struct curated_state *)priv;
+
+	CHECK_RAW("GUI Control", SEARCH_GUI_CONTROL);
+	CHECK_RAW("IPC Server", SEARCH_IPC_SERVER);
+	CHECK_RAW("Tracking Factory", SEARCH_INVALID);
+	CHECK_RAW("Space Overseer", SEARCH_SPACE_OVERSEER);
+	CHECK_RAW("Prober", SEARCH_INVALID);
+	CHECK_RAW("SLAM Tracker", SEARCH_SLAM_TRACKER);
+	CHECK_RAW("Vive Device", SEARCH_INVALID);
+	CHECK_RAW("V4L2 Frameserver", SEARCH_INVALID);
+	CHECK_RAW("Hand-tracking async shim!", SEARCH_INVALID);
+	CHECK_RAW("Controller emulation!", SEARCH_INVALID);
+	CHECK_RAW("Camera-based Hand Tracker", SEARCH_HAND_TRACKER);
+	CHECK_RAW("App timing info", SEARCH_APP_TIMING);
+	CHECK_RAW("Compositor timing info", SEARCH_COMPOSITOR_TIMING);
+	CHECK_RAW("Compositor", SEARCH_INVALID);
+	CHECK_RAW("Readback", SEARCH_READBACK);
+
+	// If we have too many app timing structs, ignore them.
+	if (cs->search == SEARCH_APP_TIMING && cs->timing.app_count >= ARRAY_SIZE(cs->timing.apps)) {
+		cs->search = SEARCH_INVALID;
+	}
+}
+
+static void
+curated_on_elem(struct u_var_info *info, void *priv)
+{
+	struct curated_state *cs = (struct curated_state *)priv;
+
+	switch (cs->search) {
+	case SEARCH_INVALID: // Invalid
+		break;
+	case SEARCH_GUI_CONTROL: // GUI Control
+		CHECK("Clear Colour", clear);
+		break;
+	case SEARCH_READBACK: // Readback
+		CHECK("Readback left eye to debug GUI", readback.enable)
+		CHECK("Left view!", readback.sink)
+		break;
+	case SEARCH_HAND_TRACKER: // Camera-based Hand Tracker
+		CHECK("Hand size (Meters between wrist and middle-proximal joint)", hand_tracking.size)
+		CHECK("Estimate hand sizes", hand_tracking.detect)
+		CHECK("Annotated camera feeds", hand_tracking.cams)
+		CHECK("Model inputs and outputs", hand_tracking.graph)
+		break;
+	case SEARCH_COMPOSITOR_TIMING: // Compositor timing info
+		CHECK("Present to display offset(ms)", timing.present_to_display)
+		break;
+	case SEARCH_IPC_SERVER: // IPC Server
+		CHECK("running", ipc_running)
+		break;
+	case SEARCH_APP_TIMING: // App timing info
+		// App count is incremented on root exit, so app_count is the current one.
+		CHECK("Minimum app time(ms)", timing.apps[cs->timing.app_count].min)
+		break;
+	case SEARCH_SPACE_OVERSEER:
+		// Nothing yet.
+		break;
+	case SEARCH_SLAM_TRACKER:
+		// Nothing yet.
+		break;
+	}
+}
+
+static void
+curated_on_root_exit(struct u_var_root_info *info, void *priv)
+{
+	struct curated_state *cs = (struct curated_state *)priv;
+
+	if (cs->search == SEARCH_APP_TIMING) {
+		cs->timing.app_count++;
+	}
+}
+
+static void
+curated_render(struct debug_scene *ds, struct gui_program *p)
+{
+	struct curated_state cs = XRT_STRUCT_INIT;
+	cs.ds = (struct draw_state){p, ds, {0}, 0, false};
+	cs.ds.vis_stack[0] = true; // Make sure things are visible.
+
+	// Collect the variables.
+	u_var_visit(curated_on_root_enter, curated_on_root_exit, curated_on_elem, &cs);
+
+	// Always enable the readback sink.
+	if (cs.readback.enable != NULL) {
+		*(bool *)cs.readback.enable->ptr = true;
+	}
+
+	// Always set the clear colour.
+	if (cs.clear != NULL) {
+		*(struct xrt_colour_rgb_f32 *)cs.clear->ptr = (struct xrt_colour_rgb_f32){0.f, 0.f, 0.f};
+	}
+
+	// Start drawing.
+	igBegin("Monado", NULL, 0);
+
+	// Top exit button.
+	ImVec2 button_dims = {48, 24};
+	igSameLine(igGetWindowWidth() - button_dims.x - 8, -1);
+	if (igButton("Exit", button_dims) && cs.ipc_running != NULL) {
+		*(bool *)cs.ipc_running->ptr = false;
+	}
+
+	ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+	if (igBeginTabBar("Tabs", tab_bar_flags)) {
+		if (igBeginTabItem("Main", NULL, 0)) {
+			DRAW(ipc_running);
+			igCheckbox("Show advanced UI", &g_show_advanced_gui);
+			igEndTabItem();
+		}
+
+		if (igBeginTabItem("Timing", NULL, 0)) {
+			for (uint32_t i = 0; i < cs.timing.app_count; i++) {
+				igText("App %u", i + 1);
+				DRAW(timing.apps[i].min);
+			}
+
+			if (cs.timing.present_to_display != NULL) {
+				igText("Compositor");
+				DRAW(timing.present_to_display);
+			}
+
+			igEndTabItem();
+		}
+
+		// Close tab bar.
+		igEndTabBar();
+	}
+
+	// If available draw the readback sink to the background.
+	if (cs.readback.sink != NULL) {
+		draw_sink_to_background(cs.readback.sink, &cs.ds);
+	}
+
+	igEnd();
+}
+
+
+/*
+ *
  * Sink interception.
  *
  */
@@ -672,9 +915,18 @@ static void
 scene_render(struct gui_scene *scene, struct gui_program *p)
 {
 	struct debug_scene *ds = (struct debug_scene *)scene;
-	struct draw_state state = {p, ds, {0}, 0, false};
 
-	u_var_visit(on_root_enter, on_root_exit, on_elem, &state);
+	static bool first = true;
+	if (first) {
+		g_show_advanced_gui = !debug_get_bool_option_curated_gui();
+		first = false;
+	}
+
+	if (g_show_advanced_gui) {
+		advanced_scene_render(ds, p);
+	} else {
+		curated_render(ds, p);
+	}
 }
 
 static void
