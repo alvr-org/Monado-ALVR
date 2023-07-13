@@ -1,0 +1,15 @@
+; Copyright 2019-2023, Collabora, Ltd.
+; SPDX-License-Identifier: BSL-1.0
+EXPORTS
+    mnd_root_create
+    mnd_root_destroy
+    mnd_root_update_client_list
+    mnd_root_get_number_clients
+    mnd_root_get_client_name
+    mnd_root_get_client_state
+    mnd_root_set_client_primary
+    mnd_root_set_client_focused
+    mnd_root_toggle_client_io_active
+    mnd_root_get_device_count
+    mnd_root_get_device_info
+    mnd_root_get_device_from_role

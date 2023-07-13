@@ -41,3 +41,8 @@ if(XRT_FEATURE_SERVICE
 	)
 	add_subdirectory(sdl_test)
 endif()
+
+# Monado management library
+if(XRT_FEATURE_SERVICE AND XRT_HAVE_LINUX)
+	add_subdirectory(libmonado)
+endif()
