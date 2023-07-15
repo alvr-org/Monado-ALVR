@@ -16,9 +16,10 @@
 
 
 /*!
- * An @ref xrt_frame_sink queue, any frames received will be pushed to the
- * downstream consumer on the queue thread. Will drop frames should multiple
- * frames be queued up.
+ * An @ref xrt_frame_sink queue that holds buffers a single xrt_frame
+ * and passes it to the downstream consumer on the queue thread. If another
+ * frame arrives before the current frame is consumed, the new frame replaces
+ * the old one.
  *
  * @implements xrt_frame_sink
  * @implements xrt_frame_node
