@@ -55,16 +55,29 @@ gst_fmt_from_xf_format(enum xrt_format format_in)
 }
 
 static void
-complain_if_wrong_image_size(struct xrt_frame *xf)
+complain_if_wrong_image_size(struct gstreamer_sink *gs, struct xrt_frame *xf)
 {
+	if (!gs->need_even_dims) {
+		return;
+	}
+
 	// libx264 is the actual source of this requirement; it refuses to handle odd widths/heights when encoding I420
 	// subsampled content. OpenH264 should work, but it's easy enough to just force all users of this code to
 	// provide normal-sized inputs.
 	if (xf->width % 2 == 1) {
-		U_LOG_W("Image width needs to be divisible by 2!");
+		if (!gs->have_padded_width) {
+			U_LOG_W("Image width needs to be divisible by 2!");
+		}
+	} else if (gs->have_padded_width) {
+		U_LOG_W("Image width changed after we added padding!");
 	}
+
 	if (xf->height % 2 == 1) {
-		U_LOG_W("Image height needs to be divisible by 2!");
+		if (!gs->have_padded_height) {
+			U_LOG_W("Image height needs to be divisible by 2!");
+		}
+	} else if (gs->have_padded_height) {
+		U_LOG_W("Image height changed after we added padding!");
 	}
 }
 
@@ -74,7 +87,7 @@ push_frame(struct xrt_frame_sink *xfs, struct xrt_frame *xf)
 	SINK_TRACE_MARKER();
 	struct gstreamer_sink *gs = (struct gstreamer_sink *)xfs;
 
-	complain_if_wrong_image_size(xf);
+	complain_if_wrong_image_size(gs, xf);
 
 	GstBuffer *buffer;
 	GstFlowReturn ret;
@@ -194,12 +207,20 @@ gstreamer_sink_create_with_pipeline(struct gstreamer_pipeline *gp,
                                     struct xrt_frame_sink **out_xfs)
 {
 	const char *format_str = NULL;
+	bool need_even_dims = false;
+
 	switch (format) {
 	case XRT_FORMAT_R8G8B8: format_str = "RGB"; break;
 	case XRT_FORMAT_R8G8B8A8: format_str = "RGBA"; break;
 	case XRT_FORMAT_R8G8B8X8: format_str = "RGBx"; break;
-	case XRT_FORMAT_YUYV422: format_str = "YUY2"; break;
-	case XRT_FORMAT_L8: format_str = "GRAY8"; break;
+	case XRT_FORMAT_YUYV422:
+		format_str = "YUY2";
+		need_even_dims = true;
+		break;
+	case XRT_FORMAT_L8:
+		format_str = "GRAY8";
+		need_even_dims = true;
+		break;
 	default: assert(false); break;
 	}
 
@@ -209,6 +230,25 @@ gstreamer_sink_create_with_pipeline(struct gstreamer_pipeline *gp,
 	gs->node.destroy = destroy;
 	gs->gp = gp;
 	gs->appsrc = gst_bin_get_by_name(GST_BIN(gp->pipeline), appsrc_name);
+	gs->need_even_dims = need_even_dims;
+
+	if (need_even_dims) {
+		/* Pad out height and width to multiple of 2 */
+		GstElement *vbox = gst_bin_get_by_name(GST_BIN(gp->pipeline), "vbox");
+		if (vbox != NULL) {
+			if (height % 2) {
+				g_object_set(G_OBJECT(vbox), "bottom", -1, NULL);
+				gs->have_padded_height = true;
+			}
+			if (width % 2) {
+				g_object_set(G_OBJECT(vbox), "width", -1, NULL);
+				gs->have_padded_width = true;
+			}
+			gst_object_unref(vbox);
+		} else if (height % 2 || width % 2) {
+			U_LOG_W("Image height or width needs padding. Please add `videobox name=vbox' to the pipeline");
+		}
+	}
 
 
 	GstCaps *caps = gst_caps_new_simple(      //

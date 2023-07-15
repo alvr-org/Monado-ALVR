@@ -85,7 +85,7 @@ create_pipeline(struct gui_record_window *rw)
 		         "appsrc name=\"%s\" ! "
 		         "queue ! "
 		         "videoconvert ! "
-		         "queue ! "
+		         "videobox name=vbox ! "
 		         "x264enc bitrate=\"%s\" speed-preset=\"%s\" ! "
 		         "video/x-h264,profile=main ! "
 		         "h264parse ! "

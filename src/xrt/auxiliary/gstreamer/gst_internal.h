@@ -71,6 +71,11 @@ struct gstreamer_sink
 
 	//! Cached appsrc element.
 	GstElement *appsrc;
+
+	//! Info about required / configured width/height padding
+	bool need_even_dims;
+	bool have_padded_height;
+	bool have_padded_width;
 };
 
 
