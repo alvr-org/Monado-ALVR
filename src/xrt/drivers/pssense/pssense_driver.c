@@ -123,6 +123,15 @@ const uint8_t VIBRATE_MODE_CLASSIC_RUMBLE = 0x40;
 //! Softer rumble emulation, like an engine running
 const uint8_t VIBRATE_MODE_DIET_RUMBLE = 0x60;
 
+//! Flag bits to enable setting trigger feedback in an output report
+const uint8_t TRIGGER_FEEDBACK_ENABLE_BITS = 0x04;
+//! Clear the trigger feedback setting
+const uint8_t TRIGGER_FEEDBACK_MODE_NONE = 0x00;
+//! Constant resistance throughout the trigger movement
+const uint8_t TRIGGER_FEEDBACK_MODE_CONSTANT = 0x01;
+//! A single point of resistance at the beginning of the trigger, right before the click flag is activated
+const uint8_t TRIGGER_FEEDBACK_MODE_CATCH = 0x02;
+
 /**
  * 16-bit little-endian int
  */
@@ -179,12 +188,14 @@ static_assert(sizeof(struct pssense_input_report) == INPUT_REPORT_LENGTH, "Incor
 struct pssense_output_report
 {
 	uint8_t report_id;
-	uint8_t seq_no;          // High bits only; low bits are always 0
-	uint8_t tag;             // Needs to be 0x10. Nobody seems to know why.
-	uint8_t vibration_flags; // Vibrate mode and enable flags to set vibrate in this report
+	uint8_t seq_no;         // High bits only; low bits are always 0
+	uint8_t tag;            // Needs to be 0x10. Nobody seems to know why.
+	uint8_t feedback_flags; // Vibrate mode and enable flags to set vibrate and trigger feedback in this report
 	uint8_t unknown;
 	uint8_t vibration_amplitude; // Vibration amplitude from 0x00-0xff. Sending 0 turns vibration off.
-	uint8_t unknown3[68];
+	uint8_t unknown2;
+	uint8_t trigger_feedback_mode; // Constant or sticky trigger resistance
+	uint8_t unknown3[66];
 	struct pssense_i32_le crc;
 };
 static_assert(sizeof(struct pssense_output_report) == OUTPUT_REPORT_LENGTH, "Incorrect output report struct length");
@@ -250,10 +261,13 @@ struct pssense_device
 	struct
 	{
 		uint8_t next_seq_no;
+		bool send_vibration;
 		uint8_t vibration_amplitude;
 		uint8_t vibration_mode;
 		uint64_t vibration_end_timestamp_ns;
-		uint64_t resend_timestamp_ns;
+		uint64_t vibration_resend_timestamp_ns;
+		bool send_trigger_feedback;
+		uint8_t trigger_feedback_mode;
 	} output;
 
 	struct m_imu_3dof fusion;
@@ -434,16 +448,26 @@ pssense_send_output_report_locked(struct pssense_device *pssense)
 {
 	uint64_t timestamp_ns = os_monotonic_get_ns();
 
-	if (timestamp_ns >= pssense->output.vibration_end_timestamp_ns) {
-		pssense->output.vibration_amplitude = 0;
-	}
-
 	struct pssense_output_report report = {0};
 	report.report_id = OUTPUT_REPORT_ID;
 	report.seq_no = pssense->output.next_seq_no << 4;
 	report.tag = OUTPUT_REPORT_TAG;
-	report.vibration_flags = pssense->output.vibration_mode | VIBRATE_ENABLE_BITS;
-	report.vibration_amplitude = pssense->output.vibration_amplitude;
+
+	if (timestamp_ns >= pssense->output.vibration_end_timestamp_ns) {
+		pssense->output.vibration_amplitude = 0;
+	}
+
+	if (pssense->output.send_vibration) {
+		report.feedback_flags = pssense->output.vibration_mode | VIBRATE_ENABLE_BITS;
+		report.vibration_amplitude = pssense->output.vibration_amplitude;
+		pssense->output.send_vibration = pssense->output.vibration_amplitude > 0;
+	}
+
+	if (pssense->output.send_trigger_feedback) {
+		report.feedback_flags |= TRIGGER_FEEDBACK_ENABLE_BITS;
+		report.trigger_feedback_mode = pssense->output.trigger_feedback_mode;
+		pssense->output.send_trigger_feedback = false;
+	}
 
 	pssense->output.next_seq_no = (pssense->output.next_seq_no + 1) % 16;
 
@@ -451,18 +475,19 @@ pssense_send_output_report_locked(struct pssense_device *pssense)
 	crc = crc32_le(crc, (uint8_t *)&report, sizeof(struct pssense_output_report) - 4);
 	report.crc = pssense_u32_to_i32_le(crc);
 
-	PSSENSE_DEBUG(pssense, "Setting vibration amplitude: %u, mode: %02X", pssense->output.vibration_amplitude,
-	              pssense->output.vibration_mode);
+	PSSENSE_DEBUG(pssense, "Setting vibration amplitude: %u, mode: %02X, trigger feedback mode: %02X",
+	              pssense->output.vibration_amplitude, pssense->output.vibration_mode,
+	              pssense->output.trigger_feedback_mode);
 	int ret = os_hid_write(pssense->hid, (uint8_t *)&report, sizeof(struct pssense_output_report));
 	if (ret == sizeof(struct pssense_output_report)) {
 		// Controller will vibrate for 5 sec unless we resend the output report. Resend every 2 sec to be safe.
-		pssense->output.resend_timestamp_ns = timestamp_ns + 2000000000;
-		if (pssense->output.resend_timestamp_ns > pssense->output.vibration_end_timestamp_ns) {
-			pssense->output.resend_timestamp_ns = pssense->output.vibration_end_timestamp_ns;
+		pssense->output.vibration_resend_timestamp_ns = timestamp_ns + 2000000000;
+		if (pssense->output.vibration_resend_timestamp_ns > pssense->output.vibration_end_timestamp_ns) {
+			pssense->output.vibration_resend_timestamp_ns = pssense->output.vibration_end_timestamp_ns;
 		}
 	} else {
 		PSSENSE_WARN(pssense, "Failed to send output report: %d", ret);
-		pssense->output.resend_timestamp_ns = timestamp_ns;
+		pssense->output.vibration_resend_timestamp_ns = timestamp_ns;
 	}
 }
 
@@ -491,8 +516,8 @@ pssense_run_thread(void *ptr)
 			os_mutex_lock(&pssense->lock);
 			pssense->state = input_state;
 			pssense_update_fusion(pssense);
-			if (pssense->output.vibration_amplitude > 0 &&
-			    pssense->state.timestamp_ns >= pssense->output.resend_timestamp_ns) {
+			if (pssense->output.send_vibration &&
+			    pssense->state.timestamp_ns >= pssense->output.vibration_resend_timestamp_ns) {
 				pssense_send_output_report_locked(pssense);
 			}
 			os_mutex_unlock(&pssense->lock);
@@ -568,27 +593,52 @@ pssense_set_output(struct xrt_device *xdev, enum xrt_output_name name, const uni
 {
 	struct pssense_device *pssense = (struct pssense_device *)xdev;
 
-	if (name != XRT_OUTPUT_NAME_PSSENSE_VIBRATION) {
+	bool send_vibration = false;
+	uint8_t vibration_amplitude;
+	uint8_t vibration_mode;
+	bool send_trigger_feedback = false;
+	uint8_t trigger_feedback_mode;
+	if (name == XRT_OUTPUT_NAME_PSSENSE_VIBRATION) {
+		send_vibration = true;
+		vibration_amplitude = (uint8_t)(value->vibration.amplitude * 255.0f);
+		vibration_mode = VIBRATE_MODE_CLASSIC_RUMBLE;
+		if (value->vibration.frequency != XRT_FREQUENCY_UNSPECIFIED) {
+			if (value->vibration.frequency <= 70) {
+				vibration_mode = VIBRATE_MODE_LOW_60HZ;
+			} else if (value->vibration.frequency >= 110) {
+				vibration_mode = VIBRATE_MODE_HIGH_120HZ;
+			}
+		}
+	} else if (name == XRT_OUTPUT_NAME_PSSENSE_TRIGGER_FEEDBACK) {
+		for (uint64_t i = 0; i < value->force_feedback.force_feedback_location_count; i++) {
+			if (value->force_feedback.force_feedback[i].location ==
+			    XRT_FORCE_FEEDBACK_LOCATION_LEFT_INDEX) {
+				send_trigger_feedback = true;
+				if (value->force_feedback.force_feedback[i].value > 0) {
+					trigger_feedback_mode = TRIGGER_FEEDBACK_MODE_CONSTANT;
+				} else {
+					trigger_feedback_mode = TRIGGER_FEEDBACK_MODE_NONE;
+				}
+			}
+		}
+	} else {
 		PSSENSE_ERROR(pssense, "Unknown output name requested %u", name);
 		return;
 	}
 
-	uint8_t vibration_amplitude = (uint8_t)(value->vibration.amplitude * 255.0f);
-	uint8_t vibration_mode = VIBRATE_MODE_CLASSIC_RUMBLE;
-	if (value->vibration.frequency != XRT_FREQUENCY_UNSPECIFIED) {
-		if (value->vibration.frequency <= 70) {
-			vibration_mode = VIBRATE_MODE_LOW_60HZ;
-		} else if (value->vibration.frequency >= 110) {
-			vibration_mode = VIBRATE_MODE_HIGH_120HZ;
-		}
-	}
-
 	os_mutex_lock(&pssense->lock);
-	if (vibration_amplitude != pssense->output.vibration_amplitude ||
-	    vibration_mode != pssense->output.vibration_mode) {
+	if (send_vibration && (vibration_amplitude != pssense->output.vibration_amplitude ||
+	                       vibration_mode != pssense->output.vibration_mode)) {
+		pssense->output.send_vibration = true;
 		pssense->output.vibration_amplitude = vibration_amplitude;
 		pssense->output.vibration_mode = vibration_mode;
 		pssense->output.vibration_end_timestamp_ns = os_monotonic_get_ns() + value->vibration.duration_ns;
+	}
+	if (send_trigger_feedback && trigger_feedback_mode != pssense->output.trigger_feedback_mode) {
+		pssense->output.send_trigger_feedback = true;
+		pssense->output.trigger_feedback_mode = trigger_feedback_mode;
+	}
+	if (pssense->output.send_vibration || pssense->output.send_trigger_feedback) {
 		pssense_send_output_report_locked(pssense);
 	}
 	os_mutex_unlock(&pssense->lock);
@@ -715,7 +765,7 @@ pssense_found(struct xrt_prober *xp,
 	}
 
 	enum u_device_alloc_flags flags = U_DEVICE_ALLOC_TRACKING_NONE;
-	struct pssense_device *pssense = U_DEVICE_ALLOCATE(struct pssense_device, flags, 23, 1);
+	struct pssense_device *pssense = U_DEVICE_ALLOCATE(struct pssense_device, flags, 23, 2);
 	PSSENSE_DEBUG(pssense, "PlayStation Sense controller found");
 
 	pssense->base.name = XRT_DEVICE_PSSENSE;
@@ -771,6 +821,7 @@ pssense_found(struct xrt_prober *xp,
 	SET_INPUT(AIM_POSE);
 
 	pssense->base.outputs[0].name = XRT_OUTPUT_NAME_PSSENSE_VIBRATION;
+	pssense->base.outputs[1].name = XRT_OUTPUT_NAME_PSSENSE_TRIGGER_FEEDBACK;
 
 	ret = os_mutex_init(&pssense->lock);
 	if (ret != 0) {
