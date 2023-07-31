@@ -42,10 +42,10 @@ Dependencies include:
 * Python 3.6 or newer
 * Vulkan headers and loader - Fedora package `vulkan-loader-devel`
 * OpenGL headers
-* Eigen3 - Debian/Ubuntu package 'libeigen3-dev'
+* Eigen3 - Debian/Ubuntu package `libeigen3-dev`
 * glslangValidator - Debian/Ubuntu package `glslang-tools`, Fedora package `glslang`.
 * libusb
-* libudev - Fedora package `systemd-devel`
+* libudev - Debian/Ubuntu package `libudev-dev`, Fedora package `systemd-devel`
 * Video 4 Linux - Debian/Ubuntu package `libv4l-dev`.
 
 Optional (but recommended) dependencies:
