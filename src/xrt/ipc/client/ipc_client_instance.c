@@ -27,6 +27,7 @@
 #include "shared/ipc_protocol.h"
 #include "shared/ipc_shmem.h"
 #include "client/ipc_client.h"
+#include "client/ipc_client_interface.h"
 #include "client/ipc_client_connection.h"
 
 #include "ipc_client_generated.h"

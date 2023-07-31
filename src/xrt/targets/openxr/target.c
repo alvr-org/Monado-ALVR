@@ -17,10 +17,8 @@
 U_TRACE_TARGET_SETUP(U_TRACE_WHICH_OPENXR)
 
 #include "xrt/xrt_instance.h"
+#include "client/ipc_client_interface.h"
 
-// Forward declaration
-xrt_result_t
-ipc_instance_create(struct xrt_instance_info *i_info, struct xrt_instance **out_xinst);
 
 xrt_result_t
 xrt_instance_create(struct xrt_instance_info *ii, struct xrt_instance **out_xinst)
