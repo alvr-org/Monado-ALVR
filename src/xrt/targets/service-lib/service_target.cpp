@@ -13,6 +13,7 @@
 #include "wrap/android.view.h"
 
 #include "server/ipc_server.h"
+#include "server/ipc_server_interface.h"
 #include "server/ipc_server_mainloop_android.h"
 #include "util/u_logging.h"
 

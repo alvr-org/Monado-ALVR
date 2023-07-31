@@ -29,6 +29,7 @@
 
 #include "shared/ipc_shmem.h"
 #include "server/ipc_server.h"
+#include "server/ipc_server_interface.h"
 
 #include <stdlib.h>
 #include <inttypes.h>

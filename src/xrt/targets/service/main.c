@@ -18,14 +18,13 @@
 #include "util/u_windows.h"
 #endif
 
+#include "server/ipc_server_interface.h"
+
 #include "target_lists.h"
 
 
 // Insert the on load constructor to init trace marker.
 U_TRACE_TARGET_SETUP(U_TRACE_WHICH_SERVICE)
-
-int
-ipc_server_main(int argc, char *argv[]);
 
 
 int
