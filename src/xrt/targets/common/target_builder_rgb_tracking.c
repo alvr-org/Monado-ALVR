@@ -340,7 +340,7 @@ rgb_open_system(struct xrt_builder *xb,
 #endif
 
 	if (head != NULL) {
-#ifdef XRT_HAVE_OPENCV
+#if defined(XRT_HAVE_OPENCV) && defined(XRT_BUILD_DRIVER_PSVR)
 		if (build.psvr != NULL) {
 			t_psvr_start(build.psvr);
 		}
