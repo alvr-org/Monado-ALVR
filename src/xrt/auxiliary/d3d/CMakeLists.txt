@@ -28,8 +28,9 @@ if(XRT_HAVE_D3D12)
 		aux_d3d
 		PRIVATE
 			d3d_d3d12_bits.h
-			# d3d_d3d12_allocator.cpp
-			# d3d_d3d12_allocator.hpp
+			d3d_d3d12_allocator.cpp
+			d3d_d3d12_allocator.h
+			d3d_d3d12_allocator.hpp
 			d3d_d3d12_fence.cpp
 			d3d_d3d12_fence.hpp
 			d3d_d3d12_helpers.cpp

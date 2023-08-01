@@ -58,6 +58,27 @@ createCommandLists(ID3D12Device &device,
                    wil::com_ptr<ID3D12CommandList> out_release_command_list);
 
 /**
+ * @brief Create a command list for image resource copying
+ *
+ * @param device D3D12 device
+ * @param command_allocator
+ * @param resource_src Source image
+ * @param resource_dst Destination image
+ * @param src_resource_state
+ * @param dst_resource_state
+ * @param[out] out_copy_command_list Command list output
+ * @return HRESULT
+ */
+HRESULT
+createCommandListImageCopy(ID3D12Device &device,
+                           ID3D12CommandAllocator &command_allocator,
+                           ID3D12Resource &resource_src,
+                           ID3D12Resource &resource_dst,
+                           D3D12_RESOURCE_STATES src_resource_state,
+                           D3D12_RESOURCE_STATES dst_resource_state,
+                           wil::com_ptr<ID3D12CommandList> &out_copy_command_list);
+
+/**
  * Imports an image into D3D12 from a handle.
  *
  * @param device D3D12 device

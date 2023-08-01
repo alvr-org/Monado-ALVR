@@ -79,6 +79,70 @@ createCommandLists(ID3D12Device &device,
 	return S_OK;
 }
 
+HRESULT
+createCommandListImageCopy(ID3D12Device &device,
+                           ID3D12CommandAllocator &command_allocator,
+                           ID3D12Resource &resource_src,
+                           ID3D12Resource &resource_dst,
+                           D3D12_RESOURCE_STATES src_resource_state,
+                           D3D12_RESOURCE_STATES dst_resource_state,
+                           wil::com_ptr<ID3D12CommandList> &out_copy_command_list)
+{
+	wil::com_ptr<ID3D12GraphicsCommandList> copyCommandList;
+	RETURN_IF_FAILED(device.CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &command_allocator, nullptr,
+	                                          IID_PPV_ARGS(copyCommandList.put())));
+
+	// Transition images into copy state
+	D3D12_RESOURCE_BARRIER preCopyBarriers[2]{};
+	preCopyBarriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	preCopyBarriers[0].Transition.pResource = &resource_src;
+	preCopyBarriers[0].Transition.StateBefore = src_resource_state;
+	preCopyBarriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+	preCopyBarriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	preCopyBarriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	preCopyBarriers[1].Transition.pResource = &resource_dst;
+	preCopyBarriers[1].Transition.StateBefore = dst_resource_state;
+	preCopyBarriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+	preCopyBarriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	copyCommandList->ResourceBarrier(2, preCopyBarriers);
+
+	// Insert texture copy command
+	D3D12_TEXTURE_COPY_LOCATION srcCopyLocation;
+	srcCopyLocation.pResource = &resource_src;
+	srcCopyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	srcCopyLocation.SubresourceIndex = 0;
+
+	D3D12_TEXTURE_COPY_LOCATION dstCopyLocation;
+	dstCopyLocation.pResource = &resource_dst;
+	dstCopyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	dstCopyLocation.SubresourceIndex = 0;
+
+	copyCommandList->CopyTextureRegion(&dstCopyLocation, 0, 0, 0, &srcCopyLocation, nullptr);
+
+	// Transition images back from copy state
+	D3D12_RESOURCE_BARRIER postCopyBarriers[2]{};
+	postCopyBarriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	postCopyBarriers[0].Transition.pResource = &resource_src;
+	postCopyBarriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+	postCopyBarriers[0].Transition.StateAfter = src_resource_state;
+	postCopyBarriers[0].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	postCopyBarriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	postCopyBarriers[1].Transition.pResource = &resource_dst;
+	postCopyBarriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	postCopyBarriers[1].Transition.StateAfter = dst_resource_state;
+	postCopyBarriers[1].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	copyCommandList->ResourceBarrier(2, postCopyBarriers);
+
+	RETURN_IF_FAILED(copyCommandList->Close());
+
+	out_copy_command_list = std::move(copyCommandList);
+	return S_OK;
+}
+
 
 wil::com_ptr<ID3D12Resource>
 importImage(ID3D12Device &device, HANDLE h)
