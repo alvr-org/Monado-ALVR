@@ -22,9 +22,7 @@
 #include "d3d/d3d_d3d12_helpers.hpp"
 #include "d3d/d3d_d3d12_fence.hpp"
 #include "d3d/d3d_d3d12_bits.h"
-#include "d3d/d3d_d3d11_allocator.hpp"
-#include "d3d/d3d_d3d11_helpers.hpp"
-#include "d3d/d3d_dxgi_helpers.hpp"
+#include "d3d/d3d_d3d12_allocator.hpp"
 #include "util/u_misc.h"
 #include "util/u_pretty_print.h"
 #include "util/u_time.h"
@@ -53,7 +51,7 @@ using namespace std::chrono;
 DEBUG_GET_ONCE_LOG_OPTION(log, "D3D_COMPOSITOR_LOG", U_LOGGING_INFO)
 
 DEBUG_GET_ONCE_BOOL_OPTION(barriers, "D3D12_COMPOSITOR_BARRIERS", false);
-DEBUG_GET_ONCE_BOOL_OPTION(initial_transition, "D3D12_COMPOSITOR_INITIAL_TRANSITION", true);
+DEBUG_GET_ONCE_BOOL_OPTION(compositor_copy, "D3D12_COMPOSITOR_COPY", true);
 
 /*!
  * Spew level logging.
@@ -98,9 +96,6 @@ using unique_swapchain_ref =
     std::unique_ptr<struct xrt_swapchain,
                     xrt::deleters::reference_deleter<struct xrt_swapchain, xrt_swapchain_reference>>;
 
-// 0 is special
-static constexpr uint64_t kKeyedMutexKey = 0;
-
 // Timeout to wait for completion
 static constexpr auto kFenceTimeout = 500ms;
 
@@ -133,12 +128,6 @@ struct client_d3d12_compositor
 
 	//! Command list allocator for the compositor
 	wil::com_ptr<ID3D12CommandAllocator> command_allocator;
-
-	//! D3D11 device used for allocating images
-	wil::com_ptr<ID3D11Device5> d3d11_device;
-
-	//! D3D11 context used for allocating images
-	wil::com_ptr<ID3D11DeviceContext4> d3d11_context;
 
 	/*!
 	 * A timeline semaphore made by the native compositor and imported by us.
@@ -180,24 +169,38 @@ convertTimeoutToWindowsMilliseconds(uint64_t timeout_ns)
 	return (timeout_ns == XRT_INFINITE_DURATION) ? INFINITE : (DWORD)(timeout_ns / (uint64_t)U_TIME_1MS_IN_NS);
 }
 
+static inline bool
+isPowerOfTwo(uint32_t n)
+{
+	return (n & (n - 1)) == 0;
+}
+
+static inline uint32_t
+nextPowerOfTwo(uint32_t n)
+{
+	uint32_t res;
+	for (res = 1; res < n; res *= 2)
+		;
+	return res;
+}
+
+
 /*!
  * Split out from @ref client_d3d12_swapchain to ensure that it is standard
  * layout, std::vector for instance is not standard layout.
  */
 struct client_d3d12_swapchain_data
 {
-	explicit client_d3d12_swapchain_data(enum u_logging_level log_level) : keyed_mutex_collection(log_level) {}
+	explicit client_d3d12_swapchain_data(enum u_logging_level log_level) {}
 
-	xrt::compositor::client::KeyedMutexCollection keyed_mutex_collection;
-
-	//! The shared DXGI handles for our images
-	std::vector<HANDLE> dxgi_handles;
-
-	//! D3D11 Images
-	std::vector<wil::com_ptr<ID3D11Texture2D1>> d3d11_images;
+	//! The shared handles for all our images
+	std::vector<wil::unique_handle> handles;
 
 	//! Images
 	std::vector<wil::com_ptr<ID3D12Resource>> images;
+
+	//! Images used by the application
+	std::vector<wil::com_ptr<ID3D12Resource>> app_images;
 
 	//! Command list per-image to put the resource in a state for acquire (@ref appResourceState) from @ref
 	//! compositorResourceState
@@ -214,6 +217,19 @@ struct client_d3d12_swapchain_data
 	D3D12_RESOURCE_STATES compositorResourceState = D3D12_RESOURCE_STATE_COMMON;
 
 	std::vector<D3D12_RESOURCE_STATES> state;
+
+	/*!
+	 * Optional app to compositor copy mechanism, used as a workaround for d3d12 -> Vulkan interop issues
+	 */
+
+	//! Shared handles for compositor images
+	std::vector<wil::unique_handle> comp_handles;
+
+	//! Images used by the compositor
+	std::vector<wil::com_ptr<ID3D12Resource>> comp_images;
+
+	//! Command list per-image to copy from app image to compositor image
+	std::vector<wil::com_ptr<ID3D12CommandList>> comp_copy_commands;
 };
 
 /*!
@@ -231,6 +247,9 @@ struct client_d3d12_swapchain
 
 	//! Non-owning reference to our parent compositor.
 	struct client_d3d12_compositor *c{nullptr};
+
+	//! UV coordinates scaling when translating from app to compositor image
+	xrt_vec2 comp_uv_scale = {1.0f, 1.0f};
 
 	//! implementation struct with things that aren't standard_layout
 	std::unique_ptr<client_d3d12_swapchain_data> data;
@@ -324,6 +343,16 @@ client_d3d12_swapchain_barrier_to_compositor(client_d3d12_swapchain *sc, uint32_
 	return XRT_SUCCESS;
 }
 
+static void
+client_d3d12_swapchain_scale_rect(struct xrt_swapchain *xsc, xrt_normalized_rect *inOutRect)
+{
+	xrt_vec2 &uvScale = as_client_d3d12_swapchain(xsc)->comp_uv_scale;
+	inOutRect->x *= uvScale.x;
+	inOutRect->y *= uvScale.y;
+	inOutRect->w *= uvScale.x;
+	inOutRect->h *= uvScale.y;
+}
+
 /*
  *
  * Swapchain functions.
@@ -354,11 +383,6 @@ client_d3d12_swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns
 	// Pipe down call into imported swapchain in native compositor.
 	xrt_result_t xret = xrt_swapchain_wait_image(sc->xsc.get(), timeout_ns, index);
 
-	if (xret == XRT_SUCCESS) {
-		// OK, we got the image in the native compositor, now need the keyed mutex in d3d11.
-		xret = sc->data->keyed_mutex_collection.waitKeyedMutex(index, timeout_ns);
-	}
-
 	//! @todo discard old contents?
 	return xret;
 }
@@ -386,10 +410,20 @@ client_d3d12_swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
 	// Pipe down call into imported swapchain in native compositor.
 	xrt_result_t xret = xrt_swapchain_release_image(sc->xsc.get(), index);
 
-	if (xret == XRT_SUCCESS) {
-		// Release the keyed mutex
-		xret = sc->data->keyed_mutex_collection.releaseKeyedMutex(index);
-	}
+	return xret;
+}
+
+static xrt_result_t
+client_d3d12_swapchain_release_image_copy(struct xrt_swapchain *xsc, uint32_t index)
+{
+	struct client_d3d12_swapchain *sc = as_client_d3d12_swapchain(xsc);
+
+	// Queue copy from app to compositor image
+	std::array<ID3D12CommandList *, 1> commandLists{sc->data->comp_copy_commands[index].get()};
+	sc->c->app_queue->ExecuteCommandLists((UINT)commandLists.size(), commandLists.data());
+
+	// Pipe down call into imported swapchain in native compositor.
+	xrt_result_t xret = xrt_swapchain_release_image(sc->xsc.get(), index);
 
 	return xret;
 }
@@ -460,42 +494,48 @@ try {
 	sc->data = std::make_unique<client_d3d12_swapchain_data>(c->log_level);
 	auto &data = sc->data;
 
-	// Make images with D3D11
-	xret = xrt::auxiliary::d3d::d3d11::allocateSharedImages(*(c->d3d11_device), xinfo, image_count, true,
-	                                                        data->d3d11_images, data->dxgi_handles);
+	// Allocate images
+	xret = xrt::auxiliary::d3d::d3d12::allocateSharedImages( //
+	    *(c->device),                                        //
+	    xinfo,                                               //
+	    image_count,                                         //
+	    data->images,                                        //
+	    data->handles);                                      //
 	if (xret != XRT_SUCCESS) {
 		return xret;
 	}
 
-	data->images.reserve(image_count);
+	data->app_images.reserve(image_count);
 
-	// Import to D3D12 from the handle.
+	// Import from the handles for the app.
 	for (uint32_t i = 0; i < image_count; ++i) {
-		wil::com_ptr<ID3D12Resource> d3d12Image =
-		    xrt::auxiliary::d3d::d3d12::importImage(*(c->device), data->dxgi_handles[i]);
+		wil::com_ptr<ID3D12Resource> image =
+		    xrt::auxiliary::d3d::d3d12::importImage(*(c->device), data->handles[i].get());
 
 		// Put the image where the OpenXR state tracker can get it
-		sc->base.images[i] = d3d12Image.get();
+		sc->base.images[i] = image.get();
 
 		// Store the owning pointer for lifetime management
-		data->images.emplace_back(std::move(d3d12Image));
+		data->app_images.emplace_back(std::move(image));
 	}
 
 	D3D12_RESOURCE_STATES appResourceState = d3d_convert_usage_bits_to_d3d12_app_resource_state(xinfo.bits);
+	/// @todo No idea if this is right, might depend on whether it's the compute or graphics compositor!
+	D3D12_RESOURCE_STATES compositorResourceState = D3D12_RESOURCE_STATE_COMMON;
 
-	// Transition all images from _COMMON to the correct state
-	if (debug_get_bool_option_initial_transition()) {
-		D3D_INFO(c, "Executing initial barriers");
+	// app_images do not inherit the initial state of images, so
+	// transition all app images from _COMMON to the correct state
+	{
 		D3D12_RESOURCE_BARRIER barrier{};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON; // state at creation in d3d11
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
 		barrier.Transition.StateAfter = appResourceState;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
 		data->state.resize(image_count, barrier.Transition.StateAfter);
 
 		std::vector<D3D12_RESOURCE_BARRIER> barriers;
-		for (const auto &image : data->images) {
+		for (const auto &image : data->app_images) {
 			barrier.Transition.pResource = image.get();
 			barriers.emplace_back(barrier);
 		}
@@ -509,9 +549,6 @@ try {
 
 		c->app_queue->ExecuteCommandLists((UINT)commandLists.size(), commandLists.data());
 	}
-
-	/// @todo No idea if this is right, might depend on whether it's the compute or graphics compositor!
-	D3D12_RESOURCE_STATES compositorResourceState = D3D12_RESOURCE_STATE_COMMON;
 
 	data->appResourceState = appResourceState;
 	data->compositorResourceState = compositorResourceState;
@@ -544,26 +581,90 @@ try {
 		}
 	}
 
-	// Cache the keyed mutex interface
-	xret = data->keyed_mutex_collection.init(data->d3d11_images);
-	if (xret != XRT_SUCCESS) {
-		D3D_ERROR(c, "Error retrieving keyex mutex interfaces");
-		return xret;
+
+	/*
+	 * There is a bug in nvidia systems where D3D12 and Vulkan disagree on the memory layout
+	 * of smaller images, this causes the native compositor to not display these swapchains
+	 * correctly.
+	 *
+	 * The workaround for this is to create a second set of images for use in the native
+	 * compositor and copy the contents from the app image into the compositor image every
+	 * time the swapchain is released by the app.
+	 *
+	 * @todo: check if AMD and Intel platforms have this issue as well.
+	 */
+	bool fixWidth = info->width < 256 && !isPowerOfTwo(info->width);
+	bool fixHeight = info->height < 256 && !isPowerOfTwo(info->height);
+	bool compositorNeedsCopy = debug_get_bool_option_compositor_copy() && (fixWidth || fixHeight);
+
+	if (compositorNeedsCopy) {
+		// These bits doesn't matter for D3D12, just set it to something.
+		xinfo.bits = XRT_SWAPCHAIN_USAGE_SAMPLED;
+
+		if (fixWidth) {
+			vkinfo.width = xinfo.width = nextPowerOfTwo(info->width);
+		}
+		if (fixHeight) {
+			vkinfo.height = xinfo.height = nextPowerOfTwo(info->height);
+		}
+
+		sc->comp_uv_scale = xrt_vec2{
+		    (float)info->width / xinfo.width,
+		    (float)info->height / xinfo.height,
+		};
+
+		// Allocate compositor images
+		xret = xrt::auxiliary::d3d::d3d12::allocateSharedImages( //
+		    *(c->device),                                        // device
+		    xinfo,                                               // xsci
+		    image_count,                                         // image_count
+		    data->comp_images,                                   // out_images
+		    data->comp_handles);                                 // out_handles
+		if (xret != XRT_SUCCESS) {
+			return xret;
+		}
+
+		// Create copy command lists
+		for (uint32_t i = 0; i < image_count; ++i) {
+			wil::com_ptr<ID3D12CommandList> copyCommandList;
+
+			D3D_INFO(c, "Creating copy-to-compositor command list for image %" PRId32, i);
+			HRESULT hr = xrt::auxiliary::d3d::d3d12::createCommandListImageCopy( //
+			    *(c->device),                                                    // device
+			    *(c->command_allocator),                                         // command_allocator
+			    *(data->images[i]),                                              // resource_src
+			    *(data->comp_images[i]),                                         // resource_dst
+			    appResourceState,                                                // src_resource_state
+			    compositorResourceState,                                         // dst_resource_state
+			    copyCommandList);                                                // out_copy_command_list
+			if (!SUCCEEDED(hr)) {
+				char buf[kErrorBufSize];
+				formatMessage(hr, buf);
+				D3D_ERROR(c, "Error creating command list: %s", buf);
+				return XRT_ERROR_D3D12;
+			}
+			data->comp_copy_commands.emplace_back(std::move(copyCommandList));
+		}
 	}
 
+	std::vector<wil::unique_handle> &handles = compositorNeedsCopy ? data->comp_handles : data->handles;
+
 	// Import into the native compositor, to create the corresponding swapchain which we wrap.
-	xret = xrt::compositor::client::importFromDxgiHandles(
-	    *(c->xcn), data->dxgi_handles, vkinfo, false /** @todo not sure - dedicated allocation */, sc->xsc);
+	xret = xrt::compositor::client::importFromHandleDuplicates(*(c->xcn), handles, vkinfo, true, sc->xsc);
 	if (xret != XRT_SUCCESS) {
 		D3D_ERROR(c, "Error importing D3D swapchain into native compositor");
 		return xret;
 	}
 
+	auto release_image_fn = compositorNeedsCopy //
+	                            ? client_d3d12_swapchain_release_image_copy
+	                            : client_d3d12_swapchain_release_image;
+
 	sc->base.base.destroy = client_d3d12_swapchain_destroy;
 	sc->base.base.acquire_image = client_d3d12_swapchain_acquire_image;
 	sc->base.base.wait_image = client_d3d12_swapchain_wait_image;
 	sc->base.base.barrier_image = client_d3d12_swapchain_barrier_image;
-	sc->base.base.release_image = client_d3d12_swapchain_release_image;
+	sc->base.base.release_image = release_image_fn;
 	sc->c = c;
 	sc->base.base.image_count = image_count;
 
@@ -659,8 +760,12 @@ client_d3d12_compositor_layer_stereo_projection(struct xrt_compositor *xc,
 	struct xrt_swapchain *l_xscn = as_client_d3d12_swapchain(l_xsc)->xsc.get();
 	struct xrt_swapchain *r_xscn = as_client_d3d12_swapchain(r_xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(l_xsc, &d.stereo.l.sub.norm_rect);
+	client_d3d12_swapchain_scale_rect(r_xsc, &d.stereo.r.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_stereo_projection(&c->xcn->base, xdev, l_xscn, r_xscn, data);
+	return xrt_comp_layer_stereo_projection(&c->xcn->base, xdev, l_xscn, r_xscn, &d);
 }
 
 static xrt_result_t
@@ -681,8 +786,14 @@ client_d3d12_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
 	struct xrt_swapchain *l_d_xscn = as_client_d3d12_swapchain(l_d_xsc)->xsc.get();
 	struct xrt_swapchain *r_d_xscn = as_client_d3d12_swapchain(r_d_xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(l_xsc, &d.stereo_depth.l.sub.norm_rect);
+	client_d3d12_swapchain_scale_rect(r_xsc, &d.stereo_depth.r.sub.norm_rect);
+	client_d3d12_swapchain_scale_rect(l_d_xsc, &d.stereo_depth.l_d.sub.norm_rect);
+	client_d3d12_swapchain_scale_rect(r_d_xsc, &d.stereo_depth.r_d.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_stereo_projection_depth(&c->xcn->base, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, data);
+	return xrt_comp_layer_stereo_projection_depth(&c->xcn->base, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, &d);
 }
 
 static xrt_result_t
@@ -697,8 +808,11 @@ client_d3d12_compositor_layer_quad(struct xrt_compositor *xc,
 
 	struct xrt_swapchain *xscfb = as_client_d3d12_swapchain(xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(xsc, &d.quad.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_quad(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_quad(&c->xcn->base, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -713,8 +827,11 @@ client_d3d12_compositor_layer_cube(struct xrt_compositor *xc,
 
 	struct xrt_swapchain *xscfb = as_client_d3d12_swapchain(xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(xsc, &d.cube.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_cube(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_cube(&c->xcn->base, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -729,8 +846,11 @@ client_d3d12_compositor_layer_cylinder(struct xrt_compositor *xc,
 
 	struct xrt_swapchain *xscfb = as_client_d3d12_swapchain(xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(xsc, &d.cylinder.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_cylinder(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_cylinder(&c->xcn->base, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -745,8 +865,11 @@ client_d3d12_compositor_layer_equirect1(struct xrt_compositor *xc,
 
 	struct xrt_swapchain *xscfb = as_client_d3d12_swapchain(xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(xsc, &d.equirect1.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_equirect1(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_equirect1(&c->xcn->base, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -761,8 +884,11 @@ client_d3d12_compositor_layer_equirect2(struct xrt_compositor *xc,
 
 	struct xrt_swapchain *xscfb = as_client_d3d12_swapchain(xsc)->xsc.get();
 
+	struct xrt_layer_data d = *data;
+	client_d3d12_swapchain_scale_rect(xsc, &d.equirect2.sub.norm_rect);
+
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_equirect2(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_equirect2(&c->xcn->base, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -948,25 +1074,6 @@ try {
 		formatMessage(hr, buf);
 		D3D_ERROR(c, "Error creating command allocator: %s", buf);
 		return nullptr;
-	}
-
-
-	// Get D3D11 device/context for the same underlying adapter
-	{
-		LUID adapterLuid = device->GetAdapterLuid();
-		auto adapter = xrt::auxiliary::d3d::getAdapterByLUID(
-		    *reinterpret_cast<const xrt_luid_t *>(&adapterLuid), c->log_level);
-		if (!adapter) {
-			D3D_ERROR(c, "Error getting DXGI adapter");
-			return nullptr;
-		}
-
-		// Now, try to get an equivalent device of our own
-		wil::com_ptr<ID3D11Device> our_dev;
-		wil::com_ptr<ID3D11DeviceContext> our_context;
-		std::tie(our_dev, our_context) = xrt::auxiliary::d3d::d3d11::createDevice(adapter, c->log_level);
-		our_dev.query_to(c->d3d11_device.put());
-		our_context.query_to(c->d3d11_context.put());
 	}
 
 
