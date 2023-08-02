@@ -73,7 +73,11 @@ best with the following vcpkg packages installed:
 
 If you have a recent [vcpkg](https://vcpkg.io) installed and use the appropriate
 CMake toolchain file, the vcpkg manifest in the Monado repository will instruct
-vcpkg to locally install the dependencies automatically.
+vcpkg to locally install the dependencies automatically. The Vulkan SDK
+installer should set the `VULKAN_SDK` Windows environment variable to point
+at the installation location (for example, `C:/VulkanSDK/1.3.250.1`), though
+make sure you open a new terminal (or open the CMake GUI) *after* doing that
+install to make sure it is available.
 
 Monado has been tested on these distributions, but is expected to work on almost
 any modern distribution.
