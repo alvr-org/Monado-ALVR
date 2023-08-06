@@ -246,6 +246,17 @@ void
 math_quat_from_plus_x_z(const struct xrt_vec3 *plus_x, const struct xrt_vec3 *plus_z, struct xrt_quat *result);
 
 /*!
+ * Create a rotation from two vectors vec_a and vec_b that would
+ * rotate vec_a into vec_b
+ *
+ * @relates xrt_quat
+ * @see xrt_vec3
+ * @ingroup aux_math
+ */
+void
+math_quat_from_vec_a_to_vec_b(const struct xrt_vec3 *vec_a, const struct xrt_vec3 *vec_b, struct xrt_quat *result);
+
+/*!
  * Check if this quat can be used in transformation operations.
  *
  * @relates xrt_quat

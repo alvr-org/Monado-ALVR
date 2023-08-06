@@ -253,6 +253,12 @@ math_quat_from_plus_x_z(const struct xrt_vec3 *plus_x, const struct xrt_vec3 *pl
 	math_quat_from_matrix_3x3(&m, result);
 }
 
+extern "C" void
+math_quat_from_vec_a_to_vec_b(const struct xrt_vec3 *vec_a, const struct xrt_vec3 *vec_b, struct xrt_quat *result)
+{
+	map_quat(*result) = Eigen::Quaternionf::FromTwoVectors(copy(vec_a), copy(vec_b));
+}
+
 static bool
 quat_validate(const float precision, const struct xrt_quat *quat)
 {
