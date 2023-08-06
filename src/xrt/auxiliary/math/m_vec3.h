@@ -67,6 +67,13 @@ m_vec3_div_scalar(struct xrt_vec3 l, float r)
 	return ret;
 }
 
+static inline struct xrt_vec3
+m_vec3_inverse(struct xrt_vec3 v)
+{
+	struct xrt_vec3 ret = {-v.x, -v.y, -v.z};
+	return ret;
+}
+
 static inline float
 m_vec3_dot(struct xrt_vec3 l, struct xrt_vec3 r)
 {
