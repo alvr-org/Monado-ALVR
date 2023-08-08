@@ -566,9 +566,13 @@ try {
 			wil::com_ptr<ID3D12CommandList> commandsToCompositor;
 
 			D3D_INFO(c, "Creating command lists for image %" PRId32, i);
-			HRESULT hr = xrt::auxiliary::d3d::d3d12::createCommandLists(
-			    *(c->device), *(c->command_allocator), *(data->images[i]), xinfo.bits, commandsToApp,
-			    commandsToCompositor);
+			HRESULT hr = xrt::auxiliary::d3d::d3d12::createCommandLists( //
+			    *(c->device),                                            // device
+			    *(c->command_allocator),                                 // command_allocator
+			    *(data->images[i]),                                      // resource
+			    xinfo.bits,                                              // bits
+			    commandsToApp,                                           // out_acquire_command_list
+			    commandsToCompositor);                                   // out_release_command_list
 			if (!SUCCEEDED(hr)) {
 				char buf[kErrorBufSize];
 				formatMessage(hr, buf);
