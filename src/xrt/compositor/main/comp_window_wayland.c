@@ -182,6 +182,9 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
 #if XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION >= 4
     NULL,
 #endif
+#if XDG_TOPLEVEL_WM_CAPABILITIES_SINCE_VERSION >= 5
+    NULL,
+#endif
 };
 
 static void
