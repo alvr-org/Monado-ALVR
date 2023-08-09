@@ -35,7 +35,7 @@ u_truncate_vsnprintf(char *chars, size_t char_count, const char *fmt, va_list ar
 {
 	/*
 	 * We always want to be able to write null terminator, and
-	 * something propbly went wrong if char_count larger then INT_MAX.
+	 * something probably went wrong if char_count larger then INT_MAX.
 	 */
 	if (char_count == 0 || char_count > INT_MAX) {
 		return -1;
@@ -68,7 +68,7 @@ u_truncate_snprintf(char *chars, size_t char_count, const char *fmt, ...)
 {
 	/*
 	 * We always want to be able to write null terminator, and
-	 * something propbly went wrong if char_count larger then INT_MAX.
+	 * something probably went wrong if char_count larger then INT_MAX.
 	 */
 	if (char_count == 0 || char_count > INT_MAX) {
 		return -1;
