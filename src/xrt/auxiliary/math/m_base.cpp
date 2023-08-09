@@ -550,6 +550,44 @@ math_quat_to_swing_twist(const struct xrt_quat *in, struct xrt_vec2 *out_swing, 
 	*out_twist = twist_aax.axis().z() * twist_aax.angle();
 }
 
+void
+math_quat_decompose_swing_twist(const struct xrt_quat *in,
+                                const struct xrt_vec3 *twist_axis,
+                                struct xrt_quat *swing,
+                                struct xrt_quat *twist)
+{
+	struct xrt_quat twist_inv;
+	struct xrt_vec3 orig_axis;
+	float dot;
+
+	orig_axis.x = in->x;
+	orig_axis.y = in->y;
+	orig_axis.z = in->z;
+
+	/* Calculate projection onto the twist axis */
+	dot = m_vec3_dot(orig_axis, *twist_axis);
+	struct xrt_vec3 projection = *twist_axis;
+	math_vec3_scalar_mul(dot, &projection);
+
+	twist->x = projection.x;
+	twist->y = projection.y;
+	twist->z = projection.z;
+	twist->w = in->w;
+
+	if (math_quat_dot(twist, twist) < FLT_EPSILON) {
+		/* Singularity - 180 degree rotation and perpendicular
+		 * decomp axis, so twist is the identity quat */
+		twist->x = twist->y = twist->z = 0.0;
+		twist->w = 1.0;
+	} else {
+		math_quat_normalize(twist);
+	}
+
+	math_quat_invert(twist, &twist_inv);
+	math_quat_rotate(in, &twist_inv, swing);
+	math_quat_normalize(swing);
+}
+
 /*
  *
  * Exported matrix functions.

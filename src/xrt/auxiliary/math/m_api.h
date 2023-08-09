@@ -463,6 +463,25 @@ math_quat_from_swing_twist(const struct xrt_vec2 *swing, const float twist, stru
 void
 math_quat_to_swing_twist(const struct xrt_quat *in, struct xrt_vec2 *out_swing, float *out_twist);
 
+/*!
+ * Decompose a quaternion to swing and twist component rotations around a target
+ * axis. The swing is always orthogonal to the target axis, and twist rotation is always
+ * around the axis.
+ *
+ * swing * twist gives back the original quat
+ * (e.g. math_quat_rotate(&swing, &twist, &orig_q))
+ *
+ * See https://arxiv.org/pdf/1506.05481.pdf
+ *
+ * @relates xrt_quat
+ * @ingroup aux_math
+ */
+void
+math_quat_decompose_swing_twist(const struct xrt_quat *in,
+                                const struct xrt_vec3 *twist_axis,
+                                struct xrt_quat *swing,
+                                struct xrt_quat *twist);
+
 /*
  *
  * Matrix functions
