@@ -413,7 +413,7 @@ client_gl_compositor_get_swapchain_create_properties(struct xrt_compositor *xc,
 	struct xrt_swapchain_create_info vkinfo = *info;
 	vkinfo.format = vk_format;
 
-	return xrt_comp_get_swapchain_create_properties(&c->xcn->base, info, xsccp);
+	return xrt_comp_get_swapchain_create_properties(&c->xcn->base, &vkinfo, xsccp);
 }
 
 static xrt_result_t
