@@ -293,6 +293,20 @@ float
 math_quat_len(const struct xrt_quat *quat);
 
 /*!
+ * The dot product of 2 quaternions. It has a analogous interpretation
+ * as for vec3. For unit quaternions, it provides cos(theta) of the
+ * angle between the 2 quaternion rotations.
+ *
+ * @relates xrt_quat
+ * @ingroup aux_math
+ */
+static inline float
+math_quat_dot(const struct xrt_quat *l, const struct xrt_quat *r)
+{
+	return l->x * r->x + l->y * r->y + l->z * r->z + l->w * r->w;
+}
+
+/*!
  * Normalize a quaternion.
  *
  * @relates xrt_quat
