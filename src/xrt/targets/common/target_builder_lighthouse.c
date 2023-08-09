@@ -27,6 +27,8 @@
 #include "vive/vive_common.h"
 #include "vive/vive_config.h"
 #include "vive/vive_calibration.h"
+#include "vive/vive_device.h"
+#include "vive/vive_source.h"
 #include "v4l2/v4l2_interface.h"
 
 #include "xrt/xrt_frameserver.h"
@@ -38,8 +40,6 @@
 
 #ifdef XRT_BUILD_DRIVER_VIVE
 #include "vive/vive_prober.h"
-#include "vive/vive_device.h"
-#include "vive/vive_source.h"
 #endif
 
 #ifdef XRT_BUILD_DRIVER_SURVIVE
