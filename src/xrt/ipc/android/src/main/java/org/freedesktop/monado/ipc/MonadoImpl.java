@@ -64,7 +64,11 @@ public class MonadoImpl extends IMonado.Stub {
             throw new IllegalStateException("server not available");
         } else {
             Log.i(TAG, "connect: fd ownership transferred");
-            parcelFileDescriptor.detachFd();
+            try {
+                parcelFileDescriptor.close();
+            } catch (IOException e) {
+                Log.e(TAG, "connect: close FileDescriptor fail!");
+            }
         }
     }
 

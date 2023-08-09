@@ -157,8 +157,11 @@ Java_org_freedesktop_monado_ipc_MonadoImpl_nativeAddClient(JNIEnv *env, jobject 
 	jni::Object monadoImpl(thiz);
 	U_LOG_D("service: Called nativeAddClient with fd %d", fd);
 
+	int native_fd = dup(fd);
+	U_LOG_D("service: transfer ownership to native and native_fd %d", native_fd);
+
 	// We try pushing the fd number to the server. If and only if we get a 0 return, has the server taken ownership.
-	return IpcServerHelper::instance().addClient(fd);
+	return IpcServerHelper::instance().addClient(native_fd);
 }
 
 extern "C" JNIEXPORT void JNICALL
