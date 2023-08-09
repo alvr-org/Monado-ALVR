@@ -193,11 +193,11 @@ typedef struct model_vertex
 
 typedef struct match_data
 {
-	float angle = {};              // angle from reference vector
-	float distance = {};           // distance from base of reference vector
-	int32_t vertex_index = {};     // index also known as tag
-	Eigen::Vector4f position = {}; // 3d position of vertex
-	blob_point_t src_blob = {};    // blob this vertex was derived from
+	float angle = {};                                   // angle from reference vector
+	float distance = {};                                // distance from base of reference vector
+	int32_t vertex_index = {};                          // index also known as tag
+	Eigen::Vector4f position = Eigen::Vector4f::Zero(); // 3d position of vertex
+	blob_point_t src_blob = {};                         // blob this vertex was derived from
 } match_data_t;
 
 typedef struct match_model
