@@ -1088,7 +1088,7 @@ t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
 	// We have to reference it, getCalibration points at it.
 	t_stereo_camera_calibration_reference(&hgt->calib, calib);
 	getCalibration(hgt, *calib);
-	strncpy(hgt->models_folder, models_folder, ARRAY_SIZE(hgt->models_folder));
+	strncpy(hgt->models_folder, models_folder, ARRAY_SIZE(hgt->models_folder) - 1);
 
 
 	hgt->views[0].hgt = hgt;
