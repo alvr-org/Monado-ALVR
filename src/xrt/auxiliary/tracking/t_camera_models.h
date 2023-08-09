@@ -197,6 +197,17 @@ kb4_unproject(const struct t_camera_model_params *dist, //
 	return true;
 }
 
+static inline void
+kb4_undistort(const struct t_camera_model_params *dist, const float x, const float y, float *out_x, float *out_y)
+{
+	float xp, yp, zp;
+
+	kb4_unproject(dist, x, y, &xp, &yp, &zp);
+
+	*out_x = xp / zp;
+	*out_y = yp / zp;
+}
+
 /*
  * Functions for radial-tangential (un)projections
  */
@@ -291,11 +302,9 @@ rt8_distort(const struct t_camera_model_params *params,
 	d_dist_d_undist->v[3] = dypp_dyp;
 }
 
-static inline bool
-rt8_unproject(
-    const struct t_camera_model_params *hg_dist, const float u, const float v, float *out_x, float *out_y, float *out_z)
+static inline void
+rt8_undistort(const struct t_camera_model_params *hg_dist, const float u, const float v, float *out_x, float *out_y)
 {
-
 	const float x0 = (u - hg_dist->cx) / hg_dist->fx;
 	const float y0 = (v - hg_dist->cy) / hg_dist->fy;
 
@@ -329,16 +338,22 @@ rt8_unproject(
 			break;
 		}
 	}
-	const float xp = undist.x;
-	const float yp = undist.y;
+	*out_x = undist.x;
+	*out_y = undist.y;
+}
 
+static inline bool
+rt8_unproject(
+    const struct t_camera_model_params *hg_dist, const float u, const float v, float *out_x, float *out_y, float *out_z)
+{
+	float xp, yp;
+
+	rt8_undistort(hg_dist, u, v, &xp, &yp);
 
 	const float norm_inv = 1.0f / sqrt(xp * xp + yp * yp + 1.0f);
 	*out_x = xp * norm_inv;
 	*out_y = yp * norm_inv;
 	*out_z = norm_inv;
-
-
 
 	const float rp2 = xp * xp + yp * yp;
 	bool in_injective_area =
@@ -512,6 +527,26 @@ t_camera_models_unproject_and_flip(
 	*out_z *= -1;
 	*out_y *= -1;
 	return ret;
+}
+
+/*!
+ * Takes a distorted 2D point through \p x and \p y and computes the undistorted point into
+ * \p out_x and \p out_y
+ */
+static inline void
+t_camera_models_undistort(
+    const struct t_camera_model_params *dist, const float x, const float y, float *out_x, float *out_y)
+{
+	switch (dist->model) {
+	case T_DISTORTION_OPENCV_RADTAN_8: {
+		rt8_undistort(dist, x, y, out_x, out_y);
+	}; break;
+	case T_DISTORTION_FISHEYE_KB4: {
+		kb4_undistort(dist, x, y, out_x, out_y);
+	}; break;
+	// Return false so we don't get warnings on Release builds.
+	default: assert(false);
+	}
 }
 
 
