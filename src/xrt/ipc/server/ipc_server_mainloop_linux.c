@@ -41,11 +41,20 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include "util/u_debug.h"
 
 #ifdef XRT_HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
 #endif
 
+/*
+ * "XRT_NO_STDIN" option disables stdin and prevents monado-service from terminating.
+ * This could be useful for situations where there is no proper or in a non-interactive shell.
+ * Two example scenarios are:
+ *    * IDE terminals,
+ *    * Some scripting environments where monado-service is spawned in the background
+ */
+DEBUG_GET_ONCE_BOOL_OPTION(skip_stdin, "XRT_NO_STDIN", false)
 
 /*
  *
@@ -178,7 +187,7 @@ init_epoll(struct ipc_server_mainloop *ml)
 
 	struct epoll_event ev = {0};
 
-	if (!ml->launched_by_socket) {
+	if (!ml->launched_by_socket && !debug_get_bool_option_skip_stdin()) {
 		// Can't do this when launched by systemd socket activation by
 		// default.
 		// This polls stdin.
