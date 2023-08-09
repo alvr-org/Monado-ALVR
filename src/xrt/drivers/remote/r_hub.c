@@ -376,7 +376,7 @@ r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
  *
  */
 
-int
+xrt_result_t
 r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd)
 {
 	struct r_hub *r = U_TYPED_CALLOC(struct r_hub);
