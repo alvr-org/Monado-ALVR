@@ -26,6 +26,10 @@
 
 #include <assert.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*!
  * Floating point parameters for @ref T_DISTORTION_FISHEYE_KB4
  * @ingroup aux_tracking
@@ -64,7 +68,7 @@ struct t_camera_model_params
 };
 
 
-const float SQRT_EPSILON = 0.00316; // sqrt(1e-05)
+static const float SQRT_EPSILON = 0.00316; // sqrt(1e-05)
 
 /*
  * Functions for @ref T_DISTORTION_FISHEYE_KB4 (un)projections
@@ -169,12 +173,12 @@ kb4_unproject(const struct t_camera_model_params *dist, //
 	const float mx = (x - dist->cx) / dist->fx;
 	const float my = (y - dist->cy) / dist->fy;
 
-	float theta(0);
-	float sin_theta(0);
-	float cos_theta(1);
+	float theta = 0.0;
+	float sin_theta = 0.0;
+	float cos_theta = 1.0;
 	float thetad = sqrt(mx * mx + my * my);
-	float scaling(1);
-	float d_func_d_theta(0);
+	float scaling = 1.0;
+	float d_func_d_theta = 0.0;
 
 	if (thetad > SQRT_EPSILON) {
 		theta = kb4_solve_theta(dist, &thetad, &d_func_d_theta);
@@ -228,19 +232,19 @@ rt8_project(const struct t_camera_model_params *dist, //
 }
 
 static inline void
-rt8_distort(const t_camera_model_params *params,
-            const xrt_vec2 *undist,
-            xrt_vec2 *dist,
-            xrt_matrix_2x2 *d_dist_d_undist)
+rt8_distort(const struct t_camera_model_params *params,
+            const struct xrt_vec2 *undist,
+            struct xrt_vec2 *dist,
+            struct xrt_matrix_2x2 *d_dist_d_undist)
 {
-	const float &k1 = params->rt8.k1;
-	const float &k2 = params->rt8.k2;
-	const float &p1 = params->rt8.p1;
-	const float &p2 = params->rt8.p2;
-	const float &k3 = params->rt8.k3;
-	const float &k4 = params->rt8.k4;
-	const float &k5 = params->rt8.k5;
-	const float &k6 = params->rt8.k6;
+	const float k1 = params->rt8.k1;
+	const float k2 = params->rt8.k2;
+	const float p1 = params->rt8.p1;
+	const float p2 = params->rt8.p2;
+	const float k3 = params->rt8.k3;
+	const float k4 = params->rt8.k4;
+	const float k5 = params->rt8.k5;
+	const float k6 = params->rt8.k6;
 
 	const float xp = undist->x;
 	const float yp = undist->y;
@@ -553,3 +557,7 @@ t_camera_models_flip_and_project(const struct t_camera_model_params *dist, //
 
 	return t_camera_models_project(dist, x, _y, _z, out_x, out_y);
 }
+
+#ifdef __cplusplus
+}
+#endif
