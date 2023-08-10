@@ -109,7 +109,8 @@ p_factory(struct xrt_tracking_factory *xfact)
 	return (struct p_factory *)xfact;
 }
 
-#ifdef XRT_HAVE_OPENCV
+#if defined(XRT_HAVE_OPENCV)
+#if defined(XRT_BUILD_DRIVER_PSVR) || defined(XRT_BUILD_DRIVER_PSMV)
 static void
 on_video_device(struct xrt_prober *xp,
                 struct xrt_prober_device *pdev,
@@ -169,12 +170,12 @@ p_factory_ensure_frameserver(struct p_factory *fact)
 	struct xrt_frame_sink *xsinks[4] = {0};
 
 	// We create the two psmv trackers up front, but don't start them.
-#if defined(XRT_HAVE_OPENCV) && defined(XRT_BUILD_DRIVER_PSMV)
+#if defined(XRT_BUILD_DRIVER_PSMV)
 	struct xrt_colour_rgb_f32 rgb[2] = {{1.f, 0.f, 0.f}, {1.f, 0.f, 1.f}};
 	t_psmv_create(&fact->xfctx, &rgb[0], fact->data, &fact->xtmv[0], &xsinks[0]);
 	t_psmv_create(&fact->xfctx, &rgb[1], fact->data, &fact->xtmv[1], &xsinks[1]);
 #endif
-#if defined(XRT_HAVE_OPENCV) && defined(XRT_BUILD_DRIVER_PSVR)
+#if defined(XRT_BUILD_DRIVER_PSVR)
 	t_psvr_create(&fact->xfctx, fact->data, &fact->xtvr, &xsinks[2]);
 #endif
 
@@ -230,6 +231,7 @@ p_factory_ensure_frameserver(struct p_factory *fact)
 	// Start the stream now.
 	xrt_fs_stream_start(fact->xfs, xsink, XRT_FS_CAPTURE_TYPE_TRACKING, fact->settings.camera_mode);
 }
+#endif
 
 //! @todo Similar to p_factory_ensure_frameserver but for SLAM sources.
 //! Therefore we can only have one SLAM tracker at a time, with exactly one SLAM
