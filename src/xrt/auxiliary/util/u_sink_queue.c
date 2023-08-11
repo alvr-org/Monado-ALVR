@@ -99,7 +99,11 @@ static bool
 queue_try_refpush(struct u_sink_queue *q, struct xrt_frame *xf)
 {
 	if (queue_is_full(q)) {
-		return false;
+		// Drop the oldest frame
+		if (!queue_is_empty(q)) {
+			struct xrt_frame *old = queue_pop(q);
+			xrt_frame_reference(&old, NULL);
+		}
 	}
 	struct u_sink_queue_elem *elem = U_TYPED_CALLOC(struct u_sink_queue_elem);
 	xrt_frame_reference(&elem->frame, xf);
