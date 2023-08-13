@@ -62,6 +62,16 @@ Settings::GetInt32(const char *pchSection, const char *pchSettingsKey, vr::EVRSe
 float
 Settings::GetFloat(const char *pchSection, const char *pchSettingsKey, vr::EVRSettingsError *peError)
 {
+	if (!strcmp(pchSection, "steamvr")) {
+		if (!strcmp(pchSettingsKey, "analogGain")) {
+			// Return 100% brightness.
+			return 1.0;
+		}
+		if (!strcmp(pchSettingsKey, "ipd")) {
+			// Inform the SteamVR driver we have 0 ipd (in case) it factors this into the eye matrix.
+			return 0.f;
+		}
+	}
 	return 0.0;
 }
 
