@@ -227,6 +227,10 @@ Context::TrackedDeviceAdded(const char *pchDeviceSerialNumber,
 		return setup_controller(pchDeviceSerialNumber, pDriver);
 		break;
 	}
+	case vr::TrackedDeviceClass_TrackingReference: {
+		CTX_INFO("Found lighthouse device: %s", pchDeviceSerialNumber);
+		return false;
+	}
 	default: {
 		CTX_WARN("Attempted to add unsupported device class: %u", eDeviceClass);
 		return false;
