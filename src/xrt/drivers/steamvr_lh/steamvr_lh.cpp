@@ -320,7 +320,9 @@ void
 Context::SetDisplayEyeToHead(uint32_t unWhichDevice,
                              const vr::HmdMatrix34_t &eyeToHeadLeft,
                              const vr::HmdMatrix34_t &eyeToHeadRight)
-{}
+{
+	hmd->SetDisplayEyeToHead(unWhichDevice, eyeToHeadLeft, eyeToHeadRight);
+}
 
 void
 Context::SetDisplayProjectionRaw(uint32_t unWhichDevice, const vr::HmdRect2_t &eyeLeft, const vr::HmdRect2_t &eyeRight)

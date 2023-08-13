@@ -52,15 +52,17 @@ public:
 	update_pose(const vr::DriverPose_t &newPose);
 
 	void
-	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation);
-
-	void
 	handle_properties(const vr::PropertyWrite_t *batch, uint32_t count);
+
+	//! Maps to @ref xrt_device::get_track_pose.
+	virtual void
+	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) = 0;
 
 protected:
 	Device(const DeviceBuilder &builder);
 	std::shared_ptr<Context> ctx;
 	vr::PropertyContainerHandle_t container_handle{0};
+	float vsync_to_photon_ns{0.f};
 
 	virtual void
 	handle_property_write(const vr::PropertyWrite_t &prop) = 0;
@@ -85,6 +87,8 @@ private:
 class HmdDevice : public Device
 {
 public:
+	xrt_pose eye[2];
+	float ipd{0.063}; // meters
 	struct Parts
 	{
 		xrt_hmd_parts base;
@@ -92,6 +96,14 @@ public:
 	};
 
 	HmdDevice(const DeviceBuilder &builder);
+
+	void
+	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) override;
+
+	void
+	SetDisplayEyeToHead(uint32_t unWhichDevice,
+	                    const vr::HmdMatrix34_t &eyeToHeadLeft,
+	                    const vr::HmdMatrix34_t &eyeToHeadRight);
 
 	void
 	get_view_poses(const xrt_vec3 *default_eye_relation,
@@ -106,6 +118,12 @@ public:
 
 	void
 	set_hmd_parts(std::unique_ptr<Parts> parts);
+
+	inline float
+	get_ipd() const
+	{
+		return ipd;
+	}
 
 private:
 	std::unique_ptr<Parts> hmd_parts{nullptr};
@@ -130,6 +148,9 @@ public:
 
 	void
 	set_haptic_handle(vr::VRInputComponentHandle_t handle);
+
+	void
+	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) override;
 
 private:
 	vr::VRInputComponentHandle_t haptic_handle{0};

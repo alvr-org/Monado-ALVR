@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <cstring>
+#include <math.h>
 #include <thread>
 #include <algorithm>
 
@@ -18,6 +19,7 @@
 #include "util/u_device.h"
 #include "util/u_logging.h"
 #include "util/u_json.hpp"
+#include "xrt/xrt_defines.h"
 #include "xrt/xrt_device.h"
 
 #define DEV_ERR(...) U_LOG_IFL_E(ctx->log_level, __VA_ARGS__)
@@ -36,9 +38,9 @@ struct InputClass
 
 namespace {
 const std::unordered_map<std::string_view, InputClass> hmd_classes{
-    {"vive", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
-    {"indexhmd", InputClass{XRT_DEVICE_GENERIC_HMD, "Index HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
-    {"vive_pro", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive Pro HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
+    {"vive", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}}},
+    {"indexhmd", InputClass{XRT_DEVICE_GENERIC_HMD, "Index HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}}},
+    {"vive_pro", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive Pro HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}}},
 };
 
 // Adding support for a new controller is a simple as adding it here.
@@ -82,8 +84,6 @@ HmdDevice::HmdDevice(const DeviceBuilder &builder) : Device(builder)
 	this->name = XRT_DEVICE_GENERIC_HMD;
 	this->device_type = XRT_DEVICE_TYPE_HMD;
 	this->container_handle = 0;
-
-	set_input_class(&hmd_class);
 
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<HmdDevice, &HmdDevice::name>
 	SETUP_MEMBER_FUNC(get_view_poses);
@@ -192,6 +192,18 @@ Device::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_spac
 }
 
 void
+HmdDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
+{
+	*out_relation = relation;
+}
+
+void
+ControllerDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
+{
+	*out_relation = relation;
+}
+
+void
 ControllerDevice::set_output(xrt_output_name name, const xrt_output_value *value)
 
 {
@@ -211,6 +223,45 @@ ControllerDevice::set_output(xrt_output_name name, const xrt_output_value *value
 }
 
 void
+HmdDevice::SetDisplayEyeToHead(uint32_t unWhichDevice,
+                               const vr::HmdMatrix34_t &eyeToHeadLeft,
+                               const vr::HmdMatrix34_t &eyeToHeadRight)
+{
+	xrt_matrix_3x3 leftEye_prequat;
+	xrt_matrix_3x3 rightEye_prequat;
+
+	xrt_pose leftEye_postquat;
+	xrt_pose rightEye_postquat;
+
+	// This is a HmdMatrix34 to xrt_matrix_3x3 copy.
+	for (int i = 0; i < 3; ++i) {
+		for (int j = 0; j < 3; ++j) {
+			leftEye_prequat.v[i * 3 + j] = eyeToHeadLeft.m[i][j];
+			rightEye_prequat.v[i * 3 + j] = eyeToHeadRight.m[i][j];
+		}
+	}
+
+	math_quat_from_matrix_3x3(&leftEye_prequat, &leftEye_postquat.orientation);
+	math_quat_from_matrix_3x3(&rightEye_prequat, &rightEye_postquat.orientation);
+	leftEye_postquat.position.x = eyeToHeadLeft.m[0][3];
+	leftEye_postquat.position.y = eyeToHeadLeft.m[1][3];
+	leftEye_postquat.position.z = eyeToHeadLeft.m[2][3];
+
+	rightEye_postquat.position.x = eyeToHeadRight.m[0][3];
+	rightEye_postquat.position.y = eyeToHeadRight.m[1][3];
+	rightEye_postquat.position.z = eyeToHeadRight.m[2][3];
+
+	this->eye[0].orientation = leftEye_postquat.orientation;
+	this->eye[0].position.x += leftEye_postquat.position.x;
+	this->eye[0].position.y += leftEye_postquat.position.y;
+	this->eye[0].position.z += leftEye_postquat.position.z;
+	this->eye[1].orientation = rightEye_postquat.orientation;
+	this->eye[1].position.x += rightEye_postquat.position.x;
+	this->eye[1].position.y += rightEye_postquat.position.y;
+	this->eye[1].position.z += rightEye_postquat.position.z;
+}
+
+void
 HmdDevice::get_view_poses(const xrt_vec3 *default_eye_relation,
                           uint64_t at_timestamp_ns,
                           uint32_t view_count,
@@ -218,8 +269,14 @@ HmdDevice::get_view_poses(const xrt_vec3 *default_eye_relation,
                           xrt_fov *out_fovs,
                           xrt_pose *out_poses)
 {
-	u_device_get_view_poses(this, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
+	struct xrt_vec3 eye_relation = *default_eye_relation;
+	eye_relation.x = ipd;
+
+	u_device_get_view_poses(this, &eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
 	                        out_poses);
+
+	out_poses[0].orientation = this->eye[0].orientation;
+	out_poses[1].orientation = this->eye[1].orientation;
 }
 
 bool
@@ -421,7 +478,15 @@ HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		}
 		break;
 	}
-	default: break;
+	case vr::Prop_UserIpdMeters_Float: {
+		ipd = *static_cast<float *>(prop.pvBuffer);
+		break;
+	}
+	case vr::Prop_SecondsFromVsyncToPhotons_Float: {
+		vsync_to_photon_ns = *static_cast<float *>(prop.pvBuffer) * 1e9f;
+		break;
+	}
+	default: DEV_DEBUG("Unassigned HMD property: %i", prop.prop); break;
 	}
 }
 
