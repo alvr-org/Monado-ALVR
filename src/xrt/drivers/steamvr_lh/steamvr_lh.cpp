@@ -54,7 +54,7 @@ find_steamvr_install()
 } // namespace
 
 #define CTX_ERR(...) U_LOG_IFL_E(log_level, __VA_ARGS__)
-#define CTX_WARN(...) U_LOG_IFL_E(log_level, __VA_ARGS__)
+#define CTX_WARN(...) U_LOG_IFL_W(log_level, __VA_ARGS__)
 #define CTX_INFO(...) U_LOG_IFL_I(log_level, __VA_ARGS__)
 #define CTX_TRACE(...) U_LOG_IFL_T(log_level, __VA_ARGS__)
 #define CTX_DEBUG(...) U_LOG_IFL_D(log_level, __VA_ARGS__)
