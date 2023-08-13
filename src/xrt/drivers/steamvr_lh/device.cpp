@@ -751,6 +751,44 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		}
 		break;
 	}
+	case vr::Prop_DeviceIsCharging_Bool: {
+		float charging = *static_cast<bool *>(prop.pvBuffer);
+		const char *name;
+		switch (this->device_type) {
+		case XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER: {
+			name = "Left";
+			break;
+		}
+		case XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER: {
+			name = "Right";
+			break;
+		}
+		default: {
+			name = "Unknown";
+		}
+		}
+		DEV_DEBUG("Charging: %s: %s", name, charging ? "true" : "false");
+		break;
+	}
+	case vr::Prop_DeviceBatteryPercentage_Float: {
+		float bat = *static_cast<float *>(prop.pvBuffer);
+		const char *name;
+		switch (this->device_type) {
+		case XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER: {
+			name = "Left";
+			break;
+		}
+		case XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER: {
+			name = "Right";
+			break;
+		}
+		default: {
+			name = "Unknown";
+		}
+		}
+		DEV_DEBUG("Battery: %s: %f", name, bat);
+		break;
+	}
 	default: DEV_DEBUG("Unassigned controller property: %i", prop.prop); break;
 	}
 }
