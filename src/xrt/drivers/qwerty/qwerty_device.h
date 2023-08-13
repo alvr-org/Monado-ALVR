@@ -254,18 +254,32 @@ struct qwerty_controller *
 qwerty_controller(struct xrt_device *xd);
 
 /*!
- * Simulate input/select/click
+ * Simulate pressing input/select/click
  * @public @memberof qwerty_controller
  */
 void
-qwerty_select_click(struct qwerty_controller *qc);
+qwerty_press_select(struct qwerty_controller *qc);
 
 /*!
- * Simulate input/menu/click
+ * Simulate releasing input/select/click
  * @public @memberof qwerty_controller
  */
 void
-qwerty_menu_click(struct qwerty_controller *qc);
+qwerty_release_select(struct qwerty_controller *qc);
+
+/*!
+ * Simulate pressing input/menu/click
+ * @public @memberof qwerty_controller
+ */
+void
+qwerty_press_menu(struct qwerty_controller *qc);
+
+/*!
+ * Simulate releasing input/menu/click
+ * @public @memberof qwerty_controller
+ */
+void
+qwerty_release_menu(struct qwerty_controller *qc);
 
 /*!
  * Attach/detach the pose of `qc` to its HMD. Only works when a qwerty_hmd is present.

@@ -210,8 +210,10 @@ qwerty_process_event(struct xrt_device **xdevs, size_t xdev_count, SDL_Event eve
 	}
 
 	// Select and menu clicks only for controllers.
-	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) qwerty_select_click(qctrl);
-	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_MIDDLE) qwerty_menu_click(qctrl);
+	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) qwerty_press_select(qctrl);
+	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) qwerty_release_select(qctrl);
+	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_MIDDLE) qwerty_press_menu(qctrl);
+	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_MIDDLE) qwerty_release_menu(qctrl);
 
 	// clang-format on
 
