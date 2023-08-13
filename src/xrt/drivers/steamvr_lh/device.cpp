@@ -35,7 +35,11 @@ struct InputClass
 };
 
 namespace {
-InputClass hmd_class{{}, "Generic HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}};
+const std::unordered_map<std::string_view, InputClass> hmd_classes{
+    {"vive", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
+    {"indexhmd", InputClass{XRT_DEVICE_GENERIC_HMD, "Index HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
+    {"vive_pro", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive Pro HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
+};
 
 // Adding support for a new controller is a simple as adding it here.
 // The key for the map needs to be the name of input profile as indicated by the lighthouse driver.
@@ -407,9 +411,15 @@ HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 	case vr::Prop_InputProfilePath_String: {
 		std::string_view profile =
 		    parse_profile(std::string_view(static_cast<char *>(prop.pvBuffer), prop.unBufferSize));
-		if (profile == "vive") {
-			std::strcpy(this->str, "Vive HMD");
+		auto input_class = hmd_classes.find(profile);
+		if (input_class == hmd_classes.end()) {
+			DEV_ERR("Could not find input class for hmd profile %s", std::string(profile).c_str());
+		} else {
+			std::strcpy(this->str, input_class->second.description.c_str());
+			this->name = input_class->second.name;
+			set_input_class(&input_class->second);
 		}
+		break;
 	}
 	default: break;
 	}
