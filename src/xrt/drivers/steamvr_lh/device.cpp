@@ -14,18 +14,30 @@
 #include <algorithm>
 
 #include "math/m_api.h"
+#include "math/m_relation_history.h"
+#include "math/m_space.h"
 #include "device.hpp"
 #include "interfaces/context.hpp"
+#include "os/os_time.h"
+#include "util/u_debug.h"
 #include "util/u_device.h"
+#include "util/u_hand_simulation.h"
+#include "util/u_hand_tracking.h"
 #include "util/u_logging.h"
 #include "util/u_json.hpp"
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_device.h"
 
+#include "vive/vive_poses.h"
+
 #define DEV_ERR(...) U_LOG_IFL_E(ctx->log_level, __VA_ARGS__)
 #define DEV_WARN(...) U_LOG_IFL_W(ctx->log_level, __VA_ARGS__)
 #define DEV_INFO(...) U_LOG_IFL_I(ctx->log_level, __VA_ARGS__)
 #define DEV_DEBUG(...) U_LOG_IFL_D(ctx->log_level, __VA_ARGS__)
+
+#define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
+
+DEBUG_GET_ONCE_BOOL_OPTION(lh_emulate_hand, "LH_EMULATE_HAND", true)
 
 // Each device will have its own input class.
 struct InputClass
@@ -34,13 +46,14 @@ struct InputClass
 	std::string description;
 	const std::vector<xrt_input_name> poses;
 	const std::unordered_map<std::string_view, xrt_input_name> non_poses;
+	const std::unordered_map<std::string_view, IndexFinger> finger_curls;
 };
 
 namespace {
 const std::unordered_map<std::string_view, InputClass> hmd_classes{
-    {"vive", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}}},
-    {"indexhmd", InputClass{XRT_DEVICE_GENERIC_HMD, "Index HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}}},
-    {"vive_pro", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive Pro HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}}},
+    {"vive", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
+    {"indexhmd", InputClass{XRT_DEVICE_GENERIC_HMD, "Index HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
+    {"vive_pro", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive Pro HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
 };
 
 // Adding support for a new controller is a simple as adding it here.
@@ -65,9 +78,56 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
                 {"/input/grip/click", XRT_INPUT_VIVE_SQUEEZE_CLICK},
                 {"/input/trackpad", XRT_INPUT_VIVE_TRACKPAD},
             },
+            {
+                // No fingers on this controller type
+            },
+        },
+    },
+    {
+        "index_controller",
+        InputClass{
+            XRT_DEVICE_INDEX_CONTROLLER,
+            "Valve Index Controller",
+            {
+                XRT_INPUT_INDEX_GRIP_POSE,
+                XRT_INPUT_INDEX_AIM_POSE,
+            },
+            {
+                {"/input/system/click", XRT_INPUT_INDEX_SYSTEM_CLICK},
+                {"/input/system/touch", XRT_INPUT_INDEX_SYSTEM_TOUCH},
+                {"/input/a/click", XRT_INPUT_INDEX_A_CLICK},
+                {"/input/a/touch", XRT_INPUT_INDEX_A_TOUCH},
+                {"/input/b/click", XRT_INPUT_INDEX_B_CLICK},
+                {"/input/b/touch", XRT_INPUT_INDEX_B_TOUCH},
+                {"/input/trigger/click", XRT_INPUT_INDEX_TRIGGER_CLICK},
+                {"/input/trigger/touch", XRT_INPUT_INDEX_TRIGGER_TOUCH},
+                {"/input/trigger/value", XRT_INPUT_INDEX_TRIGGER_VALUE},
+                {"/input/grip/force", XRT_INPUT_INDEX_SQUEEZE_FORCE},
+                {"/input/grip/value", XRT_INPUT_INDEX_SQUEEZE_VALUE},
+                {"/input/thumbstick/click", XRT_INPUT_INDEX_THUMBSTICK_CLICK},
+                {"/input/thumbstick/touch", XRT_INPUT_INDEX_THUMBSTICK_TOUCH},
+                {"/input/thumbstick", XRT_INPUT_INDEX_THUMBSTICK},
+                {"/input/trackpad/force", XRT_INPUT_INDEX_TRACKPAD_FORCE},
+                {"/input/trackpad/touch", XRT_INPUT_INDEX_TRACKPAD_TOUCH},
+                {"/input/trackpad", XRT_INPUT_INDEX_TRACKPAD},
+            },
+            {
+                {"/input/finger/index", IndexFinger::Index},
+                {"/input/finger/middle", IndexFinger::Middle},
+                {"/input/finger/ring", IndexFinger::Ring},
+                {"/input/finger/pinky", IndexFinger::Pinky},
+            },
         },
     },
 };
+
+uint64_t
+chrono_timestamp_ns()
+{
+	auto now = std::chrono::steady_clock::now().time_since_epoch();
+	uint64_t ts = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+	return ts;
+}
 
 // Template for calling a member function of Device from a free function
 template <typename DeviceType, auto Func, typename Ret, typename... Args>
@@ -95,17 +155,26 @@ ControllerDevice::ControllerDevice(vr::PropertyContainerHandle_t handle, const D
 {
 	this->device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
 	this->container_handle = handle;
-	this->xrt_device::set_output = &device_bouncer<ControllerDevice, &ControllerDevice::set_output>;
+#define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<ControllerDevice, &ControllerDevice::name>
+	SETUP_MEMBER_FUNC(set_output);
+	SETUP_MEMBER_FUNC(get_hand_tracking);
+#undef SETUP_MEMBER_FUNC
+}
+
+Device::~Device()
+{
+	m_relation_history_destroy(&relation_hist);
 }
 
 Device::Device(const DeviceBuilder &builder) : xrt_device({}), ctx(builder.ctx), driver(builder.driver)
 {
+	m_relation_history_create(&relation_hist);
 	std::strncpy(this->serial, builder.serial, XRT_DEVICE_NAME_LEN - 1);
 	this->serial[XRT_DEVICE_NAME_LEN - 1] = 0;
 	this->tracking_origin = ctx.get();
 	this->orientation_tracking_supported = true;
 	this->position_tracking_supported = true;
-	this->hand_tracking_supported = false;
+	this->hand_tracking_supported = true;
 	this->force_feedback_supported = false;
 	this->form_factor_check_supported = false;
 
@@ -124,6 +193,14 @@ Device::Device(const DeviceBuilder &builder) : xrt_device({}), ctx(builder.ctx),
 }
 
 void
+ControllerDevice::set_hand_tracking_hand(xrt_input_name name)
+{
+	if (has_index_hand_tracking) {
+		inputs_map["HAND"]->name = name;
+	}
+}
+
+void
 Device::set_input_class(const InputClass *input_class)
 {
 	// this should only be called once
@@ -131,7 +208,7 @@ Device::set_input_class(const InputClass *input_class)
 	this->input_class = input_class;
 
 	// reserve to ensure our pointers don't get invalidated
-	inputs_vec.reserve(input_class->poses.size() + input_class->non_poses.size());
+	inputs_vec.reserve(input_class->poses.size() + input_class->non_poses.size() + 1);
 	for (xrt_input_name input : input_class->poses) {
 		inputs_vec.push_back({true, 0, input, {}});
 	}
@@ -140,9 +217,92 @@ Device::set_input_class(const InputClass *input_class)
 		inputs_vec.push_back({true, 0, input, {}});
 		inputs_map.insert({path, &inputs_vec.back()});
 	}
-
 	this->inputs = inputs_vec.data();
 	this->input_count = inputs_vec.size();
+}
+
+void
+ControllerDevice::set_input_class(const InputClass *input_class)
+{
+	Device::set_input_class(input_class);
+	if (!debug_get_bool_option_lh_emulate_hand()) {
+		return;
+	}
+	has_index_hand_tracking = !input_class->finger_curls.empty();
+	if (!has_index_hand_tracking) {
+		return;
+	}
+	finger_inputs_vec.reserve(input_class->finger_curls.size());
+	for (const auto &[path, finger] : input_class->finger_curls) {
+		finger_inputs_vec.push_back({0, finger, 0.f});
+		finger_inputs_map.insert({path, &finger_inputs_vec.back()});
+	}
+	inputs_vec.push_back({true, 0, XRT_INPUT_GENERIC_HAND_TRACKING_LEFT, {}});
+	inputs_map.insert({std::string_view("HAND"), &inputs_vec.back()});
+	this->inputs = inputs_vec.data();
+	this->input_count = inputs_vec.size();
+}
+
+xrt_hand
+ControllerDevice::get_xrt_hand()
+{
+	switch (this->device_type) {
+	case XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER: {
+		return xrt_hand::XRT_HAND_LEFT;
+	}
+	case XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER: {
+		return xrt_hand::XRT_HAND_RIGHT;
+	}
+	default: DEV_ERR("Device %s cannot be tracked as a hand!", serial); return xrt_hand::XRT_HAND_LEFT;
+	}
+}
+
+const std::vector<std::string> FACE_BUTTONS = {
+    "/input/system/touch", "/input/a/touch", "/input/b/touch", "/input/thumbstick/touch", "/input/trackpad/touch",
+};
+
+void
+ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
+{
+	if (!has_index_hand_tracking)
+		return;
+	float index = 0.f;
+	float middle = 0.f;
+	float ring = 0.f;
+	float pinky = 0.f;
+	float thumb = 0.f;
+	for (auto fi : finger_inputs_vec) {
+		switch (fi.finger) {
+		case IndexFinger::Index: index = fi.value; break;
+		case IndexFinger::Middle: middle = fi.value; break;
+		case IndexFinger::Ring: ring = fi.value; break;
+		case IndexFinger::Pinky: pinky = fi.value; break;
+		default: break;
+		}
+	}
+	for (const auto &name : FACE_BUTTONS) {
+		auto *input = get_input_from_name(name);
+		if (input && input->value.boolean) {
+			thumb = 1.f;
+			break;
+		}
+	}
+	auto curl_values = u_hand_tracking_curl_values{pinky, ring, middle, index, thumb};
+
+	struct xrt_space_relation hand_relation = {};
+
+	m_relation_history_get(relation_hist, last_pose_timestamp, &hand_relation);
+
+	u_hand_sim_simulate_for_valve_index_knuckles(&curl_values, get_xrt_hand(), &hand_relation, out);
+
+	struct xrt_relation_chain chain = {};
+
+	struct xrt_pose pose_offset = XRT_POSE_IDENTITY;
+	vive_poses_get_pose_offset(name, device_type, inputs_map["HAND"]->name, &pose_offset);
+
+	m_relation_chain_push_pose(&chain, &pose_offset);
+	m_relation_chain_push_relation(&chain, &hand_relation);
+	m_relation_chain_resolve(&chain, &out->hand_pose);
 }
 
 xrt_input *
@@ -169,6 +329,10 @@ ControllerDevice::set_haptic_handle(vr::VRInputComponentHandle_t handle)
 		name = XRT_OUTPUT_NAME_VIVE_HAPTIC;
 		break;
 	}
+	case XRT_DEVICE_INDEX_CONTROLLER: {
+		name = XRT_OUTPUT_NAME_INDEX_HAPTIC;
+		break;
+	}
 	default: {
 		DEV_WARN("Unknown device name (%u), haptics will not work", this->name);
 		return;
@@ -185,22 +349,57 @@ Device::update_inputs()
 	ctx->maybe_run_frame(++current_frame);
 }
 
-void
-Device::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
+IndexFingerInput *
+ControllerDevice::get_finger_from_name(const std::string_view name)
 {
-	*out_relation = this->relation;
+	auto finger = finger_inputs_map.find(name);
+	if (finger == finger_inputs_map.end()) {
+		DEV_WARN("requested unknown finger name %s for device %s", std::string(name).c_str(), serial);
+		return nullptr;
+	}
+	return finger->second;
+}
+
+void
+ControllerDevice::get_hand_tracking(enum xrt_input_name name,
+                                    uint64_t desired_timestamp_ns,
+                                    struct xrt_hand_joint_set *out_value,
+                                    uint64_t *out_timestamp_ns)
+{
+	if (!has_index_hand_tracking)
+		return;
+	update_hand_tracking(out_value);
+	out_value->is_active = true;
+	hand_tracking_timestamp = desired_timestamp_ns;
+	*out_timestamp_ns = hand_tracking_timestamp;
 }
 
 void
 HmdDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
 	*out_relation = relation;
+	// TODO: figure this out, it's not doing anything like this
+	// at_timestamp_ns += vsync_to_photon_ns == 0.f ? 11000000L : static_cast<uint64_t>(vsync_to_photon_ns);
 }
 
 void
 ControllerDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
-	*out_relation = relation;
+	xrt_space_relation rel = {};
+	m_relation_history_get(relation_hist, last_pose_timestamp, &rel);
+
+	xrt_pose pose_offset = XRT_POSE_IDENTITY;
+	vive_poses_get_pose_offset(input_class->name, device_type, name, &pose_offset);
+
+	xrt_relation_chain relchain = {};
+
+	m_relation_chain_push_pose(&relchain, &pose_offset);
+	m_relation_chain_push_relation(&relchain, &rel);
+	m_relation_chain_resolve(&relchain, out_relation);
+
+	struct xrt_pose *p = &out_relation->pose;
+	DEV_DEBUG("controller %u: GET_POSITION (%f %f %f) GET_ORIENTATION (%f, %f, %f, %f)", name, p->position.x,
+	          p->position.y, p->position.z, p->orientation.x, p->orientation.y, p->orientation.z, p->orientation.w);
 }
 
 void
@@ -413,6 +612,11 @@ Device::update_pose(const vr::DriverPose_t &newPose)
 		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
 	}
 	this->relation = relation;
+	uint64_t ts = chrono_timestamp_ns();
+	uint64_t ts_offset = static_cast<uint64_t>(newPose.poseTimeOffset * 1000000.0);
+	ts += ts_offset;
+	last_pose_timestamp = ts;
+	m_relation_history_push(relation_hist, &relation, ts);
 }
 
 void
@@ -507,6 +711,24 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		}
 		break;
 	}
-	default: break;
+	case vr::Prop_ControllerRoleHint_Int32: {
+		vr::ETrackedControllerRole role = *static_cast<vr::ETrackedControllerRole *>(prop.pvBuffer);
+		switch (role) {
+		case vr::TrackedControllerRole_RightHand: {
+			this->device_type = XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER;
+			set_hand_tracking_hand(XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
+			break;
+		}
+		case vr::TrackedControllerRole_LeftHand: {
+			this->device_type = XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER;
+			set_hand_tracking_hand(XRT_INPUT_GENERIC_HAND_TRACKING_LEFT);
+			break;
+		}
+		default: {
+		}
+		}
+		break;
+	}
+	default: DEV_DEBUG("Unassigned controller property: %i", prop.prop); break;
 	}
 }

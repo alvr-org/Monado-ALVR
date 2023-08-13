@@ -28,6 +28,22 @@
 
 #include "xrt/xrt_tracking.h"
 
+enum IndexFinger
+{
+	Invalid = -1,
+	Index = 1,
+	Middle,
+	Ring,
+	Pinky,
+};
+
+struct IndexFingerInput
+{
+	int64_t timestamp;
+	IndexFinger finger;
+	float value;
+};
+
 struct xrt_input;
 class Device;
 class Context final : public xrt_tracking_origin,
@@ -49,7 +65,9 @@ class Context final : public xrt_tracking_origin,
 
 	uint64_t current_frame{0};
 
+	std::vector<vr::VRInputComponentHandle_t> handles;
 	std::unordered_map<vr::VRInputComponentHandle_t, xrt_input *> handle_to_input;
+	std::unordered_map<vr::VRInputComponentHandle_t, IndexFingerInput *> handle_to_finger;
 	struct Vec2Components
 	{
 		vr::VRInputComponentHandle_t x;
@@ -85,6 +103,14 @@ class Context final : public xrt_tracking_origin,
 	bool
 	setup_controller(const char *serial, vr::ITrackedDeviceServerDriver *driver);
 	vr::IServerTrackedDeviceProvider *provider;
+
+	inline vr::VRInputComponentHandle_t
+	new_handle()
+	{
+		vr::VRInputComponentHandle_t h = handles.size() + 1;
+		handles.push_back(h);
+		return h;
+	}
 
 protected:
 	Context(const std::string &steam_install, const std::string &steamvr_install, u_logging_level level);

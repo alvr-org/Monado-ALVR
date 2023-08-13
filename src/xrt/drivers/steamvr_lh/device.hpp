@@ -15,6 +15,8 @@
 #include <condition_variable>
 #include <mutex>
 
+#include "interfaces/context.hpp"
+#include "math/m_relation_history.h"
 #include "xrt/xrt_device.h"
 #include "openvr_driver.h"
 
@@ -39,8 +41,9 @@ class Device : public xrt_device
 
 public:
 	xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
+	m_relation_history *relation_hist;
 
-	virtual ~Device() = default;
+	virtual ~Device();
 
 	xrt_input *
 	get_input_from_name(std::string_view name);
@@ -62,6 +65,13 @@ protected:
 	Device(const DeviceBuilder &builder);
 	std::shared_ptr<Context> ctx;
 	vr::PropertyContainerHandle_t container_handle{0};
+	std::unordered_map<std::string_view, xrt_input *> inputs_map;
+	std::vector<xrt_input> inputs_vec;
+	inline static xrt_vec3 chaperone_center{};
+	inline static xrt_quat chaperone_yaw = XRT_QUAT_IDENTITY;
+	const InputClass *input_class;
+	uint64_t last_pose_timestamp{0};
+
 	float vsync_to_photon_ns{0.f};
 
 	virtual void
@@ -72,16 +82,11 @@ protected:
 
 private:
 	vr::ITrackedDeviceServerDriver *driver;
-	const InputClass *input_class;
 	std::vector<xrt_binding_profile> binding_profiles_vec;
-	std::unordered_map<std::string_view, xrt_input *> inputs_map;
-	std::vector<xrt_input> inputs_vec;
 	uint64_t current_frame{0};
 
 	void
 	init_chaperone(const std::string &steam_install);
-	inline static xrt_vec3 chaperone_center{};
-	inline static xrt_quat chaperone_yaw = XRT_QUAT_IDENTITY;
 };
 
 class HmdDevice : public Device
@@ -140,6 +145,10 @@ private:
 
 class ControllerDevice : public Device
 {
+protected:
+	void
+	set_input_class(const InputClass *input_class);
+
 public:
 	ControllerDevice(vr::PropertyContainerHandle_t container_handle, const DeviceBuilder &builder);
 
@@ -152,9 +161,31 @@ public:
 	void
 	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) override;
 
+	IndexFingerInput *
+	get_finger_from_name(std::string_view name);
+
+	void
+	get_hand_tracking(enum xrt_input_name name,
+	                  uint64_t desired_timestamp_ns,
+	                  struct xrt_hand_joint_set *out_value,
+	                  uint64_t *out_timestamp_ns);
+
+	xrt_hand
+	get_xrt_hand();
+
+	void
+	update_hand_tracking(struct xrt_hand_joint_set *out);
+
 private:
 	vr::VRInputComponentHandle_t haptic_handle{0};
 	std::unique_ptr<xrt_output> output{nullptr};
+	bool has_index_hand_tracking{false};
+	std::vector<IndexFingerInput> finger_inputs_vec;
+	std::unordered_map<std::string_view, IndexFingerInput *> finger_inputs_map;
+	uint64_t hand_tracking_timestamp;
+
+	void
+	set_hand_tracking_hand(xrt_input_name name);
 
 	void
 	handle_property_write(const vr::PropertyWrite_t &prop) override;
