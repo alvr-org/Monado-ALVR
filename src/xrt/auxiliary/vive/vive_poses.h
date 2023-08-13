@@ -12,6 +12,10 @@
 #include "xrt/xrt_defines.h"
 #include "vive_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*!
  * Returns the offset from a controller's IMU to the aim pose, grip pose or wrist pose (P_imu_{aim,grip,wrist}).
  *
@@ -24,3 +28,8 @@ vive_poses_get_pose_offset(enum xrt_device_name device_name,
                            enum xrt_device_type device_type,
                            enum xrt_input_name input_name,
                            struct xrt_pose *out_offset_pose);
+
+
+#ifdef __cplusplus
+}
+#endif
