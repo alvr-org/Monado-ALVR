@@ -1,0 +1,2 @@
+- h/mercury: Fix warnings found with GCC 13.
+- t/common: Fix warnings found with GCC 13.
