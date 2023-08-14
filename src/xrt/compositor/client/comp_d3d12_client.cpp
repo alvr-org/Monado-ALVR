@@ -347,11 +347,13 @@ static void
 client_d3d12_swapchain_scale_rect(struct xrt_swapchain *xsc, xrt_normalized_rect *inOutRect)
 {
 	xrt_vec2 &uvScale = as_client_d3d12_swapchain(xsc)->comp_uv_scale;
+
 	inOutRect->x *= uvScale.x;
 	inOutRect->y *= uvScale.y;
 	inOutRect->w *= uvScale.x;
 	inOutRect->h *= uvScale.y;
 }
+
 
 /*
  *
@@ -674,7 +676,9 @@ try {
 
 	xrt_swapchain_reference(out_xsc, &sc->base.base);
 	(void)sc.release();
+
 	return XRT_SUCCESS;
+
 } catch (wil::ResultException const &e) {
 	U_LOG_E("Error creating D3D12 swapchain: %s", e.what());
 	return XRT_ERROR_ALLOCATION;
@@ -686,12 +690,12 @@ try {
 	return XRT_ERROR_ALLOCATION;
 }
 
+
 /*
  *
  * Compositor functions.
  *
  */
-
 
 static xrt_result_t
 client_d3d12_compositor_begin_session(struct xrt_compositor *xc, const struct xrt_begin_session_info *info)
