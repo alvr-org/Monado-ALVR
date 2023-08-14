@@ -1,0 +1,2 @@
+- steamvr_lh: Fix warnings with logger defines.
+- steamvr_lh: Set driver ipd & brightness on HMD.
