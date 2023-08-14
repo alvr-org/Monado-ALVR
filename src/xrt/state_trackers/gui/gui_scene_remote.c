@@ -13,6 +13,7 @@
 #include "util/u_logging.h"
 
 #include "math/m_api.h"
+#include "math/m_vec2.h"
 
 #include "gui_common.h"
 #include "gui_imgui.h"
@@ -141,13 +142,13 @@ handle_input(struct r_remote_controller_data *d)
 	touched = false;
 	d->thumbstick_click = handle_downable_button("Thumbstick Click");
 	touched |= igIsItemHovered(ImGuiHoveredFlags_RectOnly);
-	igSliderFloat2("Thumbstick", &d->thumbstick.x, -1, 1, "%.2f", 0);
+	igSliderFloat2("Thumbstick", *m_vec2_ptr_to_float_arr_ptr(&d->thumbstick), -1, 1, "%.2f", 0);
 	touched |= igIsItemHovered(ImGuiHoveredFlags_RectOnly);
 	d->thumbstick_touch = touched;
 
 	// Trackpad
 	touched = false;
-	igSliderFloat2("Trackpad", &d->trackpad.x, -1, 1, "%.2f", 0);
+	igSliderFloat2("Trackpad", *m_vec2_ptr_to_float_arr_ptr(&d->trackpad), -1, 1, "%.2f", 0);
 	touched |= igIsItemHovered(ImGuiHoveredFlags_RectOnly);
 	igSliderFloat("Trackpad Force", &d->trackpad_force.x, 0, 1, "%.2f", 0);
 	touched |= igIsItemHovered(ImGuiHoveredFlags_RectOnly);
