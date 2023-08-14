@@ -143,8 +143,18 @@ m_vec3_equal_exact(struct xrt_vec3 l, struct xrt_vec3 r)
 	return l.x == r.x && l.y == r.y && l.z == r.z;
 }
 
+typedef float m_vec3_float_arr[3];
+
+static inline m_vec3_float_arr *
+m_vec3_ptr_to_float_arr_ptr(struct xrt_vec3 *ptr)
+{
+	return (m_vec3_float_arr *)ptr;
+}
+
+
 #ifdef __cplusplus
 }
+
 
 static inline struct xrt_vec3
 operator+(const struct xrt_vec3 &a, const struct xrt_vec3 &b)
