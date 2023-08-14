@@ -109,6 +109,15 @@ m_vec2_lerp(struct xrt_vec2 from, struct xrt_vec2 to, float amount)
 	return m_vec2_add(m_vec2_mul_scalar(from, 1.0f - amount), m_vec2_mul_scalar(to, amount));
 }
 
+typedef float m_vec2_float_arr[2];
+
+static inline m_vec2_float_arr *
+m_vec2_ptr_to_float_arr_ptr(struct xrt_vec2 *ptr)
+{
+	return (m_vec2_float_arr *)ptr;
+}
+
+
 #ifdef __cplusplus
 }
 
