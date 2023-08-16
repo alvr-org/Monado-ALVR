@@ -38,6 +38,7 @@
 #define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
 
 DEBUG_GET_ONCE_BOOL_OPTION(lh_emulate_hand, "LH_EMULATE_HAND", true)
+DEBUG_GET_ONCE_BOOL_OPTION(lh_prediction, "LH_PREDICTION", false)
 
 // Each device will have its own input class.
 struct InputClass
@@ -312,8 +313,9 @@ ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
 	auto curl_values = u_hand_tracking_curl_values{pinky, ring, middle, index, thumb};
 
 	struct xrt_space_relation hand_relation = {};
-
-	m_relation_history_get(relation_hist, last_pose_timestamp, &hand_relation);
+	uint64_t last_ns{0}; // Not used.
+	// Currently we only return the latest pose.
+	m_relation_history_get_latest(relation_hist, &last_ns, &hand_relation);
 
 	u_hand_sim_simulate_for_valve_index_knuckles(&curl_values, get_xrt_hand(), &hand_relation, out);
 
@@ -397,18 +399,28 @@ ControllerDevice::get_hand_tracking(enum xrt_input_name name,
 }
 
 void
+Device::get_pose(uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
+{
+	if (debug_get_bool_option_lh_prediction()) {
+		m_relation_history_get(this->relation_hist, at_timestamp_ns, out_relation);
+	} else {
+		// Without prediction just use the latest, also disables history.
+		uint64_t last_ns{0}; // Not used.
+		m_relation_history_get_latest(this->relation_hist, &last_ns, out_relation);
+	}
+}
+
+void
 HmdDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
-	*out_relation = relation;
-	// TODO: figure this out, it's not doing anything like this
-	// at_timestamp_ns += vsync_to_photon_ns == 0.f ? 11000000L : static_cast<uint64_t>(vsync_to_photon_ns);
+	Device::get_pose(at_timestamp_ns, out_relation);
 }
 
 void
 ControllerDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
 	xrt_space_relation rel = {};
-	m_relation_history_get(relation_hist, last_pose_timestamp, &rel);
+	Device::get_pose(at_timestamp_ns, &rel);
 
 	xrt_pose pose_offset = XRT_POSE_IDENTITY;
 	vive_poses_get_pose_offset(input_class->name, device_type, name, &pose_offset);
@@ -633,11 +645,11 @@ Device::update_pose(const vr::DriverPose_t &newPose)
 	} else {
 		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
 	}
-	this->relation = relation;
+
 	uint64_t ts = chrono_timestamp_ns();
 	uint64_t ts_offset = static_cast<uint64_t>(newPose.poseTimeOffset * 1000000.0);
 	ts += ts_offset;
-	last_pose_timestamp = ts;
+
 	m_relation_history_push(relation_hist, &relation, ts);
 }
 

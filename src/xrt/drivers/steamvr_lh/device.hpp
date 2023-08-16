@@ -40,7 +40,6 @@ class Device : public xrt_device
 {
 
 public:
-	xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
 	m_relation_history *relation_hist;
 
 	virtual ~Device();
@@ -53,6 +52,10 @@ public:
 
 	void
 	update_pose(const vr::DriverPose_t &newPose);
+
+	//! Helper to access the @ref relation_hist member.
+	void
+	get_pose(uint64_t at_timestamp_ns, xrt_space_relation *out_relation);
 
 	void
 	handle_properties(const vr::PropertyWrite_t *batch, uint32_t count);
@@ -70,7 +73,6 @@ protected:
 	inline static xrt_vec3 chaperone_center{};
 	inline static xrt_quat chaperone_yaw = XRT_QUAT_IDENTITY;
 	const InputClass *input_class;
-	uint64_t last_pose_timestamp{0};
 
 	float vsync_to_photon_ns{0.f};
 
