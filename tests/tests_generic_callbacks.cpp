@@ -1,4 +1,4 @@
-// Copyright 2021, Collabora, Ltd.
+// Copyright 2021-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,8 +14,8 @@ using xrt::auxiliary::util::GenericCallbacks;
 
 enum class MyEvent
 {
-	ACQUIRED,
-	LOST,
+	ACQUIRED = 1u << 0u,
+	LOST = 1u << 1u,
 };
 
 using mask_t = std::underlying_type_t<MyEvent>;
@@ -78,6 +78,10 @@ TEST_CASE("u_generic_callbacks")
 				                                    &numAcquired, 0, 1));
 				CHECK(callbacks.contains(increment_userdata_int, (mask_t)MyEvent::ACQUIRED,
 				                         &numAcquired));
+
+				// LOST callback should still be there to remove
+				CHECK(1 == callbacks.removeCallback(increment_userdata_int, (mask_t)MyEvent::LOST,
+				                                    &numLost));
 			}
 			SECTION("large max_remove")
 			{
@@ -85,6 +89,10 @@ TEST_CASE("u_generic_callbacks")
 				                                    &numAcquired, 0, 3));
 				CHECK_FALSE(callbacks.contains(increment_userdata_int, (mask_t)MyEvent::ACQUIRED,
 				                               &numAcquired));
+
+				// LOST callback should still be there to remove
+				CHECK(1 == callbacks.removeCallback(increment_userdata_int, (mask_t)MyEvent::LOST,
+				                                    &numLost));
 			}
 			SECTION("num_skip")
 			{
@@ -97,8 +105,63 @@ TEST_CASE("u_generic_callbacks")
 				                                    &numAcquired, 1));
 				CHECK(callbacks.contains(increment_userdata_int, (mask_t)MyEvent::ACQUIRED,
 				                         &numAcquired));
+
+				// LOST callback should still be there to remove
+				CHECK(1 == callbacks.removeCallback(increment_userdata_int, (mask_t)MyEvent::LOST,
+				                                    &numLost));
+			}
+			SECTION("invoke acquired")
+			{
+				CHECK(2 == callbacks.invokeCallbacks(MyEvent::ACQUIRED, invoker));
+				CHECK(2 == numAcquired);
+				CHECK(0 == numLost);
+				{
+					INFO("should have removed themselves");
+					CHECK_FALSE(callbacks.contains(increment_userdata_int,
+					                               (mask_t)MyEvent::ACQUIRED, &numAcquired));
+				}
+
+				{
+					INFO("LOST callbacks should still be there");
+					CHECK(callbacks.contains(increment_userdata_int, (mask_t)MyEvent::LOST,
+					                         &numLost));
+					CHECK(1 == callbacks.removeCallback(increment_userdata_int,
+					                                    (mask_t)MyEvent::LOST, &numLost));
+				}
+			}
+			SECTION("invoke lost")
+			{
+				CHECK(1 == callbacks.invokeCallbacks(MyEvent::LOST, invoker));
+				CHECK(0 == numAcquired);
+				CHECK(1 == numLost);
+				{
+					INFO("should have removed themselves");
+					CHECK_FALSE(callbacks.contains(increment_userdata_int, (mask_t)MyEvent::LOST,
+					                               &numLost));
+				}
+
+				{
+					INFO("ACQUIRED callbacks should still be there");
+					CHECK(callbacks.contains(increment_userdata_int, (mask_t)MyEvent::ACQUIRED,
+					                         &numAcquired));
+					CHECK(2 == callbacks.removeCallback(increment_userdata_int,
+					                                    (mask_t)MyEvent::ACQUIRED, &numAcquired));
+				}
 			}
 		}
-		CHECK(1 == callbacks.removeCallback(increment_userdata_int, (mask_t)MyEvent::LOST, &numLost));
 	}
+}
+
+
+enum MyCEvent
+{
+	MY_C_EVENT_ACQUIRE = 1u << 0u,
+	MY_C_EVENT_LOST = 1u << 1u,
+};
+
+using c_callback_type = bool (*)(MyCEvent event, void *userdata);
+
+TEST_CASE("u_generic_callbacks-C")
+{
+	GenericCallbacks<c_callback_type, MyCEvent> callbacks;
 }

@@ -1,4 +1,4 @@
-// Copyright 2021, Collabora, Ltd.
+// Copyright 2021-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,6 +11,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <type_traits>
+#include <cstdint>
 
 namespace xrt::auxiliary::util {
 template <typename CallbackType, typename EventType> struct GenericCallbacks;
@@ -20,7 +22,7 @@ namespace detail {
 	/*!
 	 * @brief Element type stored in @ref GenericCallbacks, for internal use only.
 	 */
-	template <typename CallbackType, typename MaskType = uint32_t> struct GenericCallbackEntry
+	template <typename CallbackType, typename MaskType = std::uint32_t> struct GenericCallbackEntry
 	{
 		CallbackType callback;
 		MaskType event_mask;
@@ -83,17 +85,17 @@ namespace detail {
  * limit to a single instance in a collection.
  *
  * @tparam CallbackType the function pointer type to store for each callback.
- * @tparam EventType the event enum type.
+ * @tparam EventBitflagType the event enum type.
  */
-template <typename CallbackType, typename EventType> struct GenericCallbacks
+template <typename CallbackType, typename EventBitflagType> struct GenericCallbacks
 {
 
 public:
-	static_assert(std::is_integral<EventType>::value || std::is_enum<EventType>::value,
+	static_assert(std::is_integral<EventBitflagType>::value || std::is_enum<EventBitflagType>::value,
 	              "Your event type must either be an integer or an enum");
 	using callback_t = CallbackType;
-	using event_t = EventType;
-	using mask_t = detail::mask_from_enum_t<EventType>;
+	using event_t = EventBitflagType;
+	using mask_t = detail::mask_from_enum_t<EventBitflagType>;
 
 private:
 	static_assert(std::is_integral<mask_t>::value, "Our enum to mask conversion should have produced an integer");
@@ -195,7 +197,7 @@ public:
 	 */
 	template <typename F>
 	int
-	invokeCallbacks(EventType event, F &&invoker)
+	invokeCallbacks(EventBitflagType event, F &&invoker)
 	{
 		bool needPurge = false;
 
