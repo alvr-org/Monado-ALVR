@@ -2138,7 +2138,9 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 		if (wmr_hmd_request_controller_status(wh)) {
 			/* @todo: Add a timed version of os_cond_wait and a timeout? */
 			/* This will be signalled from the reader thread */
-			os_cond_wait(&wh->controller_status_cond, &wh->controller_status_lock);
+			while (!wh->have_left_controller_status && !wh->have_right_controller_status) {
+				os_cond_wait(&wh->controller_status_cond, &wh->controller_status_lock);
+			}
 			have_controller_status = true;
 		}
 		os_mutex_unlock(&wh->controller_status_lock);
