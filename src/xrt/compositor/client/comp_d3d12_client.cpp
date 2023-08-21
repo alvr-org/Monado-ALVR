@@ -851,10 +851,12 @@ static void
 client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_compositor *c)
 {
 	c->timeline_semaphore_value = 1;
+
 	// See if we can make a "timeline semaphore", also known as ID3D12Fence
 	if (!c->xcn->base.create_semaphore || !c->xcn->base.layer_commit_with_semaphore) {
 		return;
 	}
+
 	struct xrt_compositor_semaphore *xcsem = nullptr;
 	wil::unique_handle timeline_semaphore_handle;
 	if (XRT_SUCCESS != xrt_comp_create_semaphore(&(c->xcn->base), timeline_semaphore_handle.put(), &xcsem)) {
@@ -863,11 +865,18 @@ client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_composi
 	}
 	D3D_INFO(c, "Native compositor created a timeline semaphore for us.");
 
+	// Because importFence throws on failure we use this ref.
 	unique_compositor_semaphore_ref timeline_semaphore{xcsem};
 
-	// try to import and signal
-	wil::com_ptr<ID3D12Fence1> fence =
-	    xrt::auxiliary::d3d::d3d12::importFence(*(c->device), timeline_semaphore_handle.get());
+	// Try to import, importFence throws on failure.
+	wil::com_ptr<ID3D12Fence1> fence = xrt::auxiliary::d3d::d3d12::importFence( //
+	    *(c->device),                                                           //
+	    timeline_semaphore_handle.get());                                       //
+
+	// The fence now owns the handle., importFence throws on failure.
+	timeline_semaphore_handle.release();
+
+	// Check flags.
 	D3D12_FENCE_FLAGS flags = fence->GetCreationFlags();
 	if (flags & D3D12_FENCE_FLAG_NON_MONITORED) {
 		D3D_WARN(c,
@@ -875,6 +884,8 @@ client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_composi
 		         "them unusable in D3D12, falling back to local blocking.");
 		return;
 	}
+
+	// Check if we can signal it.
 	HRESULT hr = fence->Signal(c->timeline_semaphore_value);
 	if (!SUCCEEDED(hr)) {
 		D3D_WARN(c,
@@ -884,6 +895,7 @@ client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_composi
 	}
 
 	D3D_INFO(c, "We imported a timeline semaphore and can signal it.");
+
 	// OK, keep these resources around.
 	c->fence = std::move(fence);
 	c->timeline_semaphore = std::move(timeline_semaphore);
