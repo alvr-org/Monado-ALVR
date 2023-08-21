@@ -241,6 +241,7 @@ Context::TrackedDeviceAdded(const char *pchDeviceSerialNumber,
 		return false;
 	}
 	case vr::TrackedDeviceClass_GenericTracker: {
+		CTX_INFO("Found generic tracker device: %s", pchDeviceSerialNumber);
 		return setup_controller(pchDeviceSerialNumber, pDriver);
 		break;
 	}
