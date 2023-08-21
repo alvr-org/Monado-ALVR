@@ -176,7 +176,7 @@ HmdDevice::HmdDevice(const DeviceBuilder &builder) : Device(builder)
 
 ControllerDevice::ControllerDevice(vr::PropertyContainerHandle_t handle, const DeviceBuilder &builder) : Device(builder)
 {
-	this->device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
+	this->device_type = XRT_DEVICE_TYPE_UNKNOWN;
 	this->container_handle = handle;
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<ControllerDevice, &ControllerDevice::name>
 	SETUP_MEMBER_FUNC(set_output);
