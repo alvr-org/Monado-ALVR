@@ -175,10 +175,15 @@ os_mutex_recursive_destroy(struct os_mutex *om)
 #endif
 }
 
+
 /*
  *
  * Conditional variable.
  *
+ */
+
+/*!
+ * A wrapper around a native conditional variable.
  */
 struct os_cond
 {
