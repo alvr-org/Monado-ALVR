@@ -42,11 +42,11 @@ using std::filesystem::create_directories;
 struct euroc_recorder
 {
 	struct xrt_frame_node node;
-	string path; //!< Destination path for the dataset
+	string path_prefix; //!< Path for the dataset without datetime suffix
+	string path;        //!< Full path of the current dataset being recorded or empty string if none
 	int cam_count = -1;
 
 	bool recording;                    //!< Whether samples are being recorded
-	bool files_created;                //!< Whether the dataset directory structure has been created
 	struct u_var_button recording_btn; //!< UI button to start/stop `recording`
 
 	bool use_jpg; //! Whether or not we should save images as .jpg files
@@ -84,14 +84,8 @@ struct euroc_recorder
  */
 
 static void
-euroc_recorder_try_mkfiles(struct euroc_recorder *er)
+euroc_recorder_mkfiles(struct euroc_recorder *er)
 {
-	// Create directory structure and files only once
-	if (er->files_created) {
-		return;
-	}
-	er->files_created = true;
-
 	string path = er->path;
 
 	create_directories(path + "/mav0/imu0");
@@ -348,29 +342,14 @@ euroc_recorder_create(struct xrt_frame_context *xfctx, const char *record_path, 
 {
 	struct euroc_recorder *er = new euroc_recorder{};
 
-	er->recording = record_from_start;
 	er->cam_count = cam_count;
+	er->path_prefix = record_path == nullptr ? "euroc_recording" : record_path;
+	er->path = record_path == nullptr ? "" : record_path;
 
 	struct xrt_frame_node *xfn = &er->node;
 	xfn->break_apart = euroc_recorder_node_break_apart;
 	xfn->destroy = euroc_recorder_node_destroy;
 	xrt_frame_context_add(xfctx, xfn);
-
-	// Determine dataset path
-	if (record_path != nullptr) {
-		er->path = record_path;
-	} else {
-		time_t seconds = os_realtime_get_ns() / U_1_000_000_000;
-		constexpr size_t size = sizeof("YYYYMMDDHHmmss");
-		char datetime[size] = {0};
-		(void)strftime(datetime, size, "%Y%m%d%H%M%S", localtime(&seconds));
-		string default_path = string{"euroc_recording_"} + datetime;
-		er->path = default_path;
-	}
-
-	if (record_from_start) {
-		euroc_recorder_try_mkfiles(er);
-	}
 
 	er->use_jpg = debug_get_bool_option_euroc_recorder_use_jpg();
 
@@ -408,23 +387,69 @@ euroc_recorder_create(struct xrt_frame_context *xfctx, const char *record_path, 
 	er->writer_gt_sink.push_pose = euroc_recorder_save_gt;
 
 	xrt_slam_sinks *public_sinks = &er->cloner_queues;
+
+	if (record_from_start) {
+		euroc_recorder_start(public_sinks);
+	}
+
 	return public_sinks;
+}
+
+extern "C" void
+euroc_recorder_start(struct xrt_slam_sinks *er_sinks)
+{
+	euroc_recorder *er = container_of(er_sinks, euroc_recorder, cloner_queues);
+
+	if (er->recording) {
+		U_LOG_W("We are already recording; unable to start.");
+		return;
+	}
+
+	// Create dataset directories with current datetime suffix
+	time_t seconds = os_realtime_get_ns() / U_1_000_000_000;
+	constexpr size_t size = sizeof("YYYYMMDDHHmmss");
+	char datetime[size] = {0};
+	(void)strftime(datetime, size, "%Y%m%d%H%M%S", localtime(&seconds));
+	string default_path = er->path_prefix + "_" + datetime;
+	er->path = default_path;
+
+	euroc_recorder_mkfiles(er);
+	er->recording = true;
+}
+
+extern "C" void
+euroc_recorder_stop(struct xrt_slam_sinks *er_sinks)
+{
+	euroc_recorder *er = container_of(er_sinks, euroc_recorder, cloner_queues);
+
+	if (!er->recording) {
+		U_LOG_W("We are already not recording; unable to stop.");
+		return;
+	}
+
+	er->path = "";
+	er->recording = false;
+	euroc_recorder_flush(er);
 }
 
 static void
 euroc_recorder_btn_cb(void *ptr)
 {
 	euroc_recorder *er = (euroc_recorder *)ptr;
-	euroc_recorder_try_mkfiles(er);
-	er->recording = !er->recording;
-	(void)snprintf(er->recording_btn.label, sizeof(er->recording_btn.label),
-	               er->recording ? "Stop recording" : "Record EuRoC dataset");
+
+	if (er->recording) {
+		euroc_recorder_stop(&er->cloner_queues);
+		(void)snprintf(er->recording_btn.label, sizeof(er->recording_btn.label), "Record EuRoC dataset");
+	} else {
+		euroc_recorder_start(&er->cloner_queues);
+		(void)snprintf(er->recording_btn.label, sizeof(er->recording_btn.label), "Stop recording");
+	}
 }
 
 extern "C" void
-euroc_recorder_add_ui(struct xrt_slam_sinks *public_sinks, void *root, const char *prefix)
+euroc_recorder_add_ui(struct xrt_slam_sinks *er_sinks, void *root, const char *prefix)
 {
-	euroc_recorder *er = container_of(public_sinks, euroc_recorder, cloner_queues);
+	euroc_recorder *er = container_of(er_sinks, euroc_recorder, cloner_queues);
 	er->recording_btn.cb = euroc_recorder_btn_cb;
 	er->recording_btn.ptr = er;
 
