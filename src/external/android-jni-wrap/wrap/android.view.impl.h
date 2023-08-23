@@ -98,5 +98,25 @@ inline WindowManager_LayoutParams WindowManager_LayoutParams::construct(int32_t 
             Meta::data().clazz().newInstance(Meta::data().init2, type, flags));
 }
 
+inline int Display_Mode::getModeId() {
+    assert(!isNull());
+    return object().call<int>(Meta::data().getModeId);
+}
+
+inline int Display_Mode::getPhysicalHeight() {
+    assert(!isNull());
+    return object().call<int>(Meta::data().getPhysicalHeight);
+}
+
+inline int Display_Mode::getPhysicalWidth() {
+    assert(!isNull());
+    return object().call<int>(Meta::data().getPhysicalWidth);
+}
+
+inline float Display_Mode::getRefreshRate() {
+    assert(!isNull());
+    return object().call<float>(Meta::data().getRefreshRate);
+}
+
 } // namespace android::view
 } // namespace wrap

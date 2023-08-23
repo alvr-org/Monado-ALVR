@@ -49,5 +49,12 @@ WindowManager_LayoutParams::Meta::Meta(bool deferDrop)
         MetaBaseDroppable::dropClassRef();
     }
 }
+Display_Mode::Meta::Meta() : MetaBaseDroppable(Display_Mode::getTypeName()),
+    getModeId(classRef().getMethod("getModeId", "()I")),
+    getPhysicalHeight(classRef().getMethod("getPhysicalHeight", "()I")),
+    getPhysicalWidth(classRef().getMethod("getPhysicalWidth", "()I")),
+    getRefreshRate(classRef().getMethod("getRefreshRate", "()F")) {
+    MetaBaseDroppable::dropClassRef();
+}
 } // namespace android::view
 } // namespace wrap

@@ -343,6 +343,37 @@ public:
     };
 };
 
+class Display_Mode : public ObjectWrapperBase  {
+public:
+    using ObjectWrapperBase::ObjectWrapperBase;
+    static constexpr const char *getTypeName() noexcept {
+        return "android/view/Display$Mode";
+    }
+
+    int getModeId();
+
+    int getPhysicalHeight();
+
+    int getPhysicalWidth();
+
+    float getRefreshRate();
+
+    struct Meta : public MetaBaseDroppable {
+        jni::method_t getModeId;
+        jni::method_t getPhysicalHeight;
+        jni::method_t getPhysicalWidth;
+        jni::method_t getRefreshRate;
+
+        static Meta &data() {
+            static Meta instance{};
+            return instance;
+        }
+
+    private:
+        Meta();
+    };
+};
+
 } // namespace android::view
 } // namespace wrap
 #include "android.view.impl.h"
