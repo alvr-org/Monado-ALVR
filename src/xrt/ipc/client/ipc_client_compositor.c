@@ -771,6 +771,17 @@ ipc_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 }
 
 static xrt_result_t
+ipc_compositor_set_performance_level(struct xrt_compositor *xc,
+                                     enum xrt_perf_domain domain,
+                                     enum xrt_perf_set_level level)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+	xret = ipc_call_compositor_set_performance_level(icc->ipc_c, domain, level);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_set_performance_level");
+}
+
+static xrt_result_t
 ipc_compositor_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint hint, uint32_t thread_id)
 {
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
@@ -838,6 +849,7 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.set_thread_hint = ipc_compositor_set_thread_hint;
 	icc->base.base.get_display_refresh_rate = ipc_compositor_get_display_refresh_rate;
 	icc->base.base.request_display_refresh_rate = ipc_compositor_request_display_refresh_rate;
+	icc->base.base.set_performance_level = ipc_compositor_set_performance_level;
 
 	// Using in wait frame.
 	os_precise_sleeper_init(&icc->sleeper);

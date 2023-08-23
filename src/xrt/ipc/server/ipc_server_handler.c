@@ -709,6 +709,24 @@ ipc_handle_compositor_request_display_refresh_rate(volatile struct ipc_client_st
 	return xrt_comp_request_display_refresh_rate(ics->xc, display_refresh_rate_hz);
 }
 
+xrt_result_t
+ipc_handle_compositor_set_performance_level(volatile struct ipc_client_state *ics,
+                                            enum xrt_perf_domain domain,
+                                            enum xrt_perf_set_level level)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED;
+	}
+
+	if (ics->xc->set_performance_level == NULL) {
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	return xrt_comp_set_performance_level(ics->xc, domain, level);
+}
+
 static bool
 _update_projection_layer(struct xrt_compositor *xc,
                          volatile struct ipc_client_state *ics,

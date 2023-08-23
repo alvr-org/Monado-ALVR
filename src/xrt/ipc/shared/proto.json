@@ -212,6 +212,13 @@
 		]
 	},
 
+	"compositor_set_performance_level": {
+		"in": [
+			{"name": "domain", "type": "enum xrt_perf_domain"},
+			{"name": "level", "type": "enum xrt_perf_set_level"}
+		]
+	},
+
 	"compositor_set_thread_hint": {
 		"in": [
 			{"name": "hint", "type": "enum xrt_thread_hint"},
