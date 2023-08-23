@@ -1315,17 +1315,21 @@ t_slam_receive_imu(struct xrt_imu_sink *sink, struct xrt_imu_sample *s)
 	xrt_vec3_f64 a = s->accel_m_s2;
 	xrt_vec3_f64 w = s->gyro_rad_secs;
 
+	timepoint_ns now = (timepoint_ns)os_monotonic_get_ns();
+	SLAM_TRACE("[%ld] imu t=%ld  a=[%f,%f,%f] w=[%f,%f,%f]", now, ts, a.x, a.y, a.z, w.x, w.y, w.z);
+	// Check monotonically increasing timestamps
+	if (ts <= t.last_imu_ts) {
+		SLAM_WARN("Sample (%ld) is older than last (%ld)", ts, t.last_imu_ts);
+		return;
+	}
+	t.last_imu_ts = ts;
+
 	//! @todo There are many conversions like these between xrt and
 	//! slam_tracker.hpp types. Implement a casting mechanism to avoid copies.
 	imu_sample sample{ts, a.x, a.y, a.z, w.x, w.y, w.z};
 	if (t.submit) {
 		t.slam->push_imu_sample(sample);
 	}
-	SLAM_TRACE("imu t=%ld a=[%f,%f,%f] w=[%f,%f,%f]", ts, a.x, a.y, a.z, w.x, w.y, w.z);
-
-	// Check monotonically increasing timestamps
-	SLAM_DASSERT(ts > t.last_imu_ts, "Sample (%ld) is older than last (%ld)", ts, t.last_imu_ts);
-	t.last_imu_ts = ts;
 
 	xrt_sink_push_imu(t.euroc_recorder->imu, s);
 
@@ -1348,20 +1352,23 @@ receive_frame(TrackerSlam &t, struct xrt_frame *frame, int cam_index)
 	}
 	SLAM_DASSERT(t.last_cam_ts[0] != INT64_MIN || cam_index == 0, "First frame was not a cam0 frame");
 
+	// Check monotonically increasing timestamps
+	timepoint_ns &last_ts = t.last_cam_ts[cam_index];
+	timepoint_ns ts = (int64_t)frame->timestamp;
+	SLAM_TRACE("[%ld] cam%d frame t=%ld", os_monotonic_get_ns(), cam_index, ts);
+	if (last_ts >= ts) {
+		SLAM_WARN("Frame (%ld) is older than last (%ld)", ts, last_ts);
+	}
+	last_ts = ts;
+
 	// Construct and send the image sample
 	cv::Mat img = t.cv_wrapper->wrap(frame);
 	SLAM_DASSERT_(frame->timestamp < INT64_MAX);
-	img_sample sample{(int64_t)frame->timestamp, img, cam_index};
+	img_sample sample{ts, img, cam_index};
 	if (t.submit) {
 		XRT_TRACE_IDENT(slam_push);
 		t.slam->push_frame(sample);
 	}
-	SLAM_TRACE("cam%d frame t=%lu", cam_index, frame->timestamp);
-
-	// Check monotonically increasing timestamps
-	timepoint_ns &last_ts = t.last_cam_ts[cam_index];
-	SLAM_DASSERT(sample.timestamp > last_ts, "Frame (%ld) is older than last (%ld)", sample.timestamp, last_ts);
-	last_ts = sample.timestamp;
 }
 
 #define DEFINE_RECEIVE_CAM(cam_id)                                                                                     \
