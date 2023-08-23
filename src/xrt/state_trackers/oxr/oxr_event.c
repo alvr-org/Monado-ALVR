@@ -13,6 +13,7 @@
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
+#include "oxr_conversions.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -265,6 +266,35 @@ oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *lo
 	return XR_SUCCESS;
 }
 #endif // OXR_HAVE_EXTX_overlay
+
+
+#ifdef OXR_HAVE_EXT_performance_settings
+XrResult
+oxr_event_push_XrEventDataPerfSettingsEXTX(struct oxr_logger *log,
+                                           struct oxr_session *sess,
+                                           enum xrt_perf_domain domain,
+                                           enum xrt_perf_sub_domain subDomain,
+                                           enum xrt_perf_notify_level fromLevel,
+                                           enum xrt_perf_notify_level toLevel)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrEventDataPerfSettingsEXT *changed;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT;
+	changed->domain = xrt_perf_domain_to_xr(domain);
+	changed->subDomain = xrt_perf_sub_domain_to_xr(subDomain);
+	changed->fromLevel = xrt_perf_notify_level_to_xr(fromLevel);
+	changed->toLevel = xrt_perf_notify_level_to_xr(toLevel);
+	event->result = XR_SUCCESS;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_EXT_performance_settings
 
 XrResult
 oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess)

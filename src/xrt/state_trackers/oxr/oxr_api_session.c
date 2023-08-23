@@ -307,14 +307,14 @@ oxr_xrGetVisibilityMaskKHR(XrSession session,
 }
 #endif // OXR_HAVE_KHR_visibility_mask
 
+
 /*
  *
  * XR_EXT_performance_settings
  *
  */
 
-#ifdef XR_EXT_performance_settings
-
+#ifdef OXR_HAVE_EXT_performance_settings
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrPerfSettingsSetPerformanceLevelEXT(XrSession session,
                                          XrPerfSettingsDomainEXT domain,
@@ -326,11 +326,24 @@ oxr_xrPerfSettingsSetPerformanceLevelEXT(XrSession session,
 	struct oxr_logger log;
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrPerfSettingsSetPerformanceLevelEXT");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
+	OXR_VERIFY_EXTENSION(&log, sess->sys->inst, EXT_performance_settings);
+	// check parameters
+	if (domain != XR_PERF_SETTINGS_DOMAIN_CPU_EXT && domain != XR_PERF_SETTINGS_DOMAIN_GPU_EXT) {
+		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "Invalid domain %d, must be 1(CPU) or 2(GPU)",
+		                 domain);
+	}
 
-	return oxr_error(&log, XR_ERROR_HANDLE_INVALID, "Not implemented");
+	if (level != XR_PERF_SETTINGS_LEVEL_POWER_SAVINGS_EXT && level != XR_PERF_SETTINGS_LEVEL_SUSTAINED_LOW_EXT &&
+	    level != XR_PERF_SETTINGS_LEVEL_SUSTAINED_HIGH_EXT && level != XR_PERF_SETTINGS_LEVEL_BOOST_EXT) {
+		return oxr_error(
+		    &log, XR_ERROR_VALIDATION_FAILURE,
+		    "Invalid level %d, must be 0(POWER SAVE), 25(SUSTAINED LOW), 50(SUSTAINED_HIGH) or 75(BOOST)",
+		    level);
+	}
+
+	return oxr_session_set_perf_level(&log, sess, domain, level);
 }
-
-#endif
+#endif // OXR_HAVE_EXT_performance_settings
 
 
 /*

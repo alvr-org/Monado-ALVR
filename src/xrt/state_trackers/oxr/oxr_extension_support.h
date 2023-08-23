@@ -361,6 +361,17 @@
 
 
 /*
+ * XR_EXT_performance_settings
+ */
+#if defined(XR_EXT_performance_settings) && defined(XRT_FEATURE_OPENXR_PERFORMANCE_SETTINGS)
+#define OXR_HAVE_EXT_performance_settings
+#define OXR_EXTENSION_SUPPORT_EXT_performance_settings(_) _(EXT_performance_settings, EXT_PERFORMANCE_SETTINGS)
+#else
+#define OXR_EXTENSION_SUPPORT_EXT_performance_settings(_)
+#endif
+
+
+/*
  * XR_EXT_samsung_odyssey_controller
  */
 #if defined(XR_EXT_samsung_odyssey_controller) && defined(XRT_FEATURE_OPENXR_INTERACTION_WINMR)
@@ -620,6 +631,7 @@
     OXR_EXTENSION_SUPPORT_EXT_hp_mixed_reality_controller(_) \
     OXR_EXTENSION_SUPPORT_EXT_local_floor(_) \
     OXR_EXTENSION_SUPPORT_EXT_palm_pose(_) \
+    OXR_EXTENSION_SUPPORT_EXT_performance_settings(_) \
     OXR_EXTENSION_SUPPORT_EXT_samsung_odyssey_controller(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_alpha_blend(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_) \

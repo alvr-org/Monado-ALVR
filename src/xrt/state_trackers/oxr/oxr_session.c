@@ -363,6 +363,13 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 		case XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING:
 			handle_reference_space_change_pending(log, sess, &xse.ref_change);
 			break;
+		case XRT_SESSION_EVENT_PERFORMANCE_CHANGE:
+#ifdef OXR_HAVE_EXT_performance_settings
+			oxr_event_push_XrEventDataPerfSettingsEXTX(
+			    log, sess, xse.performance.domain, xse.performance.sub_domain, xse.performance.from_level,
+			    xse.performance.to_level);
+#endif // OXR_HAVE_EXT_performance_settings
+			break;
 		default: U_LOG_W("unhandled event type! %d", xse.type); break;
 		}
 	}
@@ -1394,3 +1401,23 @@ oxr_session_request_display_refresh_rate(struct oxr_logger *log, struct oxr_sess
 	return XR_SUCCESS;
 }
 #endif // OXR_HAVE_FB_display_refresh_rate
+
+#ifdef OXR_HAVE_EXT_performance_settings
+XrResult
+oxr_session_set_perf_level(struct oxr_logger *log,
+                           struct oxr_session *sess,
+                           XrPerfSettingsDomainEXT domain,
+                           XrPerfSettingsLevelEXT level)
+{
+	struct xrt_compositor *xc = &sess->xcn->base;
+
+	if (xc->set_performance_level == NULL) {
+		return XR_ERROR_FUNCTION_UNSUPPORTED;
+	}
+	enum xrt_perf_domain oxr_domain = xr_perf_domain_to_xrt(domain);
+	enum xrt_perf_set_level oxr_level = xr_perf_level_to_xrt(level);
+	xrt_comp_set_performance_level(xc, oxr_domain, oxr_level);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_EXT_performance_settings

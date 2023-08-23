@@ -771,6 +771,14 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
                                 XrVisibilityMaskKHR *visibilityMask);
 #endif // OXR_HAVE_KHR_visibility_mask
 
+#ifdef OXR_HAVE_EXT_performance_settings
+XrResult
+oxr_session_set_perf_level(struct oxr_logger *log,
+                           struct oxr_session *sess,
+                           XrPerfSettingsDomainEXT domain,
+                           XrPerfSettingsLevelEXT level);
+#endif // OXR_HAVE_EXT_performance_settings
+
 /*
  *
  * oxr_space.c
@@ -968,6 +976,15 @@ oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *lo
                                                            bool visible);
 #endif // OXR_HAVE_EXTX_overlay
 
+#ifdef OXR_HAVE_EXT_performance_settings
+XrResult
+oxr_event_push_XrEventDataPerfSettingsEXTX(struct oxr_logger *log,
+                                           struct oxr_session *sess,
+                                           enum xrt_perf_domain domain,
+                                           enum xrt_perf_sub_domain subDomain,
+                                           enum xrt_perf_notify_level fromLevel,
+                                           enum xrt_perf_notify_level toLevel);
+#endif // OXR_HAVE_EXT_performance_settings
 /*!
  * This clears all pending events refers to the given session.
  */

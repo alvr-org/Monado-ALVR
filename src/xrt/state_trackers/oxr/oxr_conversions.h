@@ -158,3 +158,57 @@ xrt_input_type_to_str(enum xrt_input_type type)
 	}
 	// clang-format on
 }
+
+static inline enum xrt_perf_set_level
+xr_perf_level_to_xrt(XrPerfSettingsLevelEXT level)
+{
+	switch (level) {
+	case XR_PERF_SETTINGS_LEVEL_POWER_SAVINGS_EXT: return XRT_PERF_SET_LEVEL_POWER_SAVINGS;
+	case XR_PERF_SETTINGS_LEVEL_SUSTAINED_LOW_EXT: return XRT_PERF_SET_LEVEL_SUSTAINED_LOW;
+	case XR_PERF_SETTINGS_LEVEL_SUSTAINED_HIGH_EXT: return XRT_PERF_SET_LEVEL_SUSTAINED_HIGH;
+	case XR_PERF_SETTINGS_LEVEL_BOOST_EXT: return XRT_PERF_SET_LEVEL_BOOST;
+	default: assert(false); return 0;
+	}
+}
+
+static inline enum xrt_perf_domain
+xr_perf_domain_to_xrt(XrPerfSettingsDomainEXT domain)
+{
+	switch (domain) {
+	case XR_PERF_SETTINGS_DOMAIN_CPU_EXT: return XRT_PERF_DOMAIN_CPU;
+	case XR_PERF_SETTINGS_DOMAIN_GPU_EXT: return XRT_PERF_DOMAIN_GPU;
+	default: assert(false); return 0;
+	}
+}
+
+static inline XrPerfSettingsDomainEXT
+xrt_perf_domain_to_xr(enum xrt_perf_domain domain)
+{
+	switch (domain) {
+	case XRT_PERF_DOMAIN_CPU: return XR_PERF_SETTINGS_DOMAIN_CPU_EXT;
+	case XRT_PERF_DOMAIN_GPU: return XR_PERF_SETTINGS_DOMAIN_GPU_EXT;
+	default: assert(false); return 0;
+	}
+}
+
+static inline XrPerfSettingsSubDomainEXT
+xrt_perf_sub_domain_to_xr(enum xrt_perf_sub_domain subDomain)
+{
+	switch (subDomain) {
+	case XRT_PERF_SUB_DOMAIN_COMPOSITING: return XR_PERF_SETTINGS_SUB_DOMAIN_COMPOSITING_EXT;
+	case XRT_PERF_SUB_DOMAIN_RENDERING: return XR_PERF_SETTINGS_SUB_DOMAIN_RENDERING_EXT;
+	case XRT_PERF_SUB_DOMAIN_THERMAL: return XR_PERF_SETTINGS_SUB_DOMAIN_THERMAL_EXT;
+	default: assert(false); return 0;
+	}
+}
+
+static inline XrPerfSettingsNotificationLevelEXT
+xrt_perf_notify_level_to_xr(enum xrt_perf_notify_level level)
+{
+	switch (level) {
+	case XRT_PERF_NOTIFY_LEVEL_NORMAL: return XR_PERF_SETTINGS_NOTIF_LEVEL_NORMAL_EXT;
+	case XRT_PERF_NOTIFY_LEVEL_WARNING: return XR_PERF_SETTINGS_NOTIF_LEVEL_WARNING_EXT;
+	case XRT_PERF_NOTIFY_LEVEL_IMPAIRED: return XR_PERF_SETTINGS_NOTIF_LEVEL_IMPAIRED_EXT;
+	default: assert(false); return 0;
+	}
+}

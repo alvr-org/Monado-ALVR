@@ -63,6 +63,7 @@ EXTENSIONS = (
     ['XR_EXT_hp_mixed_reality_controller', 'XRT_FEATURE_OPENXR_INTERACTION_WINMR'],
     ['XR_EXT_local_floor', 'XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR'],
     ['XR_EXT_palm_pose', 'XRT_FEATURE_OPENXR_INTERACTION_EXT_PALM_POSE'],
+    ['XR_EXT_performance_settings', 'XRT_FEATURE_OPENXR_PERFORMANCE_SETTINGS'],
     ['XR_EXT_samsung_odyssey_controller', 'XRT_FEATURE_OPENXR_INTERACTION_WINMR'],
     ['XR_FB_composition_layer_alpha_blend', 'XRT_FEATURE_OPENXR_LAYER_FB_ALPHA_BLEND'],
     ['XR_FB_composition_layer_image_layout', 'XRT_FEATURE_OPENXR_LAYER_FB_IMAGE_LAYOUT'],
