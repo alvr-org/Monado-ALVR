@@ -28,7 +28,7 @@ struct fov_entry
 	const struct xrt_fov fovs[2];
 };
 
-static const struct fov_entry fovs[1] = {
+static const struct fov_entry fovs[] = {
     {
         .device_serial_number = "LHR-4DC3ADD6",
         .fovs =
@@ -45,6 +45,25 @@ static const struct fov_entry fovs[1] = {
                     .angle_right = 0.908661,
                     .angle_up = 0.954474,
                     .angle_down = -0.953057,
+                },
+            },
+    },
+    {
+        .device_serial_number = "LHR-C1BF2059", // @mateosss
+        .fovs =
+            {
+                {
+                    .angle_left = -0.907341,
+                    .angle_right = 0.897500,
+                    .angle_up = 0.953644,
+                    .angle_down = -0.953628,
+                },
+                {
+
+                    .angle_left = -0.897566,
+                    .angle_right = 0.907700,
+                    .angle_up = 0.954293,
+                    .angle_down = -0.952802,
                 },
             },
     },
