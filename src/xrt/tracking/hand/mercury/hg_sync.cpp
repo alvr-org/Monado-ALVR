@@ -26,6 +26,7 @@ namespace xrt::tracking::hand::mercury {
 
 DEBUG_GET_ONCE_LOG_OPTION(mercury_log, "MERCURY_LOG", U_LOGGING_WARN)
 DEBUG_GET_ONCE_BOOL_OPTION(mercury_optimize_hand_size, "MERCURY_optimize_hand_size", true)
+DEBUG_GET_ONCE_FLOAT_OPTION(mercury_min_detection_confidence, "MERCURY_MIN_DETECTION_CONFIDENCE", 0.3)
 
 // Flags to tell state tracker that these are indeed valid joints
 static const enum xrt_space_relation_flags valid_flags_ht = (enum xrt_space_relation_flags)(
@@ -1192,6 +1193,11 @@ t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
 	hgt->tuneable_values.max_hand_dist.step = 0.05f;
 	hgt->tuneable_values.max_hand_dist.val = 1.7f;
 
+	hgt->tuneable_values.min_detection_confidence.max = 1.0f;
+	hgt->tuneable_values.min_detection_confidence.min = 0.0f;
+	hgt->tuneable_values.min_detection_confidence.step = 0.01f;
+	hgt->tuneable_values.min_detection_confidence.val = debug_get_float_option_mercury_min_detection_confidence();
+
 	u_var_add_draggable_f32(hgt, &hgt->tuneable_values.amt_use_depth, "Amount to use depth prediction");
 
 
@@ -1207,6 +1213,7 @@ t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
 	u_var_add_draggable_f32(hgt, &hgt->tuneable_values.max_reprojection_error, "Max reprojection error");
 	u_var_add_draggable_f32(hgt, &hgt->tuneable_values.opt_smooth_factor, "Optimizer smoothing factor");
 	u_var_add_draggable_f32(hgt, &hgt->tuneable_values.max_hand_dist, "Max hand distance");
+	u_var_add_draggable_f32(hgt, &hgt->tuneable_values.min_detection_confidence, "Min detection confidence");
 
 	u_var_add_i32(hgt, &hgt->tuneable_values.max_num_outside_view,
 	              "max allowed number of hand joints outside view");

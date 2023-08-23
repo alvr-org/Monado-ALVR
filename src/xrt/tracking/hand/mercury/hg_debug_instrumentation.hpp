@@ -33,6 +33,7 @@ struct hg_tuneable_values
 	struct u_var_draggable_f32 max_reprojection_error;
 	struct u_var_draggable_f32 opt_smooth_factor;
 	struct u_var_draggable_f32 max_hand_dist;
+	struct u_var_draggable_f32 min_detection_confidence;
 	bool scribble_predictions_into_next_frame = false;
 	bool scribble_keypoint_model_outputs = false;
 	bool scribble_optimizer_outputs = true;

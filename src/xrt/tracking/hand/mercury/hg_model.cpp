@@ -383,7 +383,7 @@ run_hand_detection(void *ptr)
 	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
 		hand_region_of_interest &output = info->outputs[hand_idx];
 
-		output.found = hand_exists[hand_idx] > 0.3;
+		output.found = hand_exists[hand_idx] > hgt->tuneable_values.min_detection_confidence.val;
 
 		if (output.found) {
 			output.hand_detection_confidence = hand_exists[hand_idx];
