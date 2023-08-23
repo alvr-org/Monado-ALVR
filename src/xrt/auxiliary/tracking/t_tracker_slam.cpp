@@ -357,6 +357,8 @@ struct TrackerSlam
 	bool submit;   //!< Whether to submit data pushed to sinks to the SLAM tracker
 	int cam_count; //!< Number of cameras used for tracking
 
+	struct u_var_button reset_state_btn; //!< Reset tracker state button
+
 	enum u_logging_level log_level; //!< Logging level for the SLAM tracker, set by SLAM_LOG var
 	struct os_thread_helper oth;    //!< Thread where the external SLAM system runs
 	MatFrame *cv_wrapper;           //!< Wraps a xrt_frame in a cv::Mat to send to the SLAM system
@@ -1084,6 +1086,15 @@ setup_ui(TrackerSlam &t)
 	u_var_add_root(&t, "SLAM Tracker", true);
 	u_var_add_log_level(&t, &t.log_level, "Log Level");
 	u_var_add_bool(&t, &t.submit, "Submit data to SLAM");
+	u_var_button_cb reset_state_cb = [](void *t_ptr) {
+		TrackerSlam *t = (TrackerSlam *)t_ptr;
+		shared_ptr<void> _;
+		t->slam->use_feature(F_RESET_TRACKER_STATE, _, _);
+	};
+	t.reset_state_btn.cb = reset_state_cb;
+	t.reset_state_btn.ptr = &t;
+	u_var_add_button(&t, &t.reset_state_btn, "Reset tracker state");
+
 	u_var_add_bool(&t, &t.gt.override_tracking, "Track with ground truth (if available)");
 	euroc_recorder_add_ui(t.euroc_recorder, &t, "");
 
