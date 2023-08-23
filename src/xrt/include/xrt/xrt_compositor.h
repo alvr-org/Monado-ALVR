@@ -1272,6 +1272,13 @@ struct xrt_compositor
 
 
 	/*!
+	 * @brief Set CPU/GPU performance level.
+	 */
+	xrt_result_t (*set_performance_level)(struct xrt_compositor *xc,
+	                                      enum xrt_perf_domain domain,
+	                                      enum xrt_perf_set_level level);
+
+	/*!
 	 * Teardown the compositor.
 	 *
 	 * The state tracker must have made sure that no frames or sessions are
@@ -1695,6 +1702,19 @@ xrt_comp_request_display_refresh_rate(struct xrt_compositor *xc, float display_r
 	return xc->request_display_refresh_rate(xc, display_refresh_rate_hz);
 }
 
+
+/*!
+ * @copydoc xrt_compositor::set_performance_level
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_set_performance_level(struct xrt_compositor *xc, enum xrt_perf_domain domain, enum xrt_perf_set_level level)
+{
+	return xc->set_performance_level(xc, domain, level);
+}
 
 /*!
  * @copydoc xrt_compositor::destroy

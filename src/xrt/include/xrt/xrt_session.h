@@ -55,6 +55,9 @@ enum xrt_session_event_type
 
 	//! A reference space for this session has a pending change.
 	XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING = 6,
+
+	//! The performance of the session has changed
+	XRT_SESSION_EVENT_PERFORMANCE_CHANGE = 7,
 };
 
 /*!
@@ -138,6 +141,18 @@ struct xrt_session_event_reference_space_change_pending
 };
 
 /*!
+ * Performance metrics change event.
+ */
+struct xrt_session_event_perf_change
+{
+	enum xrt_session_event_type type;
+	enum xrt_perf_domain domain;
+	enum xrt_perf_sub_domain sub_domain;
+	enum xrt_perf_notify_level from_level;
+	enum xrt_perf_notify_level to_level;
+};
+
+/*!
  * Union of all session events, used to return multiple events through one call.
  * Each event struct must start with a @ref xrt_session_event_type field.
  *
@@ -152,6 +167,7 @@ union xrt_session_event {
 	struct xrt_session_event_lost lost;
 	struct xrt_session_event_display_refresh_rate_change display;
 	struct xrt_session_event_reference_space_change_pending ref_change;
+	struct xrt_session_event_perf_change performance;
 };
 
 /*!

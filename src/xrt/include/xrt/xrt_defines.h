@@ -1322,6 +1322,45 @@ enum xrt_form_factor
 };
 
 /*!
+ * Domain type.
+ * Use for performance level setting
+ * Which hardware should be boost/decrease
+ */
+enum xrt_perf_domain
+{
+	XRT_PERF_DOMAIN_CPU = 1,
+	XRT_PERF_DOMAIN_GPU = 2,
+};
+
+enum xrt_perf_sub_domain
+{
+	XRT_PERF_SUB_DOMAIN_COMPOSITING = 1,
+	XRT_PERF_SUB_DOMAIN_RENDERING = 2,
+	XRT_PERF_SUB_DOMAIN_THERMAL = 3
+};
+
+/*!
+ * Performance level.
+ */
+enum xrt_perf_set_level
+{
+	XRT_PERF_SET_LEVEL_POWER_SAVINGS = 0,
+	XRT_PERF_SET_LEVEL_SUSTAINED_LOW = 25,
+	XRT_PERF_SET_LEVEL_SUSTAINED_HIGH = 50,
+	XRT_PERF_SET_LEVEL_BOOST = 75,
+};
+
+/*!
+ * Performance level.
+ */
+enum xrt_perf_notify_level
+{
+	XRT_PERF_NOTIFY_LEVEL_NORMAL = 0,
+	XRT_PERF_NOTIFY_LEVEL_WARNING = 25,
+	XRT_PERF_NOTIFY_LEVEL_IMPAIRED = 75,
+};
+
+/*!
  * Visibility mask, mirror of XrVisibilityMaskKHR
  *
  * @ingroup xrt_iface
