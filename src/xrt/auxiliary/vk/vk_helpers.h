@@ -657,6 +657,22 @@ vk_print_features_info(struct vk_bundle *vk, enum u_logging_level log_level);
 void
 vk_print_external_handles_info(struct vk_bundle *vk, enum u_logging_level log_level);
 
+/*!
+ * Print a @p VkSwapchainCreateInfoKHR, used to log during creation.
+ */
+void
+vk_print_swapchain_create_info(struct vk_bundle *vk, VkSwapchainCreateInfoKHR *i, enum u_logging_level log_level);
+
+#ifdef VK_KHR_display
+/*!
+ * Print a @p VkDisplaySurfaceCreateInfoKHR, used to log during creation.
+ */
+void
+vk_print_display_surface_create_info(struct vk_bundle *vk,
+                                     VkDisplaySurfaceCreateInfoKHR *i,
+                                     enum u_logging_level log_level);
+#endif
+
 
 /*
  *

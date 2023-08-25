@@ -9,8 +9,41 @@
  * @ingroup aux_vk
  */
 
+#include "util/u_pretty_print.h"
 #include "vk/vk_helpers.h"
 
+
+/*
+ *
+ * Helpers.
+ *
+ */
+
+#define P(...) u_pp(dg, __VA_ARGS__)
+#define PNT(...) u_pp(dg, "\n\t" __VA_ARGS__)
+#define PNTT(...) u_pp(dg, "\n\t\t" __VA_ARGS__)
+#define PRINT_BITS(BITS, FUNC)                                                                                         \
+	do {                                                                                                           \
+		for (uint32_t index = 0; index < 32; index++) {                                                        \
+			uint32_t bit = (BITS) & (1u << index);                                                         \
+			if (!bit) {                                                                                    \
+				continue;                                                                              \
+			}                                                                                              \
+			const char *str = FUNC(bit, true);                                                             \
+			if (str != NULL) {                                                                             \
+				PNTT("%s", str);                                                                       \
+			} else {                                                                                       \
+				PNTT("0x%08x", bit);                                                                   \
+			}                                                                                              \
+		}                                                                                                      \
+	} while (false)
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 void
 vk_print_device_info(struct vk_bundle *vk,
@@ -160,3 +193,57 @@ vk_print_external_handles_info(struct vk_bundle *vk, enum u_logging_level log_le
 #error "Need port for fence sync handles printers"
 #endif
 }
+
+void
+vk_print_swapchain_create_info(struct vk_bundle *vk, VkSwapchainCreateInfoKHR *i, enum u_logging_level log_level)
+{
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+	P("VkSwapchainCreateInfoKHR:");
+	PNT("surface: %p", (void *)i->surface);
+	PNT("minImageCount: %u", i->minImageCount);
+	PNT("imageFormat: %s", vk_format_string(i->imageFormat));
+	PNT("imageColorSpace: %s", vk_color_space_string(i->imageColorSpace));
+	PNT("imageExtent: {%u, %u}", i->imageExtent.width, i->imageExtent.height);
+	PNT("imageArrayLayers: %u", i->imageArrayLayers);
+	PNT("imageUsage:");
+	PRINT_BITS(i->imageUsage, vk_image_usage_flag_string);
+	PNT("imageSharingMode: %s", vk_sharing_mode_string(i->imageSharingMode));
+	PNT("queueFamilyIndexCount: %u", i->queueFamilyIndexCount);
+	PNT("preTransform: %s", vk_surface_transform_flag_string(i->preTransform, false));
+	PNT("compositeAlpha: %s", vk_composite_alpha_flag_string(i->compositeAlpha, false));
+	PNT("presentMode: %s", vk_present_mode_string(i->presentMode));
+	PNT("clipped: %s", i->clipped ? "VK_TRUE" : "VK_FALSE");
+	PNT("oldSwapchain: %p", (void *)i->oldSwapchain);
+
+	U_LOG_IFL(log_level, vk->log_level, "%s", sink.buffer);
+}
+
+#ifdef VK_KHR_display
+void
+vk_print_display_surface_create_info(struct vk_bundle *vk,
+                                     VkDisplaySurfaceCreateInfoKHR *i,
+                                     enum u_logging_level log_level)
+{
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	P("VkDisplaySurfaceCreateInfoKHR:");
+	if (i->flags == 0) {
+		// No flags defined so only zero is valid.
+		PNT("flags:");
+	} else {
+		// Field reserved for future use, just in case.
+		PNT("flags: UNKNOWN FLAG(S) 0x%x", i->flags);
+	}
+	PNT("displayMode: %p", (void *)i->displayMode);
+	PNT("planeIndex: %u", i->planeIndex);
+	PNT("planeStackIndex: %u", i->planeStackIndex);
+	PNT("transform: %s", vk_surface_transform_flag_string(i->transform, false));
+	PNT("planeIndex: %f", i->globalAlpha);
+	PNT("alphaMode: %s", vk_display_plane_alpha_flag_string(i->alphaMode, false));
+	PNT("imageExtent: {%u, %u}", i->imageExtent.width, i->imageExtent.height);
+
+	U_LOG_IFL(log_level, vk->log_level, "%s", sink.buffer);
+}
+#endif
