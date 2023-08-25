@@ -74,8 +74,11 @@ print_modes(struct comp_target *ct, VkDisplayModePropertiesKHR *mode_properties,
 	COMP_PRINT_MODE(ct->c, "Listed %d modes", mode_count);
 }
 
-VkDisplayModeKHR
-comp_window_direct_get_primary_display_mode(struct comp_target_swapchain *cts, VkDisplayKHR display)
+static VkDisplayModeKHR
+get_primary_display_mode(struct comp_target_swapchain *cts,
+                         VkDisplayKHR display,
+                         uint32_t *out_width,
+                         uint32_t *out_height)
 {
 	struct vk_bundle *vk = get_vk(cts);
 	struct comp_target *ct = &cts->base;
@@ -142,6 +145,9 @@ comp_window_direct_get_primary_display_mode(struct comp_target_swapchain *cts, V
 
 	free(mode_properties);
 
+	*out_width = props.parameters.visibleRegion.width;
+	*out_height = props.parameters.visibleRegion.height;
+
 	return props.displayMode;
 }
 
@@ -156,6 +162,13 @@ choose_alpha_mode(VkDisplayPlaneAlphaFlagsKHR flags)
 	}
 	return VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR;
 }
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 VkResult
 comp_window_direct_create_surface(struct comp_target_swapchain *cts,
@@ -188,7 +201,36 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 	plane_properties = NULL;
 
 	// Select the mode.
-	VkDisplayModeKHR display_mode = comp_window_direct_get_primary_display_mode(cts, display);
+	uint32_t mode_width = 0, mode_height = 0;
+	VkDisplayModeKHR display_mode = get_primary_display_mode( //
+	    cts,                                                  //
+	    display,                                              //
+	    &mode_width,                                          //
+	    &mode_height);                                        //
+
+	if (display_mode == VK_NULL_HANDLE) {
+		COMP_ERROR(cts->base.c, "Failed to find display mode!");
+		return VK_ERROR_INITIALIZATION_FAILED;
+	}
+
+	/*
+	 * This fixes a bug on NVIDIA Jetson. Note this isn't so much the NVIDIA
+	 * Jetson fault, while the code was working on desktop, Monado did
+	 * something wrong. What happned was that Monado would select a mode
+	 * with one size, while then creating a VkSurface/VkSwapchain of a
+	 * different size. This would work on hardware with scalers/panning
+	 * modes. The NVIDIA Jetson apparently doesn't have support for that so
+	 * failed when presenting. This patch makes sure that the VkSurface &
+	 * VkSwapchain extents match the mode for all direct mode targets.
+	 */
+	if (mode_width != width || mode_height != height) {
+		COMP_INFO(cts->base.c,
+		          "Ignoring given extent %dx%d and using %dx%d from mode, bugs could happen otherwise.",
+		          width,        //
+		          height,       //
+		          mode_width,   //
+		          mode_height); //
+	}
 
 	// We need the capabilities of the selected plane.
 	VkDisplayPlaneCapabilitiesKHR plane_caps;
@@ -206,8 +248,8 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 	    .alphaMode = choose_alpha_mode(plane_caps.supportedAlpha),
 	    .imageExtent =
 	        {
-	            .width = width,
-	            .height = height,
+	            .width = mode_width,
+	            .height = mode_height,
 	        },
 	};
 
