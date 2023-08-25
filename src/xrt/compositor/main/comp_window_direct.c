@@ -182,6 +182,10 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 	// Select the plane.
 	//! @todo actually select the plane.
 	uint32_t plane_index = 0;
+	uint32_t plane_stack_index = plane_properties[plane_index].currentStackIndex;
+
+	free(plane_properties);
+	plane_properties = NULL;
 
 	// Select the mode.
 	VkDisplayModeKHR display_mode = comp_window_direct_get_primary_display_mode(cts, display);
@@ -196,7 +200,7 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 	    .flags = 0,
 	    .displayMode = display_mode,
 	    .planeIndex = plane_index,
-	    .planeStackIndex = plane_properties[plane_index].currentStackIndex,
+	    .planeStackIndex = plane_stack_index,
 	    .transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 	    .globalAlpha = 1.0,
 	    .alphaMode = choose_alpha_mode(plane_caps.supportedAlpha),
