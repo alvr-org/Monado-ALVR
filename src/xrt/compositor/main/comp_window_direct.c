@@ -79,27 +79,34 @@ comp_window_direct_get_primary_display_mode(struct comp_target_swapchain *cts, V
 {
 	struct vk_bundle *vk = get_vk(cts);
 	struct comp_target *ct = &cts->base;
-	uint32_t mode_count;
+	VkDisplayModePropertiesKHR *mode_properties = NULL;
+	uint32_t mode_count = 0;
 	VkResult ret;
 
-	ret = vk->vkGetDisplayModePropertiesKHR(vk->physical_device, display, &mode_count, NULL);
+	// Get plane properties
+	ret = vk_enumerate_display_mode_properties( //
+	    vk,                                     //
+	    vk->physical_device,                    //
+	    display,                                //
+	    &mode_count,                            //
+	    &mode_properties);                      //
 	if (ret != VK_SUCCESS) {
-		COMP_ERROR(ct->c, "vkGetDisplayModePropertiesKHR: %s", vk_result_string(ret));
+		COMP_ERROR(ct->c, "vk_enumerate_display_mode_properties: %s", vk_result_string(ret));
 		return VK_NULL_HANDLE;
 	}
+
+
+	/*
+	 * Debug information.
+	 */
 
 	COMP_DEBUG(ct->c, "Found %d modes", mode_count);
-
-	VkDisplayModePropertiesKHR *mode_properties = U_TYPED_ARRAY_CALLOC(VkDisplayModePropertiesKHR, mode_count);
-	ret = vk->vkGetDisplayModePropertiesKHR(vk->physical_device, display, &mode_count, mode_properties);
-	if (ret != VK_SUCCESS) {
-		COMP_ERROR(ct->c, "vkGetDisplayModePropertiesKHR: %s", vk_result_string(ret));
-		free(mode_properties);
-		return VK_NULL_HANDLE;
-	}
-
 	print_modes(ct, mode_properties, mode_count);
 
+
+	/*
+	 * Select the mode.
+	 */
 
 	int chosen_mode = 0;
 
@@ -157,33 +164,29 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
                                   uint32_t height)
 {
 	struct vk_bundle *vk = get_vk(cts);
+	VkDisplayPlanePropertiesKHR *plane_properties = NULL;
+	uint32_t plane_property_count = 0;
+	VkResult ret;
 
 	// Get plane properties
-	uint32_t plane_property_count;
-	VkResult ret =
-	    vk->vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk->physical_device, &plane_property_count, NULL);
+	ret = vk_enumerate_physical_display_plane_properties( //
+	    vk,                                               //
+	    vk->physical_device,                              //
+	    &plane_property_count,                            //
+	    &plane_properties);                               //
 	if (ret != VK_SUCCESS) {
-		COMP_ERROR(cts->base.c, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR: %s", vk_result_string(ret));
-		return ret;
+		COMP_ERROR(cts->base.c, "vk_enumerate_physical_display_plane_properties: %s", vk_result_string(ret));
+		return VK_ERROR_INITIALIZATION_FAILED;
 	}
 
-	COMP_DEBUG(cts->base.c, "Found %d plane properties.", plane_property_count);
-
-	VkDisplayPlanePropertiesKHR *plane_properties =
-	    U_TYPED_ARRAY_CALLOC(VkDisplayPlanePropertiesKHR, plane_property_count);
-
-	ret = vk->vkGetPhysicalDeviceDisplayPlanePropertiesKHR(vk->physical_device, &plane_property_count,
-	                                                       plane_properties);
-	if (ret != VK_SUCCESS) {
-		COMP_ERROR(cts->base.c, "vkGetPhysicalDeviceDisplayPlanePropertiesKHR: %s", vk_result_string(ret));
-		free(plane_properties);
-		return ret;
-	}
-
+	// Select the plane.
+	//! @todo actually select the plane.
 	uint32_t plane_index = 0;
 
+	// Select the mode.
 	VkDisplayModeKHR display_mode = comp_window_direct_get_primary_display_mode(cts, display);
 
+	// We need the capabilities of the selected plane.
 	VkDisplayPlaneCapabilitiesKHR plane_caps;
 	vk->vkGetDisplayPlaneCapabilitiesKHR(vk->physical_device, display_mode, plane_index, &plane_caps);
 
