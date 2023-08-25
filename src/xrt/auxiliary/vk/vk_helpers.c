@@ -483,16 +483,23 @@ vk_power_state_string(VkDisplayPowerStateEXT code)
 }
 
 XRT_CHECK_RESULT const char *
-vk_format_feature_string(VkFormatFeatureFlagBits code)
+vk_format_feature_flag_string(VkFormatFeatureFlagBits bits, bool null_on_unknown)
 {
-	switch (code) {
+	switch (bits) {
 		ENUM_TO_STR(VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
 		ENUM_TO_STR(VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT);
 		ENUM_TO_STR(VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 		ENUM_TO_STR(VK_FORMAT_FEATURE_TRANSFER_SRC_BIT);
 		ENUM_TO_STR(VK_FORMAT_FEATURE_TRANSFER_DST_BIT);
 		ENUM_TO_STR(VK_FORMAT_R5G6B5_UNORM_PACK16);
-	default: return "UNKNOWN FORMAT FEATURE";
+	default:
+		if (bits == 0) {
+			return "FORMAT FEATURE: NO BITS SET";
+		} else if (bits & (bits - 1)) {
+			return "FORMAT FEATURE: MULTIPLE BITS SET";
+		} else {
+			return null_on_unknown ? NULL : "FORMAT FEATURE: UNKNOWN BIT";
+		}
 	}
 }
 
@@ -592,9 +599,9 @@ vk_surface_transform_flag_string(VkSurfaceTransformFlagBitsKHR bits, bool null_o
 }
 
 XRT_CHECK_RESULT const char *
-xrt_swapchain_usage_string(enum xrt_swapchain_usage_bits code)
+xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on_unknown)
 {
-	switch (code) {
+	switch (bits) {
 		ENUM_TO_STR(XRT_SWAPCHAIN_USAGE_COLOR);
 		ENUM_TO_STR(XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL);
 		ENUM_TO_STR(XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS);
@@ -603,7 +610,14 @@ xrt_swapchain_usage_string(enum xrt_swapchain_usage_bits code)
 		ENUM_TO_STR(XRT_SWAPCHAIN_USAGE_SAMPLED);
 		ENUM_TO_STR(XRT_SWAPCHAIN_USAGE_MUTABLE_FORMAT);
 		ENUM_TO_STR(XRT_SWAPCHAIN_USAGE_INPUT_ATTACHMENT);
-	default: return "UNKNOWN SWAPCHAIN USAGE";
+	default:
+		if (bits == 0) {
+			return "XRT SWAPCHAIN USAGE: NO BITS SET";
+		} else if (bits & (bits - 1)) {
+			return "XRT SWAPCHAIN USAGE: MULTIPLE BITS SET";
+		} else {
+			return null_on_unknown ? NULL : "XRT SWAPCHAIN USAGE: UNKNOWN BIT";
+		}
 	}
 }
 

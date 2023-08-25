@@ -44,8 +44,8 @@ check_feature(VkFormat format,
 {
 	if ((format_features & flag) == 0) {
 		U_LOG_E("vk_csci_get_image_usage_flags: %s requested but %s not supported for format %s (%08x) (%08x)",
-		        xrt_swapchain_usage_string(usage), vk_format_feature_string(flag), vk_format_string(format),
-		        format_features, flag);
+		        xrt_swapchain_usage_flag_string(usage, false), vk_format_feature_flag_string(flag, false),
+		        vk_format_string(format), format_features, flag);
 		return false;
 	}
 	return true;

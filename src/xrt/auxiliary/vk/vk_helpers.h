@@ -461,8 +461,19 @@ vk_color_space_string(VkColorSpaceKHR code);
 XRT_CHECK_RESULT const char *
 vk_power_state_string(VkDisplayPowerStateEXT code);
 
+
+/*
+ *
+ * Flag bits string functions.
+ *
+ */
+
+/*!
+ * Returns the format feature flag if one valid bit is set,
+ * if multiple bits are set, will return 'MULTIPLE BIT SET'.
+ */
 XRT_CHECK_RESULT const char *
-vk_format_feature_string(VkFormatFeatureFlagBits code);
+vk_format_feature_flag_string(VkFormatFeatureFlagBits bits, bool null_on_unknown);
 
 /*!
  * Returns the image usage flag if one valid bit is set,
@@ -485,8 +496,12 @@ vk_composite_alpha_flag_string(VkCompositeAlphaFlagBitsKHR bits, bool null_on_un
 XRT_CHECK_RESULT const char *
 vk_surface_transform_flag_string(VkSurfaceTransformFlagBitsKHR bits, bool null_on_unknown);
 
+/*!
+ * Returns xrt swapchain_usage flag if one valid bit is set,
+ * if multiple bits are set, will return 'MULTIPLE BIT SET'.
+ */
 XRT_CHECK_RESULT const char *
-xrt_swapchain_usage_string(enum xrt_swapchain_usage_bits code);
+xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on_unknown);
 
 
 /*
