@@ -420,6 +420,16 @@ vk_format_string(VkFormat code)
 }
 
 XRT_CHECK_RESULT const char *
+vk_sharing_mode_string(VkSharingMode code)
+{
+	switch (code) {
+		ENUM_TO_STR(VK_SHARING_MODE_EXCLUSIVE);
+		ENUM_TO_STR(VK_SHARING_MODE_CONCURRENT);
+	default: return "UNKNOWN SHARING MODE";
+	}
+}
+
+XRT_CHECK_RESULT const char *
 vk_format_feature_string(VkFormatFeatureFlagBits code)
 {
 	switch (code) {

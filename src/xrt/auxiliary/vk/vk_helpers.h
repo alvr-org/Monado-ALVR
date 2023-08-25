@@ -450,6 +450,9 @@ XRT_CHECK_RESULT const char *
 vk_format_string(VkFormat code);
 
 XRT_CHECK_RESULT const char *
+vk_sharing_mode_string(VkSharingMode code);
+
+XRT_CHECK_RESULT const char *
 vk_present_mode_string(VkPresentModeKHR code);
 
 XRT_CHECK_RESULT const char *
