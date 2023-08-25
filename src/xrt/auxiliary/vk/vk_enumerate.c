@@ -143,4 +143,53 @@ out:
 
 	return VK_SUCCESS;
 }
+
+VkResult
+vk_enumerate_physical_display_plane_properties(struct vk_bundle *vk,
+                                               VkPhysicalDevice physical_device,
+                                               uint32_t *out_prop_count,
+                                               VkDisplayPlanePropertiesKHR **out_props)
+{
+	VkDisplayPlanePropertiesKHR *props = NULL;
+	uint32_t prop_count = 0;
+	VkResult ret;
+
+	ret = vk->vkGetPhysicalDeviceDisplayPlanePropertiesKHR(physical_device, &prop_count, NULL);
+	CHECK_FIRST_CALL("vkGetPhysicalDeviceDisplayPlanePropertiesKHR", ret, prop_count);
+
+	props = U_TYPED_ARRAY_CALLOC(VkDisplayPlanePropertiesKHR, prop_count);
+	ret = vk->vkGetPhysicalDeviceDisplayPlanePropertiesKHR(physical_device, &prop_count, props);
+	CHECK_SECOND_CALL("vkGetPhysicalDeviceDisplayPlanePropertiesKHR", ret, props);
+
+out:
+	*out_props = props;
+	*out_prop_count = prop_count;
+
+	return VK_SUCCESS;
+}
+
+VkResult
+vk_enumerate_display_mode_properties(struct vk_bundle *vk,
+                                     VkPhysicalDevice physical_device,
+                                     VkDisplayKHR display,
+                                     uint32_t *out_prop_count,
+                                     VkDisplayModePropertiesKHR **out_props)
+{
+	VkDisplayModePropertiesKHR *props = NULL;
+	uint32_t prop_count = 0;
+	VkResult ret;
+
+	ret = vk->vkGetDisplayModePropertiesKHR(physical_device, display, &prop_count, NULL);
+	CHECK_FIRST_CALL("vkGetDisplayModePropertiesKHR", ret, prop_count);
+
+	props = U_TYPED_ARRAY_CALLOC(VkDisplayModePropertiesKHR, prop_count);
+	ret = vk->vkGetDisplayModePropertiesKHR(physical_device, display, &prop_count, props);
+	CHECK_SECOND_CALL("vkGetDisplayModePropertiesKHR", ret, props);
+
+out:
+	*out_props = props;
+	*out_prop_count = prop_count;
+
+	return VK_SUCCESS;
+}
 #endif

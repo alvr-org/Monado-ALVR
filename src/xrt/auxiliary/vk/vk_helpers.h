@@ -663,6 +663,30 @@ vk_enumerate_physical_device_display_properties(struct vk_bundle *vk,
                                                 VkPhysicalDevice physical_device,
                                                 uint32_t *out_prop_count,
                                                 VkDisplayPropertiesKHR **out_props);
+
+/*!
+ * Enumerate the display plane properties of the given @p VkPhysicalDevice.
+ *
+ * @ingroup aux_vk
+ */
+VkResult
+vk_enumerate_physical_display_plane_properties(struct vk_bundle *vk,
+                                               VkPhysicalDevice physical_device,
+                                               uint32_t *out_prop_count,
+                                               VkDisplayPlanePropertiesKHR **out_props);
+
+/*!
+ * Enumerate the mode properties of the given @p VkDisplayKHR, which belongs
+ * to the given @p VkPhysicalDevice.
+ *
+ * @ingroup aux_vk
+ */
+VkResult
+vk_enumerate_display_mode_properties(struct vk_bundle *vk,
+                                     VkPhysicalDevice physical_device,
+                                     VkDisplayKHR display,
+                                     uint32_t *out_prop_count,
+                                     VkDisplayModePropertiesKHR **out_props);
 #endif
 
 
