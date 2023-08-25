@@ -464,6 +464,27 @@ vk_power_state_string(VkDisplayPowerStateEXT code);
 XRT_CHECK_RESULT const char *
 vk_format_feature_string(VkFormatFeatureFlagBits code);
 
+/*!
+ * Returns the image usage flag if one valid bit is set,
+ * if multiple bits are set, will return 'MULTIPLE BIT SET'.
+ */
+XRT_CHECK_RESULT const char *
+vk_image_usage_flag_string(VkImageUsageFlagBits bits, bool null_on_unknown);
+
+/*!
+ * Returns the composite alpha flag if one valid bit is set,
+ * if multiple bits are set, will return 'MULTIPLE BIT SET'.
+ */
+XRT_CHECK_RESULT const char *
+vk_composite_alpha_flag_string(VkCompositeAlphaFlagBitsKHR bits, bool null_on_unknown);
+
+/*!
+ * Returns the surface transform flag if one valid bit is set,
+ * if multiple bits are set, will return 'MULTIPLE BIT SET'.
+ */
+XRT_CHECK_RESULT const char *
+vk_surface_transform_flag_string(VkSurfaceTransformFlagBitsKHR bits, bool null_on_unknown);
+
 XRT_CHECK_RESULT const char *
 xrt_swapchain_usage_string(enum xrt_swapchain_usage_bits code);
 

@@ -497,6 +497,101 @@ vk_format_feature_string(VkFormatFeatureFlagBits code)
 }
 
 XRT_CHECK_RESULT const char *
+vk_image_usage_flag_string(VkImageUsageFlagBits bits, bool null_on_unknown)
+{
+	switch (bits) {
+		ENUM_TO_STR(VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_SAMPLED_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_STORAGE_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+		ENUM_TO_STR(VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+#ifdef VK_KHR_video_decode_queue
+		ENUM_TO_STR(VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR);
+		ENUM_TO_STR(VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR);
+		ENUM_TO_STR(VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR);
+#endif
+#ifdef VK_EXT_fragment_density_map
+		ENUM_TO_STR(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT);
+#endif
+#ifdef VK_KHR_fragment_shading_rate
+		ENUM_TO_STR(VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR);
+#endif
+#ifdef VK_EXT_host_image_copy
+		ENUM_TO_STR(VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT);
+#endif
+#ifdef VK_EXT_attachment_feedback_loop_layout
+		ENUM_TO_STR(VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT);
+#endif
+#ifdef VK_HUAWEI_invocation_mask
+		ENUM_TO_STR(VK_IMAGE_USAGE_INVOCATION_MASK_BIT_HUAWEI);
+#endif
+#ifdef VK_QCOM_image_processing
+		ENUM_TO_STR(VK_IMAGE_USAGE_SAMPLE_WEIGHT_BIT_QCOM);
+#endif
+#ifdef VK_QCOM_image_processing
+		ENUM_TO_STR(VK_IMAGE_USAGE_SAMPLE_BLOCK_MATCH_BIT_QCOM);
+#endif
+#if defined(VK_NV_shading_rate_image) && !defined(VK_KHR_fragment_shading_rate)
+		ENUM_TO_STR(VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV);
+#endif
+	default:
+		if (bits == 0) {
+			return "IMAGE USAGE: NO BITS SET";
+		} else if (bits & (bits - 1)) {
+			return "IMAGE USAGE: MULTIPLE BITS SET";
+		} else {
+			return null_on_unknown ? NULL : "IMAGE USAGE: UNKNOWN BIT";
+		}
+	}
+}
+
+XRT_CHECK_RESULT const char *
+vk_composite_alpha_flag_string(VkCompositeAlphaFlagBitsKHR bits, bool null_on_unknown)
+{
+	switch (bits) {
+		ENUM_TO_STR(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
+		ENUM_TO_STR(VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR);
+		ENUM_TO_STR(VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR);
+		ENUM_TO_STR(VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR);
+	default:
+		if (bits == 0) {
+			return "COMPOSITE ALPHA: NO BITS SET";
+		} else if (bits & (bits - 1)) {
+			return "COMPOSITE ALPHA: MULTIPLE BITS SET";
+		} else {
+			return null_on_unknown ? NULL : "COMPOSITE ALPHA: UNKNOWN BIT";
+		}
+	}
+}
+
+XRT_CHECK_RESULT const char *
+vk_surface_transform_flag_string(VkSurfaceTransformFlagBitsKHR bits, bool null_on_unknown)
+{
+	switch (bits) {
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR);
+		ENUM_TO_STR(VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR);
+	default:
+		if (bits == 0) {
+			return "SURFACE TRANSFORM: NO BITS SET";
+		} else if (bits & (bits - 1)) {
+			return "SURFACE TRANSFORM: MULTIPLE BITS SET";
+		} else {
+			return null_on_unknown ? NULL : "SURFACE TRANSFORM: UNKNOWN BIT";
+		}
+	}
+}
+
+XRT_CHECK_RESULT const char *
 xrt_swapchain_usage_string(enum xrt_swapchain_usage_bits code)
 {
 	switch (code) {
