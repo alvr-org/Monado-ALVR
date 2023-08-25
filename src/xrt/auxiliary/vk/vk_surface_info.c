@@ -20,6 +20,21 @@
 #define P(...) u_pp(dg, __VA_ARGS__)
 #define PNT(...) u_pp(dg, "\n\t" __VA_ARGS__)
 #define PNTT(...) u_pp(dg, "\n\t\t" __VA_ARGS__)
+#define PRINT_BITS(BITS, FUNC)                                                                                         \
+	do {                                                                                                           \
+		for (uint32_t index = 0; index < 32; index++) {                                                        \
+			uint32_t bit = (BITS) & (1u << index);                                                         \
+			if (!bit) {                                                                                    \
+				continue;                                                                              \
+			}                                                                                              \
+			const char *str = FUNC(bit, true);                                                             \
+			if (str != NULL) {                                                                             \
+				PNTT("%s", str);                                                                       \
+			} else {                                                                                       \
+				PNTT("0x%08x", bit);                                                                   \
+			}                                                                                              \
+		}                                                                                                      \
+	} while (false)
 
 XRT_CHECK_RESULT static VkResult
 surface_info_get_present_modes(struct vk_bundle *vk, struct vk_surface_info *info, VkSurfaceKHR surface)
@@ -193,10 +208,13 @@ vk_print_surface_info(struct vk_bundle *vk, struct vk_surface_info *info, enum u
 	PNT("caps.minImageExtent: %ux%u", info->caps.minImageExtent.width, info->caps.minImageExtent.height);
 	PNT("caps.maxImageExtent: %ux%u", info->caps.maxImageExtent.width, info->caps.maxImageExtent.height);
 	PNT("caps.maxImageArrayLayers: %u", info->caps.maxImageArrayLayers);
-	// PNT("caps.supportedTransforms")
-	// PNT("caps.currentTransform")
-	// PNT("caps.supportedCompositeAlpha")
-	// PNT("caps.supportedUsageFlags")
+	PNT("caps.supportedTransforms:");
+	PRINT_BITS(info->caps.supportedTransforms, vk_surface_transform_flag_string);
+	PNT("caps.currentTransform: %s", vk_surface_transform_flag_string(info->caps.currentTransform, false));
+	PNT("caps.supportedCompositeAlpha:");
+	PRINT_BITS(info->caps.supportedCompositeAlpha, vk_composite_alpha_flag_string);
+	PNT("caps.supportedUsageFlags:");
+	PRINT_BITS(info->caps.supportedUsageFlags, vk_image_usage_flag_string);
 
 	PNT("present_modes(%u):", info->present_mode_count);
 	for (uint32_t i = 0; i < info->present_mode_count; i++) {
