@@ -496,6 +496,15 @@ vk_composite_alpha_flag_string(VkCompositeAlphaFlagBitsKHR bits, bool null_on_un
 XRT_CHECK_RESULT const char *
 vk_surface_transform_flag_string(VkSurfaceTransformFlagBitsKHR bits, bool null_on_unknown);
 
+#ifdef VK_KHR_display
+/*!
+ * Returns the display plane alpha flag if one valid bit is set,
+ * if multiple bits are set, will return 'MULTIPLE BIT SET'.
+ */
+XRT_CHECK_RESULT const char *
+vk_display_plane_alpha_flag_string(VkDisplayPlaneAlphaFlagBitsKHR bits, bool null_on_unknown);
+#endif
+
 /*!
  * Returns xrt swapchain_usage flag if one valid bit is set,
  * if multiple bits are set, will return 'MULTIPLE BIT SET'.

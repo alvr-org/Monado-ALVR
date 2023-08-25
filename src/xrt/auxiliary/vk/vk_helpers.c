@@ -598,6 +598,27 @@ vk_surface_transform_flag_string(VkSurfaceTransformFlagBitsKHR bits, bool null_o
 	}
 }
 
+#ifdef VK_KHR_display
+XRT_CHECK_RESULT const char *
+vk_display_plane_alpha_flag_string(VkDisplayPlaneAlphaFlagBitsKHR bits, bool null_on_unknown)
+{
+	switch (bits) {
+		ENUM_TO_STR(VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR);
+		ENUM_TO_STR(VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR);
+		ENUM_TO_STR(VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR);
+		ENUM_TO_STR(VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR);
+	default:
+		if (bits == 0) {
+			return "DISPLAY PLANE ALPHA: NO BITS SET";
+		} else if (bits & (bits - 1)) {
+			return "DISPLAY PLANE ALPHA: MULTIPLE BITS SET";
+		} else {
+			return null_on_unknown ? NULL : "DISPLAY PLANE ALPHA: UNKNOWN BIT";
+		}
+	}
+}
+#endif
+
 XRT_CHECK_RESULT const char *
 xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on_unknown)
 {
