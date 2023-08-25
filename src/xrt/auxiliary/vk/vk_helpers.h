@@ -456,10 +456,10 @@ XRT_CHECK_RESULT const char *
 vk_present_mode_string(VkPresentModeKHR code);
 
 XRT_CHECK_RESULT const char *
-vk_power_state_string(VkDisplayPowerStateEXT code);
+vk_color_space_string(VkColorSpaceKHR code);
 
 XRT_CHECK_RESULT const char *
-vk_color_space_string(VkColorSpaceKHR code);
+vk_power_state_string(VkDisplayPowerStateEXT code);
 
 XRT_CHECK_RESULT const char *
 vk_format_feature_string(VkFormatFeatureFlagBits code);
