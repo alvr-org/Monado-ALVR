@@ -679,15 +679,14 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	}
 
 	// Always print the first one.
-	{
-		static bool first = true;
-		if (first) {
-			vk_print_surface_info(vk, &info, U_LOGGING_INFO);
-			first = false;
-		} else {
-			vk_print_surface_info(vk, &info, U_LOGGING_DEBUG);
-		}
+	enum u_logging_level print_log_level = U_LOGGING_DEBUG;
+	if (!cts->has_logged_info) {
+		print_log_level = U_LOGGING_INFO;
+		cts->has_logged_info = true;
 	}
+
+	// Print info about the surface.
+	vk_print_surface_info(vk, &info, print_log_level);
 
 	if (!check_surface_present_mode(cts, &info, cts->present_mode)) {
 		// Free old.
@@ -746,8 +745,6 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	 * Do the creation.
 	 */
 
-	COMP_DEBUG(ct->c, "Creating compositor swapchain with %d images", image_count);
-
 	// Create the swapchain now.
 	VkSwapchainCreateInfoKHR swapchain_info = {
 	    .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -771,6 +768,10 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	    .oldSwapchain = old_swapchain_handle,
 	};
 
+	// Print what we are creating.
+	vk_print_swapchain_create_info(vk, &swapchain_info, print_log_level);
+
+	// Everything decided and logged, do the creation.
 	ret = vk->vkCreateSwapchainKHR(vk->device, &swapchain_info, NULL, &cts->swapchain.handle);
 
 	// Always destroy the old.

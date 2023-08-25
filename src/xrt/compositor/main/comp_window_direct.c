@@ -211,11 +211,11 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 	        },
 	};
 
-	VkResult result = vk->vkCreateDisplayPlaneSurfaceKHR(vk->instance, &surface_info, NULL, &cts->surface.handle);
+	// This function is called seldom so ok to always print.
+	vk_print_display_surface_create_info(vk, &surface_info, U_LOGGING_INFO);
 
-	free(plane_properties);
-
-	return result;
+	// Everything decided and logged, do the creation.
+	return vk->vkCreateDisplayPlaneSurfaceKHR(vk->instance, &surface_info, NULL, &cts->surface.handle);
 }
 
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT

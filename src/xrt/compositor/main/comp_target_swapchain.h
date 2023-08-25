@@ -87,6 +87,12 @@ struct comp_target_swapchain
 		//! Thread waiting on vblank_event_fence (first pixel out).
 		struct os_thread_helper event_thread;
 	} vblank;
+
+	/*!
+	 * We print swapchain info as INFO the first time we create a
+	 * VkSWapchain, this keeps track if we have done it.
+	 */
+	bool has_logged_info;
 };
 
 
