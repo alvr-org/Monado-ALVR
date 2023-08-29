@@ -630,7 +630,7 @@ vk_name_object(struct vk_bundle *vk, VkDebugReportObjectTypeEXT object_type, uin
 void
 vk_print_device_info(struct vk_bundle *vk,
                      enum u_logging_level log_level,
-                     VkPhysicalDeviceProperties *pdp,
+                     const VkPhysicalDeviceProperties *pdp,
                      uint32_t gpu_index,
                      const char *title);
 
