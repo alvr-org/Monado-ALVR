@@ -161,6 +161,18 @@ vk_result_string(VkResult code)
 }
 
 XRT_CHECK_RESULT const char *
+vk_physical_device_type_string(VkPhysicalDeviceType device_type)
+{
+	switch (device_type) {
+		ENUM_TO_STR(VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
+		ENUM_TO_STR(VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU);
+		ENUM_TO_STR(VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU);
+		ENUM_TO_STR(VK_PHYSICAL_DEVICE_TYPE_CPU);
+	default: return "UNKNOWN PHYSICAL DEVICE TYPE";
+	}
+}
+
+XRT_CHECK_RESULT const char *
 vk_format_string(VkFormat code)
 {
 	switch (code) {

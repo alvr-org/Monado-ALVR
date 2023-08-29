@@ -447,6 +447,9 @@ XRT_CHECK_RESULT const char *
 vk_result_string(VkResult code);
 
 XRT_CHECK_RESULT const char *
+vk_physical_device_type_string(VkPhysicalDeviceType device_type);
+
+XRT_CHECK_RESULT const char *
 vk_format_string(VkFormat code);
 
 XRT_CHECK_RESULT const char *
