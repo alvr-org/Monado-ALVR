@@ -508,6 +508,14 @@ device_is_preferred(VkPhysicalDeviceProperties *l_device, VkPhysicalDeviceProper
 	return false;
 }
 
+static void
+device_debug_print(struct vk_bundle *vk, const VkPhysicalDeviceProperties *pdp, uint32_t index)
+{
+	char title[32];
+	(void)snprintf(title, sizeof(title), "GPU index %u\n", index);
+	vk_print_device_info(vk, U_LOGGING_DEBUG, pdp, index, title);
+}
+
 static uint32_t
 select_preferred_device(struct vk_bundle *vk, VkPhysicalDevice *devices, uint32_t device_count)
 {
@@ -518,13 +526,15 @@ select_preferred_device(struct vk_bundle *vk, VkPhysicalDevice *devices, uint32_
 	VkPhysicalDeviceProperties gpu_properties;
 	vk->vkGetPhysicalDeviceProperties(devices[0], &gpu_properties);
 
+	// Loop starts at index 1, so print the first GPU here.
+	device_debug_print(vk, &gpu_properties, 0);
+
 	for (uint32_t i = 1; i < device_count; i++) {
 		VkPhysicalDeviceProperties pdp;
 		vk->vkGetPhysicalDeviceProperties(devices[i], &pdp);
 
-		char title[32];
-		(void)snprintf(title, sizeof(title), "GPU index %u\n", i);
-		vk_print_device_info(vk, U_LOGGING_DEBUG, &pdp, i, title);
+		// Print GPU 1 to device_count here.
+		device_debug_print(vk, &pdp, i);
 
 		// Prefer devices based on device type priority, with preference to equal devices with smaller index
 		if (device_is_preferred(&pdp, &gpu_properties)) {
