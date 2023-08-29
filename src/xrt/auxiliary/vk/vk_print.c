@@ -52,17 +52,21 @@ vk_print_device_info(struct vk_bundle *vk,
                      uint32_t gpu_index,
                      const char *title)
 {
+	const char *device_type_string = vk_physical_device_type_string(pdp->deviceType);
+
 	U_LOG_IFL(log_level, vk->log_level,
 	          "%s"
 	          "\tname: %s\n"
 	          "\tvendor: 0x%04x\n"
 	          "\tproduct: 0x%04x\n"
+	          "\tdeviceType: %s\n"
 	          "\tapiVersion: %u.%u.%u\n"
 	          "\tdriverVersion: 0x%08x",
 	          title,                             //
 	          pdp->deviceName,                   //
 	          pdp->vendorID,                     //
 	          pdp->deviceID,                     //
+	          device_type_string,                //
 	          VK_VERSION_MAJOR(pdp->apiVersion), //
 	          VK_VERSION_MINOR(pdp->apiVersion), //
 	          VK_VERSION_PATCH(pdp->apiVersion), //
