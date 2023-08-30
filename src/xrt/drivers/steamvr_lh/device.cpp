@@ -38,7 +38,6 @@
 #define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
 
 DEBUG_GET_ONCE_BOOL_OPTION(lh_emulate_hand, "LH_EMULATE_HAND", true)
-DEBUG_GET_ONCE_BOOL_OPTION(lh_prediction, "LH_PREDICTION", false)
 
 // Each device will have its own input class.
 struct InputClass
@@ -405,13 +404,7 @@ ControllerDevice::get_hand_tracking(enum xrt_input_name name,
 void
 Device::get_pose(uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
-	if (debug_get_bool_option_lh_prediction()) {
-		m_relation_history_get(this->relation_hist, at_timestamp_ns, out_relation);
-	} else {
-		// Without prediction just use the latest, also disables history.
-		uint64_t last_ns{0}; // Not used.
-		m_relation_history_get_latest(this->relation_hist, &last_ns, out_relation);
-	}
+	m_relation_history_get(this->relation_hist, at_timestamp_ns, out_relation);
 }
 
 void
@@ -644,7 +637,6 @@ Device::update_pose(const vr::DriverPose_t &newPose)
 			math_quat_rotate_vec3(&chaperone_yaw, &vec, &vec);
 		};
 		chap_transform(pose.position);
-		chap_transform(relation.linear_velocity);
 		math_quat_rotate(&chaperone_yaw, &pose.orientation, &pose.orientation);
 	} else {
 		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
