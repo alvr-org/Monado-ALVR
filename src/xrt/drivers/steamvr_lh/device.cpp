@@ -713,7 +713,9 @@ HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		break;
 	}
 	case vr::Prop_UserIpdMeters_Float: {
-		ipd = *static_cast<float *>(prop.pvBuffer);
+		if (*static_cast<float *>(prop.pvBuffer) != 0) {
+			ipd = *static_cast<float *>(prop.pvBuffer);
+		}
 		break;
 	}
 	case vr::Prop_SecondsFromVsyncToPhotons_Float: {
