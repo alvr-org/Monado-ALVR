@@ -767,6 +767,8 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 			break;
 		}
 		default: {
+			this->device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
+			break;
 		}
 		}
 		break;
