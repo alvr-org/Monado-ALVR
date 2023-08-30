@@ -126,7 +126,7 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
             XRT_DEVICE_VIVE_TRACKER,
             "HTC Vive Tracker",
             {
-                XRT_INPUT_VIVE_TRACKER_GRIP_POSE,
+                XRT_INPUT_GENERIC_TRACKER_POSE,
             },
             {
                 {"/input/system/click", XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK},
@@ -355,6 +355,10 @@ ControllerDevice::set_haptic_handle(vr::VRInputComponentHandle_t handle)
 	}
 	case XRT_DEVICE_INDEX_CONTROLLER: {
 		name = XRT_OUTPUT_NAME_INDEX_HAPTIC;
+		break;
+	}
+	case XRT_DEVICE_VIVE_TRACKER: {
+		name = XRT_OUTPUT_NAME_VIVE_TRACKER_HAPTIC;
 		break;
 	}
 	default: {
@@ -603,7 +607,7 @@ void
 Device::update_pose(const vr::DriverPose_t &newPose)
 {
 	xrt_space_relation relation;
-	if (newPose.poseIsValid) {
+	if (newPose.poseIsValid && newPose.deviceIsConnected) {
 		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
 
 		const xrt_vec3 to_local_pos = copy_vec3(newPose.vecDriverFromHeadTranslation);
@@ -756,6 +760,10 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		case vr::TrackedControllerRole_LeftHand: {
 			this->device_type = XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER;
 			set_hand_tracking_hand(XRT_INPUT_GENERIC_HAND_TRACKING_LEFT);
+			break;
+		}
+		case vr::TrackedControllerRole_OptOut: {
+			this->device_type = XRT_DEVICE_TYPE_GENERIC_TRACKER;
 			break;
 		}
 		default: {

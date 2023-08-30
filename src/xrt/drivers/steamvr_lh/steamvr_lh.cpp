@@ -27,6 +27,8 @@ namespace {
 
 DEBUG_GET_ONCE_LOG_OPTION(lh_log, "LIGHTHOUSE_LOG", U_LOGGING_INFO)
 
+static const size_t MAX_CONTROLLERS = 16;
+
 // ~/.steam/root is a symlink to where the Steam root is
 const std::string STEAM_INSTALL_DIR = std::string(getenv("HOME")) + "/.steam/root";
 constexpr auto STEAMVR_APPID = "250820";
@@ -185,21 +187,28 @@ Context::setup_hmd(const char *serial, vr::ITrackedDeviceServerDriver *driver)
 bool
 Context::setup_controller(const char *serial, vr::ITrackedDeviceServerDriver *driver)
 {
-	if (controller[0] && controller[1]) {
-		CTX_WARN("Attempted to activate more than two controllers - this is unsupported");
+	// Find the first available slot for a new controller
+	size_t device_idx = 0;
+	for (; device_idx < MAX_CONTROLLERS; ++device_idx) {
+		if (!controller[device_idx])
+			break;
+	}
+
+	// Check if we've exceeded the maximum number of controllers
+	if (device_idx == MAX_CONTROLLERS) {
+		CTX_WARN("Attempted to activate more than %zu controllers - this is unsupported", MAX_CONTROLLERS);
 		return false;
 	}
-	size_t device_idx = (controller[0]) ? 2 : 1;
-	auto &dev = controller[device_idx - 1];
-	dev = new ControllerDevice(device_idx + 1,
-	                           DeviceBuilder{this->shared_from_this(), driver, serial, STEAM_INSTALL_DIR});
 
-	vr::EVRInitError err = driver->Activate(device_idx);
+	// Create the new controller
+	controller[device_idx] = new ControllerDevice(
+	    device_idx + 1, DeviceBuilder{this->shared_from_this(), driver, serial, STEAM_INSTALL_DIR});
+
+	vr::EVRInitError err = driver->Activate(device_idx + 1);
 	if (err != vr::VRInitError_None) {
 		CTX_ERR("Activating controller failed: error %u", err);
 		return false;
 	}
-
 	return true;
 }
 
@@ -231,6 +240,10 @@ Context::TrackedDeviceAdded(const char *pchDeviceSerialNumber,
 		CTX_INFO("Found lighthouse device: %s", pchDeviceSerialNumber);
 		return false;
 	}
+	case vr::TrackedDeviceClass_GenericTracker: {
+		return setup_controller(pchDeviceSerialNumber, pDriver);
+		break;
+	}
 	default: {
 		CTX_WARN("Attempted to add unsupported device class: %u", eDeviceClass);
 		return false;
@@ -242,10 +255,21 @@ void
 Context::TrackedDevicePoseUpdated(uint32_t unWhichDevice, const vr::DriverPose_t &newPose, uint32_t unPoseStructSize)
 {
 	assert(sizeof(newPose) == unPoseStructSize);
-	if (unWhichDevice > 2)
+
+	// Check for valid device index, allowing for the HMD plus up to 16 controllers
+	if (unWhichDevice > 16)
 		return;
-	Device *dev = (unWhichDevice == 0) ? static_cast<Device *>(this->hmd)
-	                                   : static_cast<Device *>(this->controller[unWhichDevice - 1]);
+
+	Device *dev = nullptr;
+
+	// If unWhichDevice is 0, it refers to the HMD; otherwise, it refers to one of the controllers
+	if (unWhichDevice == 0) {
+		dev = static_cast<Device *>(this->hmd);
+	} else {
+		// unWhichDevice - 1 will give the index into the controller array
+		dev = static_cast<Device *>(this->controller[unWhichDevice - 1]);
+	}
+
 	assert(dev);
 	dev->update_pose(newPose);
 }
@@ -571,13 +595,14 @@ Context::prop_container_to_device(vr::PropertyContainerHandle_t handle)
 		return hmd;
 		break;
 	}
-	case 2:
-	case 3: {
-		return controller[handle - 2];
-		break;
-	}
 	default: {
-		return nullptr;
+		// If the handle corresponds to a controller
+		if (handle >= 2 && handle <= 17) {
+			return controller[handle - 2];
+		} else {
+			return nullptr;
+		}
+		break;
 	}
 	}
 }
@@ -586,9 +611,10 @@ vr::PropertyContainerHandle_t
 Context::TrackedDeviceToPropertyContainer(vr::TrackedDeviceIndex_t nDevice)
 {
 	size_t container = nDevice + 1;
-	if (nDevice == 0 && this->hmd)
+	if (nDevice == 0 && this->hmd) {
 		return container;
-	if ((nDevice == 1 || nDevice == 2) && this->controller[nDevice - 1]) {
+	}
+	if (nDevice >= 1 && nDevice <= 16 && this->controller[nDevice - 1]) {
 		return container;
 	}
 
@@ -665,11 +691,18 @@ steamvr_lh_get_devices(struct xrt_device **out_xdevs)
 	U_LOG_IFL_I(level, "Device search time complete.");
 
 	int devices = 0;
-	Device *devs[] = {ctx->hmd, ctx->controller[0], ctx->controller[1]};
-	for (Device *dev : devs) {
-		if (dev) {
-			out_xdevs[devices++] = dev;
+
+	// Include the HMD
+	if (ctx->hmd) {
+		out_xdevs[devices++] = ctx->hmd;
+	}
+
+	// Include the controllers (up to 16)
+	for (int i = 0; i < 16; i++) {
+		if (ctx->controller[i]) {
+			out_xdevs[devices++] = ctx->controller[i];
 		}
 	}
+
 	return devices;
 }
