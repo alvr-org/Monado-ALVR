@@ -143,6 +143,16 @@ function(get_git_head_revision _refspecvar _hashvar)
             string(REGEX REPLACE "gitdir: (.*)$" "\\1" git_worktree_dir
                                  ${worktree_ref})
             string(STRIP ${git_worktree_dir} git_worktree_dir)
+            # When running in an msys environment, the git_worktree_dir has to be
+            # converted to windows format, by adding the windows prefix of the
+            # msys root dir.
+            if(MINGW)
+                execute_process(
+                    COMMAND bash -c "cygpath.exe -m /"
+                    OUTPUT_VARIABLE real_root
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+                set(git_worktree_dir "${real_root}${git_worktree_dir}")
+            endif()
             _git_find_closest_git_dir("${git_worktree_dir}" GIT_DIR)
             set(HEAD_SOURCE_FILE "${git_worktree_dir}/HEAD")
         endif()
