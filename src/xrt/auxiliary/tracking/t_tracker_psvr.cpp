@@ -106,8 +106,9 @@ DEBUG_GET_ONCE_LOG_OPTION(psvr_log, "PSVR_TRACKING_LOG", U_LOGGING_WARN)
 // uncomment this to dump comprehensive optical and imu data to
 // /tmp/psvr_dump.txt
 
-//#define PSVR_DUMP_FOR_OFFLINE_ANALYSIS
-//#define PSVR_DUMP_IMU_FOR_OFFLINE_ANALYSIS
+// Debug define(s), always off.
+#undef PSVR_DUMP_FOR_OFFLINE_ANALYSIS
+#undef PSVR_DUMP_IMU_FOR_OFFLINE_ANALYSIS
 
 using namespace xrt::auxiliary::tracking;
 
