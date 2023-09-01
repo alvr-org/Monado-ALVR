@@ -56,8 +56,9 @@ DEBUG_GET_ONCE_NUM_OPTION(scale_percentage, "XRT_COMPOSITOR_SCALE_PERCENTAGE", 1
 
 #define OPENVR_BONE_COUNT 31
 
-//#define DUMP_POSE
-//#define DUMP_POSE_CONTROLLERS
+// Debug define(s), always off.
+#undef DUMP_POSE
+#undef DUMP_POSE_CONTROLLERS
 
 
 /*
