@@ -102,6 +102,9 @@ enum vive_controller_input_index
 #define DEFAULT_HAPTIC_FREQ 150.0f
 #define MIN_HAPTIC_DURATION 0.05f
 
+// Debug define(s), always off.
+#undef WATCHMAN2_PRINT_HID
+
 
 /*
  *
@@ -743,8 +746,6 @@ vive_controller_decode_watchmanv1(struct vive_controller_device *d, struct vive_
 	if (buf < end)
 		vive_controller_handle_lighthousev1(d, buf, end - buf);
 }
-
-//#define WATCHMAN2_PRINT_HID
 
 /*
  * Handles battery, imu, trigger, buttons, trackpad.
