@@ -312,9 +312,8 @@ ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
 	auto curl_values = u_hand_tracking_curl_values{pinky, ring, middle, index, thumb};
 
 	struct xrt_space_relation hand_relation = {};
-	uint64_t last_ns{0}; // Not used.
-	// Currently we only return the latest pose.
-	m_relation_history_get_latest(relation_hist, &last_ns, &hand_relation);
+	uint64_t ts = chrono_timestamp_ns();
+	m_relation_history_get_latest(relation_hist, &ts, &hand_relation);
 
 	u_hand_sim_simulate_for_valve_index_knuckles(&curl_values, get_xrt_hand(), &hand_relation, out);
 
@@ -620,7 +619,6 @@ Device::update_pose(const vr::DriverPose_t &newPose)
 			math_vec3_accum(&to_world_pos, &vec);
 		};
 		world_transform(pose.position);
-		world_transform(relation.linear_velocity);
 		math_quat_rotate(&to_world_rot, &pose.orientation, &pose.orientation);
 		math_quat_rotate_vec3(&pose.orientation, &relation.angular_velocity, &relation.angular_velocity);
 
