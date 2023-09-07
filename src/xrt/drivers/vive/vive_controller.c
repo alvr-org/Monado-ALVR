@@ -128,11 +128,7 @@ get_pose(struct vive_controller_device *d,
 {
 	struct xrt_space_relation imu_relation = {0};
 	imu_relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
-
-	os_mutex_lock(&d->fusion.mutex);
 	m_relation_history_get(d->fusion.relation_hist, at_timestamp_ns, &imu_relation);
-	os_mutex_unlock(&d->fusion.mutex);
-
 	imu_relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL; // Needed after history_get
 
 	// Get the offset to the pose (this is from libsurvive's reporting position currently)
@@ -629,8 +625,9 @@ vive_controller_handle_imu_sample(struct vive_controller_device *d, struct watch
 	os_mutex_lock(&d->fusion.mutex);
 	m_imu_3dof_update(&d->fusion.i3dof, d->imu.last_sample_ts_ns, &acceleration, &angular_velocity);
 	rel.pose.orientation = d->fusion.i3dof.rot;
-	m_relation_history_push(d->fusion.relation_hist, &rel, now_ns);
 	os_mutex_unlock(&d->fusion.mutex);
+
+	m_relation_history_push(d->fusion.relation_hist, &rel, now_ns);
 
 	// Update the pose we show in the GUI.
 	d->pose = rel.pose;

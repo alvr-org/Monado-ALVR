@@ -117,10 +117,7 @@ vive_device_get_3dof_tracked_pose(struct xrt_device *xdev,
 	struct xrt_space_relation relation = {0};
 	relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
 
-	os_mutex_lock(&d->fusion.mutex);
 	m_relation_history_get(d->fusion.relation_hist, at_timestamp_ns, &relation);
-	os_mutex_unlock(&d->fusion.mutex);
-
 	relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL; // Needed after history_get
 	relation.pose.position = d->pose.position;
 	relation.linear_velocity = (struct xrt_vec3){0, 0, 0};
@@ -444,8 +441,9 @@ update_imu(struct vive_device *d, const void *buffer)
 		os_mutex_lock(&d->fusion.mutex);
 		m_imu_3dof_update(&d->fusion.i3dof, d->imu.last_sample_ts_ns, &acceleration, &angular_velocity);
 		rel.pose.orientation = d->fusion.i3dof.rot;
-		m_relation_history_push(d->fusion.relation_hist, &rel, now_ns);
 		os_mutex_unlock(&d->fusion.mutex);
+
+		m_relation_history_push(d->fusion.relation_hist, &rel, now_ns);
 
 		assert(j > 0);
 		uint32_t age = j <= 0 ? 0 : (uint32_t)(j - 1);
