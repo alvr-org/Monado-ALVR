@@ -965,6 +965,8 @@ teardown(struct na_hmd *hmd)
 		hmd->hid_sensor = NULL;
 	}
 
+	m_relation_history_destroy(&hmd->relation_hist);
+
 	// Destroy the fusion.
 	m_imu_3dof_close(&hmd->fusion);
 
