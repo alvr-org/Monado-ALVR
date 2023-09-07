@@ -236,8 +236,9 @@ m_relation_history_get_latest(struct m_relation_history *rh,
 }
 
 uint32_t
-m_relation_history_get_size(const struct m_relation_history *rh)
+m_relation_history_get_size(struct m_relation_history *rh)
 {
+	std::unique_lock<os::Mutex> lock(rh->mutex);
 	return (uint32_t)rh->impl.size();
 }
 

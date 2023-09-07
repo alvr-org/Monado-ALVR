@@ -109,7 +109,7 @@ m_relation_history_get_latest(struct m_relation_history *rh,
  * @public @memberof m_relation_history
  */
 uint32_t
-m_relation_history_get_size(const struct m_relation_history *rh);
+m_relation_history_get_size(struct m_relation_history *rh);
 
 /*!
  * Clears the history from all of the items.
@@ -199,7 +199,7 @@ public:
 	 * @copydoc m_relation_history_get_size
 	 */
 	size_t
-	size() const noexcept
+	size() noexcept
 	{
 		return m_relation_history_get_size(mPtr);
 	}
