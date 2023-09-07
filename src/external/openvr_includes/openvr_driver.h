@@ -2743,6 +2743,7 @@ namespace vr
 	};
 
 	static const char *IVRDisplayComponent_Version = "IVRDisplayComponent_002";
+	static const char *IVRDisplayComponent_Version3 = "IVRDisplayComponent_003";
 
 }
 

@@ -140,7 +140,10 @@ Context::setup_hmd(const char *serial, vr::ITrackedDeviceServerDriver *driver)
 	vr::EVRInitError err = driver->Activate(0);
 	VERIFY(err == vr::VRInitError_None, std::to_string(err).c_str());
 
-	auto *display = static_cast<vr::IVRDisplayComponent *>(driver->GetComponent(vr::IVRDisplayComponent_Version));
+	auto *display = static_cast<vr::IVRDisplayComponent *>(driver->GetComponent(vr::IVRDisplayComponent_Version3));
+	if (display == NULL) {
+		display = static_cast<vr::IVRDisplayComponent *>(driver->GetComponent(vr::IVRDisplayComponent_Version));
+	}
 	VERIFY(display, "IVRDisplayComponent is null");
 #undef VERIFY
 
