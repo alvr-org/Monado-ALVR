@@ -318,12 +318,10 @@ update_fusion(struct na_hmd *hmd, struct na_parsed_sample *sample, uint64_t time
 
 	os_mutex_lock(&hmd->device_mutex);
 	update_fusion_locked(hmd, sample, timestamp_ns);
-
-	// We have no tracking, don't return a position.
-	rel.pose.orientation = hmd->fusion.rot;
+	rel.pose.orientation = hmd->fusion.rot; // We have no tracking, don't return a position.
+	os_mutex_unlock(&hmd->device_mutex);
 
 	m_relation_history_push(hmd->relation_hist, &rel, timestamp_ns);
-	os_mutex_unlock(&hmd->device_mutex);
 }
 
 static uint32_t
@@ -1063,11 +1061,9 @@ na_hmd_get_tracked_pose(struct xrt_device *xdev,
 	U_ZERO(&relation); // Clear out the relation.
 	relation.relation_flags = flags;
 
-	os_mutex_lock(&hmd->device_mutex);
 	m_relation_history_get(hmd->relation_hist, at_timestamp_ns, &relation);
-	os_mutex_unlock(&hmd->device_mutex);
-
 	relation.relation_flags = flags; // Needed after history_get
+
 	*out_relation = relation;
 
 	// Make sure that the orientation is valid.
