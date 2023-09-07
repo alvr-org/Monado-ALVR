@@ -43,6 +43,11 @@ if(XRT_BUILD_DRIVER_SIMULAVR)
 	target_sources(target_lists PRIVATE target_builder_simulavr.c)
 endif()
 
+if(XRT_BUILD_DRIVER_NA)
+	target_sources(target_lists PRIVATE target_builder_nreal_air.c)
+	target_link_libraries(target_lists PRIVATE drv_na)
+endif()
+
 if(XRT_BUILD_DRIVER_NS)
 	target_sources(target_lists PRIVATE target_builder_north_star.c)
 	target_link_libraries(target_lists PRIVATE drv_ns)
@@ -86,6 +91,10 @@ endif()
 
 if(XRT_BUILD_DRIVER_HYDRA)
 	target_link_libraries(target_lists PRIVATE drv_hydra)
+endif()
+
+if(XRT_BUILD_DRIVER_NA)
+	target_link_libraries(target_lists PRIVATE drv_na)
 endif()
 
 if(XRT_BUILD_DRIVER_NS)

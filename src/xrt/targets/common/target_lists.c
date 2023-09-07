@@ -76,6 +76,10 @@
 #include "depthai/depthai_interface.h"
 #endif
 
+#ifdef XRT_BUILD_DRIVER_NA
+#include "nreal_air/na_interface.h"
+#endif
+
 #ifdef XRT_BUILD_DRIVER_WMR
 #include "wmr/wmr_interface.h"
 #include "wmr/wmr_common.h"
@@ -123,6 +127,10 @@ xrt_builder_create_func_t target_builder_list[] = {
 #ifdef T_BUILDER_LIGHTHOUSE
     t_builder_lighthouse_create,
 #endif // T_BUILDER_LIGHTHOUSE
+
+#ifdef XRT_BUILD_DRIVER_NA
+    nreal_air_builder_create,
+#endif // T_BUILDER_NA
 
 #ifdef T_BUILDER_NS
     t_builder_north_star_create,

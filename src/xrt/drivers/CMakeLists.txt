@@ -110,6 +110,18 @@ if(XRT_BUILD_DRIVER_NS)
 	list(APPEND ENABLED_HEADSET_DRIVERS ns)
 endif()
 
+if(XRT_BUILD_DRIVER_NA)
+	add_library(
+		drv_na STATIC nreal_air/na_hmd.h nreal_air/na_hmd.c nreal_air/na_interface.h
+			      nreal_air/na_packet.c
+		)
+	target_link_libraries(
+		drv_na PRIVATE xrt-interfaces HIDAPI::hidapi aux_util xrt-external-cjson
+		)
+	target_include_directories(drv_na PRIVATE ${HIDAPI_INCLUDE_DIRS})
+	list(APPEND ENABLED_HEADSET_DRIVERS na)
+endif()
+
 if(XRT_BUILD_DRIVER_ULV2)
 	add_library(drv_ulv2 STATIC ultraleap_v2/ulv2_driver.cpp ultraleap_v2/ulv2_interface.h)
 	target_link_libraries(drv_ulv2 PRIVATE xrt-interfaces aux_util aux_math LeapV2::LeapV2)
