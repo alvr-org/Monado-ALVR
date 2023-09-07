@@ -129,7 +129,11 @@ ht_async_mainloop(void *ptr)
 
 		for (int i = 0; i < 2; i++) {
 			hta->present.hands[i] = hta->working.hands[i];
+		}
 
+		os_mutex_unlock(&hta->present.mutex);
+
+		for (int i = 0; i < 2; i++) {
 			struct xrt_space_relation wrist_rel =
 			    hta->working.hands[i].values.hand_joint_set_default[XRT_HAND_JOINT_WRIST].relation;
 
@@ -144,8 +148,6 @@ ht_async_mainloop(void *ptr)
 			    &wrist_rel,                    //
 			    hta->working.timestamp);       //
 		}
-
-		os_mutex_unlock(&hta->present.mutex);
 
 		hta->hand_tracking_work_active = false;
 
@@ -280,14 +282,14 @@ ht_async_get_hand(struct t_hand_tracking_async *ht_async,
 		return;
 	}
 
+	os_mutex_unlock(&hta->present.mutex);
+
 	double prediction_offset_ns = (double)hta->prediction_offset_ms.val * (double)U_TIME_1MS_IN_NS;
 
 	desired_timestamp_ns += (uint64_t)prediction_offset_ns;
 
 	struct xrt_space_relation predicted_wrist;
 	m_relation_history_get(hta->present.relation_hist[idx], desired_timestamp_ns, &predicted_wrist);
-
-	os_mutex_unlock(&hta->present.mutex);
 
 	struct xrt_space_relation latest_wrist =
 	    latest_hand.values.hand_joint_set_default[XRT_HAND_JOINT_WRIST].relation;
