@@ -481,13 +481,9 @@ HmdDevice::SetDisplayEyeToHead(uint32_t unWhichDevice,
 	rightEye_postquat.position.z = eyeToHeadRight.m[2][3];
 
 	this->eye[0].orientation = leftEye_postquat.orientation;
-	this->eye[0].position.x += leftEye_postquat.position.x;
-	this->eye[0].position.y += leftEye_postquat.position.y;
-	this->eye[0].position.z += leftEye_postquat.position.z;
+	this->eye[0].position = leftEye_postquat.position;
 	this->eye[1].orientation = rightEye_postquat.orientation;
-	this->eye[1].position.x += rightEye_postquat.position.x;
-	this->eye[1].position.y += rightEye_postquat.position.y;
-	this->eye[1].position.z += rightEye_postquat.position.z;
+	this->eye[1].position = rightEye_postquat.position;
 }
 
 void
@@ -505,7 +501,11 @@ HmdDevice::get_view_poses(const xrt_vec3 *default_eye_relation,
 	                        out_poses);
 
 	out_poses[0].orientation = this->eye[0].orientation;
+	out_poses[0].position.z = this->eye[0].position.z;
+	out_poses[0].position.y = this->eye[0].position.y;
 	out_poses[1].orientation = this->eye[1].orientation;
+	out_poses[1].position.z = this->eye[1].position.z;
+	out_poses[1].position.y = this->eye[1].position.y;
 }
 
 bool
@@ -620,13 +620,13 @@ Device::update_pose(const vr::DriverPose_t &newPose)
 		};
 		world_transform(pose.position);
 		math_quat_rotate(&to_world_rot, &pose.orientation, &pose.orientation);
+		math_quat_rotate_vec3(&to_world_rot, &relation.linear_velocity, &relation.linear_velocity);
 		math_quat_rotate_vec3(&pose.orientation, &relation.angular_velocity, &relation.angular_velocity);
 
 		// apply local transform
 		xrt_vec3 local_rotated;
 		math_quat_rotate_vec3(&pose.orientation, &to_local_pos, &local_rotated);
 		math_vec3_accum(&local_rotated, &pose.position);
-		math_vec3_accum(&local_rotated, &relation.linear_velocity);
 		math_quat_rotate(&pose.orientation, &to_local_rot, &pose.orientation);
 
 		// apply chaperone transform
@@ -636,6 +636,8 @@ Device::update_pose(const vr::DriverPose_t &newPose)
 		};
 		chap_transform(pose.position);
 		math_quat_rotate(&chaperone_yaw, &pose.orientation, &pose.orientation);
+		math_quat_rotate_vec3(&chaperone_yaw, &relation.linear_velocity, &relation.linear_velocity);
+		math_quat_rotate_vec3(&chaperone_yaw, &relation.angular_velocity, &relation.angular_velocity);
 	} else {
 		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
 	}
