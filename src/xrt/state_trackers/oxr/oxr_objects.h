@@ -867,6 +867,18 @@ oxr_space_reference_create(struct oxr_logger *log,
                            const XrReferenceSpaceCreateInfo *createInfo,
                            struct oxr_space **out_space);
 
+/*!
+ * Monado special space that always points to a specific @ref xrt_device and
+ * pose, useful when you want to bypass the action binding system for instance.
+ */
+XrResult
+oxr_space_xdev_pose_create(struct oxr_logger *log,
+                           struct oxr_session *sess,
+                           struct xrt_device *xdev,
+                           enum xrt_input_name name,
+                           const struct xrt_pose *pose,
+                           struct oxr_space **out_space);
+
 XrResult
 oxr_space_locate(
     struct oxr_logger *log, struct oxr_space *spc, struct oxr_space *baseSpc, XrTime time, XrSpaceLocation *location);
@@ -2197,7 +2209,8 @@ oxr_space_type_is_reference(enum oxr_space_type space_type)
 		return true;
 
 	case OXR_SPACE_TYPE_ACTION:
-		// Not a reference space.
+	case OXR_SPACE_TYPE_XDEV_POSE:
+		// These are not reference spaces.
 		return false;
 	}
 
@@ -2241,6 +2254,11 @@ struct oxr_space
 		struct xrt_device *xdev;
 		enum xrt_input_name name;
 	} action;
+
+	struct
+	{
+		struct xrt_space *xs;
+	} xdev_pose;
 };
 
 /*!

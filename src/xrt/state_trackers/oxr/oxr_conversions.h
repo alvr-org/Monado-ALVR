@@ -1,4 +1,4 @@
-// Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -71,6 +71,7 @@ oxr_ref_space_to_xr(enum oxr_space_type space_type)
 	case OXR_SPACE_TYPE_REFERENCE_LOCALIZATION_MAP_ML: return XR_REFERENCE_SPACE_TYPE_LOCALIZATION_MAP_ML;
 
 	case OXR_SPACE_TYPE_ACTION: return XR_REFERENCE_SPACE_TYPE_MAX_ENUM;
+	case OXR_SPACE_TYPE_XDEV_POSE: return XR_REFERENCE_SPACE_TYPE_MAX_ENUM;
 	}
 
 	return XR_REFERENCE_SPACE_TYPE_MAX_ENUM;

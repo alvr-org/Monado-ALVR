@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -91,6 +91,7 @@ get_xrt_space(struct oxr_logger *log, struct oxr_space *spc, struct xrt_space **
 	struct xrt_space *xspace = NULL;
 	switch (spc->space_type) {
 	case OXR_SPACE_TYPE_ACTION: return get_xrt_space_action(log, spc, out_xspace);
+	case OXR_SPACE_TYPE_XDEV_POSE: xspace = spc->xdev_pose.xs; break;
 	case OXR_SPACE_TYPE_REFERENCE_VIEW: xspace = spc->sess->sys->xso->semantic.view; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL: xspace = spc->sess->sys->xso->semantic.local; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL_FLOOR: xspace = spc->sess->sys->xso->semantic.local_floor; break;
@@ -127,6 +128,7 @@ oxr_space_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 		xrt_space_overseer_ref_space_dec(spc->sess->sys->xso, xtype);
 	}
 
+	xrt_space_reference(&spc->xdev_pose.xs, NULL);
 	xrt_space_reference(&spc->action.xs, NULL);
 	spc->action.xdev = NULL;
 	spc->action.name = 0;
@@ -205,6 +207,39 @@ oxr_space_reference_create(struct oxr_logger *log,
 	if (xtype != XRT_SPACE_REFERENCE_TYPE_INVALID) {
 		xrt_space_overseer_ref_space_inc(sess->sys->xso, xtype);
 	}
+
+	*out_space = spc;
+
+	return XR_SUCCESS;
+}
+
+XrResult
+oxr_space_xdev_pose_create(struct oxr_logger *log,
+                           struct oxr_session *sess,
+                           struct xrt_device *xdev,
+                           enum xrt_input_name name,
+                           const struct xrt_pose *pose,
+                           struct oxr_space **out_space)
+{
+	if (!math_pose_validate(pose)) {
+		return oxr_error(log, XR_ERROR_POSE_INVALID, "(createInfo->offset)");
+	}
+
+	struct xrt_space *xspace = NULL;
+	xrt_result_t xret = xrt_space_overseer_create_pose_space( //
+	    sess->sys->xso,                                       //
+	    xdev,                                                 //
+	    name,                                                 //
+	    &xspace);                                             //
+	OXR_CHECK_XRET(log, sess, xret, xrt_space_overseer_create_pose_space);
+
+	struct oxr_space *spc = NULL;
+	OXR_ALLOCATE_HANDLE_OR_RETURN(log, spc, OXR_XR_DEBUG_SPACE, oxr_space_destroy, &sess->handle);
+	spc->sess = sess;
+	spc->pose = *pose;
+	spc->space_type = OXR_SPACE_TYPE_XDEV_POSE;
+	xrt_space_reference(&spc->xdev_pose.xs, xspace);
+	xrt_space_reference(&xspace, NULL);
 
 	*out_space = spc;
 
