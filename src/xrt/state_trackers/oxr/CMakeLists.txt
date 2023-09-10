@@ -1,4 +1,4 @@
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 ###
@@ -16,6 +16,7 @@ add_library(
 	oxr_api_swapchain.c
 	oxr_api_system.c
 	oxr_api_verify.h
+	oxr_api_xdev.c
 	oxr_binding.c
 	oxr_chain.h
 	oxr_dpad.c

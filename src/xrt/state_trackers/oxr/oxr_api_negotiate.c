@@ -319,6 +319,15 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrLocateBodyJointsFB, FB_body_tracking);
 #endif
 
+#ifdef OXR_HAVE_MNDX_xdev_space
+	ENTRY_IF_EXT(xrCreateXDevListMNDX, MNDX_xdev_space);
+	ENTRY_IF_EXT(xrGetXDevListGenerationNumberMNDX, MNDX_xdev_space);
+	ENTRY_IF_EXT(xrEnumerateXDevsMNDX, MNDX_xdev_space);
+	ENTRY_IF_EXT(xrGetXDevPropertiesMNDX, MNDX_xdev_space);
+	ENTRY_IF_EXT(xrDestroyXDevListMNDX, MNDX_xdev_space);
+	ENTRY_IF_EXT(xrCreateXDevSpaceMNDX, MNDX_xdev_space);
+#endif // OXR_HAVE_MNDX_xdev_space
+
 	/*
 	 * Not logging here because there's no need to loudly advertise
 	 * which extensions the loader knows about (it calls this on

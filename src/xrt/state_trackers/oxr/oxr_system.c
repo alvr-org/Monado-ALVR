@@ -222,6 +222,15 @@ oxr_system_fill_in(
 
 
 	/*
+	 * Misc
+	 */
+
+#ifdef OXR_HAVE_MNDX_xdev_space
+	// By default xdev_space is implemented in the state tracker and does not need explicit system support.
+	sys->supports_xdev_space = true;
+#endif
+
+	/*
 	 * Done.
 	 */
 
@@ -423,6 +432,19 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 		body_tracking_fb_props->supportsBodyTracking = oxr_system_get_body_tracking_fb_support(log, sys->inst);
 	}
 #endif // OXR_HAVE_FB_body_tracking
+
+
+#ifdef OXR_HAVE_MNDX_xdev_space
+	XrSystemXDevSpacePropertiesMNDX *xdev_space_props = NULL;
+	if (sys->inst->extensions.MNDX_xdev_space) {
+		xdev_space_props = OXR_GET_OUTPUT_FROM_CHAIN(properties, XR_TYPE_SYSTEM_XDEV_SPACE_PROPERTIES_MNDX,
+		                                             XrSystemXDevSpacePropertiesMNDX);
+	}
+
+	if (xdev_space_props) {
+		xdev_space_props->supportsXDevSpace = sys->supports_xdev_space;
+	}
+#endif // OXR_HAVE_MNDX_xdev_space
 
 	return XR_SUCCESS;
 }

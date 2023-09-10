@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 """Simple script to update oxr_extension_support.h."""
 
@@ -86,6 +86,7 @@ EXTENSIONS = (
     ['XR_MNDX_force_feedback_curl', 'XRT_FEATURE_OPENXR_FORCE_FEEDBACK_CURL'],
     ['XR_MNDX_hydra', 'XRT_FEATURE_OPENXR_INTERACTION_MNDX'],
     ['XR_MNDX_system_buttons', 'XRT_FEATURE_OPENXR_INTERACTION_MNDX'],
+    ['XR_MNDX_xdev_space', 'XRT_FEATURE_OPENXR_XDEV_SPACE'],
 )
 
 

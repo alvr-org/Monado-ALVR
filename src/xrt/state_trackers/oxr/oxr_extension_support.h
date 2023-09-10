@@ -622,6 +622,17 @@
 #define OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_)
 #endif
 
+
+/*
+ * XR_MNDX_xdev_space
+ */
+#if defined(XR_MNDX_xdev_space) && defined(XRT_FEATURE_OPENXR_XDEV_SPACE)
+#define OXR_HAVE_MNDX_xdev_space
+#define OXR_EXTENSION_SUPPORT_MNDX_xdev_space(_) _(MNDX_xdev_space, MNDX_XDEV_SPACE)
+#else
+#define OXR_EXTENSION_SUPPORT_MNDX_xdev_space(_)
+#endif
+
 // end of GENERATED per-extension defines - do not modify - used by scripts
 
 /*!
@@ -698,5 +709,6 @@
     OXR_EXTENSION_SUPPORT_MNDX_egl_enable(_) \
     OXR_EXTENSION_SUPPORT_MNDX_force_feedback_curl(_) \
     OXR_EXTENSION_SUPPORT_MNDX_hydra(_) \
-    OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_)
+    OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_) \
+    OXR_EXTENSION_SUPPORT_MNDX_xdev_space(_)
 // clang-format on

@@ -646,6 +646,43 @@ oxr_xrLocateBodyJointsFB(XrBodyTrackerFB bodyTracker,
                          XrBodyJointLocationsFB *locations);
 #endif
 
+
+/*
+ *
+ * oxr_api_xdev.c
+ *
+ */
+
+#ifdef OXR_HAVE_MNDX_xdev_space
+//! OpenXR API function @ep{xrCreateXDevListMNDX}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateXDevListMNDX(XrSession session, const XrCreateXDevListInfoMNDX *info, XrXDevListMNDX *xdevList);
+
+//! OpenXR API function @ep{xrGetXDevListGenerationNumberMNDX}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetXDevListGenerationNumberMNDX(XrXDevListMNDX session, uint64_t *outGeneration);
+
+//! OpenXR API function @ep{xrEnumerateXDevsMNDX}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrEnumerateXDevsMNDX(XrXDevListMNDX xdevList,
+                         uint32_t xdevCapacityInput,
+                         uint32_t *xdevCountOutput,
+                         XrXDevIdMNDX *xdevs);
+
+//! OpenXR API function @ep{xrGetXDevProperty}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetXDevPropertiesMNDX(XrXDevListMNDX xdevList, const XrGetXDevInfoMNDX *info, XrXDevPropertiesMNDX *properties);
+
+//! OpenXR API function @ep{xrDestroyXDevListMNDX}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyXDevListMNDX(XrXDevListMNDX xdevList);
+
+//! OpenXR API function @ep{xrCreateXDevSpace}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateXDevSpaceMNDX(XrSession session, const XrCreateXDevSpaceInfoMNDX *createInfo, XrSpace *space);
+#endif
+
+
 /*!
  * @}
  */

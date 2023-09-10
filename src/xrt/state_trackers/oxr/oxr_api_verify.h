@@ -76,6 +76,8 @@ extern "C" {
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_facial_tracker_htc, FTRACKER, name, new_thing->sess->sys->inst)
 #define OXR_VERIFY_BODY_TRACKER_FB_AND_INIT_LOG(log, thing, new_thing, name) \
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_body_tracker_fb, BTRACKER, name, new_thing->sess->sys->inst)
+#define OXR_VERIFY_XDEVLIST_AND_INIT_LOG(log, thing, new_thing, name) \
+	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_xdev_list, XDEVLIST, name, new_thing->sess->sys->inst)
 // clang-format on
 
 #define OXR_VERIFY_INSTANCE_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_instance, INSTANCE);
@@ -85,6 +87,7 @@ extern "C" {
 #define OXR_VERIFY_ACTION_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_action, ACTION);
 #define OXR_VERIFY_SWAPCHAIN_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_swapchain, SWAPCHAIN);
 #define OXR_VERIFY_ACTIONSET_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_action_set, ACTIONSET);
+#define OXR_VERIFY_XDEVLIST_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_xdev_list, XDEVLIST);
 
 /*!
  * Checks if a required extension is enabled.

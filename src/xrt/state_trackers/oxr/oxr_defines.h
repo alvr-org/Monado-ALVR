@@ -31,6 +31,7 @@
 #define OXR_XR_DEBUG_FTRACKER  (*(uint64_t *)"oxrftra\0")
 // body tracker
 #define OXR_XR_DEBUG_BTRACKER  (*(uint64_t *)"oxrbtra\0")
+#define OXR_XR_DEBUG_XDEVLIST  (*(uint64_t *)"oxrxdli\0")
 // clang-format on
 
 /*!
