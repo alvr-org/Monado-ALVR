@@ -4,6 +4,7 @@
  * @file
  * @brief  Common OpenGL code header.
  * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_ogl
  */
 
@@ -25,6 +26,16 @@ void
 ogl_texture_target_for_swapchain_info(const struct xrt_swapchain_create_info *info,
                                       uint32_t *out_tex_target,
                                       uint32_t *out_tex_param_name);
+
+/*!
+ * Converts a Vulkan format to corresponding OpenGL format,
+ * will return 0 if no mapping exist for the given format.
+ *
+ * @ingroup aux_ogl
+ */
+XRT_CHECK_RESULT uint32_t
+ogl_vk_format_to_gl(int64_t vk_format);
+
 
 #ifdef __cplusplus
 }

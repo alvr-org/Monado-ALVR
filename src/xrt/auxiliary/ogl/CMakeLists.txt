@@ -1,4 +1,4 @@
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2023, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 add_library(
@@ -9,7 +9,7 @@ add_library(
 	ogl_helpers.c
 	ogl_helpers.h
 	)
-target_link_libraries(aux_ogl PUBLIC aux-includes xrt-external-glad)
+target_link_libraries(aux_ogl PUBLIC aux-includes xrt-external-glad aux_util)
 
 if(XRT_HAVE_OPENGL_GLX AND XRT_HAVE_XLIB)
 	target_sources(aux_ogl PRIVATE glx_api.c glx_api.h)
