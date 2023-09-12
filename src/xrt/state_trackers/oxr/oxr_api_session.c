@@ -583,3 +583,35 @@ oxr_xrRequestDisplayRefreshRateFB(XrSession session, float displayRefreshRate)
 }
 
 #endif
+
+/*
+ *
+ * XR_KHR_android_thread_settings
+ *
+ */
+
+#ifdef OXR_HAVE_KHR_android_thread_settings
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrSetAndroidApplicationThreadKHR(XrSession session, XrAndroidThreadTypeKHR threadType, uint32_t threadId)
+{
+	OXR_TRACE_MARKER();
+
+	struct oxr_session *sess = NULL;
+	struct oxr_logger log;
+	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrSetAndroidApplicationThreadKHR");
+	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
+
+	if (threadType != XR_ANDROID_THREAD_TYPE_APPLICATION_MAIN_KHR &&
+	    threadType != XR_ANDROID_THREAD_TYPE_APPLICATION_WORKER_KHR &&
+	    threadType != XR_ANDROID_THREAD_TYPE_RENDERER_MAIN_KHR &&
+	    threadType != XR_ANDROID_THREAD_TYPE_RENDERER_WORKER_KHR) {
+		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "(threadType == %d) is invalid", threadType);
+	}
+
+	OXR_VERIFY_EXTENSION(&log, sess->sys->inst, KHR_android_thread_settings);
+
+	return oxr_session_android_thread_settings(&log, sess, threadType, threadId);
+}
+
+#endif

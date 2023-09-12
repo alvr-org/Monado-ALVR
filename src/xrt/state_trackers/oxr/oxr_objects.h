@@ -737,6 +737,14 @@ oxr_session_apply_force_feedback(struct oxr_logger *log,
                                  struct oxr_hand_tracker *hand_tracker,
                                  const XrForceFeedbackCurlApplyLocationsMNDX *locations);
 
+#ifdef OXR_HAVE_KHR_android_thread_settings
+XrResult
+oxr_session_android_thread_settings(struct oxr_logger *log,
+                                    struct oxr_session *sess,
+                                    XrAndroidThreadTypeKHR threadType,
+                                    uint32_t threadId);
+#endif // OXR_HAVE_KHR_android_thread_settings
+
 /*
  *
  * oxr_space.c

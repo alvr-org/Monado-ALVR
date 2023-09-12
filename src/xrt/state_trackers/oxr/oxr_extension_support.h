@@ -33,6 +33,17 @@
 
 
 /*
+ * XR_KHR_android_thread_settings
+ */
+#if defined(XR_KHR_android_thread_settings) && defined(XR_USE_PLATFORM_ANDROID)
+#define OXR_HAVE_KHR_android_thread_settings
+#define OXR_EXTENSION_SUPPORT_KHR_android_thread_settings(_) _(KHR_android_thread_settings, KHR_ANDROID_THREAD_SETTINGS)
+#else
+#define OXR_EXTENSION_SUPPORT_KHR_android_thread_settings(_)
+#endif
+
+
+/*
  * XR_KHR_binding_modification
  */
 #if defined(XR_KHR_binding_modification)
@@ -485,6 +496,7 @@
 // clang-format off
 #define OXR_EXTENSION_SUPPORT_GENERATE(_) \
     OXR_EXTENSION_SUPPORT_KHR_android_create_instance(_) \
+    OXR_EXTENSION_SUPPORT_KHR_android_thread_settings(_) \
     OXR_EXTENSION_SUPPORT_KHR_binding_modification(_) \
     OXR_EXTENSION_SUPPORT_KHR_composition_layer_cube(_) \
     OXR_EXTENSION_SUPPORT_KHR_composition_layer_cylinder(_) \

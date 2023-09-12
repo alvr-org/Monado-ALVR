@@ -1120,3 +1120,40 @@ oxr_session_apply_force_feedback(struct oxr_logger *log,
 
 	return XR_SUCCESS;
 }
+
+#ifdef OXR_HAVE_KHR_android_thread_settings
+static enum xrt_thread_hint
+xr_thread_type_to_thread_hint(XrAndroidThreadTypeKHR type)
+{
+	switch (type) {
+	case XR_ANDROID_THREAD_TYPE_APPLICATION_MAIN_KHR: return XRT_THREAD_HINT_APPLICATION_MAIN;
+	case XR_ANDROID_THREAD_TYPE_APPLICATION_WORKER_KHR: return XRT_THREAD_HINT_APPLICATION_WORKER;
+	case XR_ANDROID_THREAD_TYPE_RENDERER_MAIN_KHR: return XRT_THREAD_HINT_RENDERER_MAIN;
+	case XR_ANDROID_THREAD_TYPE_RENDERER_WORKER_KHR: return XRT_THREAD_HINT_RENDERER_WORKER;
+	default: assert(false); return 0;
+	}
+}
+
+XrResult
+oxr_session_android_thread_settings(struct oxr_logger *log,
+                                    struct oxr_session *sess,
+                                    XrAndroidThreadTypeKHR threadType,
+                                    uint32_t threadId)
+{
+	struct xrt_compositor *xc = &sess->xcn->base;
+
+	if (xc == NULL) {
+		return oxr_error(log, XR_ERROR_FUNCTION_UNSUPPORTED,
+		                 "Extension XR_KHR_android_thread_settings not be implemented");
+	}
+
+	// Convert.
+	enum xrt_thread_hint xhint = xr_thread_type_to_thread_hint(threadType);
+
+	// Do the call!
+	xrt_result_t xret = xrt_comp_set_thread_hint(xc, xhint, threadId);
+	OXR_CHECK_XRET(log, sess, xret, oxr_session_android_thread_settings);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_KHR_android_thread_settings

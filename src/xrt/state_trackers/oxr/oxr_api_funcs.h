@@ -311,6 +311,12 @@ oxr_xrGetVisibilityMaskKHR(XrSession session,
                            XrVisibilityMaskKHR *visibilityMask);
 #endif // OXR_HAVE_KHR_visibility_mask
 
+#ifdef OXR_HAVE_KHR_android_thread_settings
+//! OpenXR API function @ep{xrSetAndroidApplicationThreadKHR}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrSetAndroidApplicationThreadKHR(XrSession session, XrAndroidThreadTypeKHR threadType, uint32_t threadId);
+#endif // OXR_HAVE_KHR_android_thread_settings
+
 #ifdef OXR_HAVE_EXT_performance_settings
 //! OpenXR API function @ep{xrPerfSettingsSetPerformanceLevelEXT}
 XRAPI_ATTR XrResult XRAPI_CALL

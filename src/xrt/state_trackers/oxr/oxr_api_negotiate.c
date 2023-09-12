@@ -218,6 +218,10 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrConvertTimeToWin32PerformanceCounterKHR, KHR_win32_convert_performance_counter_time);
 #endif // OXR_HAVE_KHR_win32_convert_performance_counter_time
 
+#ifdef OXR_HAVE_KHR_android_thread_settings
+	ENTRY_IF_EXT(xrSetAndroidApplicationThreadKHR, KHR_android_thread_settings);
+#endif // XR_HAVE_KHR_android_thread_settings
+
 #ifdef OXR_HAVE_EXT_performance_settings
 	ENTRY_IF_EXT(xrPerfSettingsSetPerformanceLevelEXT, EXT_performance_settings);
 #endif // OXR_HAVE_EXT_performance_settings
