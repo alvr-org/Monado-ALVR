@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -18,6 +18,8 @@ extern "C" {
 /*!
  * Determine the texture target and the texture binding parameter to
  * save/restore for creation/use of an OpenGL texture from the given info.
+ *
+ * @ingroup aux_ogl
  */
 void
 ogl_texture_target_for_swapchain_info(const struct xrt_swapchain_create_info *info,
