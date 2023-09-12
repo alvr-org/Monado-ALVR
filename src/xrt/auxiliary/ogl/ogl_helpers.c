@@ -7,6 +7,7 @@
  * @ingroup aux_ogl
  */
 
+#include "util/u_handles.h"
 #include "util/u_logging.h"
 
 #include "ogl_helpers.h"
@@ -14,6 +15,25 @@
 
 #include <inttypes.h>
 
+/*!
+ * Check for OpenGL errors, context needs to be current.
+ *
+ * @ingroup sdl_test
+ */
+#define CHECK_GL()                                                                                                     \
+	do {                                                                                                           \
+		GLint err = glGetError();                                                                              \
+		if (err != 0) {                                                                                        \
+			U_LOG_RAW("%s:%u: error: 0x%04x", __func__, __LINE__, err);                                    \
+		}                                                                                                      \
+	} while (false)
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 void
 ogl_texture_target_for_swapchain_info(const struct xrt_swapchain_create_info *info,
@@ -71,4 +91,67 @@ ogl_vk_format_to_gl(int64_t vk_format)
 	case 130 /* VK_FORMAT_D32_SFLOAT_S8_UINT       */: return GL_DEPTH32F_STENCIL8;
 	default: U_LOG_W("Cannot convert VK format %" PRIu64 " to GL format!", vk_format); return 0;
 	}
+}
+
+XRT_CHECK_RESULT bool
+ogl_import_from_native(struct xrt_image_native *natives,
+                       uint32_t native_count,
+                       const struct xrt_swapchain_create_info *info,
+                       struct ogl_import_results *results)
+{
+	// Setup fields.
+	results->width = info->width;
+	results->height = info->height;
+	results->image_count = native_count;
+
+	GLuint binding_enum = 0;
+	GLuint tex_target = 0;
+	ogl_texture_target_for_swapchain_info(info, &tex_target, &binding_enum);
+
+	GLuint gl_format = ogl_vk_format_to_gl(info->format);
+
+	glCreateTextures(tex_target, native_count, results->textures);
+	CHECK_GL();
+	glCreateMemoryObjectsEXT(native_count, results->memories);
+	CHECK_GL();
+
+	for (uint32_t i = 0; i < native_count; i++) {
+		GLint dedicated = natives[i].use_dedicated_allocation ? GL_TRUE : GL_FALSE;
+		glMemoryObjectParameterivEXT(results->memories[i], GL_DEDICATED_MEMORY_OBJECT_EXT, &dedicated);
+		CHECK_GL();
+
+		// The below function consumes the handle, need to reference it.
+		xrt_graphics_buffer_handle_t handle = u_graphics_buffer_ref(natives[i].handle);
+
+		glImportMemoryFdEXT(              //
+		    results->memories[i],         //
+		    natives[i].size,              //
+		    GL_HANDLE_TYPE_OPAQUE_FD_EXT, //
+		    (GLint)handle);               //
+		CHECK_GL();
+
+		if (info->array_size == 1) {
+			glTextureStorageMem2DEXT( //
+			    results->textures[i], //
+			    info->mip_count,      //
+			    gl_format,            //
+			    info->width,          //
+			    info->height,         //
+			    results->memories[i], //
+			    0);                   //
+		} else {
+			glTextureStorageMem3DEXT( //
+			    results->textures[i], //
+			    info->mip_count,      //
+			    gl_format,            //
+			    info->width,          //
+			    info->height,         //
+			    info->array_size,     //
+			    results->memories[i], //
+			    0);                   //
+		}
+		CHECK_GL();
+	}
+
+	return true;
 }

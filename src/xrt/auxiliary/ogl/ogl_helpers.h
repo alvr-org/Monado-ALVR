@@ -16,6 +16,27 @@
 extern "C" {
 #endif
 
+
+/*!
+ * Results from a import, nicer then having to pass in multiple arrays.
+ *
+ * @ingroup aux_ogl
+ */
+struct ogl_import_results
+{
+	//! Imported textures.
+	uint32_t textures[XRT_MAX_SWAPCHAIN_IMAGES];
+
+	//! Memory objects for imported textures.
+	uint32_t memories[XRT_MAX_SWAPCHAIN_IMAGES];
+
+	//! The count of textures and memories.
+	uint32_t image_count;
+
+	//! Dimensions.
+	uint32_t width, height;
+};
+
 /*!
  * Determine the texture target and the texture binding parameter to
  * save/restore for creation/use of an OpenGL texture from the given info.
@@ -35,6 +56,17 @@ ogl_texture_target_for_swapchain_info(const struct xrt_swapchain_create_info *in
  */
 XRT_CHECK_RESULT uint32_t
 ogl_vk_format_to_gl(int64_t vk_format);
+
+/*!
+ * Import native images, a context needs to be current when called.
+ *
+ * @ingroup aux_ogl
+ */
+XRT_CHECK_RESULT bool
+ogl_import_from_native(struct xrt_image_native *natives,
+                       uint32_t native_count,
+                       const struct xrt_swapchain_create_info *info,
+                       struct ogl_import_results *results);
 
 
 #ifdef __cplusplus
