@@ -108,7 +108,7 @@ t_builder_rgb_tracking_create(void);
 
 #ifdef T_BUILDER_SIMULATED
 /*!
- * Builder for @drv_simulated devices.
+ * Builder for @ref drv_simulated devices.
  */
 struct xrt_builder *
 t_builder_simulated_create(void);
