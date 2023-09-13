@@ -53,14 +53,14 @@ public:
 	void
 	update_pose(const vr::DriverPose_t &newPose);
 
-	//! Helper to access the @ref relation_hist member.
+	//! Helper to use the @ref m_relation_history member.
 	void
 	get_pose(uint64_t at_timestamp_ns, xrt_space_relation *out_relation);
 
 	void
 	handle_properties(const vr::PropertyWrite_t *batch, uint32_t count);
 
-	//! Maps to @ref xrt_device::get_track_pose.
+	//! Maps to @ref xrt_device::get_tracked_pose.
 	virtual void
 	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) = 0;
 
