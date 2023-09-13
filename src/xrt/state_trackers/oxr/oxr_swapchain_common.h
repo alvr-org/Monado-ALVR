@@ -92,7 +92,6 @@ oxr_swapchain_common_release(struct oxr_logger *log, struct oxr_swapchain *sc);
  * @param      log           Logger set with the current OpenXR function call context.
  * @param      sess          OpenXR session
  * @param      createInfo    Creation info.
- * @param      sc            Swapchain.
  * @param[out] out_swapchain Return of the allocated swapchain.
  */
 XrResult
