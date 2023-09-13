@@ -143,23 +143,24 @@ struct client_d3d12_compositor
 	/*!
 	 * A timeline semaphore made by the native compositor and imported by us.
 	 *
-	 * When this is valid, we should use xrt_compositor::layer_commit_with_sync:
+	 * When this is valid, we should use @ref xrt_compositor::layer_commit_with_sync:
 	 * it means the native compositor knows about timeline semaphores, and we can import its semaphores, so we can
 	 * pass @ref timeline_semaphore instead of blocking locally.
 	 */
 	unique_compositor_semaphore_ref timeline_semaphore;
 
 	/*!
-	 * A fence (timeline semaphore) object, owned by @ref fence_device.
+	 * A fence (timeline semaphore) object.
 	 *
-	 * Signal using @ref fence_context if this is not null.
+	 * Signal using @ref app_queue if this is not null.
 	 *
 	 * Wait on it in `layer_commit` if @ref timeline_semaphore *is* null/invalid.
 	 */
 	wil::com_ptr<ID3D12Fence> fence;
 
 	/*!
-	 * Event used for blocking in `layer_commit` if required (if @ref timeline_semaphore *is* null/invalid)
+	 * Event used for blocking in `layer_commit` if required (if @ref client_d3d12_compositor::timeline_semaphore
+	 * *is* null/invalid)
 	 */
 	wil::unique_event_nothrow local_wait_event;
 
