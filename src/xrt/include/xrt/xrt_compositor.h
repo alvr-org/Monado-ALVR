@@ -2189,7 +2189,7 @@ struct xrt_system_compositor
  *
  * Helper for calling through the function pointer.
  *
- * If the system compositor @p xsc does not implement @ref xrt_multi_composition_control,
+ * If the system compositor @p xsc does not implement @ref xrt_multi_compositor_control,
  * this returns @ref XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED.
  *
  * @public @memberof xrt_system_compositor
@@ -2209,7 +2209,7 @@ xrt_syscomp_set_state(struct xrt_system_compositor *xsc, struct xrt_compositor *
  *
  * Helper for calling through the function pointer.
  *
- * If the system compositor @p xsc does not implement @ref xrt_multi_composition_control,
+ * If the system compositor @p xsc does not implement @ref xrt_multi_compositor_control,
  * this returns @ref XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED.
  *
  * @public @memberof xrt_system_compositor
@@ -2230,7 +2230,7 @@ xrt_syscomp_set_z_order(struct xrt_system_compositor *xsc, struct xrt_compositor
  *
  * Helper for calling through the function pointer.
  *
- * If the system compositor @p xsc does not implement @ref xrt_multi_composition_control,
+ * If the system compositor @p xsc does not implement @ref xrt_multi_compositor_control,
  * this returns @ref XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED.
  *
  * @public @memberof xrt_system_compositor
@@ -2250,7 +2250,7 @@ xrt_syscomp_set_main_app_visibility(struct xrt_system_compositor *xsc, struct xr
  *
  * Helper for calling through the function pointer.
  *
- * If the system compositor @p xsc does not implement @ref xrt_multi_composition_control,
+ * If the system compositor @p xsc does not implement @ref xrt_multi_compositor_control,
  * this returns @ref XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED.
  *
  * @public @memberof xrt_system_compositor
@@ -2270,7 +2270,7 @@ xrt_syscomp_notify_loss_pending(struct xrt_system_compositor *xsc, struct xrt_co
  *
  * Helper for calling through the function pointer.
  *
- * If the system compositor @p xsc does not implement @ref xrt_multi_composition_control,
+ * If the system compositor @p xsc does not implement @ref xrt_multi_compositor_control,
  * this returns @ref XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED.
  *
  * @public @memberof xrt_system_compositor
