@@ -36,7 +36,7 @@ euroc_recorder_create(struct xrt_frame_context *xfctx, const char *record_path, 
 /*!
  * Start recording samples sent to the recorder sinks.
  *
- * @param er The recorder sinks returned by @ref euroc_recorder_create
+ * @param er_sinks The recorder sinks returned by @ref euroc_recorder_create
  */
 void
 euroc_recorder_start(struct xrt_slam_sinks *er_sinks);
@@ -45,7 +45,7 @@ euroc_recorder_start(struct xrt_slam_sinks *er_sinks);
  * Stop recording samples sent to the recorder sinks. You can start and
  * stop as many times as you like.
  *
- * @param er The recorder sinks returned by @ref euroc_recorder_create
+ * @param er_sinks The recorder sinks returned by @ref euroc_recorder_create
  */
 void
 euroc_recorder_stop(struct xrt_slam_sinks *er_sinks);
@@ -53,7 +53,7 @@ euroc_recorder_stop(struct xrt_slam_sinks *er_sinks);
 /*!
  * Add EuRoC recorder UI button to start recording after creation.
  *
- * @param er The sinks returned by @ref euroc_recorder_create
+ * @param er_sinks The sinks returned by @ref euroc_recorder_create
  * @param root The pointer to add UI button to
  * @param prefix Prefix in case you have multiple recorders, otherwise pass an empty string
  */

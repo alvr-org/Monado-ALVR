@@ -133,7 +133,7 @@ enum t_camera_distortion_model
 
 
 /*!
- * Stringifies a @ref enum t_camera_distortion_model
+ * Stringifies a @ref t_camera_distortion_model
  * @param model The distortion model to be stringified
  * @return The distortion model as a string
  */
@@ -151,7 +151,7 @@ t_stringify_camera_distortion_model(const enum t_camera_distortion_model model)
 }
 
 /*!
- * Returns the number of parameters needed for this @ref enum t_camera_distortion_model to be held by an OpenCV Mat and
+ * Returns the number of parameters needed for this @ref t_camera_distortion_model to be held by an OpenCV Mat and
  * correctly interpreted by OpenCV's (un)projection functions.
  *
  * @param model The distortion model in question
@@ -651,7 +651,7 @@ struct t_slam_tracker_config
 	int cam_count;                  //!< Number of cameras in use
 	bool slam_ui;                   //!< Whether to open the external UI of the external SLAM system
 	bool submit_from_start;         //!< Whether to submit data to the SLAM tracker without user action
-	int openvr_groundtruth_device;  //!< If >0, use lighthouse as groundtruth, see @ref enum openvr_device
+	int openvr_groundtruth_device;  //!< If >0, use lighthouse as groundtruth, see @ref openvr_device
 	enum t_slam_prediction_type prediction; //!< Which level of prediction to use
 	bool write_csvs;                        //!< Whether to enable CSV writers from the start for later analysis
 	const char *csv_path;                   //!< Path to write CSVs to

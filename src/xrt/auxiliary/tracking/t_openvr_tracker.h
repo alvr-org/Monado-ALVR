@@ -15,6 +15,7 @@
 extern "C" {
 #endif
 
+/// The type of device
 enum openvr_device
 {
 	T_OPENVR_DEVICE_UNKNOWN = 0,
