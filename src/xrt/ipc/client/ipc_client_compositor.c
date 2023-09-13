@@ -772,6 +772,16 @@ ipc_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 	return res;
 }
 
+static xrt_result_t
+ipc_compositor_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint hint, uint32_t thread_id)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+
+	IPC_CALL_CHK(ipc_call_compositor_set_thread_hint(icc->ipc_c, hint, thread_id));
+
+	return res;
+}
+
 static void
 ipc_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -810,6 +820,7 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.layer_commit_with_semaphore = ipc_compositor_layer_commit_with_semaphore;
 	icc->base.base.destroy = ipc_compositor_destroy;
 	icc->base.base.poll_events = ipc_compositor_poll_events;
+	icc->base.base.set_thread_hint = ipc_compositor_set_thread_hint;
 
 	// Using in wait frame.
 	os_precise_sleeper_init(&icc->sleeper);

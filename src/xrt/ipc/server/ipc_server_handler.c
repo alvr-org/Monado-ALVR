@@ -938,6 +938,21 @@ ipc_handle_compositor_poll_events(volatile struct ipc_client_state *ics, union x
 }
 
 xrt_result_t
+ipc_handle_compositor_set_thread_hint(volatile struct ipc_client_state *ics,
+                                      enum xrt_thread_hint hint,
+                                      uint32_t thread_id)
+
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_comp_set_thread_hint(ics->xc, hint, thread_id);
+}
+
+xrt_result_t
 ipc_handle_system_get_clients(volatile struct ipc_client_state *_ics, struct ipc_client_list *list)
 {
 	struct ipc_server *s = _ics->server;

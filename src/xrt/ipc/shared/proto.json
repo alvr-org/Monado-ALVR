@@ -189,6 +189,13 @@
 		]
 	},
 
+	"compositor_set_thread_hint": {
+		"in": [
+			{"name": "hint", "type": "enum xrt_thread_hint"},
+			{"name": "thread_id", "type": "uint32_t"}
+		]
+	},
+
 	"swapchain_get_properties": {
 		"in": [
 			{"name": "info", "type": "struct xrt_swapchain_create_info"}
