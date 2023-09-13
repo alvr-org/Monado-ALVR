@@ -34,6 +34,7 @@
 #include "gstreamer/gst_pipeline.h"
 #endif
 
+#include "gui_ogl.h"
 #include "gui_imgui.h"
 #include "gui_common.h"
 #include "gui_window_record.h"
@@ -313,42 +314,12 @@ gui_window_record_to_background(struct gui_record_window *rw, struct gui_program
 
 	gui_ogl_sink_update(tex);
 
-	ImVec2 uv0 = {0, 0};
-	ImVec2 uv1 = {1, 1};
-
-	// Note: We can't easily do 90 or 270-degree rotations: https://github.com/ocornut/imgui/issues/3267
-	if (rw->texture.rotate_180) {
-		uv0 = (ImVec2){1, 1};
-		uv1 = (ImVec2){0, 0};
-	}
-
-	const ImU32 white = 0xffffffff;
-	ImTextureID id = (ImTextureID)(intptr_t)tex->id;
-
-	ImGuiIO *io = igGetIO();
-
-	// Shamelessly stolen from hg_model.cpp
-	float in_w = tex->w;
-	float in_h = tex->h;
-	float out_w = io->DisplaySize.x;
-	float out_h = io->DisplaySize.y;
-
-	float scale_w = (float)out_w / in_w; // 128 / 1280 = 0.1
-	float scale_h = (float)out_h / in_h; // 128 / 800 =  0.16
-
-	float scale = MIN(scale_w, scale_h); // 0.1
-
-	float inside_w = in_w * scale;
-	float inside_h = in_h * scale;
-
-	float translate_x = (out_w - inside_w) / 2; // Should be 0 for 1280x800
-	float translate_y = (out_h - inside_h) / 2; // Should be (1280 - 800) / 2 = 240
-
-	ImVec2 p_min = {translate_x, translate_y};
-	ImVec2 p_max = {translate_x + inside_w, translate_y + inside_h};
-
-	ImDrawList *bg = igGetBackgroundDrawList();
-	ImDrawList_AddImage(bg, id, p_min, p_max, uv0, uv1, white);
+	gui_ogl_draw_background(    //
+	    (uint32_t)tex->w,       // width
+	    (uint32_t)tex->h,       // height
+	    tex->id,                // tex_id
+	    rw->texture.rotate_180, // rotate_180
+	    false);                 // flip_y
 }
 
 void
@@ -363,22 +334,14 @@ gui_window_record_render(struct gui_record_window *rw, struct gui_program *p)
 
 	struct gui_ogl_texture *tex = rw->texture.ogl;
 
-	int w = tex->w * rw->texture.scale / 100.0f;
-	int h = tex->h * rw->texture.scale / 100.0f;
+	gui_ogl_draw_image(             //
+	    (uint32_t)tex->w,           // width
+	    (uint32_t)tex->h,           // height
+	    tex->id,                    // tex_id
+	    rw->texture.scale / 100.0f, // scale
+	    rw->texture.rotate_180,     // rotate_180
+	    false);                     // flip_y
 
-	ImVec2 size = {(float)w, (float)h};
-	ImVec2 uv0 = {0, 0};
-	ImVec2 uv1 = {1, 1};
-
-	// Note: We can't easily do 90 or 270-degree rotations: https://github.com/ocornut/imgui/issues/3267
-	if (rw->texture.rotate_180) {
-		uv0 = (ImVec2){1, 1};
-		uv1 = (ImVec2){0, 0};
-	}
-
-	ImVec4 white = {1, 1, 1, 1};
-	ImTextureID id = (ImTextureID)(intptr_t)tex->id;
-	igImage(id, size, uv0, uv1, white, white);
 
 #ifdef XRT_HAVE_GST
 	draw_gst(rw);
