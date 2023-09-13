@@ -875,6 +875,13 @@ multi_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_eve
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+multi_compositor_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint hint, uint32_t thread_id)
+{
+	// No-op
+	return XRT_SUCCESS;
+}
+
 static void
 multi_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -1002,6 +1009,7 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->base.base.layer_commit_with_semaphore = multi_compositor_layer_commit_with_semaphore;
 	mc->base.base.destroy = multi_compositor_destroy;
 	mc->base.base.poll_events = multi_compositor_poll_events;
+	mc->base.base.set_thread_hint = multi_compositor_set_thread_hint;
 	mc->msc = msc;
 	mc->xsi = *xsi;
 
