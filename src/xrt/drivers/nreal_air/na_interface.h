@@ -45,7 +45,7 @@ nreal_air_builder_create(void);
 /*!
  * @dir drivers/nreal_air
  *
- * @brief @ref nreal_air files.
+ * @brief nreal_air files.
  */
 
 #ifdef __cplusplus

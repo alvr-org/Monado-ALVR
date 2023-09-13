@@ -41,7 +41,7 @@
 #define CONTROL_HEAD 0xFD
 
 /*!
- * Private struct for the @ref nreal_air device.
+ * Private struct for the nreal_air device.
  *
  * @ingroup drv_na
  * @implements xrt_device
