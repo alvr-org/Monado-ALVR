@@ -867,6 +867,17 @@ struct xrt_begin_session_info
 };
 
 /*!
+ * Hints the XR runtime what type of task the thread is doing.
+ */
+enum xrt_thread_hint
+{
+	XRT_THREAD_HINT_APPLICATION_MAIN = 1,
+	XRT_THREAD_HINT_APPLICATION_WORKER = 2,
+	XRT_THREAD_HINT_RENDERER_MAIN = 3,
+	XRT_THREAD_HINT_RENDERER_WORKER = 4,
+};
+
+/*!
  * @interface xrt_compositor
  *
  * Common compositor client interface/base.
@@ -1238,6 +1249,18 @@ struct xrt_compositor
 	 * @see xrt_compositor::end_session for an open session.
 	 */
 	void (*destroy)(struct xrt_compositor *xc);
+
+	/*!
+	 * @name Function pointers for extensions
+	 * @{
+	 */
+
+	/*!
+	 * @brief Set thread attributes according to thread type
+	 */
+	xrt_result_t (*set_thread_hint)(struct xrt_compositor *xc, enum xrt_thread_hint hint, uint32_t thread_id);
+
+	/*! @} */
 };
 
 /*!
@@ -1647,6 +1670,21 @@ xrt_comp_destroy(struct xrt_compositor **xc_ptr)
 	*xc_ptr = NULL;
 }
 
+/*!
+ * @name Function pointers for extensions
+ * @{
+ */
+
+/*!
+ * @brief Set thread attributes according to thread type
+ */
+static inline xrt_result_t
+xrt_comp_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint hint, uint32_t thread_id)
+{
+	return xc->set_thread_hint(xc, hint, thread_id);
+}
+
+/*! @} */
 
 /*
  *
