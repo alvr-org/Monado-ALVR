@@ -255,8 +255,8 @@ get_latest_frame_with_state_at_least(struct pacing_compositor *pc, enum frame_st
 }
 
 /*!
- * "Create" a frame ID in state @ref STATE_PREDICTED (by calling @ref create_frame), and additionally initialize
- * frame::desired_present_time_ns (with a crude estimate) and frame::when_predict_ns.
+ * "Create" a frame ID in state @ref frame_state::STATE_PREDICTED (by calling @ref create_frame), and additionally
+ * initialize frame::desired_present_time_ns (with a crude estimate) and frame::when_predict_ns.
  */
 static struct frame *
 do_clean_slate_frame(struct pacing_compositor *pc, uint64_t now_ns)
