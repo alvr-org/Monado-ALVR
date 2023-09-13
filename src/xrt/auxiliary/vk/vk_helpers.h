@@ -696,7 +696,7 @@ vk_enumerate_instance_extensions_properties(struct vk_bundle *vk,
                                             VkExtensionProperties **out_props);
 
 /*!
- * Enumerate the physical devices of the @VkInstance that has been opened on
+ * Enumerate the physical devices of the @p VkInstance that has been opened on
  * the given @ref vk_bundle.
  *
  * @ingroup aux_vk

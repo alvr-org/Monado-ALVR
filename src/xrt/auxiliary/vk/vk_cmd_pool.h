@@ -174,8 +174,8 @@ vk_cmd_pool_create_and_begin_cmd_buffer(struct vk_bundle *vk,
 }
 
 /*!
- * Locks, calls @ref vk_cmd_pool_submit_locked, and then unlocks the command
- * pool. Will during the call take the queue lock and release it.
+ * Locks, calls @ref vk_cmd_submit_locked, and then unlocks the command
+ * pool. Will, during the call, take the queue lock and release it.
  *
  * @public @memberof vk_cmd_pool
  */

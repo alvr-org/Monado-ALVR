@@ -40,7 +40,7 @@ struct vk_cmd_first_mip_image
 /*!
  * Argument struct for @ref vk_cmd_copy_image_locked.
  *
- * See @ref struct vk_cmd_first_mip_image for array and mip selection rules.
+ * See @ref vk_cmd_first_mip_image for array and mip selection rules.
  *
  * @ingroup aux_vk
  */
@@ -66,7 +66,7 @@ struct vk_cmd_copy_image_info
 /*!
  * Argument struct for @ref vk_cmd_blit_image_locked.
  *
- * See @ref struct vk_cmd_first_mip_image for array and mip selection rules.
+ * See @ref vk_cmd_first_mip_image for array and mip selection rules.
  *
  * @ingroup aux_vk
  */
@@ -93,7 +93,7 @@ struct vk_cmd_blit_image_info
 /*!
  * Argument struct for @ref vk_cmd_blit_images_side_by_side_locked.
  *
- * See @ref struct vk_cmd_first_mip_image for array and mip selection rules.
+ * See @ref vk_cmd_first_mip_image for array and mip selection rules.
  *
  * @ingroup aux_vk
  */
