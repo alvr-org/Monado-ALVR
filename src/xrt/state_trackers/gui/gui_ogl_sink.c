@@ -1,8 +1,8 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  OpenGL functions to drive the gui.
+ * @brief  OpenGL sink functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Moses Turner <moses@collabora.com>
  * @ingroup gui

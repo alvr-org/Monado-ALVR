@@ -8,7 +8,7 @@ add_library(
 	st_gui STATIC
 	gui_common.h
 	gui_imgui.h
-	gui_ogl.c
+	gui_ogl_sink.c
 	gui_prober.c
 	gui_scene.cpp
 	gui_scene_calibrate.c
