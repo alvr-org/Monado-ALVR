@@ -154,19 +154,19 @@ update_compute_layer_descriptor_set(struct vk_bundle *vk,
 }
 
 XRT_MAYBE_UNUSED static void
-update_compute_distortion_descriptor_set(struct vk_bundle *vk,
-                                         uint32_t src_binding,
-                                         VkSampler src_samplers[2],
-                                         VkImageView src_image_views[2],
-                                         uint32_t distortion_binding,
-                                         VkSampler distortion_samplers[6],
-                                         VkImageView distortion_image_views[6],
-                                         uint32_t target_binding,
-                                         VkImageView target_image_view,
-                                         uint32_t ubo_binding,
-                                         VkBuffer ubo_buffer,
-                                         VkDeviceSize ubo_size,
-                                         VkDescriptorSet descriptor_set)
+update_compute_shared_descriptor_set(struct vk_bundle *vk,
+                                     uint32_t src_binding,
+                                     VkSampler src_samplers[2],
+                                     VkImageView src_image_views[2],
+                                     uint32_t distortion_binding,
+                                     VkSampler distortion_samplers[6],
+                                     VkImageView distortion_image_views[6],
+                                     uint32_t target_binding,
+                                     VkImageView target_image_view,
+                                     uint32_t ubo_binding,
+                                     VkBuffer ubo_buffer,
+                                     VkDeviceSize ubo_size,
+                                     VkDescriptorSet descriptor_set)
 {
 	VkDescriptorImageInfo src_image_info[2] = {
 	    {
@@ -334,13 +334,13 @@ render_compute_init(struct render_compute *crc, struct render_resources *r)
 	    vk,                                     //
 	    r->compute.descriptor_pool,             // descriptor_pool
 	    r->compute.layer.descriptor_set_layout, // descriptor_set_layout
-	    &crc->descriptor_set));                 // descriptor_set
+	    &crc->layer_descriptor_set));           // descriptor_set
 
 	C(vk_create_descriptor_set(                      //
 	    vk,                                          //
 	    r->compute.descriptor_pool,                  // descriptor_pool
 	    r->compute.distortion.descriptor_set_layout, // descriptor_set_layout
-	    &crc->distortion_descriptor_set));           // descriptor_set
+	    &crc->shared_descriptor_set));               // descriptor_set
 
 	return true;
 }
@@ -400,8 +400,8 @@ render_compute_close(struct render_compute *crc)
 	struct vk_bundle *vk = vk_from_crc(crc);
 
 	// Reclaimed by vkResetDescriptorPool.
-	crc->descriptor_set = VK_NULL_HANDLE;
-	crc->distortion_descriptor_set = VK_NULL_HANDLE;
+	crc->layer_descriptor_set = VK_NULL_HANDLE;
+	crc->shared_descriptor_set = VK_NULL_HANDLE;
 
 	vk->vkResetDescriptorPool(vk->device, crc->r->compute.descriptor_pool, 0);
 
@@ -459,7 +459,7 @@ render_compute_layers(struct render_compute *crc,
 	    r->compute.ubo_binding,          //
 	    r->compute.layer.ubo.buffer,     //
 	    VK_WHOLE_SIZE,                   //
-	    crc->descriptor_set);            //
+	    crc->layer_descriptor_set);      //
 
 	vk->vkCmdBindPipeline(              //
 	    crc->r->cmd,                    // commandBuffer
@@ -472,7 +472,7 @@ render_compute_layers(struct render_compute *crc,
 	    r->compute.layer.pipeline_layout, // layout
 	    0,                                // firstSet
 	    1,                                // descriptorSetCount
-	    &crc->descriptor_set,             // pDescriptorSets
+	    &crc->layer_descriptor_set,       // pDescriptorSets
 	    0,                                // dynamicOffsetCount
 	    NULL);                            // pDynamicOffsets
 
@@ -585,20 +585,20 @@ render_compute_projection_timewarp(struct render_compute *crc,
 	    sampler, sampler, sampler, sampler, sampler, sampler,
 	};
 
-	update_compute_distortion_descriptor_set( //
-	    vk,                                   //
-	    r->compute.src_binding,               //
-	    src_samplers,                         //
-	    src_image_views,                      //
-	    r->compute.distortion_binding,        //
-	    distortion_samplers,                  //
-	    r->distortion.image_views,            //
-	    r->compute.target_binding,            //
-	    target_image_view,                    //
-	    r->compute.ubo_binding,               //
-	    r->compute.distortion.ubo.buffer,     //
-	    VK_WHOLE_SIZE,                        //
-	    crc->distortion_descriptor_set);      //
+	update_compute_shared_descriptor_set( //
+	    vk,                               //
+	    r->compute.src_binding,           //
+	    src_samplers,                     //
+	    src_image_views,                  //
+	    r->compute.distortion_binding,    //
+	    distortion_samplers,              //
+	    r->distortion.image_views,        //
+	    r->compute.target_binding,        //
+	    target_image_view,                //
+	    r->compute.ubo_binding,           //
+	    r->compute.distortion.ubo.buffer, //
+	    VK_WHOLE_SIZE,                    //
+	    crc->shared_descriptor_set);      //
 
 	vk->vkCmdBindPipeline(                        //
 	    r->cmd,                                   // commandBuffer
@@ -611,7 +611,7 @@ render_compute_projection_timewarp(struct render_compute *crc,
 	    r->compute.distortion.pipeline_layout, // layout
 	    0,                                     // firstSet
 	    1,                                     // descriptorSetCount
-	    &crc->distortion_descriptor_set,       // pDescriptorSets
+	    &crc->shared_descriptor_set,           // pDescriptorSets
 	    0,                                     // dynamicOffsetCount
 	    NULL);                                 // pDynamicOffsets
 
@@ -705,20 +705,20 @@ render_compute_projection(struct render_compute *crc,
 	    sampler, sampler, sampler, sampler, sampler, sampler,
 	};
 
-	update_compute_distortion_descriptor_set( //
-	    vk,                                   //
-	    r->compute.src_binding,               //
-	    src_samplers,                         //
-	    src_image_views,                      //
-	    r->compute.distortion_binding,        //
-	    distortion_samplers,                  //
-	    r->distortion.image_views,            //
-	    r->compute.target_binding,            //
-	    target_image_view,                    //
-	    r->compute.ubo_binding,               //
-	    r->compute.distortion.ubo.buffer,     //
-	    VK_WHOLE_SIZE,                        //
-	    crc->distortion_descriptor_set);      //
+	update_compute_shared_descriptor_set( //
+	    vk,                               //
+	    r->compute.src_binding,           //
+	    src_samplers,                     //
+	    src_image_views,                  //
+	    r->compute.distortion_binding,    //
+	    distortion_samplers,              //
+	    r->distortion.image_views,        //
+	    r->compute.target_binding,        //
+	    target_image_view,                //
+	    r->compute.ubo_binding,           //
+	    r->compute.distortion.ubo.buffer, //
+	    VK_WHOLE_SIZE,                    //
+	    crc->shared_descriptor_set);      //
 
 	vk->vkCmdBindPipeline(               //
 	    r->cmd,                          // commandBuffer
@@ -731,7 +731,7 @@ render_compute_projection(struct render_compute *crc,
 	    r->compute.distortion.pipeline_layout, // layout
 	    0,                                     // firstSet
 	    1,                                     // descriptorSetCount
-	    &crc->distortion_descriptor_set,       // pDescriptorSets
+	    &crc->shared_descriptor_set,           // pDescriptorSets
 	    0,                                     // dynamicOffsetCount
 	    NULL);                                 // pDynamicOffsets
 
@@ -826,20 +826,20 @@ render_compute_clear(struct render_compute *crc,                 //
 	VkImageView src_image_views[2] = {r->mock.color.image_view, r->mock.color.image_view};
 	VkSampler distortion_samplers[6] = {sampler, sampler, sampler, sampler, sampler, sampler};
 
-	update_compute_distortion_descriptor_set( //
-	    vk,                                   // vk_bundle
-	    r->compute.src_binding,               // src_binding
-	    src_samplers,                         // src_samplers[2]
-	    src_image_views,                      // src_image_views[2]
-	    r->compute.distortion_binding,        // distortion_binding
-	    distortion_samplers,                  // distortion_samplers[6]
-	    r->distortion.image_views,            // distortion_image_views[6]
-	    r->compute.target_binding,            // target_binding
-	    target_image_view,                    // target_image_view
-	    r->compute.ubo_binding,               // ubo_binding
-	    r->compute.clear.ubo.buffer,          // ubo_buffer
-	    VK_WHOLE_SIZE,                        // ubo_size
-	    crc->distortion_descriptor_set);      // descriptor_set
+	update_compute_shared_descriptor_set( //
+	    vk,                               // vk_bundle
+	    r->compute.src_binding,           // src_binding
+	    src_samplers,                     // src_samplers[2]
+	    src_image_views,                  // src_image_views[2]
+	    r->compute.distortion_binding,    // distortion_binding
+	    distortion_samplers,              // distortion_samplers[6]
+	    r->distortion.image_views,        // distortion_image_views[6]
+	    r->compute.target_binding,        // target_binding
+	    target_image_view,                // target_image_view
+	    r->compute.ubo_binding,           // ubo_binding
+	    r->compute.clear.ubo.buffer,      // ubo_buffer
+	    VK_WHOLE_SIZE,                    // ubo_size
+	    crc->shared_descriptor_set);      // descriptor_set
 
 	vk->vkCmdBindPipeline(              //
 	    r->cmd,                         // commandBuffer
@@ -852,7 +852,7 @@ render_compute_clear(struct render_compute *crc,                 //
 	    r->compute.distortion.pipeline_layout, // layout
 	    0,                                     // firstSet
 	    1,                                     // descriptorSetCount
-	    &crc->distortion_descriptor_set,       // pDescriptorSets
+	    &crc->shared_descriptor_set,           // pDescriptorSets
 	    0,                                     // dynamicOffsetCount
 	    NULL);                                 // pDynamicOffsets
 

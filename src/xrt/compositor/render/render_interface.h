@@ -735,11 +735,15 @@ struct render_compute
 	//! Shared resources.
 	struct render_resources *r;
 
-	//! Shared descriptor set between clear, projection and timewarp.
-	VkDescriptorSet descriptor_set;
+	//! Layer descriptor set.
+	VkDescriptorSet layer_descriptor_set;
 
-	//! Descriptor set for distortion.
-	VkDescriptorSet distortion_descriptor_set;
+	/*!
+	 * Shared descriptor set, used for the clear and distortion shaders. It
+	 * is used in the functions @ref render_compute_projection_timewarp,
+	 * @ref render_compute_projection and @ref render_compute_clear.
+	 */
+	VkDescriptorSet shared_descriptor_set;
 };
 
 /*!
