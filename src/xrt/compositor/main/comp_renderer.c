@@ -87,6 +87,8 @@ struct comp_renderer
 
 	struct comp_mirror_to_debug_gui mirror_to_debug_gui;
 
+	//! Scratch images used for layer squasher.
+	struct render_scratch_images scratch;
 	//! @}
 
 	//! @name Image-dependent members
@@ -812,6 +814,9 @@ renderer_fini(struct comp_renderer *r)
 
 	// Do this after the mirror struct.
 	comp_layer_renderer_destroy(&(r->lr));
+
+	// Destroy any scratch images created.
+	render_scratch_images_close(&r->c->nr, &r->scratch);
 }
 
 static VkImageView
@@ -1033,13 +1038,13 @@ ensure_scratch_image(struct comp_renderer *r,
 	struct render_viewport_data r_viewport_data = {
 	    .w = w,
 	    .h = h,
-	    .x = w,
+	    .x = 0,
 	    .y = 0,
 	};
 
-	VkExtent2D extent = {w * 2, h};
+	VkExtent2D extent = {w, h};
 
-	if (!render_ensure_scratch_image(&r->c->nr, extent)) {
+	if (!render_scratch_images_ensure(&r->c->nr, &r->scratch, extent)) {
 		U_LOG_E("Failed to create scratch image!");
 		assert(false);
 	}
@@ -1059,13 +1064,13 @@ do_layers(struct comp_renderer *r,
 	// Create scratch image and get target views.
 	ensure_scratch_image(r, &target_views[0], &target_views[1]);
 	VkImage target_images[2] = {
-	    crc->r->scratch.color.image,
-	    crc->r->scratch.color.image,
+	    r->scratch.color[0].image,
+	    r->scratch.color[1].image,
 	};
 
 	VkImageView target_image_views[2] = {
-	    crc->r->scratch.color.unorm_view, // Have to write in linear
-	    crc->r->scratch.color.unorm_view,
+	    r->scratch.color[0].unorm_view, // Have to write in linear
+	    r->scratch.color[1].unorm_view,
 	};
 
 	struct xrt_normalized_rect pre_transforms[2] = {
@@ -1101,25 +1106,27 @@ do_distortion(struct comp_renderer *r, struct render_compute *crc, const struct 
 	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
 	VkImageView target_image_view = r->c->target->images[r->acquired_buffer].view;
 
-	VkImageView view = crc->r->scratch.color.srgb_view; // Read with gamma curve.
 	VkSampler sampler = crc->r->samplers.clamp_to_border_black;
 
-	VkImageView src_image_views[2] = {view, view};
+	VkImageView src_image_views[2] = {
+	    r->scratch.color[0].srgb_view, // Read with gamma curve.
+	    r->scratch.color[1].srgb_view,
+	};
 	VkSampler src_samplers[2] = {sampler, sampler};
 
 	struct xrt_normalized_rect src_norm_rects[2] = {
 	    {
-	        // Left, takes up half the screen.
+	        // Left, takes up the full view of the first image.
 	        .x = 0.0f,
 	        .y = 0.0f,
-	        .w = 0.5f,
+	        .w = 1.0f,
 	        .h = 1.0f,
 	    },
 	    {
-	        // Right, takes up half the screen.
-	        .x = 0.5f,
+	        // Right, takes up the full view of the second image.
+	        .x = 0.0f,
 	        .y = 0.0f,
-	        .w = 0.5f,
+	        .w = 1.0f,
 	        .h = 1.0f,
 	    },
 	};
@@ -1626,17 +1633,17 @@ comp_renderer_draw(struct comp_renderer *r)
 
 		if (use_compute) {
 			// Covers only the first half of the view.
-			struct xrt_normalized_rect rect = {0, 0, 0.5f, 1.0f};
+			struct xrt_normalized_rect rect = {0, 0, 1.0f, 1.0f};
 
 			comp_mirror_do_blit(               //
 			    &r->mirror_to_debug_gui,       //
 			    &c->base.vk,                   //
 			    frame_id,                      //
 			    predicted_display_time_ns,     //
-			    c->nr.scratch.color.image,     //
-			    c->nr.scratch.color.srgb_view, //
+			    r->scratch.color[0].image,     //
+			    r->scratch.color[0].srgb_view, //
 			    clamp_to_edge,                 //
-			    c->nr.scratch.extent,          //
+			    r->scratch.extent,             //
 			    rect);                         //
 		} else {
 			// Covers the whole view.

@@ -300,22 +300,6 @@ struct render_resources
 	} mesh;
 
 	/*!
-	 * Used as a scratch buffer by the compute layer renderer.
-	 */
-	struct
-	{
-		VkExtent2D extent;
-
-		struct
-		{
-			VkDeviceMemory memory;
-			VkImage image;
-			VkImageView srgb_view;
-			VkImageView unorm_view;
-		} color;
-	} scratch;
-
-	/*!
 	 * Used as a default image empty image when none is given or to pad
 	 * out fixed sized descriptor sets.
 	 */
@@ -453,12 +437,6 @@ void
 render_distortion_images_close(struct render_resources *r);
 
 /*!
- * Ensure that the scratch image is created and has the given extent.
- */
-bool
-render_ensure_scratch_image(struct render_resources *r, VkExtent2D extent);
-
-/*!
  * Returns the timestamps for when the latest GPU work started and stopped that
  * was submitted using @ref render_gfx or @ref render_compute cmd buf builders.
  *
@@ -487,6 +465,47 @@ render_resources_get_timestamps(struct render_resources *r, uint64_t *out_gpu_st
  */
 bool
 render_resources_get_duration(struct render_resources *r, uint64_t *out_gpu_duration_ns);
+
+
+/*
+ *
+ * Scratch images.
+ *
+ */
+
+/*!
+ * Small helper struct to hold a scratch image, intended to be used with the
+ * compute pipeline where both srgb and unorm views are needed.
+ */
+struct render_scratch_color_image
+{
+	VkDeviceMemory device_memory;
+	VkImage image;
+	VkImageView srgb_view;
+	VkImageView unorm_view;
+};
+
+/*!
+ * Helper struct to hold scratch images.
+ */
+struct render_scratch_images
+{
+	VkExtent2D extent;
+
+	struct render_scratch_color_image color[2];
+};
+
+/*!
+ * Ensure that the scratch images are created and have the given extent.
+ */
+bool
+render_scratch_images_ensure(struct render_resources *r, struct render_scratch_images *rsi, VkExtent2D extent);
+
+/*!
+ * Close all resources on the given @ref render_scatch_images.
+ */
+void
+render_scratch_images_close(struct render_resources *r, struct render_scratch_images *rsi);
 
 
 /*

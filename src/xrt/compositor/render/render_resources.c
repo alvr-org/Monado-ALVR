@@ -448,12 +448,7 @@ prepare_mock_image_locked(struct vk_bundle *vk, VkCommandBuffer cmd, VkImage dst
  */
 
 static bool
-create_scratch_image_and_view(struct vk_bundle *vk,
-                              VkExtent2D extent,
-                              VkDeviceMemory *out_device_memory,
-                              VkImage *out_image,
-                              VkImageView *out_srgb_view,
-                              VkImageView *out_unorm_view)
+create_scratch_image_and_view(struct vk_bundle *vk, VkExtent2D extent, struct render_scratch_color_image *rsci)
 {
 	VkFormat srgb_format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFormat unorm_format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -506,24 +501,21 @@ create_scratch_image_and_view(struct vk_bundle *vk,
 	    subresource_range,  // subresource_range
 	    &unorm_view));      // out_image_view
 
-	*out_device_memory = device_memory;
-	*out_image = image;
-	*out_srgb_view = srgb_view;
-	*out_unorm_view = unorm_view;
+	rsci->device_memory = device_memory;
+	rsci->image = image;
+	rsci->srgb_view = srgb_view;
+	rsci->unorm_view = unorm_view;
 
 	return true;
 }
 
 static void
-teardown_scratch_image(struct render_resources *r)
+teardown_scratch_color_image(struct vk_bundle *vk, struct render_scratch_color_image *rsci)
 {
-	struct vk_bundle *vk = r->vk;
-
-	D(ImageView, r->scratch.color.unorm_view);
-	D(ImageView, r->scratch.color.srgb_view);
-	D(Image, r->scratch.color.image);
-	DF(Memory, r->scratch.color.memory);
-	U_ZERO(&r->scratch.extent);
+	D(ImageView, rsci->unorm_view);
+	D(ImageView, rsci->srgb_view);
+	D(Image, rsci->image);
+	DF(Memory, rsci->device_memory);
 }
 
 
@@ -942,36 +934,6 @@ render_resources_init(struct render_resources *r,
 	return true;
 }
 
-bool
-render_ensure_scratch_image(struct render_resources *r, VkExtent2D extent)
-{
-	bool bret;
-
-	if (r->scratch.extent.width == extent.width &&      //
-	    r->scratch.extent.height == extent.height &&    //
-	    r->scratch.color.srgb_view != VK_NULL_HANDLE && //
-	    r->scratch.color.unorm_view != VK_NULL_HANDLE) {
-		return true;
-	}
-
-	teardown_scratch_image(r);
-
-	bret = create_scratch_image_and_view( //
-	    r->vk,                            //
-	    extent,                           //
-	    &r->scratch.color.memory,         //
-	    &r->scratch.color.image,          //
-	    &r->scratch.color.srgb_view,      //
-	    &r->scratch.color.unorm_view);    //
-	if (!bret) {
-		return false;
-	}
-
-	r->scratch.extent = extent;
-
-	return true;
-}
-
 void
 render_resources_close(struct render_resources *r)
 {
@@ -1020,8 +982,6 @@ render_resources_close(struct render_resources *r)
 		render_buffer_close(vk, &r->compute.layer.ubos[i]);
 	}
 	render_buffer_close(vk, &r->compute.distortion.ubo);
-
-	teardown_scratch_image(r);
 
 	vk_cmd_pool_destroy(vk, &r->distortion_pool);
 	D(CommandPool, r->cmd_pool);
@@ -1119,4 +1079,57 @@ render_resources_get_duration(struct render_resources *r, uint64_t *out_gpu_dura
 	*out_gpu_duration_ns = (uint64_t)(duration_ticks * vk->features.timestamp_period);
 
 	return true;
+}
+
+
+/*
+ *
+ * 'Exported' scratch functions.
+ *
+ */
+
+bool
+render_scratch_images_ensure(struct render_resources *r, struct render_scratch_images *rsi, VkExtent2D extent)
+{
+	bool bret;
+
+	if (rsi->extent.width == extent.width &&         //
+	    rsi->extent.height == extent.height &&       //
+	    rsi->color[0].srgb_view != VK_NULL_HANDLE && //
+	    rsi->color[0].unorm_view != VK_NULL_HANDLE) {
+		return true;
+	}
+
+	render_scratch_images_close(r, rsi);
+
+	for (uint32_t i = 0; i < ARRAY_SIZE(rsi->color); i++) {
+		bret = create_scratch_image_and_view( //
+		    r->vk,                            //
+		    extent,                           //
+		    &rsi->color[i]);                  //
+		if (!bret) {
+			break;
+		}
+	}
+
+	if (!bret) {
+		render_scratch_images_close(r, rsi);
+		return false;
+	}
+
+	rsi->extent = extent;
+
+	return true;
+}
+
+void
+render_scratch_images_close(struct render_resources *r, struct render_scratch_images *rsi)
+{
+	struct vk_bundle *vk = r->vk;
+
+	for (uint32_t i = 0; i < ARRAY_SIZE(rsi->color); i++) {
+		teardown_scratch_color_image(vk, &rsi->color[i]);
+	}
+
+	U_ZERO(&rsi->extent);
 }
