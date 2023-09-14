@@ -800,6 +800,12 @@ struct render_compute_layer_ubo_data
 {
 	struct render_viewport_data view;
 
+	struct
+	{
+		uint32_t value;
+		uint32_t padding[3];
+	} layer_count;
+
 	struct xrt_normalized_rect pre_transform;
 	struct xrt_normalized_rect post_transforms[RENDER_MAX_LAYERS];
 

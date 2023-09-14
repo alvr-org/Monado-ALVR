@@ -31,6 +31,7 @@ layout(set = 0, binding = 2) uniform writeonly restrict image2D target;
 layout(set = 0, binding = 3, std140) uniform restrict Config
 {
 	ivec4 view;
+	ivec4 layer_count;
 	vec4 pre_transform;
 	vec4 post_transform[RENDER_MAX_LAYERS];
 
@@ -232,33 +233,30 @@ vec4 do_quad(vec2 view_uv, uint layer)
 vec4 do_layers(vec2 view_uv)
 {
 	vec4 accum = vec4(0, 0, 0, 0);
-	for (uint layer = 0; layer < RENDER_MAX_LAYERS; layer++) {
-		bool use_layer = false;
 
+	int layer_count = ubo.layer_count.x;
+	for (uint layer = 0; layer < layer_count; layer++) {
 		vec4 rgba = vec4(0, 0, 0, 0);
+
 		switch (ubo.layer_type_and_unpremultiplied[layer].x) {
 		case XRT_LAYER_STEREO_PROJECTION:
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 			rgba = do_projection(view_uv, layer);
-			use_layer = true;
 			break;
 		case XRT_LAYER_QUAD:
 			rgba = do_quad(view_uv, layer);
-			use_layer = true;
 			break;
 		default: break;
 		}
 
-		if (use_layer) {
-			if (ubo.layer_type_and_unpremultiplied[layer].y != 0) {
-				// Unpremultipled blend factor of src.a.
-				accum.rgb = mix(accum.rgb, rgba.rgb, rgba.a);
-			} else {
-				// Premultiplied blend factor of 1.
-				accum.rgb = (accum.rgb * (1 - rgba.a)) + rgba.rgb;
-			}
-			accum.a = rgba.a + accum.a * (1.0 - rgba.a);
+		if (ubo.layer_type_and_unpremultiplied[layer].y != 0) {
+			// Unpremultipled blend factor of src.a.
+			accum.rgb = mix(accum.rgb, rgba.rgb, rgba.a);
+		} else {
+			// Premultiplied blend factor of 1.
+			accum.rgb = (accum.rgb * (1 - rgba.a)) + rgba.rgb;
 		}
+		accum.a = rgba.a + accum.a * (1.0 - rgba.a);
 	}
 
 	return accum;

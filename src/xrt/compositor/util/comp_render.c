@@ -514,6 +514,9 @@ comp_render_layer(struct render_compute *crc,
 		cur_layer++;
 	}
 
+	// Set the number of layers.
+	ubo_data->layer_count.value = cur_layer;
+
 	for (uint32_t i = cur_layer; i < RENDER_MAX_LAYERS; i++) {
 		ubo_data->layer_type[i].val = UINT32_MAX;
 	}
