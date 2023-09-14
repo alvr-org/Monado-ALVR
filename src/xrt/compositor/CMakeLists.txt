@@ -82,32 +82,6 @@ if(XRT_HAVE_D3D12)
 endif()
 
 ##
-# Util library
-#
-
-if(XRT_HAVE_VULKAN)
-	add_library(
-		comp_util STATIC
-		util/comp_base.h
-		util/comp_base.c
-		util/comp_semaphore.h
-		util/comp_semaphore.c
-		util/comp_swapchain.h
-		util/comp_swapchain.c
-		util/comp_sync.h
-		util/comp_sync.c
-		util/comp_vulkan.h
-		util/comp_vulkan.c
-		)
-	target_link_libraries(
-		comp_util
-		PUBLIC xrt-interfaces
-		PRIVATE aux_util aux_os aux_vk
-		)
-	target_include_directories(comp_util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
-
-##
 # Render library
 #
 
@@ -160,6 +134,32 @@ if(XRT_HAVE_VULKAN)
 	target_include_directories(comp_render SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 	add_subdirectory(shaders)
+endif()
+
+##
+# Util library
+#
+
+if(XRT_HAVE_VULKAN)
+	add_library(
+		comp_util STATIC
+		util/comp_base.h
+		util/comp_base.c
+		util/comp_semaphore.h
+		util/comp_semaphore.c
+		util/comp_swapchain.h
+		util/comp_swapchain.c
+		util/comp_sync.h
+		util/comp_sync.c
+		util/comp_vulkan.h
+		util/comp_vulkan.c
+		)
+	target_link_libraries(
+		comp_util
+		PUBLIC xrt-interfaces
+		PRIVATE aux_util aux_os aux_vk
+		)
+	target_include_directories(comp_util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 ##
