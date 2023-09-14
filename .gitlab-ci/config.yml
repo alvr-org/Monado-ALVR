@@ -36,7 +36,6 @@ fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
   libhidapi-dev:
   libwayland-dev:
   libuvc-dev:
-  libavcodec-dev:
   libopencv-dev:
   libv4l-dev:
   libcjson-dev:
@@ -212,7 +211,6 @@ distributions:
           diffutils:
           doxygen:
           eigen:
-          ffmpeg:
           gcc:
           git:
           glfw-x11:

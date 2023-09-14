@@ -61,7 +61,6 @@ Truly optional dependencies, useful for some drivers, app support, etc.:
 * libhidapi - Debian/Ubuntu package ´libhidapi-dev´
 * OpenCV
 * libuvc - Debian/Ubuntu package ´libuvc-dev´
-* ffmpeg
 * libjpeg
 * libbluetooth - Debian/Ubuntu package ´libbluetooth-dev´
 * libsdl - Debian/Ubuntu package ´libsdl2-dev´

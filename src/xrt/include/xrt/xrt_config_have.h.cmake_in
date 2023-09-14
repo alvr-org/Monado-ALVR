@@ -18,7 +18,6 @@
 #cmakedefine XRT_HAVE_DBUS
 #cmakedefine XRT_HAVE_DXGI
 #cmakedefine XRT_HAVE_EGL
-#cmakedefine XRT_HAVE_FFMPEG
 #cmakedefine XRT_HAVE_GST
 #cmakedefine XRT_HAVE_HIDAPI
 #cmakedefine XRT_HAVE_JPEG

@@ -148,9 +148,6 @@ endif()
 if(PKGCONFIG_FOUND AND NOT ANDROID)
 	# @TODO Turn into a find_package LIBUVC file.
 	pkg_check_modules(LIBUVC libuvc)
-
-	# @TODO Turn into a find_package FFMPEG file.
-	pkg_check_modules(FFMPEG libavcodec)
 endif()
 
 find_package(OpenGL)
@@ -313,7 +310,6 @@ option_with_deps(XRT_INSTALL_ABSOLUTE_SYSTEMD_UNIT_FILES "Use an absolute path t
 
 # Driver deps to use (sorted, though there are some internal dependencies)
 option_with_deps(XRT_HAVE_BLUETOOTH "Enable Bluetooth (legacy, non-ble)" DEPENDS BLUETOOTH_FOUND)
-option_with_deps(XRT_HAVE_FFMPEG "Enable ffmpeg testing video driver" DEPENDS FFMPEG_FOUND)
 option_with_deps(XRT_HAVE_GST "Enable gstreamer" DEPENDS GST_FOUND)
 option_with_deps(XRT_HAVE_HIDAPI "Enable libhidapi (used for PSVR)" DEPENDS HIDAPI_FOUND)
 option_with_deps(XRT_HAVE_JPEG "Enable jpeg code (used for some video drivers)" DEPENDS JPEG_FOUND)
@@ -597,7 +593,6 @@ message(STATUS "#    D3D11:           ${XRT_HAVE_D3D11}")
 message(STATUS "#    D3D12:           ${XRT_HAVE_D3D12}")
 message(STATUS "#    DBUS:            ${XRT_HAVE_DBUS}")
 message(STATUS "#    EGL:             ${XRT_HAVE_EGL}")
-message(STATUS "#    FFMPEG:          ${XRT_HAVE_FFMPEG}")
 message(STATUS "#    GST (GStreamer): ${XRT_HAVE_GST}")
 message(STATUS "#    HIDAPI:          ${XRT_HAVE_HIDAPI}")
 message(STATUS "#    JPEG:            ${XRT_HAVE_JPEG}")

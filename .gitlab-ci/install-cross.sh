@@ -23,7 +23,6 @@ for arch in $CROSS_ARCHITECTURES; do
     apt-get install -y --no-install-recommends --no-remove \
             crossbuild-essential-${arch} \
             libelf-dev:${arch} \
-            libavcodec-dev:${arch} \
             libegl1-mesa-dev:${arch} \
             libgl1-mesa-dev:${arch} \
             libglvnd-dev:${arch} \

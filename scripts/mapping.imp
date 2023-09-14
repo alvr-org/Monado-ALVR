@@ -69,7 +69,6 @@
 { symbol: ["XRT_HAVE_DBUS", "public", "\"xrt/xrt_config_have.h\"", "public"] },
 { symbol: ["XRT_HAVE_DXGI", "public", "\"xrt/xrt_config_have.h\"", "public"] },
 { symbol: ["XRT_HAVE_EGL", "public", "\"xrt/xrt_config_have.h\"", "public"] },
-{ symbol: ["XRT_HAVE_FFMPEG", "public", "\"xrt/xrt_config_have.h\"", "public"] },
 { symbol: ["XRT_HAVE_GST", "public", "\"xrt/xrt_config_have.h\"", "public"] },
 { symbol: ["XRT_HAVE_HIDAPI", "public", "\"xrt/xrt_config_have.h\"", "public"] },
 { symbol: ["XRT_HAVE_JPEG", "public", "\"xrt/xrt_config_have.h\"", "public"] },
