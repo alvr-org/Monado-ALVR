@@ -10,8 +10,6 @@
 
 #pragma once
 
-#define COMP_VIEWS_PER_LAYER 2
-
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
 
@@ -53,6 +51,15 @@ extern "C" {
  * squasher in a single dispatch.
  */
 #define RENDER_MAX_IMAGES (RENDER_MAX_LAYERS * 2)
+
+/*!
+ * Maximum number of times that the layer squasher shader can run per
+ * @ref render_compute. Since you run the layer squasher shader once per view
+ * this is essentially the same as number of views. But if you you where to do
+ * two or more different compositions it's not the maximum number of views per
+ * composition (which is this number divided by number of composition).
+ */
+#define RENDER_MAX_LAYER_RUNS (2)
 
 //! How large in pixels the distortion image is.
 #define RENDER_DISTORTION_IMAGE_DIMENSIONS (128)
@@ -357,7 +364,7 @@ struct render_resources
 			uint32_t image_array_size;
 
 			//! Target info.
-			struct render_buffer ubo;
+			struct render_buffer ubos[RENDER_MAX_LAYER_RUNS];
 		} layer;
 
 		struct
@@ -746,7 +753,7 @@ struct render_compute
 	struct render_resources *r;
 
 	//! Layer descriptor set.
-	VkDescriptorSet layer_descriptor_set;
+	VkDescriptorSet layer_descriptor_sets[RENDER_MAX_LAYER_RUNS];
 
 	/*!
 	 * Shared descriptor set, used for the clear and distortion shaders. It
@@ -772,9 +779,10 @@ struct render_compute_blit_push_data
  */
 struct render_compute_layer_ubo_data
 {
-	struct render_viewport_data views[2];
-	struct xrt_normalized_rect pre_transforms[2];
-	struct xrt_normalized_rect post_transforms[RENDER_MAX_LAYERS * COMP_VIEWS_PER_LAYER];
+	struct render_viewport_data view;
+
+	struct xrt_normalized_rect pre_transform;
+	struct xrt_normalized_rect post_transforms[RENDER_MAX_LAYERS];
 
 	//! std140 uvec2, corresponds to enum xrt_layer_type and unpremultiplied alpha.
 	struct
@@ -790,7 +798,7 @@ struct render_compute_layer_ubo_data
 		uint32_t images[2];
 		//! @todo Implement separated samplers and images (and change to samplers[2])
 		uint32_t padding[2];
-	} images_samplers[RENDER_MAX_LAYERS * 2];
+	} images_samplers[RENDER_MAX_LAYERS];
 
 
 	/*!
@@ -798,7 +806,7 @@ struct render_compute_layer_ubo_data
 	 */
 
 	//! Timewarp matrices
-	struct xrt_matrix_4x4 transforms[RENDER_MAX_LAYERS * COMP_VIEWS_PER_LAYER];
+	struct xrt_matrix_4x4 transforms[RENDER_MAX_LAYERS];
 
 
 	/*!
@@ -810,13 +818,13 @@ struct render_compute_layer_ubo_data
 	{
 		struct xrt_vec3 val;
 		float padding;
-	} quad_position[RENDER_MAX_LAYERS * 2];
+	} quad_position[RENDER_MAX_LAYERS];
 	struct
 	{
 		struct xrt_vec3 val;
 		float padding;
-	} quad_normal[RENDER_MAX_LAYERS * 2];
-	struct xrt_matrix_4x4 inverse_quad_transform[RENDER_MAX_LAYERS * 2];
+	} quad_normal[RENDER_MAX_LAYERS];
+	struct xrt_matrix_4x4 inverse_quad_transform[RENDER_MAX_LAYERS];
 
 	//! Quad extent in world scale
 	struct
@@ -874,16 +882,26 @@ bool
 render_compute_end(struct render_compute *crc);
 
 /*!
+ * Updates the given @p descriptor_set and dispatches the layer shader. Unlike
+ * other dispatch functions below this function doesn't do any layer barriers
+ * before or after dispatching, this is to allow the callee to batch any such
+ * image transitions.
+ *
+ * Expected layouts:
+ * * Source images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Target image: VK_IMAGE_LAYOUT_GENERAL
+ *
  * @public @memberof render_compute
  */
 void
 render_compute_layers(struct render_compute *crc,                     //
+                      VkDescriptorSet descriptor_set,                 //
+                      VkBuffer ubo,                                   //
                       VkSampler src_samplers[RENDER_MAX_IMAGES],      //
                       VkImageView src_image_views[RENDER_MAX_IMAGES], //
-                      uint32_t image_count,                           //
-                      VkImage target_image,                           //
+                      uint32_t num_srcs,                              //
                       VkImageView target_image_view,                  //
-                      VkImageLayout transition_to,                    //
+                      const struct render_viewport_data *view,        //
                       bool timewarp);                                 //
 
 /*!

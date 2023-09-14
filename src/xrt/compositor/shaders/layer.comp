@@ -1,4 +1,4 @@
-// Copyright 2021-2022, Collabora Ltd.
+// Copyright 2021-2023, Collabora Ltd.
 // Author: Jakob Bornecrantz <jakob@collabora.com>
 // Author: Christoph Haag <christoph.haag@collabora.com>
 // SPDX-License-Identifier: BSL-1.0
@@ -21,38 +21,37 @@
 layout(constant_id = 1) const bool do_timewarp = false;
 layout(constant_id = 2) const bool do_color_correction = true;
 layout(constant_id = 3) const int RENDER_MAX_LAYERS = 16;
-layout(constant_id = 4) const int COMP_VIEWS_PER_LAYER = 2;
-layout(constant_id = 5) const int SAMPLER_ARRAY_SIZE = 16;
+layout(constant_id = 4) const int SAMPLER_ARRAY_SIZE = 16;
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-// layer 0 left color, layer 0 right color, [optional: layer 0 left depth, layer 0 right depth], layer 1 left, layer 1 right, ...
+// layer 0 color, [optional: layer 0 depth], layer 1, ...
 layout(set = 0, binding = 0) uniform sampler2D source[SAMPLER_ARRAY_SIZE];
 layout(set = 0, binding = 2) uniform writeonly restrict image2D target;
 layout(set = 0, binding = 3, std140) uniform restrict Config
 {
-	ivec4 views[2];
-	vec4 pre_transform[2];
-	vec4 post_transform[RENDER_MAX_LAYERS][2];
+	ivec4 view;
+	vec4 pre_transform;
+	vec4 post_transform[RENDER_MAX_LAYERS];
 
 	// corresponds to enum xrt_layer_type
 	uvec2 layer_type_and_unpremultiplied[RENDER_MAX_LAYERS];
 
 	// which image/sampler(s) correspond to each layer
-	ivec2 images_samplers[RENDER_MAX_LAYERS][2];
+	ivec2 images_samplers[RENDER_MAX_LAYERS];
 
 	// for projection layers
 
 	// timewarp matrices
-	mat4 transform[RENDER_MAX_LAYERS][2];
+	mat4 transform[RENDER_MAX_LAYERS];
 
 
 	// for quad layers
 
 	// all quad transforms and coordinates are in view space
-	vec4 quad_position[RENDER_MAX_LAYERS][2];
-	vec4 quad_normal[RENDER_MAX_LAYERS][2];
-	mat4 inverse_quad_transform[RENDER_MAX_LAYERS][2];
+	vec4 quad_position[RENDER_MAX_LAYERS];
+	vec4 quad_normal[RENDER_MAX_LAYERS];
+	mat4 inverse_quad_transform[RENDER_MAX_LAYERS];
 
 	// quad extent in world scale
 	vec2 quad_extent[RENDER_MAX_LAYERS];
@@ -76,54 +75,54 @@ vec2 position_to_view_uv(ivec2 extent, uint ix, uint iy)
 	return view_uv;
 }
 
-vec2 transform_uv_subimage(vec2 uv, uint iz, uint layer)
+vec2 transform_uv_subimage(vec2 uv, uint layer)
 {
 	vec2 values = uv;
 
 	// To deal with OpenGL flip and sub image view.
-	values.xy = values.xy * ubo.post_transform[layer][iz].zw + ubo.post_transform[layer][iz].xy;
+	values.xy = values.xy * ubo.post_transform[layer].zw + ubo.post_transform[layer].xy;
 
 	// Ready to be used.
 	return values.xy;
 }
 
-vec2 transform_uv_timewarp(vec2 uv, uint view_index, uint layer)
+vec2 transform_uv_timewarp(vec2 uv, uint layer)
 {
 	vec4 values = vec4(uv, -1, 1);
 
 	// From uv to tan angle (tangent space).
-	values.xy = values.xy * ubo.pre_transform[view_index].zw + ubo.pre_transform[view_index].xy;
+	values.xy = values.xy * ubo.pre_transform.zw + ubo.pre_transform.xy;
 	values.y = -values.y; // Flip to OpenXR coordinate system.
 
 	// Timewarp.
-	values = ubo.transform[layer][view_index] * values;
+	values = ubo.transform[layer] * values;
 	values.xy = values.xy * (1.0 / max(values.w, 0.00001));
 
 	// From [-1, 1] to [0, 1]
 	values.xy = values.xy * 0.5 + 0.5;
 
 	// To deal with OpenGL flip and sub image view.
-	values.xy = values.xy * ubo.post_transform[layer][view_index].zw + ubo.post_transform[layer][view_index].xy;
+	values.xy = values.xy * ubo.post_transform[layer].zw + ubo.post_transform[layer].xy;
 
 	// Done.
 	return values.xy;
 }
 
-vec2 transform_uv(vec2 uv, uint view_index, uint layer)
+vec2 transform_uv(vec2 uv, uint layer)
 {
 	if (do_timewarp) {
-		return transform_uv_timewarp(uv, view_index, layer);
+		return transform_uv_timewarp(uv, layer);
 	} else {
-		return transform_uv_subimage(uv, view_index, layer);
+		return transform_uv_subimage(uv, layer);
 	}
 }
 
-vec4 do_projection(uint view_index, vec2 view_uv, uint layer)
+vec4 do_projection(vec2 view_uv, uint layer)
 {
-	uint source_image_index = ubo.images_samplers[layer][view_index].x;
+	uint source_image_index = ubo.images_samplers[layer].x;
 
 	// Do any transformation needed.
-	vec2 uv = transform_uv(view_uv, view_index, layer);
+	vec2 uv = transform_uv(view_uv, layer);
 
 	// Sample the source.
 	vec4 colour = vec4(texture(source[source_image_index], uv).rgba);
@@ -131,13 +130,13 @@ vec4 do_projection(uint view_index, vec2 view_uv, uint layer)
 	return colour;
 }
 
-vec3 get_direction(vec2 uv, uint view_index)
+vec3 get_direction(vec2 uv)
 {
 	// Skip the DIM/STRETCH/OFFSET stuff and go directly to values
 	vec4 values = vec4(uv, -1, 1);
 
 	// From uv to tan angle (tangent space).
-	values.xy = values.xy * ubo.pre_transform[view_index].zw + ubo.pre_transform[view_index].xy;
+	values.xy = values.xy * ubo.pre_transform.zw + ubo.pre_transform.xy;
 	values.y = -values.y; // Flip to OpenXR coordinate system.
 
 	// This works because values.xy are now in tangent space, that is the
@@ -150,15 +149,15 @@ vec3 get_direction(vec2 uv, uint view_index)
 	return direction;
 }
 
-vec4 do_quad(uint view_index, vec2 view_uv, uint layer)
+vec4 do_quad(vec2 view_uv, uint layer)
 {
-	uint source_image_index = ubo.images_samplers[layer][view_index].x;
+	uint source_image_index = ubo.images_samplers[layer].x;
 
 	// center point of the plane in view space.
-	vec3 quad_position = ubo.quad_position[layer][view_index].xyz;
+	vec3 quad_position = ubo.quad_position[layer].xyz;
 
 	// normal vector of the plane.
-	vec3 normal = ubo.quad_normal[layer][view_index].xyz;
+	vec3 normal = ubo.quad_normal[layer].xyz;
 	normal = normalize(normal);
 
 	// coordinate system is the view space, therefore the camera/eye position is in the origin.
@@ -177,7 +176,7 @@ vec4 do_quad(uint view_index, vec2 view_uv, uint layer)
 	* intersection is picked for the current view_uv texel, the final image as seen through the headset will
 	* show this view_uv texel at the respective location.
 	*/
-	vec3 direction = get_direction(uv, view_index);
+	vec3 direction = get_direction(uv);
 	direction = normalize(direction);
 
 	float denominator = dot(direction, normal);
@@ -200,7 +199,7 @@ vec4 do_quad(uint view_index, vec2 view_uv, uint layer)
 		vec3 intersection = camera + intersection_dist * direction;
 
 		// ps for "plane space"
-		vec2 intersection_ps = (ubo.inverse_quad_transform[layer][view_index] * vec4(intersection.xyz, 1.0)).xy;
+		vec2 intersection_ps = (ubo.inverse_quad_transform[layer] * vec4(intersection.xyz, 1.0)).xy;
 
 		bool in_plane_bounds =
 			intersection_ps.x >= - ubo.quad_extent[layer].x / 2. && //
@@ -213,7 +212,7 @@ vec4 do_quad(uint view_index, vec2 view_uv, uint layer)
 			vec2 plane_uv = (intersection_ps.xy + ubo.quad_extent[layer] / 2.) / ubo.quad_extent[layer];
 
 			// sample on the desired subimage, not the entire texture
-			plane_uv = plane_uv * ubo.post_transform[layer][view_index].zw + ubo.post_transform[layer][view_index].xy;
+			plane_uv = plane_uv * ubo.post_transform[layer].zw + ubo.post_transform[layer].xy;
 
 			colour = texture(source[source_image_index], plane_uv);
 		} else {
@@ -230,7 +229,7 @@ vec4 do_quad(uint view_index, vec2 view_uv, uint layer)
 	return vec4(colour);
 }
 
-vec4 do_layers(vec2 view_uv, uint view_index)
+vec4 do_layers(vec2 view_uv)
 {
 	vec4 accum = vec4(0, 0, 0, 0);
 	for (uint layer = 0; layer < RENDER_MAX_LAYERS; layer++) {
@@ -238,17 +237,17 @@ vec4 do_layers(vec2 view_uv, uint view_index)
 
 		vec4 rgba = vec4(0, 0, 0, 0);
 		switch (ubo.layer_type_and_unpremultiplied[layer].x) {
-			case XRT_LAYER_STEREO_PROJECTION:
-			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
-				rgba = do_projection(view_index, view_uv, layer);
-				use_layer = true;
-				break;
-			case XRT_LAYER_QUAD:
-				rgba = do_quad(view_index, view_uv, layer);
-				use_layer = true;
-				break;
-			default: break;
-			}
+		case XRT_LAYER_STEREO_PROJECTION:
+		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
+			rgba = do_projection(view_uv, layer);
+			use_layer = true;
+			break;
+		case XRT_LAYER_QUAD:
+			rgba = do_quad(view_uv, layer);
+			use_layer = true;
+			break;
+		default: break;
+		}
 
 		if (use_layer) {
 			if (ubo.layer_type_and_unpremultiplied[layer].y != 0) {
@@ -261,6 +260,7 @@ vec4 do_layers(vec2 view_uv, uint view_index)
 			accum.a = rgba.a + accum.a * (1.0 - rgba.a);
 		}
 	}
+
 	return accum;
 }
 
@@ -268,10 +268,9 @@ void main()
 {
 	uint ix = gl_GlobalInvocationID.x;
 	uint iy = gl_GlobalInvocationID.y;
-	uint iz = gl_GlobalInvocationID.z;
 
-	ivec2 offset = ivec2(ubo.views[iz].xy);
-	ivec2 extent = ivec2(ubo.views[iz].zw);
+	ivec2 offset = ivec2(ubo.view.xy);
+	ivec2 extent = ivec2(ubo.view.zw);
 
 	if (ix >= extent.x || iy >= extent.y) {
 		return;
@@ -279,7 +278,7 @@ void main()
 
 	vec2 view_uv = position_to_view_uv(extent, ix, iy);
 
-	vec4 colour = do_layers(view_uv, iz);
+	vec4 colour = do_layers(view_uv);
 
 	if (do_color_correction) {
 		// Do colour correction here since there are no automatic conversion in hardware available.

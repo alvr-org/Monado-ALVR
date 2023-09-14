@@ -145,6 +145,8 @@ if(XRT_HAVE_VULKAN)
 		comp_util STATIC
 		util/comp_base.h
 		util/comp_base.c
+		util/comp_render.c
+		util/comp_render.h
 		util/comp_semaphore.h
 		util/comp_semaphore.c
 		util/comp_swapchain.h
@@ -157,7 +159,7 @@ if(XRT_HAVE_VULKAN)
 	target_link_libraries(
 		comp_util
 		PUBLIC xrt-interfaces
-		PRIVATE aux_util aux_os aux_vk
+		PRIVATE aux_util aux_os aux_vk comp_render
 		)
 	target_include_directories(comp_util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

@@ -57,11 +57,28 @@ vk_from_crc(struct render_compute *crc)
 	return crc->r->vk;
 }
 
+static uint32_t
+uint_divide_and_round_up(uint32_t a, uint32_t b)
+{
+	return (a + (b - 1)) / b;
+}
+
+static void
+calc_dispatch_dims_1_view(const struct render_viewport_data views, uint32_t *out_w, uint32_t *out_h)
+{
+	// Power of two divide and round up.
+	uint32_t w = uint_divide_and_round_up(views.w, 8);
+	uint32_t h = uint_divide_and_round_up(views.h, 8);
+
+	*out_w = w;
+	*out_h = h;
+}
+
 /*
  * For dispatching compute to the view, calculate the number of groups.
  */
 static void
-calc_dispatch_dims(const struct render_viewport_data views[2], uint32_t *out_w, uint32_t *out_h)
+calc_dispatch_dims_2_views(const struct render_viewport_data views[2], uint32_t *out_w, uint32_t *out_h)
 {
 #define IMAX(a, b) ((a) > (b) ? (a) : (b))
 	uint32_t w = IMAX(views[0].w, views[1].w);
@@ -69,10 +86,8 @@ calc_dispatch_dims(const struct render_viewport_data views[2], uint32_t *out_w, 
 #undef IMAX
 
 	// Power of two divide and round up.
-#define P2_DIVIDE_ROUND_UP(v, div) ((v + (div - 1)) / div)
-	w = P2_DIVIDE_ROUND_UP(w, 8);
-	h = P2_DIVIDE_ROUND_UP(h, 8);
-#undef P2_DIVIDE_ROUND_UP
+	w = uint_divide_and_round_up(w, 8);
+	h = uint_divide_and_round_up(h, 8);
 
 	*out_w = w;
 	*out_h = h;
@@ -330,11 +345,13 @@ render_compute_init(struct render_compute *crc, struct render_resources *r)
 	struct vk_bundle *vk = r->vk;
 	crc->r = r;
 
-	C(vk_create_descriptor_set(                 //
-	    vk,                                     //
-	    r->compute.descriptor_pool,             // descriptor_pool
-	    r->compute.layer.descriptor_set_layout, // descriptor_set_layout
-	    &crc->layer_descriptor_set));           // descriptor_set
+	for (uint32_t i = 0; i < ARRAY_SIZE(crc->layer_descriptor_sets); i++) {
+		C(vk_create_descriptor_set(                 //
+		    vk,                                     //
+		    r->compute.descriptor_pool,             // descriptor_pool
+		    r->compute.layer.descriptor_set_layout, // descriptor_set_layout
+		    &crc->layer_descriptor_sets[i]));       // descriptor_set
+	}
 
 	C(vk_create_descriptor_set(                      //
 	    vk,                                          //
@@ -400,8 +417,10 @@ render_compute_close(struct render_compute *crc)
 	struct vk_bundle *vk = vk_from_crc(crc);
 
 	// Reclaimed by vkResetDescriptorPool.
-	crc->layer_descriptor_set = VK_NULL_HANDLE;
 	crc->shared_descriptor_set = VK_NULL_HANDLE;
+	for (uint32_t i = 0; i < ARRAY_SIZE(crc->layer_descriptor_sets); i++) {
+		crc->layer_descriptor_sets[i] = VK_NULL_HANDLE;
+	}
 
 	vk->vkResetDescriptorPool(vk->device, crc->r->compute.descriptor_pool, 0);
 
@@ -410,61 +429,43 @@ render_compute_close(struct render_compute *crc)
 
 void
 render_compute_layers(struct render_compute *crc,
+                      VkDescriptorSet descriptor_set,
+                      VkBuffer ubo,
                       VkSampler src_samplers[RENDER_MAX_IMAGES],
                       VkImageView src_image_views[RENDER_MAX_IMAGES],
-                      uint32_t image_count,
-                      VkImage target_image,
+                      uint32_t num_srcs,
                       VkImageView target_image_view,
-                      VkImageLayout transition_to,
-                      bool timewarp)
+                      const struct render_viewport_data *view,
+                      bool do_timewarp)
 {
 	assert(crc->r != NULL);
 
 	struct vk_bundle *vk = vk_from_crc(crc);
 	struct render_resources *r = crc->r;
 
-	struct render_compute_layer_ubo_data *ubo_data =
-	    (struct render_compute_layer_ubo_data *)crc->r->compute.layer.ubo.mapped;
 
 	/*
 	 * Source, target and distortion images.
 	 */
-
-	VkImageSubresourceRange subresource_range = {
-	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	    .baseMipLevel = 0,
-	    .levelCount = VK_REMAINING_MIP_LEVELS,
-	    .baseArrayLayer = 0,
-	    .layerCount = VK_REMAINING_ARRAY_LAYERS,
-	};
-
-	vk_cmd_image_barrier_gpu_locked( //
-	    vk,                          //
-	    r->cmd,                      //
-	    target_image,                //
-	    0,                           //
-	    VK_ACCESS_SHADER_WRITE_BIT,  //
-	    VK_IMAGE_LAYOUT_UNDEFINED,   //
-	    VK_IMAGE_LAYOUT_GENERAL,     //
-	    subresource_range);          //
 
 	update_compute_layer_descriptor_set( //
 	    vk,                              //
 	    r->compute.src_binding,          //
 	    src_samplers,                    //
 	    src_image_views,                 //
-	    image_count,                     //
+	    num_srcs,                        //
 	    r->compute.target_binding,       //
 	    target_image_view,               //
 	    r->compute.ubo_binding,          //
-	    r->compute.layer.ubo.buffer,     //
+	    ubo,                             //
 	    VK_WHOLE_SIZE,                   //
-	    crc->layer_descriptor_set);      //
+	    descriptor_set);                 //
 
+	VkPipeline pipeline = do_timewarp ? r->compute.layer.timewarp_pipeline : r->compute.layer.non_timewarp_pipeline;
 	vk->vkCmdBindPipeline(              //
 	    crc->r->cmd,                    // commandBuffer
 	    VK_PIPELINE_BIND_POINT_COMPUTE, // pipelineBindPoint
-	    timewarp ? r->compute.layer.timewarp_pipeline : r->compute.layer.non_timewarp_pipeline); // pipeline
+	    pipeline);                      // pipeline
 
 	vk->vkCmdBindDescriptorSets(          //
 	    r->cmd,                           // commandBuffer
@@ -472,44 +473,20 @@ render_compute_layers(struct render_compute *crc,
 	    r->compute.layer.pipeline_layout, // layout
 	    0,                                // firstSet
 	    1,                                // descriptorSetCount
-	    &crc->layer_descriptor_set,       // pDescriptorSets
+	    &descriptor_set,                  // pDescriptorSets
 	    0,                                // dynamicOffsetCount
 	    NULL);                            // pDynamicOffsets
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims(ubo_data->views, &w, &h);
+	calc_dispatch_dims_1_view(*view, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //
 	    r->cmd,        // commandBuffer
 	    w,             // groupCountX
 	    h,             // groupCountY
-	    2);            // groupCountZ
-
-	VkImageMemoryBarrier memoryBarrier = {
-	    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-	    .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-	    .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-	    .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
-	    .newLayout = transition_to,
-	    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-	    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-	    .image = target_image,
-	    .subresourceRange = subresource_range,
-	};
-
-	vk->vkCmdPipelineBarrier(                 //
-	    r->cmd,                               //
-	    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, //
-	    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,    //
-	    0,                                    //
-	    0,                                    //
-	    NULL,                                 //
-	    0,                                    //
-	    NULL,                                 //
-	    1,                                    //
-	    &memoryBarrier);                      //
+	    1);            // groupCountZ
 }
 
 void
@@ -617,7 +594,7 @@ render_compute_projection_timewarp(struct render_compute *crc,
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims(views, &w, &h);
+	calc_dispatch_dims_2_views(views, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //
@@ -737,7 +714,7 @@ render_compute_projection(struct render_compute *crc,
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims(views, &w, &h);
+	calc_dispatch_dims_2_views(views, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //
@@ -858,7 +835,7 @@ render_compute_clear(struct render_compute *crc,                 //
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims(views, &w, &h);
+	calc_dispatch_dims_2_views(views, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //

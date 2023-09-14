@@ -324,7 +324,6 @@ struct compute_layer_params
 	VkBool32 do_timewarp;
 	VkBool32 do_color_correction;
 	uint32_t max_layers;
-	uint32_t views_per_layer;
 	uint32_t image_array_size;
 };
 
@@ -353,8 +352,7 @@ create_compute_layer_pipeline(struct vk_bundle *vk,
 	    ENTRY(1, do_timewarp),         //
 	    ENTRY(2, do_color_correction), //
 	    ENTRY(3, max_layers),          //
-	    ENTRY(4, views_per_layer),     //
-	    ENTRY(5, image_array_size),    //
+	    ENTRY(4, image_array_size),    //
 	};
 #undef ENTRY
 
@@ -737,13 +735,17 @@ render_resources_init(struct render_resources *r,
 	VkMemoryPropertyFlags memory_property_flags =
 	    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
+	const uint32_t compute_descriptor_count = //
+	    1 +                                   // Shared/distortion run(s).
+	    RENDER_MAX_LAYER_RUNS;                // Layer shader run(s).
+
 	struct vk_descriptor_pool_info compute_pool_info = {
 	    .uniform_per_descriptor_count = 1,
 	    // layer images
 	    .sampler_per_descriptor_count = r->compute.layer.image_array_size + 6,
 	    .storage_image_per_descriptor_count = 1,
 	    .storage_buffer_per_descriptor_count = 0,
-	    .descriptor_count = 2,
+	    .descriptor_count = compute_descriptor_count,
 	    .freeable = false,
 	};
 
@@ -774,7 +776,6 @@ render_resources_init(struct render_resources *r,
 	    .do_timewarp = false,
 	    .do_color_correction = true,
 	    .max_layers = RENDER_MAX_LAYERS,
-	    .views_per_layer = COMP_VIEWS_PER_LAYER,
 	    .image_array_size = r->compute.layer.image_array_size,
 	};
 
@@ -790,7 +791,6 @@ render_resources_init(struct render_resources *r,
 	    .do_timewarp = true,
 	    .do_color_correction = true,
 	    .max_layers = RENDER_MAX_LAYERS,
-	    .views_per_layer = COMP_VIEWS_PER_LAYER,
 	    .image_array_size = r->compute.layer.image_array_size,
 	};
 
@@ -804,15 +804,17 @@ render_resources_init(struct render_resources *r,
 
 	size_t layer_ubo_size = sizeof(struct render_compute_layer_ubo_data);
 
-	C(render_buffer_init(        //
-	    vk,                      // vk_bundle
-	    &r->compute.layer.ubo,   // buffer
-	    ubo_usage_flags,         // usage_flags
-	    memory_property_flags,   // memory_property_flags
-	    layer_ubo_size));        // size
-	C(render_buffer_map(         //
-	    vk,                      // vk_bundle
-	    &r->compute.layer.ubo)); // buffer
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->compute.layer.ubos); i++) {
+		C(render_buffer_init(            //
+		    vk,                          // vk_bundle
+		    &r->compute.layer.ubos[i],   // buffer
+		    ubo_usage_flags,             // usage_flags
+		    memory_property_flags,       // memory_property_flags
+		    layer_ubo_size));            // size
+		C(render_buffer_map(             //
+		    vk,                          // vk_bundle
+		    &r->compute.layer.ubos[i])); // buffer
+	}
 
 
 	/*
@@ -1014,7 +1016,9 @@ render_resources_close(struct render_resources *r)
 
 	render_distortion_images_close(r);
 	render_buffer_close(vk, &r->compute.clear.ubo);
-	render_buffer_close(vk, &r->compute.layer.ubo);
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->compute.layer.ubos); i++) {
+		render_buffer_close(vk, &r->compute.layer.ubos[i]);
+	}
 	render_buffer_close(vk, &r->compute.distortion.ubo);
 
 	teardown_scratch_image(r);
