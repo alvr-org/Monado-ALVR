@@ -45,7 +45,7 @@ calc_projection(const struct xrt_fov *fov, struct xrt_matrix_4x4_f64 *result)
 	const float a43 = (float)(-(far_plane * near_plane) / (far_plane - near_plane));
 
 
-#if 1
+#if 0
 	// We skip a33 & a43 because we don't have depth.
 	(void)a33;
 	(void)a43;
@@ -61,6 +61,12 @@ calc_projection(const struct xrt_fov *fov, struct xrt_matrix_4x4_f64 *result)
 	};
 	// clang-format on
 #else
+	/*
+	 * Apparently the timewarp doesn't look good without this path being
+	 * used. With the above it stretches out. I tried with the code to see
+	 * if I could affect the depth where the view was placed but couldn't
+	 * see to do it, which is a head scratcher.
+	 */
 	// clang-format off
 	*result = (struct xrt_matrix_4x4_f64) {
 		.v = {
