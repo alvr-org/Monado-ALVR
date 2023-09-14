@@ -570,8 +570,8 @@ render_resources_init(struct render_resources *r,
 	r->compute.ubo_binding = 3;
 
 	r->compute.layer.image_array_size = vk->features.max_per_stage_descriptor_sampled_images;
-	if (r->compute.layer.image_array_size > COMP_MAX_IMAGES) {
-		r->compute.layer.image_array_size = COMP_MAX_IMAGES;
+	if (r->compute.layer.image_array_size > RENDER_MAX_IMAGES) {
+		r->compute.layer.image_array_size = RENDER_MAX_IMAGES;
 	}
 
 
@@ -773,7 +773,7 @@ render_resources_init(struct render_resources *r,
 	struct compute_layer_params layer_params = {
 	    .do_timewarp = false,
 	    .do_color_correction = true,
-	    .max_layers = COMP_MAX_LAYERS,
+	    .max_layers = RENDER_MAX_LAYERS,
 	    .views_per_layer = COMP_VIEWS_PER_LAYER,
 	    .image_array_size = r->compute.layer.image_array_size,
 	};
@@ -789,7 +789,7 @@ render_resources_init(struct render_resources *r,
 	struct compute_layer_params layer_timewarp_params = {
 	    .do_timewarp = true,
 	    .do_color_correction = true,
-	    .max_layers = COMP_MAX_LAYERS,
+	    .max_layers = RENDER_MAX_LAYERS,
 	    .views_per_layer = COMP_VIEWS_PER_LAYER,
 	    .image_array_size = r->compute.layer.image_array_size,
 	};
@@ -833,7 +833,7 @@ render_resources_init(struct render_resources *r,
 	    &r->compute.distortion.pipeline_layout));    // out_pipeline_layout
 
 	struct compute_distortion_params distortion_params = {
-	    .distortion_texel_count = COMP_DISTORTION_IMAGE_DIMENSIONS,
+	    .distortion_texel_count = RENDER_DISTORTION_IMAGE_DIMENSIONS,
 	    .do_timewarp = false,
 	};
 
@@ -846,7 +846,7 @@ render_resources_init(struct render_resources *r,
 	    &r->compute.distortion.pipeline));     // out_compute_pipeline
 
 	struct compute_distortion_params distortion_timewarp_params = {
-	    .distortion_texel_count = COMP_DISTORTION_IMAGE_DIMENSIONS,
+	    .distortion_texel_count = RENDER_DISTORTION_IMAGE_DIMENSIONS,
 	    .do_timewarp = true,
 	};
 

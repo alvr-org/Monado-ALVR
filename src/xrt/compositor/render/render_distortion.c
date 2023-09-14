@@ -184,7 +184,7 @@ create_and_queue_upload_locked(struct vk_bundle *vk,
                                VkImage *out_image,
                                VkImageView *out_image_view)
 {
-	VkExtent2D extent = {COMP_DISTORTION_IMAGE_DIMENSIONS, COMP_DISTORTION_IMAGE_DIMENSIONS};
+	VkExtent2D extent = {RENDER_DISTORTION_IMAGE_DIMENSIONS, RENDER_DISTORTION_IMAGE_DIMENSIONS};
 	VkDeviceMemory device_memory = VK_NULL_HANDLE;
 	VkImage image = VK_NULL_HANDLE;
 	VkImageView image_view = VK_NULL_HANDLE;
@@ -219,7 +219,7 @@ create_and_queue_upload_locked(struct vk_bundle *vk,
  */
 struct texture
 {
-	struct xrt_vec2 pixels[COMP_DISTORTION_IMAGE_DIMENSIONS][COMP_DISTORTION_IMAGE_DIMENSIONS];
+	struct xrt_vec2 pixels[RENDER_DISTORTION_IMAGE_DIMENSIONS][RENDER_DISTORTION_IMAGE_DIMENSIONS];
 };
 
 struct tan_angles_transforms
@@ -310,13 +310,13 @@ create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
 	struct texture *g = g_buffer->mapped;
 	struct texture *b = b_buffer->mapped;
 
-	const double dim_minus_one_f64 = COMP_DISTORTION_IMAGE_DIMENSIONS - 1;
+	const double dim_minus_one_f64 = RENDER_DISTORTION_IMAGE_DIMENSIONS - 1;
 
-	for (int row = 0; row < COMP_DISTORTION_IMAGE_DIMENSIONS; row++) {
+	for (int row = 0; row < RENDER_DISTORTION_IMAGE_DIMENSIONS; row++) {
 		// This goes from 0 to 1.0 inclusive.
 		float v = (float)(row / dim_minus_one_f64);
 
-		for (int col = 0; col < COMP_DISTORTION_IMAGE_DIMENSIONS; col++) {
+		for (int col = 0; col < RENDER_DISTORTION_IMAGE_DIMENSIONS; col++) {
 			// This goes from 0 to 1.0 inclusive.
 			float u = (float)(col / dim_minus_one_f64);
 
@@ -355,10 +355,10 @@ render_distortion_buffer_init(struct render_resources *r,
                               struct xrt_device *xdev,
                               bool pre_rotate)
 {
-	struct render_buffer bufs[COMP_DISTORTION_NUM_IMAGES];
-	VkDeviceMemory device_memories[COMP_DISTORTION_NUM_IMAGES];
-	VkImage images[COMP_DISTORTION_NUM_IMAGES];
-	VkImageView image_views[COMP_DISTORTION_NUM_IMAGES];
+	struct render_buffer bufs[RENDER_DISTORTION_NUM_IMAGES];
+	VkDeviceMemory device_memories[RENDER_DISTORTION_NUM_IMAGES];
+	VkImage images[RENDER_DISTORTION_NUM_IMAGES];
+	VkImageView image_views[RENDER_DISTORTION_NUM_IMAGES];
 	VkCommandBuffer upload_buffer = VK_NULL_HANDLE;
 	VkResult ret;
 
@@ -367,7 +367,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	 * Basics
 	 */
 
-	static_assert(COMP_DISTORTION_NUM_IMAGES == 6, "Wrong number of distortion images!");
+	static_assert(RENDER_DISTORTION_NUM_IMAGES == 6, "Wrong number of distortion images!");
 
 	calc_uv_to_tanangle(xdev, 0, &r->distortion.uv_to_tanangle[0]);
 	calc_uv_to_tanangle(xdev, 1, &r->distortion.uv_to_tanangle[1]);
@@ -395,7 +395,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &upload_buffer);
 	CG(vk, ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", err_unlock);
 
-	for (uint32_t i = 0; i < COMP_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		ret = create_and_queue_upload_locked( //
 		    vk,                               // vk_bundle
 		    pool,                             // pool
@@ -418,7 +418,7 @@ render_distortion_buffer_init(struct render_resources *r,
 
 	r->distortion.pre_rotated = pre_rotate;
 
-	for (uint32_t i = 0; i < COMP_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		r->distortion.device_memories[i] = device_memories[i];
 		r->distortion.images[i] = images[i];
 		r->distortion.image_views[i] = image_views[i];
@@ -429,7 +429,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	 * Tidy
 	 */
 
-	for (uint32_t i = 0; i < COMP_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		render_buffer_close(vk, &bufs[i]);
 	}
 
@@ -443,7 +443,7 @@ err_unlock:
 	vk_cmd_pool_unlock(pool);
 
 err_resources:
-	for (uint32_t i = 0; i < COMP_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		D(ImageView, image_views[i]);
 		D(Image, images[i]);
 		DF(Memory, device_memories[i]);
@@ -465,11 +465,12 @@ render_distortion_images_close(struct render_resources *r)
 {
 	struct vk_bundle *vk = r->vk;
 
-	static_assert(COMP_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.image_views), "Array size is wrong!");
-	static_assert(COMP_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.images), "Array size is wrong!");
-	static_assert(COMP_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.device_memories), "Array size is wrong!");
+	static_assert(RENDER_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.image_views), "Array size is wrong!");
+	static_assert(RENDER_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.images), "Array size is wrong!");
+	static_assert(RENDER_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.device_memories),
+	              "Array size is wrong!");
 
-	for (uint32_t i = 0; i < COMP_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		D(ImageView, r->distortion.image_views[i]);
 		D(Image, r->distortion.images[i]);
 		DF(Memory, r->distortion.device_memories[i]);

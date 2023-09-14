@@ -10,9 +10,7 @@
 
 #pragma once
 
-#define COMP_MAX_LAYERS 16
 #define COMP_VIEWS_PER_LAYER 2
-#define COMP_MAX_IMAGES 32
 
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
@@ -44,11 +42,23 @@ extern "C" {
  *
  */
 
+/*!
+ * Max number of layers for layer squasher, can be different from
+ * @ref COMP_MAX_LAYERS as the render module is separate from the compositor.
+ */
+#define RENDER_MAX_LAYERS (16)
+
+/*!
+ * Max number of images that can be given at a single time to the layer
+ * squasher in a single dispatch.
+ */
+#define RENDER_MAX_IMAGES (RENDER_MAX_LAYERS * 2)
+
 //! How large in pixels the distortion image is.
-#define COMP_DISTORTION_IMAGE_DIMENSIONS (128)
+#define RENDER_DISTORTION_IMAGE_DIMENSIONS (128)
 
 //! How many distortion images we have, one for each channel (3 rgb) and per view, total 6.
-#define COMP_DISTORTION_NUM_IMAGES (6)
+#define RENDER_DISTORTION_NUM_IMAGES (6)
 
 
 /*
@@ -386,13 +396,13 @@ struct render_resources
 		struct xrt_normalized_rect uv_to_tanangle[2];
 
 		//! Backing memory to distortion images.
-		VkDeviceMemory device_memories[COMP_DISTORTION_NUM_IMAGES];
+		VkDeviceMemory device_memories[RENDER_DISTORTION_NUM_IMAGES];
 
 		//! Distortion images.
-		VkImage images[COMP_DISTORTION_NUM_IMAGES];
+		VkImage images[RENDER_DISTORTION_NUM_IMAGES];
 
 		//! The views into the distortion images.
-		VkImageView image_views[COMP_DISTORTION_NUM_IMAGES];
+		VkImageView image_views[RENDER_DISTORTION_NUM_IMAGES];
 
 		//! Whether distortion images have been pre-rotated 90 degrees.
 		bool pre_rotated;
@@ -764,7 +774,7 @@ struct render_compute_layer_ubo_data
 {
 	struct render_viewport_data views[2];
 	struct xrt_normalized_rect pre_transforms[2];
-	struct xrt_normalized_rect post_transforms[COMP_MAX_LAYERS * COMP_VIEWS_PER_LAYER];
+	struct xrt_normalized_rect post_transforms[RENDER_MAX_LAYERS * COMP_VIEWS_PER_LAYER];
 
 	//! std140 uvec2, corresponds to enum xrt_layer_type and unpremultiplied alpha.
 	struct
@@ -772,7 +782,7 @@ struct render_compute_layer_ubo_data
 		uint32_t val;
 		uint32_t unpremultiplied;
 		uint32_t padding[2];
-	} layer_type[COMP_MAX_LAYERS];
+	} layer_type[RENDER_MAX_LAYERS];
 
 	//! Which image/sampler(s) correspond to each layer.
 	struct
@@ -780,7 +790,7 @@ struct render_compute_layer_ubo_data
 		uint32_t images[2];
 		//! @todo Implement separated samplers and images (and change to samplers[2])
 		uint32_t padding[2];
-	} images_samplers[COMP_MAX_LAYERS * 2];
+	} images_samplers[RENDER_MAX_LAYERS * 2];
 
 
 	/*!
@@ -788,7 +798,7 @@ struct render_compute_layer_ubo_data
 	 */
 
 	//! Timewarp matrices
-	struct xrt_matrix_4x4 transforms[COMP_MAX_LAYERS * COMP_VIEWS_PER_LAYER];
+	struct xrt_matrix_4x4 transforms[RENDER_MAX_LAYERS * COMP_VIEWS_PER_LAYER];
 
 
 	/*!
@@ -800,20 +810,20 @@ struct render_compute_layer_ubo_data
 	{
 		struct xrt_vec3 val;
 		float padding;
-	} quad_position[COMP_MAX_LAYERS * 2];
+	} quad_position[RENDER_MAX_LAYERS * 2];
 	struct
 	{
 		struct xrt_vec3 val;
 		float padding;
-	} quad_normal[COMP_MAX_LAYERS * 2];
-	struct xrt_matrix_4x4 inverse_quad_transform[COMP_MAX_LAYERS * 2];
+	} quad_normal[RENDER_MAX_LAYERS * 2];
+	struct xrt_matrix_4x4 inverse_quad_transform[RENDER_MAX_LAYERS * 2];
 
 	//! Quad extent in world scale
 	struct
 	{
 		struct xrt_vec2 val;
 		float padding[2];
-	} quad_extent[COMP_MAX_LAYERS];
+	} quad_extent[RENDER_MAX_LAYERS];
 };
 
 /*!
@@ -867,14 +877,14 @@ render_compute_end(struct render_compute *crc);
  * @public @memberof render_compute
  */
 void
-render_compute_layers(struct render_compute *crc,                   //
-                      VkSampler src_samplers[COMP_MAX_IMAGES],      //
-                      VkImageView src_image_views[COMP_MAX_IMAGES], //
-                      uint32_t image_count,                         //
-                      VkImage target_image,                         //
-                      VkImageView target_image_view,                //
-                      VkImageLayout transition_to,                  //
-                      bool timewarp);                               //
+render_compute_layers(struct render_compute *crc,                     //
+                      VkSampler src_samplers[RENDER_MAX_IMAGES],      //
+                      VkImageView src_image_views[RENDER_MAX_IMAGES], //
+                      uint32_t image_count,                           //
+                      VkImage target_image,                           //
+                      VkImageView target_image_view,                  //
+                      VkImageLayout transition_to,                    //
+                      bool timewarp);                                 //
 
 /*!
  * @public @memberof render_compute

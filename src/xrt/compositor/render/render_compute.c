@@ -88,8 +88,8 @@ calc_dispatch_dims(const struct render_viewport_data views[2], uint32_t *out_w, 
 XRT_MAYBE_UNUSED static void
 update_compute_layer_descriptor_set(struct vk_bundle *vk,
                                     uint32_t src_binding,
-                                    VkSampler src_samplers[COMP_MAX_IMAGES],
-                                    VkImageView src_image_views[COMP_MAX_IMAGES],
+                                    VkSampler src_samplers[RENDER_MAX_IMAGES],
+                                    VkImageView src_image_views[RENDER_MAX_IMAGES],
                                     uint32_t image_count,
                                     uint32_t target_binding,
                                     VkImageView target_image_view,
@@ -98,9 +98,9 @@ update_compute_layer_descriptor_set(struct vk_bundle *vk,
                                     VkDeviceSize ubo_size,
                                     VkDescriptorSet descriptor_set)
 {
-	assert(image_count <= COMP_MAX_IMAGES);
+	assert(image_count <= RENDER_MAX_IMAGES);
 
-	VkDescriptorImageInfo src_image_info[COMP_MAX_IMAGES];
+	VkDescriptorImageInfo src_image_info[RENDER_MAX_IMAGES];
 	for (uint32_t i = 0; i < image_count; i++) {
 		src_image_info[i].sampler = src_samplers[i];
 		src_image_info[i].imageView = src_image_views[i];
@@ -410,8 +410,8 @@ render_compute_close(struct render_compute *crc)
 
 void
 render_compute_layers(struct render_compute *crc,
-                      VkSampler src_samplers[COMP_MAX_IMAGES],
-                      VkImageView src_image_views[COMP_MAX_IMAGES],
+                      VkSampler src_samplers[RENDER_MAX_IMAGES],
+                      VkImageView src_image_views[RENDER_MAX_IMAGES],
                       uint32_t image_count,
                       VkImage target_image,
                       VkImageView target_image_view,

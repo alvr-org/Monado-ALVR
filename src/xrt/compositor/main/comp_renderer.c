@@ -1085,8 +1085,8 @@ do_layers(struct comp_renderer *r,
 
 	// Tightly pack color and optional depth images.
 	uint32_t cur_image = 0;
-	VkSampler src_samplers[COMP_MAX_IMAGES];
-	VkImageView src_image_views[COMP_MAX_IMAGES];
+	VkSampler src_samplers[RENDER_MAX_IMAGES];
+	VkImageView src_image_views[RENDER_MAX_IMAGES];
 
 	for (uint32_t layer_i = 0; layer_i < layer_count; layer_i++) {
 		const struct xrt_layer_data *data = &layers[layer_i].data;
@@ -1303,7 +1303,7 @@ do_layers(struct comp_renderer *r,
 		}
 	}
 
-	for (uint32_t i = layer_count; i < COMP_MAX_LAYERS; i++) {
+	for (uint32_t i = layer_count; i < RENDER_MAX_LAYERS; i++) {
 		ubo_data->layer_type[i].val = UINT32_MAX;
 	}
 

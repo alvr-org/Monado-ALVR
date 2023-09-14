@@ -20,7 +20,7 @@
 // Should we do timewarp.
 layout(constant_id = 1) const bool do_timewarp = false;
 layout(constant_id = 2) const bool do_color_correction = true;
-layout(constant_id = 3) const int COMP_MAX_LAYERS = 16;
+layout(constant_id = 3) const int RENDER_MAX_LAYERS = 16;
 layout(constant_id = 4) const int COMP_VIEWS_PER_LAYER = 2;
 layout(constant_id = 5) const int SAMPLER_ARRAY_SIZE = 16;
 
@@ -33,29 +33,29 @@ layout(set = 0, binding = 3, std140) uniform restrict Config
 {
 	ivec4 views[2];
 	vec4 pre_transform[2];
-	vec4 post_transform[COMP_MAX_LAYERS][2];
+	vec4 post_transform[RENDER_MAX_LAYERS][2];
 
 	// corresponds to enum xrt_layer_type
-	uvec2 layer_type_and_unpremultiplied[COMP_MAX_LAYERS];
+	uvec2 layer_type_and_unpremultiplied[RENDER_MAX_LAYERS];
 
 	// which image/sampler(s) correspond to each layer
-	ivec2 images_samplers[COMP_MAX_LAYERS][2];
+	ivec2 images_samplers[RENDER_MAX_LAYERS][2];
 
 	// for projection layers
 
 	// timewarp matrices
-	mat4 transform[COMP_MAX_LAYERS][2];
+	mat4 transform[RENDER_MAX_LAYERS][2];
 
 
 	// for quad layers
 
 	// all quad transforms and coordinates are in view space
-	vec4 quad_position[COMP_MAX_LAYERS][2];
-	vec4 quad_normal[COMP_MAX_LAYERS][2];
-	mat4 inverse_quad_transform[COMP_MAX_LAYERS][2];
+	vec4 quad_position[RENDER_MAX_LAYERS][2];
+	vec4 quad_normal[RENDER_MAX_LAYERS][2];
+	mat4 inverse_quad_transform[RENDER_MAX_LAYERS][2];
 
 	// quad extent in world scale
-	vec2 quad_extent[COMP_MAX_LAYERS];
+	vec2 quad_extent[RENDER_MAX_LAYERS];
 } ubo;
 
 
@@ -227,7 +227,7 @@ vec4 do_quad(uint view_index, vec2 view_uv, uint layer)
 vec4 do_layers(vec2 view_uv, uint view_index)
 {
 	vec4 accum = vec4(0, 0, 0, 0);
-	for (uint layer = 0; layer < COMP_MAX_LAYERS; layer++) {
+	for (uint layer = 0; layer < RENDER_MAX_LAYERS; layer++) {
 		bool use_layer = false;
 
 		vec4 rgba = vec4(0, 0, 0, 0);
