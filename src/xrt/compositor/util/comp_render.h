@@ -77,6 +77,65 @@ comp_render_stereo_layers(struct render_compute *crc,
                           VkImageLayout transition_to,
                           bool do_timewarp);
 
+/*!
+ * Helper function that takes a set of layers, new device poses, a scratch
+ * images and writes the needed commands to the @ref render_compute to squash
+ * the given layers into the given scratch images. Will insert barriers to
+ * change the scratch images to the needed layout.
+ *
+ * Expected layouts:
+ * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Scratch images: Any
+ *
+ * After call layouts:
+ * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Scratch images: @p transition_to
+ *
+ * @ingroup comp_util
+ */
+void
+comp_render_stereo_layers_to_scratch(struct render_compute *crc,
+                                     const struct xrt_normalized_rect pre_transforms[2],
+                                     struct xrt_pose world_poses[2],
+                                     struct xrt_pose eye_poses[2],
+                                     const struct comp_layer *layers,
+                                     const uint32_t layer_count,
+                                     struct render_scratch_images *rsi,
+                                     VkImageLayout transition_to,
+                                     bool do_timewarp);
+
+/*!
+ * Helper function that takes a set of layers, new device poses, a scratch
+ * images and writes the needed commands to the @ref render_compute to do a full
+ * composition with distortion. The scratch images are optionally used to squash
+ * layers should it not be possible to do a fast_path. Will insert barriers to
+ * change the scratch images and target images to the needed layout.
+ *
+ * Expected layouts:
+ * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Sratch images: Any
+ * * Target image: Any
+ *
+ * After call layouts:
+ * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Sratch images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Target image: VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+ *
+ * @ingroup comp_util
+ */
+void
+comp_render_dispatch_compute(struct render_compute *crc,
+                             struct render_scratch_images *rsi,
+                             struct xrt_pose world_poses[2],
+                             struct xrt_pose eye_poses[2],
+                             const struct comp_layer *layers,
+                             const uint32_t layer_count,
+                             VkImage target_image,
+                             VkImageView target_image_view,
+                             const struct render_viewport_data views[2],
+                             bool fast_path,
+                             bool do_timewarp);
+
 
 #ifdef __cplusplus
 }

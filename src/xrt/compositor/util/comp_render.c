@@ -284,6 +284,115 @@ do_quad_layer(const struct xrt_layer_data *data,
 }
 
 
+
+/*
+ *
+ * Distortion helpers.
+ *
+ */
+
+static void
+do_distortion_for_scratch(struct render_compute *crc,
+                          struct render_scratch_images *rsi,
+                          VkImage target_image,
+                          VkImageView target_image_view,
+                          const struct render_viewport_data views[2])
+{
+	VkSampler sampler = crc->r->samplers.clamp_to_border_black;
+
+	VkImageView src_image_views[2] = {
+	    rsi->color[0].srgb_view, // Read with gamma curve.
+	    rsi->color[1].srgb_view,
+	};
+	VkSampler src_samplers[2] = {sampler, sampler};
+
+	struct xrt_normalized_rect src_norm_rects[2] = {
+	    {.x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f},
+	    {.x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f},
+	};
+
+	render_compute_projection( //
+	    crc,                   //
+	    src_samplers,          //
+	    src_image_views,       //
+	    src_norm_rects,        //
+	    target_image,          //
+	    target_image_view,     //
+	    views                  //
+	);
+}
+
+static void
+do_distortion_for_layer(struct render_compute *crc,
+                        const struct xrt_pose world_poses[2],
+                        const struct comp_layer *layer,
+                        const struct xrt_layer_projection_view_data *lvd,
+                        const struct xrt_layer_projection_view_data *rvd,
+                        VkImage target_image,
+                        VkImageView target_image_view,
+                        const struct render_viewport_data views[2],
+                        bool do_timewarp)
+{
+	const struct xrt_layer_data *data = &layer->data;
+	uint32_t left_array_index = lvd->sub.array_index;
+	uint32_t right_array_index = rvd->sub.array_index;
+	const struct comp_swapchain_image *left = &layer->sc_array[0]->images[lvd->sub.image_index];
+	const struct comp_swapchain_image *right = &layer->sc_array[1]->images[rvd->sub.image_index];
+
+	VkSampler clamp_to_border_black = crc->r->samplers.clamp_to_border_black;
+	VkSampler src_samplers[2] = {
+	    clamp_to_border_black,
+	    clamp_to_border_black,
+	};
+
+	VkImageView src_image_views[2] = {
+	    get_image_view(left, data->flags, left_array_index),
+	    get_image_view(right, data->flags, right_array_index),
+	};
+
+	struct xrt_normalized_rect src_norm_rects[2] = {lvd->sub.norm_rect, rvd->sub.norm_rect};
+	if (data->flip_y) {
+		src_norm_rects[0].h = -src_norm_rects[0].h;
+		src_norm_rects[0].y = 1 + src_norm_rects[0].y;
+		src_norm_rects[1].h = -src_norm_rects[1].h;
+		src_norm_rects[1].y = 1 + src_norm_rects[1].y;
+	}
+
+	if (do_timewarp) {
+		render_compute_projection( //
+		    crc,                   //
+		    src_samplers,          //
+		    src_image_views,       //
+		    src_norm_rects,        //
+		    target_image,          //
+		    target_image_view,     //
+		    views);                //
+	} else {
+		struct xrt_pose src_poses[2] = {
+		    lvd->pose,
+		    rvd->pose,
+		};
+
+		struct xrt_fov src_fovs[2] = {
+		    lvd->fov,
+		    rvd->fov,
+		};
+
+		render_compute_projection_timewarp( //
+		    crc,                            //
+		    src_samplers,                   //
+		    src_image_views,                //
+		    src_norm_rects,                 //
+		    src_poses,                      //
+		    src_fovs,                       //
+		    world_poses,                    //
+		    target_image,                   //
+		    target_image_view,              //
+		    views);                         //
+	}
+}
+
+
 /*
  *
  * 'Exported' helpers.
@@ -512,5 +621,130 @@ comp_render_stereo_layers(struct render_compute *crc,
 		    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, //
 		    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,    //
 		    first_color_level_subresource_range); //
+	}
+}
+
+void
+comp_render_stereo_layers_to_scratch(struct render_compute *crc,
+                                     const struct xrt_normalized_rect pre_transforms[2],
+                                     struct xrt_pose world_poses[2],
+                                     struct xrt_pose eye_poses[2],
+                                     const struct comp_layer *layers,
+                                     const uint32_t layer_count,
+                                     struct render_scratch_images *rsi,
+                                     VkImageLayout transition_to,
+                                     bool do_timewarp)
+{
+	struct render_viewport_data target_views[2] = {
+	    {.w = rsi->extent.width, .h = rsi->extent.height},
+	    {.w = rsi->extent.width, .h = rsi->extent.height},
+	};
+
+	VkImage target_images[2] = {
+	    rsi->color[0].image,
+	    rsi->color[1].image,
+	};
+
+	VkImageView target_image_views[2] = {
+	    rsi->color[0].unorm_view, // Have to write in linear
+	    rsi->color[1].unorm_view,
+	};
+
+	comp_render_stereo_layers( //
+	    crc,                   // crc
+	    layers,                // layers
+	    layer_count,           // layer_count
+	    pre_transforms,        // pre_transforms
+	    world_poses,           // world_poses
+	    eye_poses,             // eye_poses
+	    target_images,         // target_images
+	    target_image_views,    // target_image_views
+	    target_views,          // target_views
+	    transition_to,         // transition_to
+	    do_timewarp);          // do_timewarp
+}
+
+void
+comp_render_dispatch_compute(struct render_compute *crc,
+                             struct render_scratch_images *rsi,
+                             struct xrt_pose world_poses[2],
+                             struct xrt_pose eye_poses[2],
+                             const struct comp_layer *layers,
+                             const uint32_t layer_count,
+                             VkImage target_image,
+                             VkImageView target_image_view,
+                             const struct render_viewport_data views[2],
+                             bool fast_path,
+                             bool do_timewarp)
+{
+	assert(!fast_path || layer_count > 0);
+
+	// We make an assumption that we will be using the distortion code.
+	const struct xrt_normalized_rect pre_transforms[2] = {
+	    crc->r->distortion.uv_to_tanangle[0],
+	    crc->r->distortion.uv_to_tanangle[1],
+	};
+
+	// We want to read from the images afterwards.
+	VkImageLayout transition_to = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	if (fast_path && layers[0].data.type == XRT_LAYER_STEREO_PROJECTION) {
+		int i = 0;
+		const struct comp_layer *layer = &layers[i];
+		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
+		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
+		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
+
+		do_distortion_for_layer( //
+		    crc,                 // crc
+		    world_poses,         // world_poses
+		    layer,               // layer
+		    lvd,                 // lvd
+		    rvd,                 // rvd
+		    target_image,        // target_image
+		    target_image_view,   // target_image_view
+		    views,               // views
+		    do_timewarp);        // do_timewarp
+	} else if (fast_path && layers[0].data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+		int i = 0;
+		const struct comp_layer *layer = &layers[i];
+		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
+		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
+		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
+
+		do_distortion_for_layer( //
+		    crc,                 // crc
+		    world_poses,         // world_poses
+		    layer,               // layer
+		    lvd,                 // lvd
+		    rvd,                 // rvd
+		    target_image,        // target_image
+		    target_image_view,   // target_image_view
+		    views,               // views
+		    do_timewarp);        // do_timewarp
+	} else if (layer_count > 0) {
+		comp_render_stereo_layers_to_scratch( //
+		    crc,                              //
+		    pre_transforms,                   //
+		    world_poses,                      //
+		    eye_poses,                        //
+		    layers,                           //
+		    layer_count,                      //
+		    rsi,                              //
+		    transition_to,                    //
+		    do_timewarp);                     //
+
+		do_distortion_for_scratch( //
+		    crc,                   //
+		    rsi,                   //
+		    target_image,          //
+		    target_image_view,     //
+		    views);                //
+	} else {
+		render_compute_clear(  //
+		    crc,               //
+		    target_image,      //
+		    target_image_view, //
+		    views);            //
 	}
 }
