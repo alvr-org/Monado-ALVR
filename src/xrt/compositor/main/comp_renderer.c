@@ -1013,9 +1013,7 @@ get_view_poses(struct comp_renderer *r, struct xrt_pose out_world[2], struct xrt
 }
 
 static void
-ensure_scratch_image(struct comp_renderer *r,
-                     struct render_viewport_data *out_l_viewport_data,
-                     struct render_viewport_data *out_r_viewport_data)
+ensure_scratch_image(struct comp_renderer *r)
 {
 	struct xrt_view *l_v = &r->c->xdev->hmd->views[0];
 	struct xrt_view *r_v = &r->c->xdev->hmd->views[1];
@@ -1028,193 +1026,11 @@ ensure_scratch_image(struct comp_renderer *r,
 	w = (uint32_t)(w * 1.4f);
 	h = (uint32_t)(h * 1.4f);
 
-	struct render_viewport_data l_viewport_data = {
-	    .w = w,
-	    .h = h,
-	    .x = 0,
-	    .y = 0,
-	};
-
-	struct render_viewport_data r_viewport_data = {
-	    .w = w,
-	    .h = h,
-	    .x = 0,
-	    .y = 0,
-	};
-
 	VkExtent2D extent = {w, h};
 
 	if (!render_scratch_images_ensure(&r->c->nr, &r->scratch, extent)) {
 		U_LOG_E("Failed to create scratch image!");
 		assert(false);
-	}
-
-	*out_l_viewport_data = l_viewport_data;
-	*out_r_viewport_data = r_viewport_data;
-}
-
-static void
-do_layers(struct comp_renderer *r,
-          struct render_compute *crc,
-          const struct comp_layer *layers,
-          const uint32_t layer_count)
-{
-	struct render_viewport_data target_views[2];
-
-	// Create scratch image and get target views.
-	ensure_scratch_image(r, &target_views[0], &target_views[1]);
-	VkImage target_images[2] = {
-	    r->scratch.color[0].image,
-	    r->scratch.color[1].image,
-	};
-
-	VkImageView target_image_views[2] = {
-	    r->scratch.color[0].unorm_view, // Have to write in linear
-	    r->scratch.color[1].unorm_view,
-	};
-
-	struct xrt_normalized_rect pre_transforms[2] = {
-	    crc->r->distortion.uv_to_tanangle[0],
-	    crc->r->distortion.uv_to_tanangle[1],
-	};
-
-	struct xrt_pose world_poses[2], eye_poses[2];
-	get_view_poses(r, world_poses, eye_poses);
-
-	bool do_timewarp = !r->c->debug.atw_off;
-
-	// We want to read from the images afterwards.
-	VkImageLayout transition_to = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	comp_render_stereo_layers( //
-	    crc,                   // crc
-	    layers,                // layers
-	    layer_count,           // layer_count
-	    pre_transforms,        // pre_transforms
-	    world_poses,           // world_poses
-	    eye_poses,             // eye_poses
-	    target_images,         // target_images
-	    target_image_views,    // target_image_views
-	    target_views,          // target_views
-	    transition_to,         // transition_to
-	    do_timewarp);          // do_timewarp
-}
-
-static void
-do_distortion(struct comp_renderer *r, struct render_compute *crc, const struct render_viewport_data views[2])
-{
-	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
-	VkImageView target_image_view = r->c->target->images[r->acquired_buffer].view;
-
-	VkSampler sampler = crc->r->samplers.clamp_to_border_black;
-
-	VkImageView src_image_views[2] = {
-	    r->scratch.color[0].srgb_view, // Read with gamma curve.
-	    r->scratch.color[1].srgb_view,
-	};
-	VkSampler src_samplers[2] = {sampler, sampler};
-
-	struct xrt_normalized_rect src_norm_rects[2] = {
-	    {
-	        // Left, takes up the full view of the first image.
-	        .x = 0.0f,
-	        .y = 0.0f,
-	        .w = 1.0f,
-	        .h = 1.0f,
-	    },
-	    {
-	        // Right, takes up the full view of the second image.
-	        .x = 0.0f,
-	        .y = 0.0f,
-	        .w = 1.0f,
-	        .h = 1.0f,
-	    },
-	};
-
-	render_compute_projection( //
-	    crc,                   //
-	    src_samplers,          //
-	    src_image_views,       //
-	    src_norm_rects,        //
-	    target_image,          //
-	    target_image_view,     //
-	    views                  //
-	);
-}
-
-static void
-do_projection_layers(struct comp_renderer *r,
-                     struct render_compute *crc,
-                     const struct comp_layer *layer,
-                     const struct xrt_layer_projection_view_data *lvd,
-                     const struct xrt_layer_projection_view_data *rvd)
-{
-	const struct xrt_layer_data *data = &layer->data;
-	uint32_t left_array_index = lvd->sub.array_index;
-	uint32_t right_array_index = rvd->sub.array_index;
-	const struct comp_swapchain_image *left = &layer->sc_array[0]->images[lvd->sub.image_index];
-	const struct comp_swapchain_image *right = &layer->sc_array[1]->images[rvd->sub.image_index];
-
-	struct render_viewport_data views[2];
-	calc_viewport_data(r, &views[0], &views[1]);
-
-	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
-	VkImageView target_image_view = r->c->target->images[r->acquired_buffer].view;
-
-	struct xrt_pose new_world_poses[2];
-	struct xrt_pose unused[2]; // New eye poses, unused.
-	get_view_poses(r, new_world_poses, unused);
-
-	VkSampler clamp_to_border_black = crc->r->samplers.clamp_to_border_black;
-	VkSampler src_samplers[2] = {
-	    clamp_to_border_black,
-	    clamp_to_border_black,
-	};
-
-	VkImageView src_image_views[2] = {
-	    get_image_view(left, data->flags, left_array_index),
-	    get_image_view(right, data->flags, right_array_index),
-	};
-
-	struct xrt_normalized_rect src_norm_rects[2] = {lvd->sub.norm_rect, rvd->sub.norm_rect};
-	if (data->flip_y) {
-		src_norm_rects[0].h = -src_norm_rects[0].h;
-		src_norm_rects[0].y = 1 + src_norm_rects[0].y;
-		src_norm_rects[1].h = -src_norm_rects[1].h;
-		src_norm_rects[1].y = 1 + src_norm_rects[1].y;
-	}
-
-	struct xrt_pose src_poses[2] = {
-	    lvd->pose,
-	    rvd->pose,
-	};
-
-	struct xrt_fov src_fovs[2] = {
-	    lvd->fov,
-	    rvd->fov,
-	};
-
-	if (r->c->debug.atw_off) {
-		render_compute_projection( //
-		    crc,                   //
-		    src_samplers,          //
-		    src_image_views,       //
-		    src_norm_rects,        //
-		    target_image,          //
-		    target_image_view,     //
-		    views);                //
-	} else {
-		render_compute_projection_timewarp( //
-		    crc,                            //
-		    src_samplers,                   //
-		    src_image_views,                //
-		    src_norm_rects,                 //
-		    src_poses,                      //
-		    src_fovs,                       //
-		    new_world_poses,                //
-		    target_image,                   //
-		    target_image_view,              //
-		    views);                         //
 	}
 }
 
@@ -1229,44 +1045,43 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 	struct comp_compositor *c = r->c;
 	struct comp_target *ct = c->target;
 
-	render_compute_begin(crc);
+	// In case the scratch images are needed, make sure they are created.
+	ensure_scratch_image(r);
 
-	struct render_viewport_data views[2];
-	calc_viewport_data(r, &views[0], &views[1]);
+	// Basics
+	const struct comp_layer *layers = c->base.slot.layers;
+	uint32_t layer_count = c->base.slot.layer_count;
+	bool fast_path = c->base.slot.one_projection_layer_fast_path;
+	bool do_timewarp = !c->debug.atw_off;
 
+	// Device view information.
+	struct xrt_pose world_poses[2];
+	struct xrt_pose eye_poses[2]; // New eye poses, unused.
+	get_view_poses(r, world_poses, eye_poses);
+
+	// Target Vulkan resources..
 	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
 	VkImageView target_image_view = r->c->target->images[r->acquired_buffer].view;
 
-	uint32_t layer_count = c->base.slot.layer_count;
-	bool fast_path = c->base.slot.one_projection_layer_fast_path;
+	// Target view information.
+	struct render_viewport_data views[2];
+	calc_viewport_data(r, &views[0], &views[1]);
 
-	if (fast_path && c->base.slot.layers[0].data.type == XRT_LAYER_STEREO_PROJECTION) {
-		int i = 0;
-		const struct comp_layer *layer = &c->base.slot.layers[i];
-		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
+	// Start the compute pipeline.
+	render_compute_begin(crc);
 
-		do_projection_layers(r, crc, layer, lvd, rvd);
-	} else if (fast_path && c->base.slot.layers[0].data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
-		int i = 0;
-		const struct comp_layer *layer = &c->base.slot.layers[i];
-		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
-		do_projection_layers(r, crc, layer, lvd, rvd);
-	} else if (layer_count > 0) {
-		do_layers(r, crc, c->base.slot.layers, layer_count);
-
-		do_distortion(r, crc, views);
-	} else {
-		render_compute_clear(  //
-		    crc,               //
-		    target_image,      //
-		    target_image_view, //
-		    views);            //
-	}
+	comp_render_dispatch_compute( //
+	    crc,                      // crc
+	    &r->scratch,              // rsi
+	    world_poses,              // world_poses
+	    eye_poses,                // eye_poses
+	    layers,                   // layers
+	    layer_count,              // layer_count
+	    target_image,             // target_image
+	    target_image_view,        // target_image_view
+	    views,                    // views
+	    fast_path,                // fast_path
+	    do_timewarp);             // do_timewarp
 
 	render_compute_end(crc);
 
