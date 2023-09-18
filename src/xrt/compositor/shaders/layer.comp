@@ -140,7 +140,13 @@ vec3 get_direction(vec2 uv, uint view_index)
 	values.xy = values.xy * ubo.pre_transform[view_index].zw + ubo.pre_transform[view_index].xy;
 	values.y = -values.y; // Flip to OpenXR coordinate system.
 
+	// This works because values.xy are now in tangent space, that is the
+	// `tan(a)` on each of the x and y axis. That means values.xyz now
+	// define a point on the plane that sits at Z -1 and has a normal that
+	// runs parallel to the Z-axis. So if you run normalize you get a normal
+	// that points at that point.
 	vec3 direction = normalize(values.xyz);
+
 	return direction;
 }
 
