@@ -59,6 +59,8 @@ add_library(
 	u_json.c
 	u_json.h
 	u_json.hpp
+	u_limited_unique_id.cpp
+	u_limited_unique_id.h
 	u_logging.c
 	u_logging.h
 	u_metrics.c
