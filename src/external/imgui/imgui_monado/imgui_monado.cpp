@@ -280,3 +280,43 @@ void igToggleButton(const char *str_id, bool *v) {
       ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius),
       radius - 1.5f, IM_COL32(255, 255, 255, 255));
 }
+
+extern "C"
+void igImageBg(ImTextureID user_texture_id,
+               const ImVec2 size,
+               const ImVec2 uv0, const ImVec2 uv1,
+               const ImVec4 tint_col, const ImVec4 border_col, const ImVec4 bg_col)
+{
+  ImGuiWindow* window = GetCurrentWindow();
+  if (window->SkipItems) {
+    return;
+  }
+
+  ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+  auto bbImg = bb;
+  if (border_col.w > 0.0f) {
+      bb.Max += ImVec2(2, 2);
+
+      // Move the image pixel down and right, to be inside of the frame.
+      bbImg.Min += ImVec2(1, 1);
+      bbImg.Max += ImVec2(1, 1);
+  }
+
+  ItemSize(bb);
+  if (!ItemAdd(bb, 0)) {
+    return;
+  }
+
+  // Do we have a border?
+  if (border_col.w > 0.0f) {
+    window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f);
+  }
+
+  // Should we clear the background?
+  if (bg_col.w > 0.0f) {
+    window->DrawList->AddRectFilled(bbImg.Min, bbImg.Max, GetColorU32(bg_col));
+  }
+
+  // Finally the image.
+  window->DrawList->AddImage(user_texture_id, bbImg.Min, bbImg.Max, uv0, uv1, GetColorU32(tint_col));
+}
