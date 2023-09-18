@@ -229,7 +229,7 @@ static void PlotTimings(const char *label,
   ImGui::LabelText(label, "%6.2f %s [%6.2f, %6.2f]", v, unit, v_min, v_max);
 }
 
-extern "C" {
+extern "C"
 void igPlotTimings(const char *label,
                    float (*values_getter)(void *data, int idx), void *data,
                    int values_count, int values_offset,
@@ -241,9 +241,8 @@ void igPlotTimings(const char *label,
               overlay_text, frame_size, reference_timing,
               center_reference_timing, range, unit, dynamic_rescale);
 }
-}
 
-extern "C" {
+extern "C"
 void igToggleButton(const char *str_id, bool *v) {
   ImVec2 p = ImGui::GetCursorScreenPos();
   ImDrawList *draw_list = ImGui::GetWindowDrawList();
@@ -280,5 +279,4 @@ void igToggleButton(const char *str_id, bool *v) {
   draw_list->AddCircleFilled(
       ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius),
       radius - 1.5f, IM_COL32(255, 255, 255, 255));
-}
 }
