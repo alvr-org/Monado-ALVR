@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -262,17 +262,11 @@ create_mesh_pipeline(struct vk_bundle *vk,
 
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {
 	    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-	    .depthTestEnable = VK_TRUE,
-	    .depthWriteEnable = VK_TRUE,
+	    .depthTestEnable = VK_FALSE,
+	    .depthWriteEnable = VK_FALSE,
 	    .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-	    .front =
-	        {
-	            .compareOp = VK_COMPARE_OP_ALWAYS,
-	        },
-	    .back =
-	        {
-	            .compareOp = VK_COMPARE_OP_ALWAYS,
-	        },
+	    .front = {.compareOp = VK_COMPARE_OP_ALWAYS},
+	    .back = {.compareOp = VK_COMPARE_OP_ALWAYS},
 	};
 
 	VkPipelineViewportStateCreateInfo viewport_state = {
