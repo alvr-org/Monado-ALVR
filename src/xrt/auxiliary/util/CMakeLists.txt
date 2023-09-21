@@ -1,4 +1,4 @@
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 ####
@@ -67,6 +67,7 @@ add_library(
 	u_metrics.h
 	u_misc.c
 	u_misc.h
+	u_native_images_debug.h
 	u_pacing.h
 	u_pacing_app.c
 	u_pacing_compositor.c
