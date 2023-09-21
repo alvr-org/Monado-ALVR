@@ -13,6 +13,7 @@
 #include "util/u_misc.h"
 #include "util/u_handles.h"
 #include "util/u_trace_marker.h"
+#include "util/u_limited_unique_id.h"
 
 #include "util/comp_swapchain.h"
 #include "vk/vk_cmd_pool.h"
@@ -234,6 +235,7 @@ set_common_fields(struct comp_swapchain *sc,
 	sc->base.base.wait_image = swapchain_wait_image;
 	sc->base.base.release_image = swapchain_release_image;
 	sc->base.base.image_count = image_count;
+	sc->base.limited_unique_id = u_limited_unique_id_get();
 	sc->real_destroy = destroy_func;
 	sc->vk = vk;
 	sc->cscs = cscs;
