@@ -69,6 +69,25 @@ struct xrt_luid
 typedef struct xrt_luid xrt_luid_t;
 
 /*!
+ * A limited unique id, it's only unique for the process it's in so must not be
+ * used or synchronized across process boundaries. A value of zero is invalid
+ * and means it hasn't be properly initialised.
+ *
+ * @ingroup xrt_iface
+ */
+struct xrt_limited_unique_id
+{
+	uint64_t data;
+};
+
+/*!
+ * Typedef for @ref xrt_limited_unique_id.
+ *
+ * @ingroup xrt_iface
+ */
+typedef struct xrt_limited_unique_id xrt_limited_unique_id_t;
+
+/*!
  * A base class for reference counted objects.
  *
  * @ingroup xrt_iface
