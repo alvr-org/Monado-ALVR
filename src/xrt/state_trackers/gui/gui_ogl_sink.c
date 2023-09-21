@@ -117,19 +117,31 @@ gui_ogl_sink_update(struct gui_ogl_texture *tex)
 	struct gui_ogl_sink *s = container_of(tex, struct gui_ogl_sink, tex);
 	(void)s;
 
-	// Take the frame no need to adjust reference.
 	pthread_mutex_lock(&s->mutex);
-	struct xrt_frame *frame = s->frame;
-	s->frame = NULL;
+
+	struct xrt_frame *frame = NULL;
+
+	// Only take the frame if we are running.
+	if (s->running) {
+		// Take the frame no need to adjust reference.
+		frame = s->frame;
+		s->frame = NULL;
+	}
+
 	pthread_mutex_unlock(&s->mutex);
 
 	if (frame == NULL) {
 		return;
 	}
 
-	// To large stride for GLint.
+	/*
+	 * The frame properties are immutable while it is alive,
+	 * so no need to take any locks while reading them.
+	 */
+
+	// Too large of stride for GLint.
 	if (frame->stride > INT_MAX) {
-		U_LOG_E("Stride unreasonable large!");
+		U_LOG_E("Stride unreasonably large!");
 		return;
 	}
 
