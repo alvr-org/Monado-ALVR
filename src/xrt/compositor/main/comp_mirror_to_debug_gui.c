@@ -407,6 +407,8 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
                     VkExtent2D from_extent,
                     struct xrt_normalized_rect from_rect)
 {
+	COMP_TRACE_MARKER();
+
 	VkResult ret;
 
 	struct vk_image_readback_to_xf *wrap = NULL;
@@ -601,10 +603,16 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 	    VK_PIPELINE_STAGE_HOST_BIT,           // dstStageMask
 	    first_color_level_subresource_range); // subresourceRange
 
+	// This takes a long time so make sure to trace it.
+	COMP_TRACE_BEGIN(submit_and_wait);
+
 	// Done writing commands, submit to queue, waits for command to finish.
 	ret = vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked(vk, pool, cmd);
 
-	// Done submitting commands.
+	// Stop this block.
+	COMP_TRACE_END(submit_and_wait);
+
+	// Done with everything, can unlock the pool now.
 	vk_cmd_pool_unlock(pool);
 
 	// Check results from submit.
