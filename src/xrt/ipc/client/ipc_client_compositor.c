@@ -20,6 +20,7 @@
 #include "util/u_wait.h"
 #include "util/u_handles.h"
 #include "util/u_trace_marker.h"
+#include "util/u_limited_unique_id.h"
 
 #include "shared/ipc_protocol.h"
 #include "client/ipc_client.h"
@@ -303,6 +304,7 @@ swapchain_server_create(struct ipc_client_compositor *icc,
 	ics->base.base.release_image = ipc_compositor_swapchain_release_image;
 	ics->base.base.destroy = ipc_compositor_swapchain_destroy;
 	ics->base.base.reference.count = 1;
+	ics->base.limited_unique_id = u_limited_unique_id_get();
 	ics->icc = icc;
 	ics->id = handle;
 
@@ -360,6 +362,7 @@ swapchain_server_import(struct ipc_client_compositor *icc,
 	ics->base.base.release_image = ipc_compositor_swapchain_release_image;
 	ics->base.base.destroy = ipc_compositor_swapchain_destroy;
 	ics->base.base.reference.count = 1;
+	ics->base.limited_unique_id = u_limited_unique_id_get();
 	ics->icc = icc;
 	ics->id = id;
 
