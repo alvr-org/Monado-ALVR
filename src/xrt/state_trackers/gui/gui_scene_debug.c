@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -15,6 +15,7 @@
 #include "util/u_misc.h"
 #include "util/u_sink.h"
 #include "util/u_debug.h"
+#include "util/u_native_images_debug.h"
 
 #ifdef XRT_HAVE_OPENCV
 #include "tracking/t_tracking.h"
@@ -32,6 +33,7 @@
 #include "gui_common.h"
 #include "gui_imgui.h"
 #include "gui_window_record.h"
+#include "gui_widget_native_images.h"
 
 #include "imgui_monado/cimgui_monado.h"
 
@@ -74,6 +76,8 @@ struct debug_scene
 {
 	struct gui_scene base;
 	struct xrt_frame_context *xfctx;
+
+	struct gui_widget_native_images_storage gwnis;
 
 	struct debug_record recs[32];
 	uint32_t num_recrs;
@@ -208,6 +212,21 @@ draw_sink_to_background(struct u_var_info *var, struct draw_state *state)
 	}
 
 	gui_window_record_to_background(&dr->rw, state->p);
+}
+
+XRT_MAYBE_UNUSED static void
+draw_native_images_to_background(struct u_var_info *var, struct draw_state *state)
+{
+	struct debug_scene *ds = state->ds;
+	struct u_native_images_debug *unid = (struct u_native_images_debug *)var->ptr;
+
+	struct gui_widget_native_images *gwni = gui_widget_native_images_storage_ensure(&ds->gwnis, unid);
+	if (gwni == NULL) {
+		return;
+	}
+
+	gui_widget_native_images_update(gwni, unid);
+	gui_widget_native_images_to_background(gwni, state->p);
 }
 
 
@@ -423,6 +442,21 @@ on_sink_debug_var(const char *name, void *ptr, struct draw_state *state)
 }
 
 static void
+on_native_images_debug_var(const char *name, void *ptr, struct draw_state *state)
+{
+	struct debug_scene *ds = state->ds;
+	struct u_native_images_debug *unid = (struct u_native_images_debug *)ptr;
+
+	struct gui_widget_native_images *gwni = gui_widget_native_images_storage_ensure(&ds->gwnis, unid);
+	if (gwni == NULL) {
+		return;
+	}
+
+	gui_widget_native_images_update(gwni, unid);
+	gui_widget_native_images_render(gwni, state->p);
+}
+
+static void
 on_button_var(const char *name, void *ptr)
 {
 	struct u_var_button *btn = (struct u_var_button *)ptr;
@@ -613,6 +647,7 @@ on_elem(struct u_var_info *info, void *priv)
 	case U_VAR_KIND_GUI_HEADER_BEGIN: on_gui_header_begin(name, state); break;
 	case U_VAR_KIND_GUI_HEADER_END: on_gui_header_end(); break;
 	case U_VAR_KIND_SINK_DEBUG: on_sink_debug_var(name, ptr, state); break;
+	case U_VAR_KIND_NATIVE_IMAGES_DEBUG: on_native_images_debug_var(name, ptr, state); break;
 	case U_VAR_KIND_DRAGGABLE_F32: on_draggable_f32_var(name, ptr); break;
 	case U_VAR_KIND_BUTTON: on_button_var(name, ptr); break;
 	case U_VAR_KIND_COMBO: on_combo_var(name, ptr); break;
