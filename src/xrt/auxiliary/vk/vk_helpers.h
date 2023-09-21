@@ -836,6 +836,7 @@ vk_select_physical_device(struct vk_bundle *vk, int forced_index);
  */
 struct vk_device_features
 {
+	bool shader_image_gather_extended;
 	bool shader_storage_image_write_without_format;
 	bool null_descriptor;
 	bool timeline_semaphore;

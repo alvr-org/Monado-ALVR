@@ -1045,6 +1045,8 @@ filter_device_features(struct vk_bundle *vk,
 #ifdef VK_KHR_timeline_semaphore
 	CHECK(timeline_semaphore, timeline_semaphore_info.timelineSemaphore);
 #endif
+	CHECK(shader_image_gather_extended, physical_device_features.features.shaderImageGatherExtended);
+
 	CHECK(shader_storage_image_write_without_format,
 	      physical_device_features.features.shaderStorageImageWriteWithoutFormat);
 
@@ -1054,9 +1056,11 @@ filter_device_features(struct vk_bundle *vk,
 	VK_DEBUG(vk,
 	         "Features:"
 	         "\n\tnull_descriptor: %i"
+	         "\n\tshader_image_gather_extended: %i"
 	         "\n\tshader_storage_image_write_without_format: %i"
 	         "\n\ttimeline_semaphore: %i",                               //
 	         device_features->null_descriptor,                           //
+	         device_features->shader_image_gather_extended,              //
 	         device_features->shader_storage_image_write_without_format, //
 	         device_features->timeline_semaphore);
 }
@@ -1176,6 +1180,7 @@ vk_create_device(struct vk_bundle *vk,
 #endif
 
 	VkPhysicalDeviceFeatures enabled_features = {
+	    .shaderImageGatherExtended = device_features.shader_image_gather_extended,
 	    .shaderStorageImageWriteWithoutFormat = device_features.shader_storage_image_write_without_format,
 	};
 

@@ -274,6 +274,7 @@ create_device(struct vk_bundle *vk, const struct comp_vulkan_arguments *vk_args)
 	const bool only_compute_queue = vk_args->only_compute_queue;
 
 	struct vk_device_features device_features = {
+	    .shader_image_gather_extended = true,
 	    .shader_storage_image_write_without_format = true,
 	    .null_descriptor = only_compute_queue,
 	    .timeline_semaphore = vk_args->timeline_semaphore,
