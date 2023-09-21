@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -193,6 +193,7 @@ vk_csci_get_image_usage_flags(struct vk_bundle *vk, VkFormat format, enum xrt_sw
 	TEST(XRT_SWAPCHAIN_USAGE_TRANSFER_SRC,     VK_FORMAT_FEATURE_TRANSFER_SRC_BIT,             VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
 	TEST(XRT_SWAPCHAIN_USAGE_TRANSFER_DST,     VK_FORMAT_FEATURE_TRANSFER_DST_BIT,             VK_IMAGE_USAGE_TRANSFER_DST_BIT)
 	TEST(XRT_SWAPCHAIN_USAGE_SAMPLED,          VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT,            VK_IMAGE_USAGE_SAMPLED_BIT)
+	TEST(XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT,            VK_IMAGE_USAGE_STORAGE_BIT)
 	// clang-format on
 
 #undef TEST
@@ -200,7 +201,6 @@ vk_csci_get_image_usage_flags(struct vk_bundle *vk, VkFormat format, enum xrt_sw
 	/*
 	 * Should not be handled here.
 	 *
-	 * XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS
 	 * XRT_SWAPCHAIN_USAGE_MUTABLE_FORMAT
 	 */
 
