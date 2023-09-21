@@ -1,4 +1,4 @@
-# Copyright 2019-2021, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 # c-imgui doesn't do well with IPO - lots of warnings.
@@ -23,6 +23,8 @@ add_library(
 	gui_scene_video.c
 	gui_scene_tracking_overrides.c
 	gui_stb.c
+	gui_widget_native_images.c
+	gui_widget_native_images.h
 	gui_window_record.c
 	gui_window_record.h
 	)
