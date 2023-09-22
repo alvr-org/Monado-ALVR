@@ -58,7 +58,11 @@ vk_from_rr(struct render_gfx *rr)
 }
 
 static VkResult
-create_external_render_pass(struct vk_bundle *vk, VkFormat format, VkRenderPass *out_render_pass)
+create_implicit_render_pass(struct vk_bundle *vk,
+                            VkFormat format,
+                            VkAttachmentLoadOp load_op,
+                            VkImageLayout final_layout,
+                            VkRenderPass *out_render_pass)
 {
 	VkResult ret;
 
@@ -66,12 +70,13 @@ create_external_render_pass(struct vk_bundle *vk, VkFormat format, VkRenderPass 
 	    {
 	        .format = format,
 	        .samples = VK_SAMPLE_COUNT_1_BIT,
-	        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+	        .loadOp = load_op,
 	        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 	        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 	        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 	        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+	        .finalLayout = final_layout,
+	        .flags = 0,
 	    },
 	};
 
@@ -94,16 +99,10 @@ create_external_render_pass(struct vk_bundle *vk, VkFormat format, VkRenderPass 
 	    },
 	};
 
-	VkSubpassDependency dependencies[1] = {
-	    {
-	        .srcSubpass = VK_SUBPASS_EXTERNAL,
-	        .dstSubpass = 0,
-	        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	        .srcAccessMask = 0,
-	        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-	    },
-	};
+	/*
+	 * We don't use any VkSubpassDependency structs, instead relying on the
+	 * implicit dependencies inserted by the runtime implementation.
+	 */
 
 	VkRenderPassCreateInfo render_pass_info = {
 	    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -111,8 +110,8 @@ create_external_render_pass(struct vk_bundle *vk, VkFormat format, VkRenderPass 
 	    .pAttachments = attachments,
 	    .subpassCount = ARRAY_SIZE(subpasses),
 	    .pSubpasses = subpasses,
-	    .dependencyCount = ARRAY_SIZE(dependencies),
-	    .pDependencies = dependencies,
+	    .dependencyCount = 0,
+	    .pDependencies = NULL,
 	};
 
 	VkRenderPass render_pass = VK_NULL_HANDLE;
@@ -442,10 +441,12 @@ render_gfx_target_resources_init(struct render_gfx_target_resources *rtr,
 
 	rtr->data = *data;
 
-	C(create_external_render_pass( //
-	    vk,                        // vk_bundle
-	    data->format,              // target_format
-	    &rtr->render_pass));       // out_render_pass
+	C(create_implicit_render_pass(       //
+	    vk,                              // vk_bundle
+	    data->format,                    // target_format
+	    VK_ATTACHMENT_LOAD_OP_CLEAR,     // load_op
+	    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, // final_layout
+	    &rtr->render_pass));             // out_render_pass
 
 	C(create_mesh_pipeline(vk,                        // vk_bundle
 	                       rtr->render_pass,          // render_pass
