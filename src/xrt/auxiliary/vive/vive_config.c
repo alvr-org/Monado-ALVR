@@ -383,7 +383,6 @@ _calculate_fov(struct vive_config *d)
 		    &d->distortion.fov[eye]);   //
 		if (!bret) {
 			VIVE_ERROR(d, "Failed to compute the partial fields of view.");
-			free(d);
 			return false;
 		}
 	}
