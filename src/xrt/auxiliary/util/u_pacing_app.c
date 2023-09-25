@@ -136,7 +136,7 @@ struct pacing_app
 		//! Time between begin and frame data being delivered.
 		uint64_t draw_time_ns;
 		//! Time between the frame data being delivered and GPU completing.
-		uint64_t wait_time_ns;
+		uint64_t gpu_time_ns;
 		//! Extra time between end of draw time and when the compositor wakes up.
 		uint64_t margin_ns;
 	} app; //!< App statistics.
@@ -239,7 +239,7 @@ last_return_predicted_display(const struct pacing_app *pa)
 static uint64_t
 total_app_time_ns(const struct pacing_app *pa)
 {
-	uint64_t total_ns = pa->app.cpu_time_ns + pa->app.draw_time_ns + pa->app.wait_time_ns;
+	uint64_t total_ns = pa->app.cpu_time_ns + pa->app.draw_time_ns + pa->app.gpu_time_ns;
 	uint64_t min_ns = min_app_time(pa);
 
 	if (total_ns < min_ns) {
@@ -281,7 +281,7 @@ calc_period(const struct pacing_app *pa)
 		period_ns += base_period_ns;
 	}
 
-	while (pa->app.wait_time_ns > period_ns) {
+	while (pa->app.gpu_time_ns > period_ns) {
 		period_ns += base_period_ns;
 	}
 
@@ -571,23 +571,23 @@ pa_mark_gpu_done(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns)
 
 	uint64_t diff_cpu_ns = f->when.begin_ns - f->when.wait_woke_ns;
 	uint64_t diff_draw_ns = f->when.delivered_ns - f->when.begin_ns;
-	uint64_t diff_wait_ns = f->when.gpu_done_ns - f->when.delivered_ns;
+	uint64_t diff_gpu_ns = f->when.gpu_done_ns - f->when.delivered_ns;
 
 	UPA_LOG_D(
-	    "Delivered frame %.2fms %s."                                           //
-	    "\n\tperiod: %.2f"                                                     //
-	    "\n\tcpu  o: %.2f, n: %.2f"                                            //
-	    "\n\tdraw o: %.2f, n: %.2f"                                            //
-	    "\n\twait o: %.2f, n: %.2f",                                           //
-	    time_ns_to_ms_f(diff_ns), late ? "late" : "early",                     //
-	    time_ns_to_ms_f(f->predicted_display_period_ns),                       //
-	    time_ns_to_ms_f(pa->app.cpu_time_ns), time_ns_to_ms_f(diff_cpu_ns),    //
-	    time_ns_to_ms_f(pa->app.draw_time_ns), time_ns_to_ms_f(diff_draw_ns),  //
-	    time_ns_to_ms_f(pa->app.wait_time_ns), time_ns_to_ms_f(diff_wait_ns)); //
+	    "Delivered frame %.2fms %s."                                          //
+	    "\n\tperiod: %.2f"                                                    //
+	    "\n\tcpu  o: %.2f, n: %.2f"                                           //
+	    "\n\tdraw o: %.2f, n: %.2f"                                           //
+	    "\n\tgpu  o: %.2f, n: %.2f",                                          //
+	    time_ns_to_ms_f(diff_ns), late ? "late" : "early",                    //
+	    time_ns_to_ms_f(f->predicted_display_period_ns),                      //
+	    time_ns_to_ms_f(pa->app.cpu_time_ns), time_ns_to_ms_f(diff_cpu_ns),   //
+	    time_ns_to_ms_f(pa->app.draw_time_ns), time_ns_to_ms_f(diff_draw_ns), //
+	    time_ns_to_ms_f(pa->app.gpu_time_ns), time_ns_to_ms_f(diff_gpu_ns));  //
 
 	do_iir_filter(&pa->app.cpu_time_ns, IIR_ALPHA_LT, IIR_ALPHA_GT, diff_cpu_ns);
 	do_iir_filter(&pa->app.draw_time_ns, IIR_ALPHA_LT, IIR_ALPHA_GT, diff_draw_ns);
-	do_iir_filter(&pa->app.wait_time_ns, IIR_ALPHA_LT, IIR_ALPHA_GT, diff_wait_ns);
+	do_iir_filter(&pa->app.gpu_time_ns, IIR_ALPHA_LT, IIR_ALPHA_GT, diff_gpu_ns);
 
 	// Write out metrics and tracing data.
 	do_metrics(pa, f, false);
@@ -700,7 +700,7 @@ pa_create(int64_t session_id, struct u_pacing_app **out_upa)
 	u_var_add_draggable_f32(pa, &pa->min_app_time_ms, "Minimum app time(ms)");
 	u_var_add_ro_u64(pa, &pa->app.cpu_time_ns, "CPU time(ns)");
 	u_var_add_ro_u64(pa, &pa->app.draw_time_ns, "Draw time(ns)");
-	u_var_add_ro_u64(pa, &pa->app.wait_time_ns, "GPU time(ns)");
+	u_var_add_ro_u64(pa, &pa->app.gpu_time_ns, "GPU time(ns)");
 
 	*out_upa = &pa->base;
 
