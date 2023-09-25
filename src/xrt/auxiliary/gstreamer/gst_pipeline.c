@@ -14,6 +14,7 @@
 #include "gstreamer/gst_internal.h"
 #include "gstreamer/gst_pipeline.h"
 
+#include "gst/gst.h"
 
 /*
  *

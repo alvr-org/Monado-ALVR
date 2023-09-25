@@ -19,6 +19,8 @@
 #include "gstreamer/gst_internal.h"
 #include "gst/video/video-format.h"
 #include "gst/video/gstvideometa.h"
+#include "gst/app/gstappsink.h"
+#include "gst/app/gstappsrc.h"
 
 #include <assert.h>
 

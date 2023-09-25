@@ -11,8 +11,7 @@
 
 #include "xrt/xrt_frame.h"
 
-#include <gst/app/gstappsink.h>
-#include <gst/app/gstappsrc.h>
+typedef struct _GstElement GstElement;
 
 
 #ifdef __cplusplus
