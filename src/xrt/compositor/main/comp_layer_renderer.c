@@ -354,49 +354,6 @@ _render_eye(struct comp_layer_renderer *self,
 	}
 }
 
-static bool
-_init_frame_buffer(struct comp_layer_renderer *self, VkFormat format, VkRenderPass rp, uint32_t eye)
-{
-	struct vk_bundle *vk = self->vk;
-
-	VkImageUsageFlags usage =                 //
-	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | //
-	    VK_IMAGE_USAGE_SAMPLED_BIT |          //
-	    VK_IMAGE_USAGE_TRANSFER_SRC_BIT;      //
-
-	VkResult res = vk_create_image_simple(vk, self->extent, format, usage, &self->framebuffers[eye].memory,
-	                                      &self->framebuffers[eye].image);
-	vk_check_error("vk_create_image_simple", res, false);
-
-	VkImageSubresourceRange subresource_range = {
-	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	    .baseMipLevel = 0,
-	    .levelCount = 1,
-	    .baseArrayLayer = 0,
-	    .layerCount = 1,
-	};
-
-	res = vk_create_view(vk, self->framebuffers[eye].image, VK_IMAGE_VIEW_TYPE_2D, format, subresource_range,
-	                     &self->framebuffers[eye].view);
-
-	vk_check_error("vk_create_view", res, false);
-
-	VkFramebufferCreateInfo framebuffer_info = {
-	    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-	    .renderPass = rp,
-	    .attachmentCount = 1,
-	    .pAttachments = (VkImageView[]){self->framebuffers[eye].view},
-	    .width = self->extent.width,
-	    .height = self->extent.height,
-	    .layers = 1,
-	};
-
-	res = vk->vkCreateFramebuffer(vk->device, &framebuffer_info, NULL, &self->framebuffers[eye].handle);
-	vk_check_error("vkCreateFramebuffer", res, false);
-
-	return true;
-}
-
 void
 comp_layer_renderer_allocate_layers(struct comp_layer_renderer *self, uint32_t layer_count)
 {
@@ -426,8 +383,7 @@ static bool
 _init(struct comp_layer_renderer *self,
       struct vk_bundle *vk,
       struct render_shaders *s,
-      struct render_gfx_render_pass *rgrp,
-      VkExtent2D extent)
+      struct render_gfx_render_pass *rgrp)
 {
 	self->vk = vk;
 
@@ -435,8 +391,6 @@ _init(struct comp_layer_renderer *self,
 	self->farZ = 100.0f;
 
 	self->layer_count = 0;
-
-	self->extent = extent;
 
 	self->rgrp = rgrp;
 
@@ -456,16 +410,6 @@ _init(struct comp_layer_renderer *self,
 		return false;
 	}
 
-
-	for (uint32_t i = 0; i < 2; i++) {
-		if (!_init_frame_buffer(         //
-		        self,                    //
-		        self->rgrp->format,      //
-		        self->rgrp->render_pass, //
-		        i)) {                    //
-			return false;
-		}
-	}
 
 	if (!_init_descriptor_layout(self))
 		return false;
@@ -506,13 +450,10 @@ _init(struct comp_layer_renderer *self,
 }
 
 struct comp_layer_renderer *
-comp_layer_renderer_create(struct vk_bundle *vk,
-                           struct render_shaders *s,
-                           struct render_gfx_render_pass *rgrp,
-                           VkExtent2D extent)
+comp_layer_renderer_create(struct vk_bundle *vk, struct render_shaders *s, struct render_gfx_render_pass *rgrp)
 {
 	struct comp_layer_renderer *r = U_TYPED_CALLOC(struct comp_layer_renderer);
-	_init(r, vk, s, rgrp, extent);
+	_init(r, vk, s, rgrp);
 	return r;
 }
 
@@ -560,28 +501,30 @@ static void
 _render_stereo(struct comp_layer_renderer *self,
                struct vk_bundle *vk,
                VkCommandBuffer cmd_buffer,
+               VkExtent2D extent,
+               VkFramebuffer framebuffers[2],
                const VkClearColorValue *color)
 {
 	COMP_TRACE_MARKER();
 
 	VkViewport viewport = {
-	    0.0f, 0.0f, (float)self->extent.width, (float)self->extent.height, 0.0f, 1.0f,
+	    0.0f, 0.0f, (float)extent.width, (float)extent.height, 0.0f, 1.0f,
 	};
 	vk->vkCmdSetViewport(cmd_buffer, 0, 1, &viewport);
 	VkRect2D scissor = {
 	    .offset = {0, 0},
-	    .extent = self->extent,
+	    .extent = extent,
 	};
 	vk->vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
 
 	for (uint32_t eye = 0; eye < 2; eye++) {
-		_render_pass_begin(                 //
-		    vk,                             //
-		    self->rgrp->render_pass,        //
-		    self->extent,                   //
-		    *color,                         //
-		    self->framebuffers[eye].handle, //
-		    cmd_buffer);                    //
+		_render_pass_begin(          //
+		    vk,                      //
+		    self->rgrp->render_pass, //
+		    extent,                  //
+		    *color,                  //
+		    framebuffers[eye],       //
+		    cmd_buffer);             //
 
 		_render_eye(self, eye, cmd_buffer, self->pipeline_layout);
 
@@ -590,7 +533,9 @@ _render_stereo(struct comp_layer_renderer *self,
 }
 
 void
-comp_layer_renderer_draw(struct comp_layer_renderer *self)
+comp_layer_renderer_draw(struct comp_layer_renderer *self,
+                         struct render_gfx_target_resources *rtr_left,
+                         struct render_gfx_target_resources *rtr_right)
 {
 	COMP_TRACE_MARKER();
 	VkResult ret;
@@ -608,10 +553,19 @@ comp_layer_renderer_draw(struct comp_layer_renderer *self)
 		return;
 	}
 
+	VkExtent2D extent = rtr_left->extent;
+	assert(extent.width == rtr_right->extent.width);
+	assert(extent.height == rtr_right->extent.height);
+
+	VkFramebuffer framebuffers[2] = {
+	    rtr_left->framebuffer,
+	    rtr_right->framebuffer,
+	};
+
 	if (self->layer_count == 0) {
-		_render_stereo(self, vk, cmd_buffer, &background_color_idle);
+		_render_stereo(self, vk, cmd_buffer, extent, framebuffers, &background_color_idle);
 	} else {
-		_render_stereo(self, vk, cmd_buffer, &background_color_active);
+		_render_stereo(self, vk, cmd_buffer, extent, framebuffers, &background_color_active);
 	}
 
 	// Done writing commands, submit to queue, waits for command to finish.
@@ -622,16 +576,6 @@ comp_layer_renderer_draw(struct comp_layer_renderer *self)
 
 	// Check results from submit.
 	vk_check_error("vk_submit_cmd_buffer", ret, );
-}
-
-static void
-_destroy_framebuffer(struct comp_layer_renderer *self, uint32_t i)
-{
-	struct vk_bundle *vk = self->vk;
-	vk->vkDestroyImageView(vk->device, self->framebuffers[i].view, NULL);
-	vk->vkDestroyImage(vk->device, self->framebuffers[i].image, NULL);
-	vk->vkFreeMemory(vk->device, self->framebuffers[i].memory, NULL);
-	vk->vkDestroyFramebuffer(vk->device, self->framebuffers[i].handle, NULL);
 }
 
 void
@@ -654,9 +598,6 @@ comp_layer_renderer_destroy(struct comp_layer_renderer **ptr_clr)
 	os_mutex_unlock(&vk->queue_mutex);
 
 	comp_layer_renderer_destroy_layers(self);
-
-	for (uint32_t i = 0; i < 2; i++)
-		_destroy_framebuffer(self, i);
 
 	vk->vkDestroyPipelineLayout(vk->device, self->pipeline_layout, NULL);
 	vk->vkDestroyDescriptorSetLayout(vk->device, self->descriptor_set_layout, NULL);

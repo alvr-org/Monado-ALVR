@@ -20,20 +20,10 @@ struct comp_layer_renderer
 {
 	struct vk_bundle *vk;
 
-	struct
-	{
-		VkImage image;
-		VkDeviceMemory memory;
-		VkImageView view;
-		VkFramebuffer handle;
-	} framebuffers[2];
-
 	struct vk_cmd_pool pool;
 
 	//! Render pass used to create all pipelines.
 	struct render_gfx_render_pass *rgrp;
-
-	VkExtent2D extent;
 
 	VkShaderModule shader_modules[2];
 	VkPipeline pipeline_premultiplied_alpha;
@@ -69,10 +59,7 @@ struct comp_layer_renderer
  * @public @memberof comp_layer_renderer
  */
 struct comp_layer_renderer *
-comp_layer_renderer_create(struct vk_bundle *vk,
-                           struct render_shaders *s,
-                           struct render_gfx_render_pass *rgrp,
-                           VkExtent2D extent);
+comp_layer_renderer_create(struct vk_bundle *vk, struct render_shaders *s, struct render_gfx_render_pass *rgrp);
 
 /*!
  * Destroy the layer renderer and set the pointer to NULL.
@@ -90,7 +77,9 @@ comp_layer_renderer_destroy(struct comp_layer_renderer **ptr_clr);
  * @public @memberof comp_layer_renderer
  */
 void
-comp_layer_renderer_draw(struct comp_layer_renderer *self);
+comp_layer_renderer_draw(struct comp_layer_renderer *self,
+                         struct render_gfx_target_resources *rtr_left,
+                         struct render_gfx_target_resources *rtr_right);
 
 /*!
  * Update the internal members derived from the field of view.

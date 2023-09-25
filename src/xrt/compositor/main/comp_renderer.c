@@ -473,12 +473,10 @@ renderer_create_layer_renderer(struct comp_renderer *r)
 		comp_layer_renderer_destroy(&r->lr);
 	}
 
-	VkExtent2D extent = r->scratch.extent;
 	r->lr = comp_layer_renderer_create( //
 	    vk,                             //
 	    &r->c->shaders,                 //
-	    &r->scratch_render_pass,        //
-	    extent);                        //
+	    &r->scratch_render_pass);       //
 	if (layer_count != 0) {
 		comp_layer_renderer_allocate_layers(r->lr, layer_count);
 	}
@@ -603,7 +601,11 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 
 	struct vk_bundle *vk = &r->c->base.vk;
 
-	VkResult ret = comp_mirror_init(&r->mirror_to_debug_gui, vk, &c->shaders, r->lr->extent);
+	VkResult ret = comp_mirror_init( //
+	    &r->mirror_to_debug_gui,     //
+	    vk,                          //
+	    &c->shaders,                 //
+	    r->scratch.extent);          //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(c, "comp_mirror_init: %s", vk_result_string(ret));
 		assert(false && "Whelp, can't return a error. But should never really fail.");
@@ -941,7 +943,10 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
 
 		renderer_get_view_projection(r);
-		comp_layer_renderer_draw(r->lr);
+		comp_layer_renderer_draw(    //
+		    r->lr,                   //
+		    &r->scratch_targets[0],  //
+		    &r->scratch_targets[1]); //
 
 		VkSampler clamp_to_border_black = r->c->nr.samplers.clamp_to_border_black;
 		VkSampler src_samplers[2] = {
@@ -949,8 +954,8 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		    clamp_to_border_black,
 		};
 		VkImageView src_image_views[2] = {
-		    r->lr->framebuffers[0].view,
-		    r->lr->framebuffers[1].view,
+		    r->scratch.color[0].srgb_view,
+		    r->scratch.color[1].srgb_view,
 		};
 
 		struct xrt_normalized_rect src_norm_rects[2] = {
@@ -1441,12 +1446,18 @@ comp_renderer_draw(struct comp_renderer *r)
 	if (c->peek) {
 		switch (comp_window_peek_get_eye(c->peek)) {
 		case COMP_WINDOW_PEEK_EYE_LEFT:
-			comp_window_peek_blit(c->peek, r->lr->framebuffers[0].image, r->lr->extent.width,
-			                      r->lr->extent.height);
+			comp_window_peek_blit(         //
+			    c->peek,                   //
+			    r->scratch.color[0].image, //
+			    r->scratch.extent.width,   //
+			    r->scratch.extent.height); //
 			break;
 		case COMP_WINDOW_PEEK_EYE_RIGHT:
-			comp_window_peek_blit(c->peek, r->lr->framebuffers[1].image, r->lr->extent.width,
-			                      r->lr->extent.height);
+			comp_window_peek_blit(         //
+			    c->peek,                   //
+			    r->scratch.color[1].image, //
+			    r->scratch.extent.width,   //
+			    r->scratch.extent.height); //
 			break;
 		case COMP_WINDOW_PEEK_EYE_BOTH:
 			/* TODO: display the undistorted image */
@@ -1474,35 +1485,19 @@ comp_renderer_draw(struct comp_renderer *r)
 		// Used for both, want clamp to edge to no bring in black.
 		VkSampler clamp_to_edge = c->nr.samplers.clamp_to_edge;
 
-		if (use_compute) {
-			// Covers only the first half of the view.
-			struct xrt_normalized_rect rect = {0, 0, 1.0f, 1.0f};
+		// Covers the whole view.
+		struct xrt_normalized_rect rect = {0, 0, 1.0f, 1.0f};
 
-			comp_mirror_do_blit(               //
-			    &r->mirror_to_debug_gui,       //
-			    &c->base.vk,                   //
-			    frame_id,                      //
-			    predicted_display_time_ns,     //
-			    r->scratch.color[0].image,     //
-			    r->scratch.color[0].srgb_view, //
-			    clamp_to_edge,                 //
-			    r->scratch.extent,             //
-			    rect);                         //
-		} else {
-			// Covers the whole view.
-			struct xrt_normalized_rect rect = {0, 0, 1.0f, 1.0f};
-
-			comp_mirror_do_blit(              //
-			    &r->mirror_to_debug_gui,      //
-			    &c->base.vk,                  //
-			    frame_id,                     //
-			    predicted_display_time_ns,    //
-			    r->lr->framebuffers[0].image, //
-			    r->lr->framebuffers[0].view,  //
-			    clamp_to_edge,                //
-			    r->lr->extent,                //
-			    rect);                        //
-		}
+		comp_mirror_do_blit(               //
+		    &r->mirror_to_debug_gui,       //
+		    &c->base.vk,                   //
+		    frame_id,                      //
+		    predicted_display_time_ns,     //
+		    r->scratch.color[0].image,     //
+		    r->scratch.color[0].srgb_view, //
+		    clamp_to_edge,                 //
+		    r->scratch.extent,             //
+		    rect);                         //
 	}
 
 	/*
