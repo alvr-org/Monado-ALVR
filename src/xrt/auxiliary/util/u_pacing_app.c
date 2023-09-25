@@ -24,6 +24,7 @@
 
 DEBUG_GET_ONCE_LOG_OPTION(log_level, "U_PACING_APP_LOG", U_LOGGING_WARN)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_app_time_ms, "U_PACING_APP_MIN_TIME_MS", 1.0f)
+DEBUG_GET_ONCE_FLOAT_OPTION(min_margin_ms, "U_PACING_APP_MIN_MARGIN_MS", 2.0f)
 
 #define UPA_LOG_T(...) U_LOG_IFL_T(debug_get_log_option_log_level(), __VA_ARGS__)
 #define UPA_LOG_D(...) U_LOG_IFL_D(debug_get_log_option_log_level(), __VA_ARGS__)
@@ -129,6 +130,13 @@ struct pacing_app
 	 */
 	struct u_var_draggable_f32 min_app_time_ms;
 
+	/*!
+	 * Minimum margin to use for calculating the app pacing. Currently this
+	 * is the actual margin time used, but in the future we might calculate
+	 * a margin time so this is called minimum to future proof.
+	 */
+	struct u_var_draggable_f32 min_margin_ms;
+
 	struct
 	{
 		//! App time between wait returning and begin being called.
@@ -137,8 +145,6 @@ struct pacing_app
 		uint64_t draw_time_ns;
 		//! Time between the frame data being delivered and GPU completing.
 		uint64_t gpu_time_ns;
-		//! Extra time between end of draw time and when the compositor wakes up.
-		uint64_t margin_ns;
 	} app; //!< App statistics.
 
 	struct
@@ -225,6 +231,12 @@ min_app_time(const struct pacing_app *pa)
 }
 
 static uint64_t
+margin_time(const struct pacing_app *pa)
+{
+	return (uint64_t)(pa->min_margin_ms.val * (double)U_TIME_1MS_IN_NS);
+}
+
+static uint64_t
 last_sample_displayed(const struct pacing_app *pa)
 {
 	return pa->last_input.predicted_display_time_ns;
@@ -252,7 +264,7 @@ total_app_time_ns(const struct pacing_app *pa)
 static uint64_t
 total_compositor_time_ns(const struct pacing_app *pa)
 {
-	return pa->app.margin_ns + pa->last_input.extra_ns;
+	return margin_time(pa) + pa->last_input.extra_ns;
 }
 
 static uint64_t
@@ -682,7 +694,14 @@ pa_create(int64_t session_id, struct u_pacing_app **out_upa)
 	pa->session_id = session_id;
 	pa->app.cpu_time_ns = U_TIME_1MS_IN_NS * 2;
 	pa->app.draw_time_ns = U_TIME_1MS_IN_NS * 2;
-	pa->app.margin_ns = U_TIME_1MS_IN_NS * 2;
+
+	pa->min_margin_ms = (struct u_var_draggable_f32){
+	    .val = debug_get_float_option_min_margin_ms(),
+	    .min = 1.0, // This can never be negative.
+	    .step = 1.0,
+	    .max = +120.0, // There are some really slow applications out there.
+	};
+
 	pa->min_app_time_ms = (struct u_var_draggable_f32){
 	    .val = (float)debug_get_float_option_min_app_time_ms(),
 	    .min = 1.0, // This can never be negative.
@@ -697,6 +716,7 @@ pa_create(int64_t session_id, struct u_pacing_app **out_upa)
 
 	// U variable tracking.
 	u_var_add_root(pa, "App timing info", true);
+	u_var_add_draggable_f32(pa, &pa->min_margin_ms, "Minimum margin(ms)");
 	u_var_add_draggable_f32(pa, &pa->min_app_time_ms, "Minimum app time(ms)");
 	u_var_add_ro_u64(pa, &pa->app.cpu_time_ns, "CPU time(ns)");
 	u_var_add_ro_u64(pa, &pa->app.draw_time_ns, "Draw time(ns)");
