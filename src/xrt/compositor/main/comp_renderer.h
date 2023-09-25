@@ -1,4 +1,4 @@
-// Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,6 +12,8 @@
 
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_vulkan_includes.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,12 +30,15 @@ struct comp_renderer;
 /*!
  * Called by the main compositor code to create the renderer.
  *
+ * @param c              Owning compositor.
+ * @param scratch_extent Size for scratch image used when squashing layers.
+ *
  * @public @memberof comp_renderer
  * @see comp_compositor
  * @ingroup comp_main
  */
 struct comp_renderer *
-comp_renderer_create(struct comp_compositor *c);
+comp_renderer_create(struct comp_compositor *c, VkExtent2D scratch_extent);
 
 /*!
  * Clean up and free the renderer.

@@ -1006,7 +1006,7 @@ compositor_init_renderer(struct comp_compositor *c)
 {
 	COMP_TRACE_MARKER();
 
-	c->r = comp_renderer_create(c);
+	c->r = comp_renderer_create(c, c->view_extents);
 
 #ifdef XRT_FEATURE_WINDOW_PEEK
 	c->peek = comp_window_peek_create(c);

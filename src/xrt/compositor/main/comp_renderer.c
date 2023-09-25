@@ -466,13 +466,7 @@ renderer_create_layer_renderer(struct comp_renderer *r)
 		comp_layer_renderer_destroy(&r->lr);
 	}
 
-	VkExtent2D extent;
-
-	extent = (VkExtent2D){
-	    .width = r->c->view_extents.width,
-	    .height = r->c->view_extents.height,
-	};
-
+	VkExtent2D extent = r->scratch.extent;
 	r->lr = comp_layer_renderer_create(vk, &r->c->shaders, extent, VK_FORMAT_B8G8R8A8_SRGB);
 	if (layer_count != 0) {
 		comp_layer_renderer_allocate_layers(r->lr, layer_count);
@@ -562,7 +556,7 @@ renderer_ensure_images_and_renderings(struct comp_renderer *r, bool force_recrea
 
 //! Create renderer and initialize non-image-dependent members
 static void
-renderer_init(struct comp_renderer *r, struct comp_compositor *c)
+renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scratch_extent)
 {
 	r->c = c;
 	r->settings = &c->settings;
@@ -570,6 +564,12 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c)
 	r->acquired_buffer = -1;
 	r->fenced_buffer = -1;
 	r->rtr_array = NULL;
+
+	bool bret = render_scratch_images_ensure(&c->nr, &r->scratch, scratch_extent);
+	if (!bret) {
+		COMP_ERROR(c, "render_scratch_images_ensure: false");
+		assert(false && "Whelp, can't return an error. But should never really fail.");
+	}
 
 	// Try to early-allocate these, in case we can.
 	renderer_ensure_images_and_renderings(r, false);
@@ -1030,28 +1030,6 @@ get_view_poses(struct comp_renderer *r, struct xrt_pose out_world[2], struct xrt
 	}
 }
 
-static void
-ensure_scratch_image(struct comp_renderer *r)
-{
-	struct xrt_view *l_v = &r->c->xdev->hmd->views[0];
-	struct xrt_view *r_v = &r->c->xdev->hmd->views[1];
-
-	uint32_t w = MAX(l_v->viewport.w_pixels, r_v->viewport.w_pixels);
-	uint32_t h = MAX(l_v->viewport.h_pixels, r_v->viewport.h_pixels);
-
-	// Adjust size to be bigger, 140%, to match default recommended viewport size.
-	//! @todo Make this match fully, or even match app provided layers.
-	w = (uint32_t)(w * 1.4f);
-	h = (uint32_t)(h * 1.4f);
-
-	VkExtent2D extent = {w, h};
-
-	if (!render_scratch_images_ensure(&r->c->nr, &r->scratch, extent)) {
-		U_LOG_E("Failed to create scratch image!");
-		assert(false);
-	}
-}
-
 /*!
  * @pre render_compute_init(crc, &c->nr)
  */
@@ -1062,9 +1040,6 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 
 	struct comp_compositor *c = r->c;
 	struct comp_target *ct = c->target;
-
-	// In case the scratch images are needed, make sure they are created.
-	ensure_scratch_image(r);
 
 	// Basics
 	const struct comp_layer *layers = c->base.slot.layers;
@@ -1576,11 +1551,11 @@ comp_renderer_destroy_layers(struct comp_renderer *self)
 }
 
 struct comp_renderer *
-comp_renderer_create(struct comp_compositor *c)
+comp_renderer_create(struct comp_compositor *c, VkExtent2D scratch_extent)
 {
 	struct comp_renderer *r = U_TYPED_CALLOC(struct comp_renderer);
 
-	renderer_init(r, c);
+	renderer_init(r, c, scratch_extent);
 
 	return r;
 }
