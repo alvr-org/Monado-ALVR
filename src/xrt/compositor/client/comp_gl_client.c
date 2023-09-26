@@ -597,6 +597,13 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 	}
 	c->base.base.info.format_count = count;
 
+	// Get max texture size.
+	GLint max_texture_size = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
+	if (max_texture_size > 0) {
+		c->base.base.info.max_tetxure_size = (uint32_t)max_texture_size;
+	}
+
 	os_mutex_init(&c->context_mutex);
 
 	return true;

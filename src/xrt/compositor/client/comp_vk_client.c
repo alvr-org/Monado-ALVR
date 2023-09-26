@@ -836,6 +836,14 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	}
 #endif
 
+	// Get max texture size.
+	{
+		struct vk_bundle *vk = &c->vk;
+		VkPhysicalDeviceProperties pdp;
+		vk->vkGetPhysicalDeviceProperties(vk->physical_device, &pdp);
+		c->base.base.info.max_tetxure_size = pdp.limits.maxImageDimension2D;
+	}
+
 	return c;
 
 err_pool:
