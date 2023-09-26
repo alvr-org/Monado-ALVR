@@ -26,6 +26,7 @@
 #include <string.h>
 #include <linux/input.h>
 
+#define WINDOW_TITLE "Monado"
 
 /*
  *
@@ -88,8 +89,8 @@ static struct ANativeWindow *
 _create_android_window(struct comp_window_android *cwa)
 {
 	// 0 means default display
-	cwa->custom_surface =
-	    android_custom_surface_async_start(android_globals_get_vm(), android_globals_get_context(), 0);
+	cwa->custom_surface = android_custom_surface_async_start(android_globals_get_vm(),
+	                                                         android_globals_get_context(), 0, WINDOW_TITLE);
 	if (cwa->custom_surface == NULL) {
 		COMP_ERROR(cwa->base.base.c,
 		           "comp_window_android_create_surface: could not "

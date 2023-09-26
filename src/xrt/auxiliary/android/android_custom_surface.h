@@ -54,6 +54,7 @@ struct android_custom_surface;
  * @param vm Java VM pointer
  * @param context An android.content.Context jobject, cast to `void *`.
  * @param display_id Id of the display that the surface is attached to.
+ * @param surface_title Title of the surface.
  *
  * @return An opaque handle for monitoring this operation and referencing the
  * surface, or NULL if there was an error.
@@ -61,7 +62,7 @@ struct android_custom_surface;
  * @public @memberof android_custom_surface
  */
 struct android_custom_surface *
-android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t display_id);
+android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t display_id, const char *surface_title);
 
 /*!
  * Destroy the native handle for the custom surface.

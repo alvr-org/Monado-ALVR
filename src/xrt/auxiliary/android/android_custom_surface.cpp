@@ -59,7 +59,7 @@ android_custom_surface::~android_custom_surface()
 }
 
 struct android_custom_surface *
-android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t display_id)
+android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t display_id, const char *surface_title)
 {
 	jni::init(vm);
 	try {
@@ -108,6 +108,7 @@ android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t di
 		}
 
 		WindowManager_LayoutParams lp = WindowManager_LayoutParams::construct(type, flags);
+		lp.setTitle(surface_title);
 		ret->monadoView = MonadoView::attachToWindow(displayContext, ret.get(), lp);
 
 		return ret.release();
