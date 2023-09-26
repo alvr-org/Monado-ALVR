@@ -69,6 +69,7 @@ oxr_instance_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 	u_hashset_destroy(&inst->action_sets.loc_store);
 
 	xrt_space_overseer_destroy(&inst->system.xso);
+	os_mutex_destroy(&inst->system.sync_actions_mutex);
 	xrt_system_devices_destroy(&inst->system.xsysd);
 
 #ifdef XRT_FEATURE_CLIENT_DEBUG_GUI
@@ -191,6 +192,12 @@ oxr_instance_create(struct oxr_logger *log,
 	m_ret = os_mutex_init(&inst->event.mutex);
 	if (m_ret < 0) {
 		ret = oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "Failed to init mutex");
+		return ret;
+	}
+
+	m_ret = os_mutex_init(&inst->system.sync_actions_mutex);
+	if (m_ret < 0) {
+		ret = oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "Failed to init sync action mutex");
 		return ret;
 	}
 

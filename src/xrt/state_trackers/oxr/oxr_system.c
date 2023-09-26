@@ -114,6 +114,7 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 	sys->systemId = systemId;
 	sys->form_factor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 	sys->view_config_type = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	sys->dynamic_roles_cache = (struct xrt_system_roles)XRT_SYSTEM_ROLES_INIT;
 
 #ifdef XR_USE_GRAPHICS_API_VULKAN
 	sys->vulkan_enable2_instance = VK_NULL_HANDLE;

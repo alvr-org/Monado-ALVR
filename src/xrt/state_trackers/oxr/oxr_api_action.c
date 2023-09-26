@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -135,6 +136,17 @@ oxr_xrSyncActions(XrSession session, const XrActionsSyncInfo *syncInfo)
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrSyncActions");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, syncInfo, XR_TYPE_ACTIONS_SYNC_INFO);
+
+	struct xrt_system_roles sys_roles = XRT_STRUCT_INIT;
+	xrt_system_devices_get_roles(sess->sys->xsysd, &sys_roles);
+	{
+		os_mutex_lock(&sess->sys->sync_actions_mutex);
+		if (sess->sys->dynamic_roles_cache.generation_id < sys_roles.generation_id) {
+			sess->sys->dynamic_roles_cache = sys_roles;
+			oxr_session_update_action_bindings(&log, sess);
+		}
+		os_mutex_unlock(&sess->sys->sync_actions_mutex);
+	}
 
 	if (syncInfo->countActiveActionSets == 0) {
 		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "(syncInfo->countActiveActionSets == 0)");

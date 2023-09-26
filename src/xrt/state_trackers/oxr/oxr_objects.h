@@ -1,4 +1,5 @@
 // Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -446,6 +447,10 @@ XrResult
 oxr_session_attach_action_sets(struct oxr_logger *log,
                                struct oxr_session *sess,
                                const XrSessionActionSetsAttachInfo *bindInfo);
+
+
+XrResult
+oxr_session_update_action_bindings(struct oxr_logger *log, struct oxr_session *sess);
 
 /*!
  * @public @memberof oxr_session
@@ -1271,6 +1276,10 @@ struct oxr_system
 	uint32_t blend_mode_count;
 	XrEnvironmentBlendMode blend_modes[3];
 
+	//! Cache of the last known system roles, see @xrt_system_roles::generation_id
+	struct xrt_system_roles dynamic_roles_cache;
+	struct os_mutex sync_actions_mutex;
+
 #ifdef XR_USE_GRAPHICS_API_VULKAN
 	//! The instance/device we create when vulkan_enable2 is used
 	VkInstance vulkan_enable2_instance;
@@ -1299,15 +1308,31 @@ struct oxr_system
  * Device roles helpers.
  */
 
+// static roles
 // clang-format off
-static inline struct xrt_device *get_role_head(struct oxr_system *sys) {return sys->xsysd->roles.head; }
-static inline struct xrt_device *get_role_eyes(struct oxr_system *sys) {return sys->xsysd->roles.eyes; }
-static inline struct xrt_device *get_role_left(struct oxr_system *sys) {return sys->xsysd->roles.left; }
-static inline struct xrt_device *get_role_right(struct oxr_system *sys) {return sys->xsysd->roles.right; }
-static inline struct xrt_device *get_role_gamepad(struct oxr_system *sys) {return sys->xsysd->roles.gamepad; }
-static inline struct xrt_device *get_role_hand_tracking_left(struct oxr_system* sys) { return sys->xsysd->roles.hand_tracking.left; }
-static inline struct xrt_device *get_role_hand_tracking_right(struct oxr_system* sys) { return sys->xsysd->roles.hand_tracking.right; }
+static inline struct xrt_device *get_role_head(struct oxr_system *sys) {return sys->xsysd->static_roles.head; }
+static inline struct xrt_device *get_role_eyes(struct oxr_system *sys) {return sys->xsysd->static_roles.eyes; }
+static inline struct xrt_device *get_role_hand_tracking_left(struct oxr_system* sys) { return sys->xsysd->static_roles.hand_tracking.left; }
+static inline struct xrt_device *get_role_hand_tracking_right(struct oxr_system* sys) { return sys->xsysd->static_roles.hand_tracking.right; }
 // clang-format on
+
+// dynamic roles
+#define MAKE_GET_DYN_ROLES_FN(ROLE)                                                                                    \
+	static inline struct xrt_device *get_role_##ROLE(struct oxr_system *sys)                                       \
+	{                                                                                                              \
+		const bool is_locked = 0 == os_mutex_trylock(&sys->sync_actions_mutex);                                \
+		const int32_t xdev_idx = sys->dynamic_roles_cache.ROLE;                                                \
+		if (is_locked) {                                                                                       \
+			os_mutex_unlock(&sys->sync_actions_mutex);                                                     \
+		}                                                                                                      \
+		if (xdev_idx < 0 || xdev_idx >= (int32_t)ARRAY_SIZE(sys->xsysd->xdevs))                                \
+			return NULL;                                                                                   \
+		return sys->xsysd->xdevs[xdev_idx];                                                                    \
+	}
+MAKE_GET_DYN_ROLES_FN(left)
+MAKE_GET_DYN_ROLES_FN(right)
+MAKE_GET_DYN_ROLES_FN(gamepad)
+#undef MAKE_GET_DYN_ROLES_FN
 
 #define GET_XDEV_BY_ROLE(SYS, ROLE) (get_role_##ROLE((SYS)))
 

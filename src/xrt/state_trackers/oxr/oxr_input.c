@@ -1,4 +1,5 @@
-// Copyright 2018-2022, Collabora, Ltd.
+// Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -1597,6 +1598,34 @@ oxr_session_attach_action_sets(struct oxr_logger *log,
 	}
 	OXR_FOR_EACH_VALID_SUBACTION_PATH(POPULATE_PROFILE)
 #undef POPULATE_PROFILE
+	return oxr_session_success_result(sess);
+}
+
+XrResult
+oxr_session_update_action_bindings(struct oxr_logger *log, struct oxr_session *sess)
+{
+	struct oxr_profiles_per_subaction profiles = {0};
+
+#define FIND_PROFILE(X) oxr_find_profile_for_device(log, sess, GET_XDEV_BY_ROLE(sess->sys, X), &profiles.X);
+	OXR_FOR_EACH_VALID_SUBACTION_PATH(FIND_PROFILE)
+#undef FIND_PROFILE
+
+	for (size_t i = 0; i < sess->action_set_attachment_count; i++) {
+		struct oxr_action_set_attachment *act_set_attached = &sess->act_set_attachments[i];
+		for (size_t k = 0; k < act_set_attached->action_attachment_count; k++) {
+			struct oxr_action_attachment *act_attached = &act_set_attached->act_attachments[k];
+			oxr_action_attachment_bind(log, act_attached, &profiles);
+		}
+	}
+
+#define POPULATE_PROFILE(X)                                                                                            \
+	if (profiles.X != NULL) {                                                                                      \
+		sess->X = profiles.X->path;                                                                            \
+		oxr_event_push_XrEventDataInteractionProfileChanged(log, sess);                                        \
+	}
+	OXR_FOR_EACH_VALID_SUBACTION_PATH(POPULATE_PROFILE)
+#undef POPULATE_PROFILE
+
 	return oxr_session_success_result(sess);
 }
 
