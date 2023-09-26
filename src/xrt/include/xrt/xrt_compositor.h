@@ -852,6 +852,9 @@ struct xrt_compositor_info
 
 	//! Supported formats, never changes.
 	int64_t formats[XRT_MAX_SWAPCHAIN_FORMATS];
+
+	//! Max texture size that GPU supports, zero means any size.
+	uint32_t max_tetxure_size;
 };
 
 /*!
