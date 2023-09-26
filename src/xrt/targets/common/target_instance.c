@@ -68,6 +68,15 @@ t_instance_create_system(struct xrt_instance *xinst,
 		return xret;
 	}
 
+	/*
+	 * Fallback code while transitioning to new dynamic roles,
+	 * this allows things to at least start since a lot of code
+	 * assumes there always is device in the head role.
+	 */
+	if (xsysd->roles.head == NULL) {
+		xsysd->roles.head = xsysd->static_roles.head;
+	}
+
 	// Early out if we only want devices.
 	if (out_xsysc == NULL) {
 		*out_xsysd = xsysd;
