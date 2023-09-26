@@ -9,11 +9,15 @@ namespace android::view {
 Display::Meta::Meta(bool deferDrop)
     : MetaBaseDroppable(Display::getTypeName()),
       DEFAULT_DISPLAY(classRef(), "DEFAULT_DISPLAY"),
+      getDisplayId(classRef().getMethod("getDisplayId", "()I")),
+      getName(classRef().getMethod("getName", "()Ljava/lang/String;")),
+      getDeviceProductInfo(classRef().getMethod(
+          "getDeviceProductInfo",
+          "()Landroid/hardware/display/DeviceProductInfo;")),
       getRealSize(
           classRef().getMethod("getRealSize", "(Landroid/graphics/Point;)V")),
       getRealMetrics(classRef().getMethod("getRealMetrics",
-                                          "(Landroid/util/DisplayMetrics;)V")),
-      getDisplayId(classRef().getMethod("getDisplayId", "()I")) {
+                                          "(Landroid/util/DisplayMetrics;)V")) {
     if (!deferDrop) {
         MetaBaseDroppable::dropClassRef();
     }
@@ -30,25 +34,23 @@ SurfaceHolder::Meta::Meta()
     MetaBaseDroppable::dropClassRef();
 }
 WindowManager::Meta::Meta()
-        : MetaBaseDroppable(WindowManager::getTypeName()),
-          getDefaultDisplay(
-                  classRef().getMethod("getDefaultDisplay", "()Landroid/view/Display;")) {
+    : MetaBaseDroppable(WindowManager::getTypeName()),
+      getDefaultDisplay(classRef().getMethod("getDefaultDisplay",
+                                             "()Landroid/view/Display;")) {
     MetaBaseDroppable::dropClassRef();
 }
-WindowManager_LayoutParams::Meta::Meta(bool deferDrop)
-        : MetaBaseDroppable(WindowManager_LayoutParams::getTypeName()),
-          TYPE_APPLICATION(classRef(), "TYPE_APPLICATION"),
-          TYPE_APPLICATION_OVERLAY(classRef(), "TYPE_APPLICATION_OVERLAY"),
-          FLAG_FULLSCREEN(classRef(), "FLAG_FULLSCREEN"),
-          FLAG_NOT_FOCUSABLE(classRef(), "FLAG_NOT_FOCUSABLE"),
-          FLAG_NOT_TOUCHABLE(classRef(), "FLAG_NOT_TOUCHABLE"),
-          init(classRef().getMethod("<init>", "()V")),
-          init1(classRef().getMethod("<init>", "(I)V")),
-          init2(classRef().getMethod("<init>", "(II)V")) {
-    if (!deferDrop) {
-        MetaBaseDroppable::dropClassRef();
-    }
-}
+WindowManager_LayoutParams::Meta::Meta()
+    : MetaBase(WindowManager_LayoutParams::getTypeName()),
+      FLAG_FULLSCREEN(classRef(), "FLAG_FULLSCREEN"),
+      FLAG_NOT_FOCUSABLE(classRef(), "FLAG_NOT_FOCUSABLE"),
+      FLAG_NOT_TOUCHABLE(classRef(), "FLAG_NOT_TOUCHABLE"),
+      TYPE_APPLICATION(classRef(), "TYPE_APPLICATION"),
+      TYPE_APPLICATION_OVERLAY(classRef(), "TYPE_APPLICATION_OVERLAY"),
+      init(classRef().getMethod("<init>", "()V")),
+      init1(classRef().getMethod("<init>", "(I)V")),
+      init2(classRef().getMethod("<init>", "(II)V")),
+      setTitle(
+          classRef().getMethod("setTitle", "(Ljava/lang/CharSequence;)V")) {}
 Display_Mode::Meta::Meta() : MetaBaseDroppable(Display_Mode::getTypeName()),
     getModeId(classRef().getMethod("getModeId", "()I")),
     getPhysicalHeight(classRef().getMethod("getPhysicalHeight", "()I")),

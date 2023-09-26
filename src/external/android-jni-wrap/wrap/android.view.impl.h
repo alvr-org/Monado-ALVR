@@ -6,7 +6,9 @@
 #pragma once
 
 #include "android.graphics.h"
+#include "android.hardware.display.h"
 #include "android.util.h"
+#include <string>
 
 namespace wrap {
 namespace android::view {
@@ -15,6 +17,23 @@ inline int32_t Display::DEFAULT_DISPLAY() {
     auto ret = get(data.DEFAULT_DISPLAY, data.clazz());
     data.dropClassRef();
     return ret;
+}
+
+inline int32_t Display::getDisplayId() const {
+    assert(!isNull());
+    return object().call<int32_t>(Meta::data().getDisplayId);
+}
+
+inline std::string Display::getName() const {
+    assert(!isNull());
+    return object().call<std::string>(Meta::data().getName);
+}
+
+inline hardware::display::DeviceProductInfo
+Display::getDeviceProductInfo() const {
+    assert(!isNull());
+    return hardware::display::DeviceProductInfo(
+        object().call<jni::Object>(Meta::data().getDeviceProductInfo));
 }
 
 inline void Display::getRealSize(graphics::Point &out_size) {
@@ -28,11 +47,6 @@ inline void Display::getRealMetrics(util::DisplayMetrics &out_displayMetrics) {
                                out_displayMetrics.object());
 }
 
-inline int32_t Display::getDisplayId() {
-    assert(!isNull());
-    return object().call<int32_t>(Meta::data().getDisplayId);
-}
-
 inline bool Surface::isValid() const {
     assert(!isNull());
     return object().call<bool>(Meta::data().isValid);
@@ -43,59 +57,51 @@ inline Surface SurfaceHolder::getSurface() {
     return Surface(object().call<jni::Object>(Meta::data().getSurface));
 }
 
-inline Display WindowManager::getDefaultDisplay() {
+inline Display WindowManager::getDefaultDisplay() const {
     assert(!isNull());
     return Display(object().call<jni::Object>(Meta::data().getDefaultDisplay));
 }
 
-inline int32_t WindowManager_LayoutParams::TYPE_APPLICATION() {
-    auto &data = Meta::data(true);
-    auto ret = get(data.TYPE_APPLICATION, data.clazz());
-    data.dropClassRef();
-    return ret;
-}
-
-inline int32_t WindowManager_LayoutParams::TYPE_APPLICATION_OVERLAY() {
-    auto &data = Meta::data(true);
-    auto ret = get(data.TYPE_APPLICATION_OVERLAY, data.clazz());
-    data.dropClassRef();
-    return ret;
-}
-
 inline int32_t WindowManager_LayoutParams::FLAG_FULLSCREEN() {
-    auto &data = Meta::data(true);
-    auto ret = get(data.FLAG_FULLSCREEN, data.clazz());
-    data.dropClassRef();
-    return ret;
+    return get(Meta::data().FLAG_FULLSCREEN, Meta::data().clazz());
 }
 
 inline int32_t WindowManager_LayoutParams::FLAG_NOT_FOCUSABLE() {
-    auto &data = Meta::data(true);
-    auto ret = get(data.FLAG_NOT_FOCUSABLE, data.clazz());
-    data.dropClassRef();
-    return ret;
+    return get(Meta::data().FLAG_NOT_FOCUSABLE, Meta::data().clazz());
 }
 
 inline int32_t WindowManager_LayoutParams::FLAG_NOT_TOUCHABLE() {
-    auto &data = Meta::data(true);
-    auto ret = get(data.FLAG_NOT_TOUCHABLE, data.clazz());
-    data.dropClassRef();
-    return ret;
+    return get(Meta::data().FLAG_NOT_TOUCHABLE, Meta::data().clazz());
+}
+
+inline int32_t WindowManager_LayoutParams::TYPE_APPLICATION() {
+    return get(Meta::data().TYPE_APPLICATION, Meta::data().clazz());
+}
+
+inline int32_t WindowManager_LayoutParams::TYPE_APPLICATION_OVERLAY() {
+    return get(Meta::data().TYPE_APPLICATION_OVERLAY, Meta::data().clazz());
 }
 
 inline WindowManager_LayoutParams WindowManager_LayoutParams::construct() {
     return WindowManager_LayoutParams(
-            Meta::data().clazz().newInstance(Meta::data().init));
+        Meta::data().clazz().newInstance(Meta::data().init));
 }
 
-inline WindowManager_LayoutParams WindowManager_LayoutParams::construct(int32_t type) {
+inline WindowManager_LayoutParams
+WindowManager_LayoutParams::construct(int32_t type) {
     return WindowManager_LayoutParams(
-            Meta::data().clazz().newInstance(Meta::data().init1, type));
+        Meta::data().clazz().newInstance(Meta::data().init1, type));
 }
 
-inline WindowManager_LayoutParams WindowManager_LayoutParams::construct(int32_t type, int32_t flags) {
+inline WindowManager_LayoutParams
+WindowManager_LayoutParams::construct(int32_t type, int32_t flags) {
     return WindowManager_LayoutParams(
-            Meta::data().clazz().newInstance(Meta::data().init2, type, flags));
+        Meta::data().clazz().newInstance(Meta::data().init2, type, flags));
+}
+
+inline void WindowManager_LayoutParams::setTitle(std::string const &title) {
+    assert(!isNull());
+    return object().call<void>(Meta::data().setTitle, title);
 }
 
 inline int Display_Mode::getModeId() {
