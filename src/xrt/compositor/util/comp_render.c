@@ -125,8 +125,10 @@ set_post_transform_rect(const struct xrt_layer_data *data,
 	struct xrt_normalized_rect rect = *src_norm_rect;
 
 	if (data->flip_y ^ invert_flip) {
-		rect.h = -rect.h;
-		rect.y = 1.0f + rect.y;
+		float h = rect.h;
+
+		rect.h = -h;
+		rect.y = rect.y + h;
 	}
 
 	*out_norm_rect = rect;
