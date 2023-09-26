@@ -63,6 +63,19 @@ oxr_xrCreateSwapchain(XrSession session, const XrSwapchainCreateInfo *createInfo
 	OXR_VERIFY_ARG_NOT_ZERO(&log, createInfo->width);
 	OXR_VERIFY_ARG_NOT_ZERO(&log, createInfo->height);
 
+	const uint32_t max_dims = sess->compositor->info.max_tetxure_size;
+	if (max_dims != 0) {
+		if (createInfo->width > max_dims) {
+			return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "(createInfo->width > %u) width too large",
+			                 max_dims);
+		}
+
+		if (createInfo->height > max_dims) {
+			return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(createInfo->height > %u) height too large", max_dims);
+		}
+	}
+
 	if (createInfo->faceCount != 1 && createInfo->faceCount != 6) {
 		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "faceCount must be 1 or 6");
 	}
