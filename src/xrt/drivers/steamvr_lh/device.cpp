@@ -372,6 +372,7 @@ ControllerDevice::set_haptic_handle(vr::VRInputComponentHandle_t handle)
 void
 Device::update_inputs()
 {
+	std::lock_guard<std::mutex> lock(frame_mutex);
 	ctx->maybe_run_frame(++current_frame);
 }
 
