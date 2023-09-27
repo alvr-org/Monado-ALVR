@@ -463,7 +463,7 @@ create_scratch_image_and_view(struct vk_bundle *vk, VkExtent2D extent, struct re
 	VkImageUsageFlags unorm_usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	// Very few cards support SRGB storage.
-	VkImageUsageFlags srgb_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	VkImageUsageFlags srgb_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	// Combination of both.
 	VkImageUsageFlags image_usage = unorm_usage | srgb_usage;
