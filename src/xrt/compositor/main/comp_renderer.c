@@ -926,14 +926,48 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	struct comp_target *ct = c->target;
 
 	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
-	bool one_projection_layer_fast_path = c->base.slot.one_projection_layer_fast_path;
+	bool fast_path = c->base.slot.one_projection_layer_fast_path;
+
+	// Only used if fast_path is true.
+	const struct comp_layer *layer = &c->base.slot.layers[0];
+
+	// Sanity check.
+	assert(!fast_path || c->base.slot.layer_count >= 1);
 
 	// Need to be begin for all paths.
 	render_gfx_begin(rr);
 
-	// No fast path, standard layer renderer path.
-	if (!one_projection_layer_fast_path) {
+
+	if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+		// Fast path.
+		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
+		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
+		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
+
+		c->base.slot.poses[0] = lvd->pose;
+		c->base.slot.poses[1] = rvd->pose;
+		c->base.slot.fovs[0] = lvd->fov;
+		c->base.slot.fovs[1] = rvd->fov;
+
+		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
+
+	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+		// Fast path.
+		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
+		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
+		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
+
+		c->base.slot.poses[0] = lvd->pose;
+		c->base.slot.poses[1] = rvd->pose;
+		c->base.slot.fovs[0] = lvd->fov;
+		c->base.slot.fovs[1] = rvd->fov;
+
+		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
+
+	} else {
+
 		renderer_get_view_projection(r);
+
 		comp_layer_renderer_draw(    //
 		    r->lr,                   //
 		    c->nr.cmd,               //
@@ -956,74 +990,16 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		};
 
 		renderer_build_rendering(r, rr, rtr, src_samplers, src_image_views, src_norm_rects);
-
-		// Make the command buffer usable.
-		render_gfx_end(rr);
-
-		renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-		// We mark afterwards to not include CPU time spent.
-		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
-
-		return;
 	}
 
+	// Make the command buffer submittable.
+	render_gfx_end(rr);
 
-	/*
-	 * Fast path.
-	 */
+	// Everything is ready, submit to the queue.
+	renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
-	XRT_MAYBE_UNUSED const uint32_t layer_count = c->base.slot.layer_count;
-	assert(layer_count >= 1);
-
-	int i = 0;
-	const struct comp_layer *layer = &c->base.slot.layers[i];
-
-	switch (layer->data.type) {
-	case XRT_LAYER_STEREO_PROJECTION: {
-		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
-		c->base.slot.poses[0] = lvd->pose;
-		c->base.slot.poses[1] = rvd->pose;
-		c->base.slot.fovs[0] = lvd->fov;
-		c->base.slot.fovs[1] = rvd->fov;
-
-		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
-
-		// Make the command buffer usable.
-		render_gfx_end(rr);
-
-		renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-		// We mark afterwards to not include CPU time spent.
-		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
-	} break;
-
-	case XRT_LAYER_STEREO_PROJECTION_DEPTH: {
-		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
-		c->base.slot.poses[0] = lvd->pose;
-		c->base.slot.poses[1] = rvd->pose;
-		c->base.slot.fovs[0] = lvd->fov;
-		c->base.slot.fovs[1] = rvd->fov;
-
-		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
-
-		// Make the command buffer usable.
-		render_gfx_end(rr);
-
-		renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-		// We mark afterwards to not include CPU time spent.
-		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
-	} break;
-
-	default: COMP_ERROR(c, "Unhandled case: '%u'", layer->data.type); assert(false);
-	}
+	// We mark afterwards to not include CPU time spent.
+	comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
 }
 
 
