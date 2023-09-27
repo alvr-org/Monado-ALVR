@@ -89,6 +89,13 @@ struct comp_renderer
 
 	//! Scratch images used for layer squasher.
 	struct render_scratch_images scratch;
+
+	//! Render pass for graphics pipeline rendering to the scratch buffer.
+	struct render_gfx_render_pass scratch_render_pass;
+
+	//! Targets for rendering to the scratch buffer.
+	struct render_gfx_target_resources scratch_targets[2];
+
 	//! @}
 
 	//! @name Image-dependent members
@@ -467,7 +474,7 @@ renderer_create_layer_renderer(struct comp_renderer *r)
 	}
 
 	VkExtent2D extent = r->scratch.extent;
-	r->lr = comp_layer_renderer_create(vk, &r->c->shaders, extent, VK_FORMAT_B8G8R8A8_SRGB);
+	r->lr = comp_layer_renderer_create(vk, &r->c->shaders, extent, VK_FORMAT_R8G8B8A8_SRGB);
 	if (layer_count != 0) {
 		comp_layer_renderer_allocate_layers(r->lr, layer_count);
 	}
@@ -569,6 +576,22 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 	if (!bret) {
 		COMP_ERROR(c, "render_scratch_images_ensure: false");
 		assert(false && "Whelp, can't return an error. But should never really fail.");
+	}
+
+	render_gfx_render_pass_init(                   //
+	    &r->scratch_render_pass,                   // rgrp
+	    &r->c->nr,                                 // r
+	    VK_FORMAT_R8G8B8A8_SRGB,                   // format
+	    VK_ATTACHMENT_LOAD_OP_CLEAR,               // load_op
+	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); // final_layout
+
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch_targets); i++) {
+		render_gfx_target_resources_init(  //
+		    &r->scratch_targets[i],        //
+		    &r->c->nr,                     //
+		    &r->scratch_render_pass,       //
+		    r->scratch.color[i].srgb_view, //
+		    scratch_extent);               //
 	}
 
 	// Try to early-allocate these, in case we can.
@@ -832,6 +855,14 @@ renderer_fini(struct comp_renderer *r)
 
 	// Do this after the mirror struct.
 	comp_layer_renderer_destroy(&(r->lr));
+
+	// Do this after the layer renderer.
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch_targets); i++) {
+		render_gfx_target_resources_close(&r->scratch_targets[i]);
+	}
+
+	// Do this after the layer renderer and targert resources.
+	render_gfx_render_pass_close(&r->scratch_render_pass);
 
 	// Destroy any scratch images created.
 	render_scratch_images_close(&r->c->nr, &r->scratch);
