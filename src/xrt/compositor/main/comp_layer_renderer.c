@@ -31,56 +31,6 @@ static const VkClearColorValue background_color_active = {
 };
 
 
-
-static bool
-_init_render_pass(struct vk_bundle *vk,
-                  VkFormat format,
-                  VkImageLayout final_layout,
-                  VkSampleCountFlagBits sample_count,
-                  VkRenderPass *out_render_pass)
-{
-	VkAttachmentDescription *attachments = (VkAttachmentDescription[]){
-	    {
-	        .format = format,
-	        .samples = sample_count,
-	        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-	        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-	        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-	        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-	        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	        .finalLayout = final_layout,
-	        .flags = 0,
-	    },
-	};
-
-	VkRenderPassCreateInfo renderpass_info = {
-	    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-	    .flags = 0,
-	    .attachmentCount = 1,
-	    .pAttachments = attachments,
-	    .subpassCount = 1,
-	    .pSubpasses =
-	        &(VkSubpassDescription){
-	            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-	            .colorAttachmentCount = 1,
-	            .pColorAttachments =
-	                &(VkAttachmentReference){
-	                    .attachment = 0,
-	                    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	                },
-	            .pDepthStencilAttachment = NULL,
-	            .pResolveAttachments = NULL,
-	        },
-	    .dependencyCount = 0,
-	    .pDependencies = NULL,
-	};
-
-	VkResult res = vk->vkCreateRenderPass(vk->device, &renderpass_info, NULL, out_render_pass);
-	vk_check_error("vkCreateRenderPass", res, false);
-
-	return true;
-}
-
 static bool
 _init_descriptor_layout(struct comp_layer_renderer *self)
 {
@@ -287,7 +237,7 @@ _init_graphics_pipeline(struct comp_layer_renderer *self,
 	    .pMultisampleState =
 	        &(VkPipelineMultisampleStateCreateInfo){
 	            .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-	            .rasterizationSamples = self->sample_count,
+	            .rasterizationSamples = self->rgrp->sample_count,
 	            .minSampleShading = 0.0f,
 	            .pSampleMask = &(uint32_t){0xFFFFFFFF},
 	            .alphaToCoverageEnable = VK_FALSE,
@@ -303,7 +253,7 @@ _init_graphics_pipeline(struct comp_layer_renderer *self,
 	        },
 	    .stageCount = 2,
 	    .pStages = shader_stages,
-	    .renderPass = self->render_pass,
+	    .renderPass = self->rgrp->render_pass,
 	    .pDynamicState =
 	        &(VkPipelineDynamicStateCreateInfo){
 	            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
@@ -474,20 +424,21 @@ comp_layer_renderer_destroy_layers(struct comp_layer_renderer *self)
 
 static bool
 _init(struct comp_layer_renderer *self,
-      struct render_shaders *s,
       struct vk_bundle *vk,
-      VkExtent2D extent,
-      VkFormat format)
+      struct render_shaders *s,
+      struct render_gfx_render_pass *rgrp,
+      VkExtent2D extent)
 {
 	self->vk = vk;
 
 	self->nearZ = 0.001f;
 	self->farZ = 100.0f;
-	self->sample_count = VK_SAMPLE_COUNT_1_BIT;
 
 	self->layer_count = 0;
 
 	self->extent = extent;
+
+	self->rgrp = rgrp;
 
 	// binding indices used in layer.vert, layer.frag
 	self->transformation_ubo_binding = 0;
@@ -505,13 +456,16 @@ _init(struct comp_layer_renderer *self,
 		return false;
 	}
 
-	if (!_init_render_pass(vk, format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, self->sample_count,
-	                       &self->render_pass))
-		return false;
 
-	for (uint32_t i = 0; i < 2; i++)
-		if (!_init_frame_buffer(self, format, self->render_pass, i))
+	for (uint32_t i = 0; i < 2; i++) {
+		if (!_init_frame_buffer(         //
+		        self,                    //
+		        self->rgrp->format,      //
+		        self->rgrp->render_pass, //
+		        i)) {                    //
 			return false;
+		}
+	}
 
 	if (!_init_descriptor_layout(self))
 		return false;
@@ -552,10 +506,13 @@ _init(struct comp_layer_renderer *self,
 }
 
 struct comp_layer_renderer *
-comp_layer_renderer_create(struct vk_bundle *vk, struct render_shaders *s, VkExtent2D extent, VkFormat format)
+comp_layer_renderer_create(struct vk_bundle *vk,
+                           struct render_shaders *s,
+                           struct render_gfx_render_pass *rgrp,
+                           VkExtent2D extent)
 {
 	struct comp_layer_renderer *r = U_TYPED_CALLOC(struct comp_layer_renderer);
-	_init(r, s, vk, extent, format);
+	_init(r, vk, s, rgrp, extent);
 	return r;
 }
 
@@ -618,8 +575,13 @@ _render_stereo(struct comp_layer_renderer *self,
 	vk->vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
 
 	for (uint32_t eye = 0; eye < 2; eye++) {
-		_render_pass_begin(vk, self->render_pass, self->extent, *color, self->framebuffers[eye].handle,
-		                   cmd_buffer);
+		_render_pass_begin(                 //
+		    vk,                             //
+		    self->rgrp->render_pass,        //
+		    self->extent,                   //
+		    *color,                         //
+		    self->framebuffers[eye].handle, //
+		    cmd_buffer);                    //
 
 		_render_eye(self, eye, cmd_buffer, self->pipeline_layout);
 
@@ -695,8 +657,6 @@ comp_layer_renderer_destroy(struct comp_layer_renderer **ptr_clr)
 
 	for (uint32_t i = 0; i < 2; i++)
 		_destroy_framebuffer(self, i);
-
-	vk->vkDestroyRenderPass(vk->device, self->render_pass, NULL);
 
 	vk->vkDestroyPipelineLayout(vk->device, self->pipeline_layout, NULL);
 	vk->vkDestroyDescriptorSetLayout(vk->device, self->descriptor_set_layout, NULL);

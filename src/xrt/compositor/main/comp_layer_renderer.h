@@ -30,11 +30,10 @@ struct comp_layer_renderer
 
 	struct vk_cmd_pool pool;
 
-	VkRenderPass render_pass;
+	//! Render pass used to create all pipelines.
+	struct render_gfx_render_pass *rgrp;
 
 	VkExtent2D extent;
-
-	VkSampleCountFlagBits sample_count;
 
 	VkShaderModule shader_modules[2];
 	VkPipeline pipeline_premultiplied_alpha;
@@ -70,7 +69,10 @@ struct comp_layer_renderer
  * @public @memberof comp_layer_renderer
  */
 struct comp_layer_renderer *
-comp_layer_renderer_create(struct vk_bundle *vk, struct render_shaders *s, VkExtent2D extent, VkFormat format);
+comp_layer_renderer_create(struct vk_bundle *vk,
+                           struct render_shaders *s,
+                           struct render_gfx_render_pass *rgrp,
+                           VkExtent2D extent);
 
 /*!
  * Destroy the layer renderer and set the pointer to NULL.
