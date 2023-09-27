@@ -404,12 +404,6 @@ _init(struct comp_layer_renderer *self,
 		math_matrix_4x4_identity(&self->mat_eye_view[i]);
 	}
 
-	VkResult ret = vk_cmd_pool_init(vk, &self->pool, 0);
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vk_cmd_pool_init: %s", vk_result_string(ret));
-		return false;
-	}
-
 
 	if (!_init_descriptor_layout(self))
 		return false;
@@ -534,24 +528,13 @@ _render_stereo(struct comp_layer_renderer *self,
 
 void
 comp_layer_renderer_draw(struct comp_layer_renderer *self,
+                         VkCommandBuffer cmd_buffer,
                          struct render_gfx_target_resources *rtr_left,
                          struct render_gfx_target_resources *rtr_right)
 {
 	COMP_TRACE_MARKER();
-	VkResult ret;
 
 	struct vk_bundle *vk = self->vk;
-	struct vk_cmd_pool *pool = &self->pool;
-
-	// Writing and submitting commands.
-	vk_cmd_pool_lock(pool);
-
-	VkCommandBuffer cmd_buffer;
-	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &cmd_buffer);
-	if (ret != VK_SUCCESS) {
-		vk_cmd_pool_unlock(pool);
-		return;
-	}
 
 	VkExtent2D extent = rtr_left->extent;
 	assert(extent.width == rtr_right->extent.width);
@@ -567,15 +550,6 @@ comp_layer_renderer_draw(struct comp_layer_renderer *self,
 	} else {
 		_render_stereo(self, vk, cmd_buffer, extent, framebuffers, &background_color_active);
 	}
-
-	// Done writing commands, submit to queue, waits for command to finish.
-	ret = vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked(vk, pool, cmd_buffer);
-
-	// Done submitting commands.
-	vk_cmd_pool_unlock(pool);
-
-	// Check results from submit.
-	vk_check_error("vk_submit_cmd_buffer", ret, );
 }
 
 void
@@ -616,8 +590,6 @@ comp_layer_renderer_destroy(struct comp_layer_renderer **ptr_clr)
 	vk_buffer_destroy(&self->vertex_buffer, vk);
 
 	vk->vkDestroyPipelineCache(vk->device, self->pipeline_cache, NULL);
-
-	vk_cmd_pool_destroy(vk, &self->pool);
 
 	free(self);
 	*ptr_clr = NULL;

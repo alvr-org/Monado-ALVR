@@ -273,12 +273,6 @@ renderer_build_rendering(struct comp_renderer *r,
 	struct xrt_view *r_v = &r->c->xdev->hmd->views[1];
 
 
-	/*
-	 * Begin
-	 */
-
-	render_gfx_begin(rr);
-
 
 	/*
 	 * Update
@@ -365,9 +359,6 @@ renderer_build_rendering(struct comp_renderer *r,
 	 */
 
 	render_gfx_end_target(rr);
-
-	// Make the command buffer usable.
-	render_gfx_end(rr);
 }
 
 /*!
@@ -937,14 +928,15 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
 	bool one_projection_layer_fast_path = c->base.slot.one_projection_layer_fast_path;
 
+	// Need to be begin for all paths.
+	render_gfx_begin(rr);
+
 	// No fast path, standard layer renderer path.
 	if (!one_projection_layer_fast_path) {
-		// We mark here to include the layer rendering in the GPU time.
-		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
-
 		renderer_get_view_projection(r);
 		comp_layer_renderer_draw(    //
 		    r->lr,                   //
+		    c->nr.cmd,               //
 		    &r->scratch_targets[0],  //
 		    &r->scratch_targets[1]); //
 
@@ -965,7 +957,13 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 
 		renderer_build_rendering(r, rr, rtr, src_samplers, src_image_views, src_norm_rects);
 
+		// Make the command buffer usable.
+		render_gfx_end(rr);
+
 		renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+		// We mark afterwards to not include CPU time spent.
+		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
 
 		return;
 	}
@@ -994,6 +992,9 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 
 		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
 
+		// Make the command buffer usable.
+		render_gfx_end(rr);
+
 		renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 		// We mark afterwards to not include CPU time spent.
@@ -1011,6 +1012,9 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		c->base.slot.fovs[1] = rvd->fov;
 
 		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
+
+		// Make the command buffer usable.
+		render_gfx_end(rr);
 
 		renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 

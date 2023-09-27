@@ -20,8 +20,6 @@ struct comp_layer_renderer
 {
 	struct vk_bundle *vk;
 
-	struct vk_cmd_pool pool;
-
 	//! Render pass used to create all pipelines.
 	struct render_gfx_render_pass *rgrp;
 
@@ -78,6 +76,7 @@ comp_layer_renderer_destroy(struct comp_layer_renderer **ptr_clr);
  */
 void
 comp_layer_renderer_draw(struct comp_layer_renderer *self,
+                         VkCommandBuffer cmd_buffer,
                          struct render_gfx_target_resources *rtr_left,
                          struct render_gfx_target_resources *rtr_right);
 
