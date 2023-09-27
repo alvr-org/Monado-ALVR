@@ -526,27 +526,68 @@ struct render_viewport_data
 
 /*
  *
- * Rendering target
+ * Render pass
  *
  */
 
 /*!
- * Each rendering (@ref render_gfx) render to one or more targets
- * (@ref render_gfx_target_resources), each target can have one or more
- * views (@ref render_gfx_view), this struct holds all the data that is
- * specific to the target.
+ * A render pass while not depending on a @p VkFramebuffer does depend on the
+ * format of the target image(s), and other options for the render pass. These
+ * are used to create a @p VkRenderPass, all @p VkFramebuffer(s) and
+ * @p VkPipeline depends on the @p VkRenderPass so hang off this struct.
  */
-struct render_gfx_target_data
+struct render_gfx_render_pass
 {
-	// The format that should be used to read from the target.
+	struct render_resources *r;
+
+	//! The format of the image(s) we are rendering to.
 	VkFormat format;
 
-	// Is this target a external target.
-	bool is_external;
+	//! Sample count for this render pass.
+	VkSampleCountFlagBits sample_count;
 
-	//! Total height and width of the target.
-	uint32_t width, height;
+	//! Load op used on the attachment(s).
+	VkAttachmentLoadOp load_op;
+
+	//! Final layout of the target image(s).
+	VkImageLayout final_layout;
+
+	//! Render pass used for rendering.
+	VkRenderPass render_pass;
+
+	struct
+	{
+		//! Pipeline layout used for mesh, does not depend on framebuffer.
+		VkPipeline pipeline;
+	} mesh;
 };
+
+/*!
+ * Creates all resources held by the render pass, does not free the struct itself.
+ *
+ * @public @memberof render_gfx_render_pass
+ */
+bool
+render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
+                            struct render_resources *r,
+                            VkFormat format,
+                            VkAttachmentLoadOp load_op,
+                            VkImageLayout final_layout);
+
+/*!
+ * Frees all resources held by the render pass, does not free the struct itself.
+ *
+ * @public @memberof render_gfx_render_pass
+ */
+void
+render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp);
+
+
+/*
+ *
+ * Rendering target
+ *
+ */
 
 /*!
  * Each rendering (@ref render_gfx) render to one or more targets
@@ -564,22 +605,15 @@ struct render_gfx_target_resources
 	//! Collections of static resources.
 	struct render_resources *r;
 
-	//! The data for this target.
-	struct render_gfx_target_data data;
+	//! Render pass.
+	struct render_gfx_render_pass *rgrp;
 
-	//! Render pass used for rendering, does not depend on framebuffer.
-	VkRenderPass render_pass;
-
-	struct
-	{
-		//! Pipeline layout used for mesh, does not depend on framebuffer.
-		VkPipeline pipeline;
-	} mesh;
+	// The extent of the framebuffer.
+	VkExtent2D extent;
 
 	//! Framebuffer for this target, depends on given VkImageView.
 	VkFramebuffer framebuffer;
 };
-
 
 /*!
  * Init a target resource struct, caller has to keep target alive until closed.
@@ -589,8 +623,9 @@ struct render_gfx_target_resources
 bool
 render_gfx_target_resources_init(struct render_gfx_target_resources *rtr,
                                  struct render_resources *r,
+                                 struct render_gfx_render_pass *rgrp,
                                  VkImageView target,
-                                 struct render_gfx_target_data *data);
+                                 VkExtent2D extent);
 
 /*!
  * Frees all resources held by the target, does not free the struct itself.

@@ -101,6 +101,12 @@ struct comp_renderer
 	int32_t fenced_buffer;
 
 	/*!
+	 * The render pass used to render to the target, it depends on the
+	 * target's format so will be recreated each time the target changes.
+	 */
+	struct render_gfx_render_pass target_render_pass;
+
+	/*!
 	 * Array of "rendering" target resources equal in size to the number of
 	 * comp_target images. Each target resources holds all of the resources
 	 * needed to render to that target and its views.
@@ -212,13 +218,15 @@ renderer_build_rendering_target_resources(struct comp_renderer *r,
 
 	struct comp_compositor *c = r->c;
 
-	struct render_gfx_target_data data;
-	data.format = r->c->target->format;
-	data.is_external = true;
-	data.width = r->c->target->width;
-	data.height = r->c->target->height;
+	VkImageView image_view = r->c->target->images[index].view;
+	VkExtent2D extent = {r->c->target->width, r->c->target->height};
 
-	render_gfx_target_resources_init(rtr, &c->nr, r->c->target->images[index].view, &data);
+	render_gfx_target_resources_init( //
+	    rtr,                          //
+	    &c->nr,                       //
+	    &r->target_render_pass,       //
+	    image_view,                   //
+	    extent);                      //
 }
 
 /*!
@@ -376,6 +384,13 @@ renderer_create_renderings_and_fences(struct comp_renderer *r)
 	if (!use_compute) {
 		r->rtr_array = U_TYPED_ARRAY_CALLOC(struct render_gfx_target_resources, r->buffer_count);
 
+		render_gfx_render_pass_init(          //
+		    &r->target_render_pass,           // rgrp
+		    &r->c->nr,                        // r
+		    r->c->target->format,             // format
+		    VK_ATTACHMENT_LOAD_OP_CLEAR,      // load_op
+		    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR); // final_layout
+
 		for (uint32_t i = 0; i < r->buffer_count; ++i) {
 			renderer_build_rendering_target_resources(r, &r->rtr_array[i], i);
 		}
@@ -413,6 +428,9 @@ renderer_close_renderings_and_fences(struct comp_renderer *r)
 		for (uint32_t i = 0; i < r->buffer_count; i++) {
 			render_gfx_target_resources_close(&r->rtr_array[i]);
 		}
+
+		// Close the render pass used for rendering to the target.
+		render_gfx_render_pass_close(&r->target_render_pass);
 
 		free(r->rtr_array);
 		r->rtr_array = NULL;

@@ -424,6 +424,60 @@ update_mesh_discriptor_set(struct vk_bundle *vk,
 
 /*
  *
+ * 'Exported' render pass functions.
+ *
+ */
+
+bool
+render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
+                            struct render_resources *r,
+                            VkFormat format,
+                            VkAttachmentLoadOp load_op,
+                            VkImageLayout final_layout)
+{
+	C(create_implicit_render_pass( //
+	    r->vk,                     // vk_bundle
+	    format,                    // target_format
+	    load_op,                   // load_op
+	    final_layout,              // final_layout
+	    &rgrp->render_pass));      // out_render_pass
+
+	C(create_mesh_pipeline(        //
+	    r->vk,                     // vk_bundle
+	    rgrp->render_pass,         // render_pass
+	    r->mesh.pipeline_layout,   // pipeline_layout
+	    r->pipeline_cache,         // pipeline_cache
+	    r->mesh.src_binding,       // src_binding
+	    r->mesh.index_count_total, // mesh_index_count_total
+	    r->mesh.stride,            // mesh_stride
+	    r->shaders->mesh_vert,     // mesh_vert
+	    r->shaders->mesh_frag,     // mesh_frag
+	    &rgrp->mesh.pipeline));    // out_mesh_pipeline
+
+	// Set fields.
+	rgrp->r = r;
+	rgrp->format = format;
+	rgrp->sample_count = VK_SAMPLE_COUNT_1_BIT;
+	rgrp->load_op = load_op;
+	rgrp->final_layout = final_layout;
+
+	return true;
+}
+
+void
+render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp)
+{
+	struct vk_bundle *vk = rgrp->r->vk;
+
+	D(RenderPass, rgrp->render_pass);
+	D(Pipeline, rgrp->mesh.pipeline);
+
+	U_ZERO(rgrp);
+}
+
+
+/*
+ *
  * 'Exported' target resources functions.
  *
  */
@@ -431,40 +485,24 @@ update_mesh_discriptor_set(struct vk_bundle *vk,
 bool
 render_gfx_target_resources_init(struct render_gfx_target_resources *rtr,
                                  struct render_resources *r,
+                                 struct render_gfx_render_pass *rgrp,
                                  VkImageView target,
-                                 struct render_gfx_target_data *data)
+                                 VkExtent2D extent)
 {
 	struct vk_bundle *vk = r->vk;
 	rtr->r = r;
 
-	assert(data->is_external);
+	C(create_framebuffer(    //
+	    vk,                  // vk_bundle,
+	    target,              // image_view,
+	    rgrp->render_pass,   // render_pass,
+	    extent.width,        // width,
+	    extent.height,       // height,
+	    &rtr->framebuffer)); // out_external_framebuffer
 
-	rtr->data = *data;
-
-	C(create_implicit_render_pass(       //
-	    vk,                              // vk_bundle
-	    data->format,                    // target_format
-	    VK_ATTACHMENT_LOAD_OP_CLEAR,     // load_op
-	    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, // final_layout
-	    &rtr->render_pass));             // out_render_pass
-
-	C(create_mesh_pipeline(vk,                        // vk_bundle
-	                       rtr->render_pass,          // render_pass
-	                       r->mesh.pipeline_layout,   // pipeline_layout
-	                       r->pipeline_cache,         // pipeline_cache
-	                       r->mesh.src_binding,       // src_binding
-	                       r->mesh.index_count_total, // mesh_index_count_total
-	                       r->mesh.stride,            // mesh_stride
-	                       r->shaders->mesh_vert,     // mesh_vert
-	                       r->shaders->mesh_frag,     // mesh_frag
-	                       &rtr->mesh.pipeline));     // out_mesh_pipeline
-
-	C(create_framebuffer(vk,                  // vk_bundle,
-	                     target,              // image_view,
-	                     rtr->render_pass,    // render_pass,
-	                     data->width,         // width,
-	                     data->height,        // height,
-	                     &rtr->framebuffer)); // out_external_framebuffer
+	// Set fields.
+	rtr->rgrp = rgrp;
+	rtr->extent = extent;
 
 	return true;
 }
@@ -474,9 +512,9 @@ render_gfx_target_resources_close(struct render_gfx_target_resources *rtr)
 {
 	struct vk_bundle *vk = vk_from_rtr(rtr);
 
-	D(RenderPass, rtr->render_pass);
-	D(Pipeline, rtr->mesh.pipeline);
 	D(Framebuffer, rtr->framebuffer);
+
+	U_ZERO(rtr);
 }
 
 
@@ -592,13 +630,17 @@ render_gfx_begin_target(struct render_gfx *rr, struct render_gfx_target_resource
 	assert(rr->rtr == NULL);
 	rr->rtr = rtr;
 
+	VkRenderPass render_pass = rtr->rgrp->render_pass;
+	VkFramebuffer framebuffer = rtr->framebuffer;
+	VkExtent2D extent = rtr->extent;
+
 	// This is shared across both views.
-	begin_render_pass(vk,                    //
-	                  rr->r->cmd,            //
-	                  rr->rtr->render_pass,  //
-	                  rr->rtr->framebuffer,  //
-	                  rr->rtr->data.width,   //
-	                  rr->rtr->data.height); //
+	begin_render_pass(vk,             //
+	                  rr->r->cmd,     //
+	                  render_pass,    //
+	                  framebuffer,    //
+	                  extent.width,   //
+	                  extent.height); //
 
 	return true;
 }
@@ -702,7 +744,7 @@ render_gfx_distortion(struct render_gfx *rr)
 	vk->vkCmdBindPipeline(               //
 	    r->cmd,                          // commandBuffer
 	    VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
-	    rr->rtr->mesh.pipeline);         // pipeline
+	    rr->rtr->rgrp->mesh.pipeline);   // pipeline
 
 
 	/*
