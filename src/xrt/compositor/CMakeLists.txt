@@ -195,10 +195,6 @@ if(XRT_MODULE_COMPOSITOR_MAIN)
 		main/comp_target_swapchain.c
 		main/comp_target_swapchain.h
 		main/comp_window.h
-		main/comp_layer.h
-		main/comp_layer.c
-		main/comp_layer_renderer.h
-		main/comp_layer_renderer.c
 		main/comp_mirror_to_debug_gui.c
 		main/comp_mirror_to_debug_gui.h
 		)

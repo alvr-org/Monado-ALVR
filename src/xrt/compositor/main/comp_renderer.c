@@ -30,7 +30,6 @@
 
 #include "util/comp_render.h"
 
-#include "main/comp_layer_renderer.h"
 #include "main/comp_frame.h"
 #include "main/comp_mirror_to_debug_gui.h"
 
