@@ -630,27 +630,6 @@ vk_has_error(VkResult res, const char *fun, const char *file, int line);
 		}                                                                                                      \
 	} while (0)
 
-/*!
- * @def vk_check_error_with_free
- * @brief Perform checking of a Vulkan result, freeing an allocation and returning in case it is not VK_SUCCESS.
- *
- * @param fun A string literal with the name of the Vulkan function, for logging purposes.
- * @param res a VkResult from that function.
- * @param ret value to return, if any, upon error
- * @param to_free expression to pass to `free()` upon error
- *
- * @see vk_has_error which is wrapped by this macro
- *
- * @ingroup aux_vk
- */
-#define vk_check_error_with_free(fun, res, ret, to_free)                                                               \
-	do {                                                                                                           \
-		if (vk_has_error(res, fun, __FILE__, __LINE__)) {                                                      \
-			free(to_free);                                                                                 \
-			return ret;                                                                                    \
-		}                                                                                                      \
-	} while (0)
-
 
 /*
  *
