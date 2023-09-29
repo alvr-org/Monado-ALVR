@@ -9,8 +9,11 @@
 
 #pragma once
 
+#include "xrt/xrt_config_build.h"
+#include "xrt/xrt_compositor.h"
+
 #include "vk/vk_helpers.h"
-#include "comp_compositor.h"
+
 
 struct layer_transformation
 {

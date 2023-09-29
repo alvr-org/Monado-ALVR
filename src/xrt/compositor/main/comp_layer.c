@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,12 +8,14 @@
  */
 
 #include "math/m_mathinclude.h"
-#include "comp_layer.h"
-
-#include "util/u_misc.h"
 #include "math/m_api.h"
 
+#include "util/u_misc.h"
+
+#include "comp_layer.h"
+
 #include <stdio.h>
+
 
 // clang-format off
 // Projection layers span from -1 to 1, the vertex buffer and quad layers
