@@ -609,27 +609,6 @@ xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on
 XRT_CHECK_RESULT bool
 vk_has_error(VkResult res, const char *fun, const char *file, int line);
 
-/*!
- * @def vk_check_error
- * @brief Perform checking of a Vulkan result, returning in case it is not VK_SUCCESS.
- *
- * @param fun A string literal with the name of the Vulkan function, for logging purposes.
- * @param res a VkResult from that function.
- * @param ret value to return, if any, upon error
- *
- * @see vk_has_error which is wrapped by this macro
- *
- * @ingroup aux_vk
- */
-#define vk_check_error(fun, res, ret)                                                                                  \
-	do {                                                                                                           \
-		VkResult _ret = res;                                                                                   \
-		if (_ret != VK_SUCCESS) {                                                                              \
-			vk_print_result(vk, _ret, fun, __FILE__, __LINE__);                                            \
-			return _ret;                                                                                   \
-		}                                                                                                      \
-	} while (0)
-
 
 /*
  *
