@@ -58,7 +58,7 @@ _init_descriptor_layout(struct comp_layer_renderer *self)
 
 	VkResult res = vk->vkCreateDescriptorSetLayout(vk->device, &info, NULL, &self->descriptor_set_layout);
 
-	vk_check_error("vkCreateDescriptorSetLayout", res, false);
+	VK_CHK_WITH_RET(res, "vkCreateDescriptorSetLayout", false);
 
 	return true;
 }
@@ -84,7 +84,7 @@ _init_descriptor_layout_equirect(struct comp_layer_renderer *self)
 
 	VkResult res = vk->vkCreateDescriptorSetLayout(vk->device, &info, NULL, &self->descriptor_set_layout_equirect);
 
-	vk_check_error("vkCreateDescriptorSetLayout", res, false);
+	VK_CHK_WITH_RET(res, "vkCreateDescriptorSetLayout", false);
 
 	return true;
 }
@@ -105,7 +105,7 @@ _init_pipeline_layout(struct comp_layer_renderer *self)
 
 	VkResult res = vk->vkCreatePipelineLayout(vk->device, &info, NULL, &self->pipeline_layout);
 
-	vk_check_error("vkCreatePipelineLayout", res, false);
+	VK_CHK_WITH_RET(res, "vkCreatePipelineLayout", false);
 
 	return true;
 }
@@ -121,7 +121,7 @@ _init_pipeline_cache(struct comp_layer_renderer *self)
 
 	VkResult res = vk->vkCreatePipelineCache(vk->device, &info, NULL, &self->pipeline_cache);
 
-	vk_check_error("vkCreatePipelineCache", res, false);
+	VK_CHK_WITH_RET(res, "vkCreatePipelineCache", false);
 
 	return true;
 }
@@ -270,7 +270,7 @@ _init_graphics_pipeline(struct comp_layer_renderer *self,
 	VkResult res;
 	res = vk->vkCreateGraphicsPipelines(vk->device, self->pipeline_cache, 1, &pipeline_info, NULL, pipeline);
 
-	vk_check_error("vkCreateGraphicsPipelines", res, false);
+	VK_CHK_WITH_RET(res, "vkCreateGraphicsPipelines", false);
 
 	return true;
 }

@@ -70,7 +70,7 @@ _init_ubos(struct comp_render_layer *self)
 
 		VkResult res = vk->vkMapMemory(vk->device, self->transformation_ubos[i].memory, 0, VK_WHOLE_SIZE, 0,
 		                               &self->transformation_ubos[i].data);
-		vk_check_error("vkMapMemory", res, false);
+		VK_CHK_WITH_RET(res, "vkMapMemory", false);
 
 		memcpy(self->transformation_ubos[i].data, &self->transformation[i],
 		       sizeof(struct layer_transformation));
@@ -98,7 +98,7 @@ _init_equirect1_ubo(struct comp_render_layer *self)
 
 	VkResult res =
 	    vk->vkMapMemory(vk->device, self->equirect1_ubo.memory, 0, VK_WHOLE_SIZE, 0, &self->equirect1_ubo.data);
-	vk_check_error("vkMapMemory", res, false);
+	VK_CHK_WITH_RET(res, "vkMapMemory", false);
 
 	memcpy(self->equirect1_ubo.data, &self->equirect1_data, sizeof(struct layer_equirect1_data));
 
@@ -125,7 +125,7 @@ _init_equirect2_ubo(struct comp_render_layer *self)
 
 	VkResult res =
 	    vk->vkMapMemory(vk->device, self->equirect2_ubo.memory, 0, VK_WHOLE_SIZE, 0, &self->equirect2_ubo.data);
-	vk_check_error("vkMapMemory", res, false);
+	VK_CHK_WITH_RET(res, "vkMapMemory", false);
 
 	memcpy(self->equirect2_ubo.data, &self->equirect2_data, sizeof(struct layer_equirect2_data));
 
