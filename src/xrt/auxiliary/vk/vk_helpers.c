@@ -1388,7 +1388,7 @@ vk_init_descriptor_pool(struct vk_bundle *vk,
 	};
 
 	VkResult res = vk->vkCreateDescriptorPool(vk->device, &info, NULL, out_descriptor_pool);
-	vk_check_error("vkCreateDescriptorPool", res, false);
+	VK_CHK_WITH_RET(res, "vkCreateDescriptorPool", false);
 
 	return true;
 }
@@ -1408,7 +1408,7 @@ vk_allocate_descriptor_sets(struct vk_bundle *vk,
 	};
 
 	VkResult res = vk->vkAllocateDescriptorSets(vk->device, &alloc_info, sets);
-	vk_check_error("vkAllocateDescriptorSets", res, false);
+	VK_CHK_WITH_RET(res, "vkAllocateDescriptorSets", false);
 
 	return true;
 }
@@ -1435,7 +1435,7 @@ vk_buffer_init(struct vk_bundle *vk,
 	};
 
 	VkResult res = vk->vkCreateBuffer(vk->device, &buffer_info, NULL, out_buffer);
-	vk_check_error("vkCreateBuffer", res, false);
+	VK_CHK_WITH_RET(res, "vkCreateBuffer", false);
 
 	VkMemoryRequirements requirements;
 	vk->vkGetBufferMemoryRequirements(vk->device, *out_buffer, &requirements);
@@ -1459,10 +1459,10 @@ vk_buffer_init(struct vk_bundle *vk,
 	};
 
 	res = vk->vkAllocateMemory(vk->device, &alloc_info, NULL, out_mem);
-	vk_check_error("vkAllocateMemory", res, false);
+	VK_CHK_WITH_RET(res, "vkAllocateMemory", false);
 
 	res = vk->vkBindBufferMemory(vk->device, *out_buffer, *out_mem, 0);
-	vk_check_error("vkBindBufferMemory", res, false);
+	VK_CHK_WITH_RET(res, "vkBindBufferMemory", false);
 
 	return true;
 }
@@ -1479,7 +1479,7 @@ vk_update_buffer(struct vk_bundle *vk, float *buffer, size_t buffer_size, VkDevi
 {
 	void *tmp;
 	VkResult res = vk->vkMapMemory(vk->device, memory, 0, VK_WHOLE_SIZE, 0, &tmp);
-	vk_check_error("vkMapMemory", res, false);
+	VK_CHK_WITH_RET(res, "vkMapMemory", false);
 
 	memcpy(tmp, buffer, buffer_size);
 
@@ -1490,7 +1490,7 @@ vk_update_buffer(struct vk_bundle *vk, float *buffer, size_t buffer_size, VkDevi
 	};
 
 	res = vk->vkFlushMappedMemoryRanges(vk->device, 1, &memory_range);
-	vk_check_error("vkFlushMappedMemoryRanges", res, false);
+	VK_CHK_WITH_RET(res, "vkFlushMappedMemoryRanges", false);
 
 	vk->vkUnmapMemory(vk->device, memory);
 
