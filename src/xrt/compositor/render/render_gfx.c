@@ -8,6 +8,8 @@
  * @ingroup comp_render
  */
 
+#include "vk/vk_mini_helpers.h"
+
 #include "render/render_interface.h"
 
 #include <stdio.h>
@@ -18,26 +20,6 @@
  * Common helpers
  *
  */
-
-#define C(c)                                                                                                           \
-	do {                                                                                                           \
-		VkResult ret = c;                                                                                      \
-		if (ret != VK_SUCCESS) {                                                                               \
-			return false;                                                                                  \
-		}                                                                                                      \
-	} while (false)
-
-#define D(TYPE, thing)                                                                                                 \
-	if (thing != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkDestroy##TYPE(vk->device, thing, NULL);                                                          \
-		thing = VK_NULL_HANDLE;                                                                                \
-	}
-
-#define DD(pool, thing)                                                                                                \
-	if (thing != VK_NULL_HANDLE) {                                                                                 \
-		free_descriptor_set(vk, pool, thing);                                                                  \
-		thing = VK_NULL_HANDLE;                                                                                \
-	}
 
 /*!
  * Get the @ref vk_bundle from @ref render_gfx_target_resources.
@@ -57,7 +39,7 @@ vk_from_rr(struct render_gfx *rr)
 	return rr->r->vk;
 }
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_implicit_render_pass(struct vk_bundle *vk,
                             VkFormat format,
                             VkAttachmentLoadOp load_op,
@@ -115,21 +97,19 @@ create_implicit_render_pass(struct vk_bundle *vk,
 	};
 
 	VkRenderPass render_pass = VK_NULL_HANDLE;
-	ret = vk->vkCreateRenderPass(vk->device,        //
-	                             &render_pass_info, //
-	                             NULL,              //
-	                             &render_pass);     //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateRenderPass failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	ret = vk->vkCreateRenderPass( //
+	    vk->device,               //
+	    &render_pass_info,        //
+	    NULL,                     //
+	    &render_pass);            //
+	VK_CHK_AND_RET(ret, "vkCreateRenderPass");
 
 	*out_render_pass = render_pass;
 
 	return VK_SUCCESS;
 }
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_framebuffer(struct vk_bundle *vk,
                    VkImageView image_view,
                    VkRenderPass render_pass,
@@ -152,14 +132,12 @@ create_framebuffer(struct vk_bundle *vk,
 	};
 
 	VkFramebuffer framebuffer = VK_NULL_HANDLE;
-	ret = vk->vkCreateFramebuffer(vk->device,         //
-	                              &frame_buffer_info, //
-	                              NULL,               //
-	                              &framebuffer);      //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateFramebuffer failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	ret = vk->vkCreateFramebuffer( //
+	    vk->device,                //
+	    &frame_buffer_info,        //
+	    NULL,                      //
+	    &framebuffer);             //
+	VK_CHK_AND_RET(ret, "vkCreateFramebuffer");
 
 	*out_external_framebuffer = framebuffer;
 
@@ -209,7 +187,7 @@ begin_render_pass(struct vk_bundle *vk,
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_mesh_pipeline(struct vk_bundle *vk,
                      VkRenderPass render_pass,
                      VkPipelineLayout pipeline_layout,
@@ -357,16 +335,14 @@ create_mesh_pipeline(struct vk_bundle *vk,
 	};
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
-	ret = vk->vkCreateGraphicsPipelines(vk->device,     //
-	                                    pipeline_cache, //
-	                                    1,              //
-	                                    &pipeline_info, //
-	                                    NULL,           //
-	                                    &pipeline);     //
-	if (ret != VK_SUCCESS) {
-		VK_DEBUG(vk, "vkCreateGraphicsPipelines failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	ret = vk->vkCreateGraphicsPipelines( //
+	    vk->device,                      //
+	    pipeline_cache,                  //
+	    1,                               //
+	    &pipeline_info,                  //
+	    NULL,                            //
+	    &pipeline);                      //
+	VK_CHK_AND_RET(ret, "vkCreateGraphicsPipelines");
 
 	*out_mesh_pipeline = pipeline;
 
@@ -414,11 +390,12 @@ update_mesh_discriptor_set(struct vk_bundle *vk,
 	    },
 	};
 
-	vk->vkUpdateDescriptorSets(vk->device,                        //
-	                           ARRAY_SIZE(write_descriptor_sets), // descriptorWriteCount
-	                           write_descriptor_sets,             // pDescriptorWrites
-	                           0,                                 // descriptorCopyCount
-	                           NULL);                             // pDescriptorCopies
+	vk->vkUpdateDescriptorSets(            //
+	    vk->device,                        //
+	    ARRAY_SIZE(write_descriptor_sets), // descriptorWriteCount
+	    write_descriptor_sets,             // pDescriptorWrites
+	    0,                                 // descriptorCopyCount
+	    NULL);                             // pDescriptorCopies
 }
 
 
@@ -435,15 +412,19 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
                             VkAttachmentLoadOp load_op,
                             VkImageLayout final_layout)
 {
-	C(create_implicit_render_pass( //
-	    r->vk,                     // vk_bundle
-	    format,                    // target_format
-	    load_op,                   // load_op
-	    final_layout,              // final_layout
-	    &rgrp->render_pass));      // out_render_pass
+	struct vk_bundle *vk = r->vk;
+	VkResult ret;
 
-	C(create_mesh_pipeline(        //
-	    r->vk,                     // vk_bundle
+	ret = create_implicit_render_pass( //
+	    vk,                            // vk_bundle
+	    format,                        // target_format
+	    load_op,                       // load_op
+	    final_layout,                  // final_layout
+	    &rgrp->render_pass);           // out_render_pass
+	VK_CHK_WITH_RET(ret, "create_implicit_render_pass", false);
+
+	ret = create_mesh_pipeline(    //
+	    vk,                        // vk_bundle
 	    rgrp->render_pass,         // render_pass
 	    r->mesh.pipeline_layout,   // pipeline_layout
 	    r->pipeline_cache,         // pipeline_cache
@@ -452,7 +433,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->mesh.stride,            // mesh_stride
 	    r->shaders->mesh_vert,     // mesh_vert
 	    r->shaders->mesh_frag,     // mesh_frag
-	    &rgrp->mesh.pipeline));    // out_mesh_pipeline
+	    &rgrp->mesh.pipeline);     // out_mesh_pipeline
+	VK_CHK_WITH_RET(ret, "create_mesh_pipeline", false);
 
 	// Set fields.
 	rgrp->r = r;
@@ -490,15 +472,17 @@ render_gfx_target_resources_init(struct render_gfx_target_resources *rtr,
                                  VkExtent2D extent)
 {
 	struct vk_bundle *vk = r->vk;
+	VkResult ret;
 	rtr->r = r;
 
-	C(create_framebuffer(    //
-	    vk,                  // vk_bundle,
-	    target,              // image_view,
-	    rgrp->render_pass,   // render_pass,
-	    extent.width,        // width,
-	    extent.height,       // height,
-	    &rtr->framebuffer)); // out_external_framebuffer
+	ret = create_framebuffer( //
+	    vk,                   // vk_bundle,
+	    target,               // image_view,
+	    rgrp->render_pass,    // render_pass,
+	    extent.width,         // width,
+	    extent.height,        // height,
+	    &rtr->framebuffer);   // out_external_framebuffer
+	VK_CHK_WITH_RET(ret, "create_framebuffer", false);
 
 	// Set fields.
 	rtr->rgrp = rgrp;
@@ -528,6 +512,7 @@ bool
 render_gfx_init(struct render_gfx *rr, struct render_resources *r)
 {
 	struct vk_bundle *vk = r->vk;
+	VkResult ret;
 	rr->r = r;
 
 
@@ -535,17 +520,19 @@ render_gfx_init(struct render_gfx *rr, struct render_resources *r)
 	 * Mesh per view
 	 */
 
-	C(vk_create_descriptor_set(              //
-	    vk,                                  // vk_bundle
-	    r->mesh.descriptor_pool,             // descriptor_pool
-	    r->mesh.descriptor_set_layout,       // descriptor_set_layout
-	    &rr->views[0].mesh.descriptor_set)); // descriptor_set
+	ret = vk_create_descriptor_set(         //
+	    vk,                                 // vk_bundle
+	    r->mesh.descriptor_pool,            // descriptor_pool
+	    r->mesh.descriptor_set_layout,      // descriptor_set_layout
+	    &rr->views[0].mesh.descriptor_set); // descriptor_set
+	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
-	C(vk_create_descriptor_set(              //
-	    vk,                                  // vk_bundle
-	    r->mesh.descriptor_pool,             // descriptor_pool
-	    r->mesh.descriptor_set_layout,       // descriptor_set_layout
-	    &rr->views[1].mesh.descriptor_set)); // descriptor_set
+	ret = vk_create_descriptor_set(         //
+	    vk,                                 // vk_bundle
+	    r->mesh.descriptor_pool,            // descriptor_pool
+	    r->mesh.descriptor_set_layout,      // descriptor_set_layout
+	    &rr->views[1].mesh.descriptor_set); // descriptor_set
+	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
 	return true;
 }
@@ -554,17 +541,21 @@ bool
 render_gfx_begin(struct render_gfx *rr)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
+	VkResult ret;
 
-	C(vk->vkResetCommandPool(vk->device, rr->r->cmd_pool, 0));
+	ret = vk->vkResetCommandPool(vk->device, rr->r->cmd_pool, 0);
+	VK_CHK_WITH_RET(ret, "vkResetCommandPool", false);
+
 
 	VkCommandBufferBeginInfo begin_info = {
 	    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 	    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 	};
 
-	C(vk->vkBeginCommandBuffer( //
-	    rr->r->cmd,             // commandBuffer
-	    &begin_info));          // pBeginInfo
+	ret = vk->vkBeginCommandBuffer( //
+	    rr->r->cmd,                 // commandBuffer
+	    &begin_info);               // pBeginInfo
+	VK_CHK_WITH_RET(ret, "vkResetCommandPool", false);
 
 	vk->vkCmdResetQueryPool( //
 	    rr->r->cmd,          // commandBuffer
@@ -585,6 +576,7 @@ bool
 render_gfx_end(struct render_gfx *rr)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
+	VkResult ret;
 
 	vk->vkCmdWriteTimestamp(                  //
 	    rr->r->cmd,                           // commandBuffer
@@ -592,7 +584,8 @@ render_gfx_end(struct render_gfx *rr)
 	    rr->r->query_pool,                    // queryPool
 	    1);                                   // query
 
-	C(vk->vkEndCommandBuffer(rr->r->cmd));
+	ret = vk->vkEndCommandBuffer(rr->r->cmd);
+	VK_CHK_WITH_RET(ret, "vkEndCommandBuffer", false);
 
 	return true;
 }
