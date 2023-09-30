@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,6 +8,7 @@
  * @ingroup comp_render
  */
 
+#include "vk/vk_mini_helpers.h"
 #include "render/render_interface.h"
 
 #include <stdio.h>
@@ -19,7 +20,7 @@
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_buffer(struct vk_bundle *vk,
               VkBufferUsageFlags usage_flags,
               VkMemoryPropertyFlags memory_property_flags,
@@ -32,6 +33,7 @@ create_buffer(struct vk_bundle *vk,
               VkDeviceSize *out_allocation_size)
 {
 	VkResult ret;
+	bool bret;
 
 	// Create the buffer handle.
 	VkBufferCreateInfo buffer_info = {
@@ -46,10 +48,7 @@ create_buffer(struct vk_bundle *vk,
 	                         &buffer_info, //
 	                         NULL,         //
 	                         &buffer);     //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateBuffer failed: '%s'", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkCreateBuffer");
 
 	// Create the memory backing up the buffer handle.
 	VkMemoryRequirements mem_reqs;
@@ -59,10 +58,12 @@ create_buffer(struct vk_bundle *vk,
 
 	// Find a memory type index that fits the properties of the buffer.
 	uint32_t memory_type_index = 0;
-	if (!vk_get_memory_type(vk,                      //
-	                        mem_reqs.memoryTypeBits, //
-	                        memory_property_flags,   //
-	                        &memory_type_index)) {   //
+	bret = vk_get_memory_type(   //
+	    vk,                      //
+	    mem_reqs.memoryTypeBits, //
+	    memory_property_flags,   //
+	    &memory_type_index);     //
+	if (!bret) {
 		VK_ERROR(vk, "vk_get_memory_type failed: 'false'\n\tFailed to find a matching memory type.");
 		ret = VK_ERROR_OUT_OF_DEVICE_MEMORY;
 		goto err_buffer;
@@ -80,21 +81,14 @@ create_buffer(struct vk_bundle *vk,
 	                           &mem_alloc, //
 	                           NULL,       //
 	                           &memory);   //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkAllocateMemory failed: '%s'", vk_result_string(ret));
-		goto err_buffer;
-	}
-
+	VK_CHK_WITH_GOTO(ret, "vkAllocateMemory", err_buffer);
 
 	// Attach the memory to the buffer object
 	ret = vk->vkBindBufferMemory(vk->device, //
 	                             buffer,     // buffer
 	                             memory,     // memory
 	                             0);         // memoryOffset
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkBindBufferMemory failed: '%s'", vk_result_string(ret));
-		goto err_memory;
-	}
+	VK_CHK_WITH_GOTO(ret, "vkBindBufferMemory", err_memory);
 
 	*out_memory = memory;
 	*out_buffer = buffer;
@@ -105,10 +99,10 @@ create_buffer(struct vk_bundle *vk,
 
 
 err_memory:
-	vk->vkFreeMemory(vk->device, memory, NULL);
+	DF(Memory, memory);
 
 err_buffer:
-	vk->vkDestroyBuffer(vk->device, buffer, NULL);
+	D(Buffer, buffer);
 
 	return ret;
 }
@@ -186,13 +180,8 @@ render_buffer_init_exportable(struct vk_bundle *vk,
 void
 render_buffer_close(struct vk_bundle *vk, struct render_buffer *buffer)
 {
-	if (buffer->buffer != VK_NULL_HANDLE) {
-		vk->vkDestroyBuffer(vk->device, buffer->buffer, NULL);
-	}
-	if (buffer->memory != VK_NULL_HANDLE) {
-		vk->vkFreeMemory(vk->device, buffer->memory, NULL);
-	}
-
+	D(Buffer, buffer->buffer);
+	DF(Memory, buffer->memory);
 	U_ZERO(buffer);
 }
 
