@@ -19,6 +19,7 @@ add_library(
 	vk_image_allocator.h
 	vk_image_readback_to_xf_pool.c
 	vk_image_readback_to_xf_pool.h
+	vk_mini_helpers.h
 	vk_print.c
 	vk_state_creators.c
 	vk_surface_info.c
