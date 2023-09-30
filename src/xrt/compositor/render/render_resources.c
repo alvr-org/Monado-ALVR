@@ -9,58 +9,14 @@
  */
 
 #include "xrt/xrt_device.h"
+
 #include "math/m_api.h"
 #include "math/m_matrix_2x2.h"
 #include "math/m_vec2.h"
+
+#include "vk/vk_mini_helpers.h"
+
 #include "render/render_interface.h"
-
-#include <stdio.h>
-
-
-/*!
- * If `COND` is not VK_SUCCESS returns false.
- */
-#define C(COND)                                                                                                        \
-	do {                                                                                                           \
-		VkResult ret = COND;                                                                                   \
-		if (ret != VK_SUCCESS) {                                                                               \
-			return false;                                                                                  \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * This define will error if `RET` is not `VK_SUCCESS`, printing out that the
- * `FUNC_STR` string has failed, then goto `GOTO`, `VK` will be used for the
- * `VK_ERROR` call.
- */
-#define CG(VK, RET, FUNC_STR, GOTO)                                                                                    \
-	do {                                                                                                           \
-		VkResult CG_ret = RET;                                                                                 \
-		if (CG_ret != VK_SUCCESS) {                                                                            \
-			VK_ERROR(VK, FUNC_STR ": %s", vk_result_string(CG_ret));                                       \
-			goto GOTO;                                                                                     \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * Calls `vkDestroy##TYPE` on `THING` if it is not `VK_NULL_HANDLE`, sets it to
- * `VK_NULL_HANDLE` afterwards.
- */
-#define D(TYPE, THING)                                                                                                 \
-	if (THING != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkDestroy##TYPE(vk->device, THING, NULL);                                                          \
-		THING = VK_NULL_HANDLE;                                                                                \
-	}
-
-/*!
- * Calls `vkFree##TYPE` on `THING` if it is not `VK_NULL_HANDLE`, sets it to
- * `VK_NULL_HANDLE` afterwards.
- */
-#define DF(TYPE, THING)                                                                                                \
-	if (THING != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkFree##TYPE(vk->device, THING, NULL);                                                             \
-		THING = VK_NULL_HANDLE;                                                                                \
-	}
 
 
 /*
@@ -69,7 +25,7 @@
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_mesh_descriptor_set_layout(struct vk_bundle *vk,
                                   uint32_t src_binding,
                                   uint32_t ubo_binding,
@@ -103,18 +59,14 @@ create_mesh_descriptor_set_layout(struct vk_bundle *vk,
 	                                      &set_layout_info,        //
 	                                      NULL,                    //
 	                                      &descriptor_set_layout); //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateDescriptorSetLayout failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkCreateDescriptorSetLayout");
 
 	*out_descriptor_set_layout = descriptor_set_layout;
 
 	return VK_SUCCESS;
 }
 
-
-static bool
+XRT_CHECK_RESULT static bool
 init_mesh_vertex_buffers(struct vk_bundle *vk,
                          struct render_buffer *vbo,
                          struct render_buffer *ibo,
@@ -124,6 +76,8 @@ init_mesh_vertex_buffers(struct vk_bundle *vk,
                          uint32_t index_counts,
                          void *indices)
 {
+	VkResult ret;
+
 	// Using the same flags for all vbos.
 	VkBufferUsageFlags vbo_usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	VkBufferUsageFlags ibo_usage_flags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -140,16 +94,20 @@ init_mesh_vertex_buffers(struct vk_bundle *vk,
 		return true;
 	}
 
-	C(render_buffer_init(vk,                    // vk_bundle
-	                     vbo,                   // buffer
-	                     vbo_usage_flags,       // usage_flags
-	                     memory_property_flags, // memory_property_flags
-	                     vbo_size));            // size
+	ret = render_buffer_init(  //
+	    vk,                    // vk_bundle
+	    vbo,                   // buffer
+	    vbo_usage_flags,       // usage_flags
+	    memory_property_flags, // memory_property_flags
+	    vbo_size);             // size
+	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
 
-	C(render_buffer_write(vk,         // vk_bundle
-	                      vbo,        // buffer
-	                      vertices,   // data
-	                      vbo_size)); // size
+	ret = render_buffer_write( //
+	    vk,                    // vk_bundle
+	    vbo,                   // buffer
+	    vertices,              // data
+	    vbo_size);             // size
+	VK_CHK_WITH_RET(ret, "render_buffer_write", false);
 
 
 	// Don't create index buffer if size is zero.
@@ -157,23 +115,29 @@ init_mesh_vertex_buffers(struct vk_bundle *vk,
 		return true;
 	}
 
-	C(render_buffer_init(vk,                    // vk_bundle
-	                     ibo,                   // buffer
-	                     ibo_usage_flags,       // usage_flags
-	                     memory_property_flags, // memory_property_flags
-	                     ibo_size));            // size
+	ret = render_buffer_init(  //
+	    vk,                    // vk_bundle
+	    ibo,                   // buffer
+	    ibo_usage_flags,       // usage_flags
+	    memory_property_flags, // memory_property_flags
+	    ibo_size);             // size
+	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
 
-	C(render_buffer_write(vk,         // vk_bundle
-	                      ibo,        // buffer
-	                      indices,    // data
-	                      ibo_size)); // size
+	ret = render_buffer_write( //
+	    vk,                    // vk_bundle
+	    ibo,                   // buffer
+	    indices,               // data
+	    ibo_size);             // size
+	VK_CHK_WITH_RET(ret, "render_buffer_write", false);
 
 	return true;
 }
 
-static bool
+XRT_CHECK_RESULT static bool
 init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct render_buffer *r_ubo)
 {
+	VkResult ret;
+
 	// Using the same flags for all ubos.
 	VkBufferUsageFlags ubo_usage_flags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 	VkMemoryPropertyFlags memory_property_flags =
@@ -182,20 +146,25 @@ init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct 
 	// Distortion ubo size.
 	VkDeviceSize ubo_size = sizeof(struct render_gfx_mesh_ubo_data);
 
-	C(render_buffer_init(vk,                    //
-	                     l_ubo,                 //
-	                     ubo_usage_flags,       //
-	                     memory_property_flags, //
-	                     ubo_size));            // size
-	C(render_buffer_map(vk, l_ubo));
+	ret = render_buffer_init(vk,                    //
+	                         l_ubo,                 //
+	                         ubo_usage_flags,       //
+	                         memory_property_flags, //
+	                         ubo_size);             // size
+	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
 
-	C(render_buffer_init(vk,                    //
-	                     r_ubo,                 //
-	                     ubo_usage_flags,       //
-	                     memory_property_flags, //
-	                     ubo_size));            // size
-	C(render_buffer_map(vk, r_ubo));
+	ret = render_buffer_map(vk, l_ubo);
+	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
 
+	ret = render_buffer_init(vk,                    //
+	                         r_ubo,                 //
+	                         ubo_usage_flags,       //
+	                         memory_property_flags, //
+	                         ubo_size);             // size
+	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
+
+	ret = render_buffer_map(vk, r_ubo);
+	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
 
 	return true;
 }
@@ -207,7 +176,7 @@ init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct 
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_compute_layer_descriptor_set_layout(struct vk_bundle *vk,
                                            uint32_t src_binding,
                                            uint32_t target_binding,
@@ -250,17 +219,14 @@ create_compute_layer_descriptor_set_layout(struct vk_bundle *vk,
 	    &set_layout_info,                  //
 	    NULL,                              //
 	    &descriptor_set_layout);           //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateDescriptorSetLayout failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkCreateDescriptorSetLayout");
 
 	*out_descriptor_set_layout = descriptor_set_layout;
 
 	return VK_SUCCESS;
 }
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_compute_distortion_descriptor_set_layout(struct vk_bundle *vk,
                                                 uint32_t src_binding,
                                                 uint32_t distortion_binding,
@@ -309,10 +275,7 @@ create_compute_distortion_descriptor_set_layout(struct vk_bundle *vk,
 	    &set_layout_info,                  //
 	    NULL,                              //
 	    &descriptor_set_layout);           //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateDescriptorSetLayout failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkCreateDescriptorSetLayout");
 
 	*out_descriptor_set_layout = descriptor_set_layout;
 
@@ -333,7 +296,7 @@ struct compute_distortion_params
 	VkBool32 do_timewarp;
 };
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_compute_layer_pipeline(struct vk_bundle *vk,
                               VkPipelineCache pipeline_cache,
                               VkShaderModule shader,
@@ -372,7 +335,7 @@ create_compute_layer_pipeline(struct vk_bundle *vk,
 	    out_compute_pipeline);         // out_compute_pipeline
 }
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_compute_distortion_pipeline(struct vk_bundle *vk,
                                    VkPipelineCache pipeline_cache,
                                    VkShaderModule shader,
@@ -416,7 +379,7 @@ create_compute_distortion_pipeline(struct vk_bundle *vk,
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 prepare_mock_image_locked(struct vk_bundle *vk, VkCommandBuffer cmd, VkImage dst)
 {
 	VkImageSubresourceRange subresource_range = {
@@ -447,9 +410,11 @@ prepare_mock_image_locked(struct vk_bundle *vk, VkCommandBuffer cmd, VkImage dst
  *
  */
 
-static bool
+XRT_CHECK_RESULT static bool
 create_scratch_image_and_view(struct vk_bundle *vk, VkExtent2D extent, struct render_scratch_color_image *rsci)
 {
+	VkResult ret;
+
 	VkFormat srgb_format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFormat unorm_format = VK_FORMAT_R8G8B8A8_UNORM;
 	VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
@@ -468,12 +433,13 @@ create_scratch_image_and_view(struct vk_bundle *vk, VkExtent2D extent, struct re
 	// Combination of both.
 	VkImageUsageFlags image_usage = unorm_usage | srgb_usage;
 
-	C(vk_create_image_mutable_rgba( //
-	    vk,                         // vk_bundle
-	    extent,                     // extent
-	    image_usage,                // usage
-	    &device_memory,             // out_device_memory
-	    &image));                   // out_image
+	ret = vk_create_image_mutable_rgba( //
+	    vk,                             // vk_bundle
+	    extent,                         // extent
+	    image_usage,                    // usage
+	    &device_memory,                 // out_device_memory
+	    &image);                        // out_image
+	VK_CHK_WITH_RET(ret, "vk_create_image_mutable_rgba", false);
 
 	VkImageSubresourceRange subresource_range = {
 	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -483,23 +449,25 @@ create_scratch_image_and_view(struct vk_bundle *vk, VkExtent2D extent, struct re
 	    .layerCount = VK_REMAINING_ARRAY_LAYERS,
 	};
 
-	C(vk_create_view_usage( //
-	    vk,                 // vk_bundle
-	    image,              // image
-	    view_type,          // type
-	    srgb_format,        // format
-	    srgb_usage,         // image_usage
-	    subresource_range,  // subresource_range
-	    &srgb_view));       // out_image_view
+	ret = vk_create_view_usage( //
+	    vk,                     // vk_bundle
+	    image,                  // image
+	    view_type,              // type
+	    srgb_format,            // format
+	    srgb_usage,             // image_usage
+	    subresource_range,      // subresource_range
+	    &srgb_view);            // out_image_view
+	VK_CHK_WITH_RET(ret, "vk_create_view_usage", false);
 
-	C(vk_create_view_usage( //
-	    vk,                 // vk_bundle
-	    image,              // image
-	    view_type,          // type
-	    unorm_format,       // format
-	    unorm_usage,        // image_usage
-	    subresource_range,  // subresource_range
-	    &unorm_view));      // out_image_view
+	ret = vk_create_view_usage( //
+	    vk,                     // vk_bundle
+	    image,                  // image
+	    view_type,              // type
+	    unorm_format,           // format
+	    unorm_usage,            // image_usage
+	    subresource_range,      // subresource_range
+	    &unorm_view);           // out_image_view
+	VK_CHK_WITH_RET(ret, "vk_create_view_usage", false);
 
 	rsci->device_memory = device_memory;
 	rsci->image = image;
@@ -531,6 +499,9 @@ render_resources_init(struct render_resources *r,
                       struct vk_bundle *vk,
                       struct xrt_device *xdev)
 {
+	VkResult ret;
+	bool bret;
+
 	/*
 	 * Main pointers.
 	 */
@@ -569,32 +540,37 @@ render_resources_init(struct render_resources *r,
 	 * Common samplers.
 	 */
 
-	C(vk_create_sampler(                       //
+	ret = vk_create_sampler(                   //
 	    vk,                                    // vk_bundle
 	    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // clamp_mode
-	    &r->samplers.mock));                   // out_sampler
+	    &r->samplers.mock);                    // out_sampler
+	VK_CHK_WITH_RET(ret, "vk_create_sampler", false);
 
-	C(vk_create_sampler(                //
+	ret = vk_create_sampler(            //
 	    vk,                             // vk_bundle
 	    VK_SAMPLER_ADDRESS_MODE_REPEAT, // clamp_mode
-	    &r->samplers.repeat));          // out_sampler
+	    &r->samplers.repeat);           // out_sampler
+	VK_CHK_WITH_RET(ret, "vk_create_sampler", false);
 
-	C(vk_create_sampler(                       //
+	ret = vk_create_sampler(                   //
 	    vk,                                    // vk_bundle
 	    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // clamp_mode
-	    &r->samplers.clamp_to_edge));          // out_sampler
+	    &r->samplers.clamp_to_edge);           // out_sampler
+	VK_CHK_WITH_RET(ret, "vk_create_sampler", false);
 
-	C(vk_create_sampler(                         //
+	ret = vk_create_sampler(                     //
 	    vk,                                      // vk_bundle
 	    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, // clamp_mode
-	    &r->samplers.clamp_to_border_black));    // out_sampler
+	    &r->samplers.clamp_to_border_black);     // out_sampler
+	VK_CHK_WITH_RET(ret, "vk_create_sampler", false);
 
 
 	/*
 	 * Command buffer pool, needs to go first.
 	 */
 
-	C(vk_cmd_pool_init(vk, &r->distortion_pool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT));
+	ret = vk_cmd_pool_init(vk, &r->distortion_pool, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT);
+	VK_CHK_WITH_RET(ret, "vk_cmd_pool_init", false);
 
 	VkCommandPoolCreateInfo command_pool_info = {
 	    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -602,7 +578,8 @@ render_resources_init(struct render_resources *r,
 	    .queueFamilyIndex = vk->queue_family_index,
 	};
 
-	C(vk->vkCreateCommandPool(vk->device, &command_pool_info, NULL, &r->cmd_pool));
+	ret = vk->vkCreateCommandPool(vk->device, &command_pool_info, NULL, &r->cmd_pool);
+	VK_CHK_WITH_RET(ret, "vkCreateCommandPool", false);
 
 
 	/*
@@ -622,32 +599,37 @@ render_resources_init(struct render_resources *r,
 		    .layerCount = 1,
 		};
 
-		C(vk_create_image_simple(   //
-		    vk,                     // vk_bundle
-		    extent,                 // extent
-		    format,                 // format
-		    usage,                  // usage
-		    &r->mock.color.memory,  // out_mem
-		    &r->mock.color.image)); // out_image
+		ret = vk_create_image_simple( //
+		    vk,                       // vk_bundle
+		    extent,                   // extent
+		    format,                   // format
+		    usage,                    // usage
+		    &r->mock.color.memory,    // out_mem
+		    &r->mock.color.image);    // out_image
+		VK_CHK_WITH_RET(ret, "vk_create_image_simple", false);
 
-		C(vk_create_view(                //
-		    vk,                          // vk_bundle
-		    r->mock.color.image,         // image
-		    VK_IMAGE_VIEW_TYPE_2D,       // type
-		    format,                      // format
-		    subresource_range,           // subresource_range
-		    &r->mock.color.image_view)); // out_view
+		ret = vk_create_view(           //
+		    vk,                         // vk_bundle
+		    r->mock.color.image,        // image
+		    VK_IMAGE_VIEW_TYPE_2D,      // type
+		    format,                     // format
+		    subresource_range,          // subresource_range
+		    &r->mock.color.image_view); // out_view
+		VK_CHK_WITH_RET(ret, "vk_create_view", false);
 
 
 		VkCommandBuffer cmd = VK_NULL_HANDLE;
-		C(vk_cmd_create_and_begin_cmd_buffer_locked(vk, r->cmd_pool, 0, &cmd));
+		ret = vk_cmd_create_and_begin_cmd_buffer_locked(vk, r->cmd_pool, 0, &cmd);
+		VK_CHK_WITH_RET(ret, "vk_cmd_create_and_begin_cmd_buffer_locked", false);
 
-		C(prepare_mock_image_locked( //
-		    vk,                      // vk_bundle
-		    cmd,                     // cmd
-		    r->mock.color.image));   // dst
+		ret = prepare_mock_image_locked( //
+		    vk,                          // vk_bundle
+		    cmd,                         // cmd
+		    r->mock.color.image);        // dst
+		VK_CHK_WITH_RET(ret, "prepare_mock_image_locked", false);
 
-		C(vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(vk, r->cmd_pool, cmd));
+		ret = vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(vk, r->cmd_pool, cmd);
+		VK_CHK_WITH_RET(ret, "vk_cmd_end_submit_wait_and_free_cmd_buffer_locked", false);
 
 		// No need to wait, submit waits on the fence.
 	}
@@ -657,7 +639,8 @@ render_resources_init(struct render_resources *r,
 	 * Shared
 	 */
 
-	C(vk_create_pipeline_cache(vk, &r->pipeline_cache));
+	ret = vk_create_pipeline_cache(vk, &r->pipeline_cache);
+	VK_CHK_WITH_RET(ret, "vk_create_pipeline_cache", false);
 
 	VkCommandBufferAllocateInfo cmd_buffer_info = {
 	    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -666,10 +649,11 @@ render_resources_init(struct render_resources *r,
 	    .commandBufferCount = 1,
 	};
 
-	C(vk->vkAllocateCommandBuffers( //
-	    vk->device,                 // device
-	    &cmd_buffer_info,           // pAllocateInfo
-	    &r->cmd));                  // pCommandBuffers
+	ret = vk->vkAllocateCommandBuffers( //
+	    vk->device,                     // device
+	    &cmd_buffer_info,               // pAllocateInfo
+	    &r->cmd);                       // pCommandBuffers
+	VK_CHK_WITH_RET(ret, "vkAllocateCommandBuffers", false);
 
 
 	/*
@@ -685,36 +669,43 @@ render_resources_init(struct render_resources *r,
 	    .freeable = false,
 	};
 
-	C(vk_create_descriptor_pool(    //
-	    vk,                         // vk_bundle
-	    &mesh_pool_info,            // info
-	    &r->mesh.descriptor_pool)); // out_descriptor_pool
+	ret = vk_create_descriptor_pool( //
+	    vk,                          // vk_bundle
+	    &mesh_pool_info,             // info
+	    &r->mesh.descriptor_pool);   // out_descriptor_pool
+	VK_CHK_WITH_RET(ret, "vk_create_descriptor_pool", false);
 
-	C(create_mesh_descriptor_set_layout(  //
-	    vk,                               // vk_bundle
-	    r->mesh.src_binding,              // src_binding
-	    r->mesh.ubo_binding,              // ubo_binding
-	    &r->mesh.descriptor_set_layout)); // out_mesh_descriptor_set_layout
+	ret = create_mesh_descriptor_set_layout( //
+	    vk,                                  // vk_bundle
+	    r->mesh.src_binding,                 // src_binding
+	    r->mesh.ubo_binding,                 // ubo_binding
+	    &r->mesh.descriptor_set_layout);     // out_mesh_descriptor_set_layout
+	VK_CHK_WITH_RET(ret, "create_mesh_descriptor_set_layout", false);
 
-	C(vk_create_pipeline_layout(       //
+	ret = vk_create_pipeline_layout(   //
 	    vk,                            // vk_bundle
 	    r->mesh.descriptor_set_layout, // descriptor_set_layout
-	    &r->mesh.pipeline_layout));    // out_pipeline_layout
+	    &r->mesh.pipeline_layout);     // out_pipeline_layout
+	VK_CHK_WITH_RET(ret, "vk_create_pipeline_layout", false);
 
-	if (!init_mesh_vertex_buffers(vk,                                //
-	                              &r->mesh.vbo,                      //
-	                              &r->mesh.ibo,                      //
-	                              r->mesh.vertex_count,              //
-	                              r->mesh.stride,                    //
-	                              parts->distortion.mesh.vertices,   //
-	                              r->mesh.index_count_total,         //
-	                              parts->distortion.mesh.indices)) { //
+	bret = init_mesh_vertex_buffers(     //
+	    vk,                              //
+	    &r->mesh.vbo,                    //
+	    &r->mesh.ibo,                    //
+	    r->mesh.vertex_count,            //
+	    r->mesh.stride,                  //
+	    parts->distortion.mesh.vertices, //
+	    r->mesh.index_count_total,       //
+	    parts->distortion.mesh.indices); //
+	if (!bret) {
 		return false;
 	}
 
-	if (!init_mesh_ubo_buffers(vk,               //
-	                           &r->mesh.ubos[0], //
-	                           &r->mesh.ubos[1])) {
+	bret = init_mesh_ubo_buffers( //
+	    vk,                       //
+	    &r->mesh.ubos[0],         //
+	    &r->mesh.ubos[1]);        //
+	if (!bret) {
 		return false;
 	}
 
@@ -741,28 +732,31 @@ render_resources_init(struct render_resources *r,
 	    .freeable = false,
 	};
 
-	C(vk_create_descriptor_pool(       //
-	    vk,                            // vk_bundle
-	    &compute_pool_info,            // info
-	    &r->compute.descriptor_pool)); // out_descriptor_pool
+	ret = vk_create_descriptor_pool(  //
+	    vk,                           // vk_bundle
+	    &compute_pool_info,           // info
+	    &r->compute.descriptor_pool); // out_descriptor_pool
+	VK_CHK_WITH_RET(ret, "vk_create_descriptor_pool", false);
 
 
 	/*
 	 * Layer pipeline
 	 */
 
-	C(create_compute_layer_descriptor_set_layout(  //
-	    vk,                                        // vk_bundle
-	    r->compute.src_binding,                    // src_binding,
-	    r->compute.target_binding,                 // target_binding,
-	    r->compute.ubo_binding,                    // ubo_binding,
-	    r->compute.layer.image_array_size,         // source_images_count,
-	    &r->compute.layer.descriptor_set_layout)); // out_descriptor_set_layout
+	ret = create_compute_layer_descriptor_set_layout( //
+	    vk,                                           // vk_bundle
+	    r->compute.src_binding,                       // src_binding,
+	    r->compute.target_binding,                    // target_binding,
+	    r->compute.ubo_binding,                       // ubo_binding,
+	    r->compute.layer.image_array_size,            // source_images_count,
+	    &r->compute.layer.descriptor_set_layout);     // out_descriptor_set_layout
+	VK_CHK_WITH_RET(ret, "create_compute_layer_descriptor_set_layout", false);
 
-	C(vk_create_pipeline_layout(                //
+	ret = vk_create_pipeline_layout(            //
 	    vk,                                     // vk_bundle
 	    r->compute.layer.descriptor_set_layout, // descriptor_set_layout
-	    &r->compute.layer.pipeline_layout));    // out_pipeline_layout
+	    &r->compute.layer.pipeline_layout);     // out_pipeline_layout
+	VK_CHK_WITH_RET(ret, "vk_create_pipeline_layout", false);
 
 	struct compute_layer_params layer_params = {
 	    .do_timewarp = false,
@@ -771,13 +765,14 @@ render_resources_init(struct render_resources *r,
 	    .image_array_size = r->compute.layer.image_array_size,
 	};
 
-	C(create_compute_layer_pipeline(               //
-	    vk,                                        // vk_bundle
-	    r->pipeline_cache,                         // pipeline_cache
-	    r->shaders->layer_comp,                    // shader
-	    r->compute.layer.pipeline_layout,          // pipeline_layout
-	    &layer_params,                             // params
-	    &r->compute.layer.non_timewarp_pipeline)); // out_compute_pipeline
+	ret = create_compute_layer_pipeline(          //
+	    vk,                                       // vk_bundle
+	    r->pipeline_cache,                        // pipeline_cache
+	    r->shaders->layer_comp,                   // shader
+	    r->compute.layer.pipeline_layout,         // pipeline_layout
+	    &layer_params,                            // params
+	    &r->compute.layer.non_timewarp_pipeline); // out_compute_pipeline
+	VK_CHK_WITH_RET(ret, "create_compute_layer_pipeline", false);
 
 	struct compute_layer_params layer_timewarp_params = {
 	    .do_timewarp = true,
@@ -786,26 +781,30 @@ render_resources_init(struct render_resources *r,
 	    .image_array_size = r->compute.layer.image_array_size,
 	};
 
-	C(create_compute_layer_pipeline(           //
-	    vk,                                    // vk_bundle
-	    r->pipeline_cache,                     // pipeline_cache
-	    r->shaders->layer_comp,                // shader
-	    r->compute.layer.pipeline_layout,      // pipeline_layout
-	    &layer_timewarp_params,                // params
-	    &r->compute.layer.timewarp_pipeline)); // out_compute_pipeline
+	ret = create_compute_layer_pipeline(      //
+	    vk,                                   // vk_bundle
+	    r->pipeline_cache,                    // pipeline_cache
+	    r->shaders->layer_comp,               // shader
+	    r->compute.layer.pipeline_layout,     // pipeline_layout
+	    &layer_timewarp_params,               // params
+	    &r->compute.layer.timewarp_pipeline); // out_compute_pipeline
+	VK_CHK_WITH_RET(ret, "create_compute_layer_pipeline", false);
 
 	size_t layer_ubo_size = sizeof(struct render_compute_layer_ubo_data);
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(r->compute.layer.ubos); i++) {
-		C(render_buffer_init(            //
-		    vk,                          // vk_bundle
-		    &r->compute.layer.ubos[i],   // buffer
-		    ubo_usage_flags,             // usage_flags
-		    memory_property_flags,       // memory_property_flags
-		    layer_ubo_size));            // size
-		C(render_buffer_map(             //
-		    vk,                          // vk_bundle
-		    &r->compute.layer.ubos[i])); // buffer
+		ret = render_buffer_init(      //
+		    vk,                        // vk_bundle
+		    &r->compute.layer.ubos[i], // buffer
+		    ubo_usage_flags,           // usage_flags
+		    memory_property_flags,     // memory_property_flags
+		    layer_ubo_size);           // size
+		VK_CHK_WITH_RET(ret, "render_buffer_init", false);
+
+		ret = render_buffer_map(        //
+		    vk,                         // vk_bundle
+		    &r->compute.layer.ubos[i]); // buffer
+		VK_CHK_WITH_RET(ret, "render_buffer_map", false);
 	}
 
 
@@ -813,81 +812,91 @@ render_resources_init(struct render_resources *r,
 	 * Distortion pipeline
 	 */
 
-	C(create_compute_distortion_descriptor_set_layout(  //
-	    vk,                                             // vk_bundle
-	    r->compute.src_binding,                         // src_binding,
-	    r->compute.distortion_binding,                  // distortion_binding,
-	    r->compute.target_binding,                      // target_binding,
-	    r->compute.ubo_binding,                         // ubo_binding,
-	    &r->compute.distortion.descriptor_set_layout)); // out_descriptor_set_layout
+	ret = create_compute_distortion_descriptor_set_layout( //
+	    vk,                                                // vk_bundle
+	    r->compute.src_binding,                            // src_binding,
+	    r->compute.distortion_binding,                     // distortion_binding,
+	    r->compute.target_binding,                         // target_binding,
+	    r->compute.ubo_binding,                            // ubo_binding,
+	    &r->compute.distortion.descriptor_set_layout);     // out_descriptor_set_layout
+	VK_CHK_WITH_RET(ret, "create_compute_distortion_descriptor_set_layout", false);
 
-	C(vk_create_pipeline_layout(                     //
+	ret = vk_create_pipeline_layout(                 //
 	    vk,                                          // vk_bundle
 	    r->compute.distortion.descriptor_set_layout, // descriptor_set_layout
-	    &r->compute.distortion.pipeline_layout));    // out_pipeline_layout
+	    &r->compute.distortion.pipeline_layout);     // out_pipeline_layout
+	VK_CHK_WITH_RET(ret, "vk_create_pipeline_layout", false);
 
 	struct compute_distortion_params distortion_params = {
 	    .distortion_texel_count = RENDER_DISTORTION_IMAGE_DIMENSIONS,
 	    .do_timewarp = false,
 	};
 
-	C(create_compute_distortion_pipeline(      //
+	ret = create_compute_distortion_pipeline(  //
 	    vk,                                    // vk_bundle
 	    r->pipeline_cache,                     // pipeline_cache
 	    r->shaders->distortion_comp,           // shader
 	    r->compute.distortion.pipeline_layout, // pipeline_layout
 	    &distortion_params,                    // params
-	    &r->compute.distortion.pipeline));     // out_compute_pipeline
+	    &r->compute.distortion.pipeline);      // out_compute_pipeline
+	VK_CHK_WITH_RET(ret, "create_compute_distortion_pipeline", false);
 
 	struct compute_distortion_params distortion_timewarp_params = {
 	    .distortion_texel_count = RENDER_DISTORTION_IMAGE_DIMENSIONS,
 	    .do_timewarp = true,
 	};
 
-	C(create_compute_distortion_pipeline(           //
-	    vk,                                         // vk_bundle
-	    r->pipeline_cache,                          // pipeline_cache
-	    r->shaders->distortion_comp,                // shader
-	    r->compute.distortion.pipeline_layout,      // pipeline_layout
-	    &distortion_timewarp_params,                // params
-	    &r->compute.distortion.timewarp_pipeline)); // out_compute_pipeline
+	ret = create_compute_distortion_pipeline(      //
+	    vk,                                        // vk_bundle
+	    r->pipeline_cache,                         // pipeline_cache
+	    r->shaders->distortion_comp,               // shader
+	    r->compute.distortion.pipeline_layout,     // pipeline_layout
+	    &distortion_timewarp_params,               // params
+	    &r->compute.distortion.timewarp_pipeline); // out_compute_pipeline
+	VK_CHK_WITH_RET(ret, "create_compute_distortion_pipeline", false);
 
 	size_t distortion_ubo_size = sizeof(struct render_compute_distortion_ubo_data);
 
-	C(render_buffer_init(             //
-	    vk,                           // vk_bundle
-	    &r->compute.distortion.ubo,   // buffer
-	    ubo_usage_flags,              // usage_flags
-	    memory_property_flags,        // memory_property_flags
-	    distortion_ubo_size));        // size
-	C(render_buffer_map(              //
-	    vk,                           // vk_bundle
-	    &r->compute.distortion.ubo)); // buffer
+	ret = render_buffer_init(       //
+	    vk,                         // vk_bundle
+	    &r->compute.distortion.ubo, // buffer
+	    ubo_usage_flags,            // usage_flags
+	    memory_property_flags,      // memory_property_flags
+	    distortion_ubo_size);       // size
+	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
+	ret = render_buffer_map(         //
+	    vk,                          // vk_bundle
+	    &r->compute.distortion.ubo); // buffer
+	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
 
 
 	/*
 	 * Clear pipeline.
 	 */
 
-	C(vk_create_compute_pipeline(              //
+	ret = vk_create_compute_pipeline(          //
 	    vk,                                    // vk_bundle
 	    r->pipeline_cache,                     // pipeline_cache
 	    r->shaders->clear_comp,                // shader
 	    r->compute.distortion.pipeline_layout, // pipeline_layout
 	    NULL,                                  // specialization_info
-	    &r->compute.clear.pipeline));          // out_compute_pipeline
+	    &r->compute.clear.pipeline);           // out_compute_pipeline
+	VK_CHK_WITH_RET(ret, "vk_create_compute_pipeline", false);
 
 	size_t clear_ubo_size = sizeof(struct render_compute_distortion_ubo_data);
 
-	C(render_buffer_init(        //
-	    vk,                      // vk_bundle
-	    &r->compute.clear.ubo,   // buffer
-	    ubo_usage_flags,         // usage_flags
-	    memory_property_flags,   // memory_property_flags
-	    clear_ubo_size));        // size
-	C(render_buffer_map(         //
-	    vk,                      // vk_bundle
-	    &r->compute.clear.ubo)); // buffer
+	ret = render_buffer_init(  //
+	    vk,                    // vk_bundle
+	    &r->compute.clear.ubo, // buffer
+	    ubo_usage_flags,       // usage_flags
+	    memory_property_flags, // memory_property_flags
+	    clear_ubo_size);       // size
+	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
+
+	ret = render_buffer_map(    //
+	    vk,                     // vk_bundle
+	    &r->compute.clear.ubo); // buffer
+	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
 
 
 	/*
