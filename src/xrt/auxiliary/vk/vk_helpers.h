@@ -625,6 +625,15 @@ vk_name_object(struct vk_bundle *vk, VkDebugReportObjectTypeEXT object_type, uin
  */
 
 /*!
+ * Print the result of a function, info level if ret == `VK_SUCCESS` and error
+ * level otherwise. Also prints file and line.
+ *
+ * @ingroup aux_vk
+ */
+void
+vk_print_result(struct vk_bundle *vk, VkResult ret, const char *fun, const char *file, int line);
+
+/*!
  * Print device information to the logger at the given logging level,
  * if the vk_bundle has that level enabled.
  *

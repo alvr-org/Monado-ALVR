@@ -46,6 +46,16 @@
  */
 
 void
+vk_print_result(struct vk_bundle *vk, VkResult ret, const char *fun, const char *file, int line)
+{
+	if (ret == VK_SUCCESS) {
+		VK_INFO(vk, "%s: %s [%s:%d]", fun, vk_result_string(ret), file, line);
+	} else {
+		VK_ERROR(vk, "%s failed: %s [%s:%d]", fun, vk_result_string(ret), file, line);
+	}
+}
+
+void
 vk_print_device_info(struct vk_bundle *vk,
                      enum u_logging_level log_level,
                      const VkPhysicalDeviceProperties *pdp,
