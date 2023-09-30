@@ -439,6 +439,72 @@ struct vk_buffer
 
 /*
  *
+ * Helper defines.
+ *
+ */
+
+/*!
+ * This define will error if `RET` is not `VK_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then returns @p RET. The implicit argument
+ * @p vk will be used for the @ref vk_print_result call.
+ *
+ * @param RET      The @p VkResult to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ *
+ * @ingroup aux_vk
+ */
+#define VK_CHK_AND_RET(RET, FUNC_STR)                                                                                  \
+	do {                                                                                                           \
+		VkResult _ret = RET;                                                                                   \
+		if (_ret != VK_SUCCESS) {                                                                              \
+			vk_print_result(vk, _ret, FUNC_STR, __FILE__, __LINE__);                                       \
+			return _ret;                                                                                   \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if @p RET is not @p VK_SUCCESS, printing out that the
+ * @p FUNC_STR string has failed, then returns false. The implicit argument
+ * @p vk will be used for the @ref vk_print_result call.
+ *
+ * @param RET      The @p VkResult to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ * @param TO_RET   Value to return, upon error
+ *
+ * @ingroup aux_vk
+ */
+#define VK_CHK_WITH_RET(RET, FUNC_STR, TO_RET)                                                                         \
+	do {                                                                                                           \
+		VkResult _ret = RET;                                                                                   \
+		if (_ret != VK_SUCCESS) {                                                                              \
+			vk_print_result(vk, _ret, FUNC_STR, __FILE__, __LINE__);                                       \
+			return TO_RET;                                                                                 \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if @p RET is not @p VK_SUCCESS, printing out that the
+ * @p FUNC_STR string has failed, then goto @p GOTO. The implicit argument @p vk
+ * will be used for the @ref vk_print_result call.
+ *
+ * @param RET      The @p VkResult to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ * @param GOTO     Label to jump to, upon error
+ *
+ * @ingroup aux_vk
+ */
+#define VK_CHK_WITH_GOTO(RET, FUNC_STR, GOTO)                                                                          \
+	do {                                                                                                           \
+		VkResult _ret = RET;                                                                                   \
+		if (_ret != VK_SUCCESS) {                                                                              \
+			vk_print_result(vk, _ret, FUNC_STR, __FILE__, __LINE__);                                       \
+			goto GOTO;                                                                                     \
+		}                                                                                                      \
+	} while (false)
+
+
+/*
+ *
  * String helper functions.
  *
  */
