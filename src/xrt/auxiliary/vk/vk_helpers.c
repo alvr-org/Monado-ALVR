@@ -654,16 +654,6 @@ xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on
 	}
 }
 
-XRT_CHECK_RESULT bool
-vk_has_error(VkResult res, const char *fun, const char *file, int line)
-{
-	if (res != VK_SUCCESS) {
-		U_LOG_E("%s failed with %s in %s:%d", fun, vk_result_string(res), file, line);
-		return true;
-	}
-	return false;
-}
-
 
 /*
  *

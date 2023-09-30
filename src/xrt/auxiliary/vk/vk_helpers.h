@@ -594,21 +594,6 @@ xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on
 #define VK_WARN(d, ...) U_LOG_IFL_W(d->log_level, __VA_ARGS__)
 #define VK_ERROR(d, ...) U_LOG_IFL_E(d->log_level, __VA_ARGS__)
 
-/*!
- * @brief Check a Vulkan VkResult, writing an error to the log and returning true if not VK_SUCCESS
- *
- * @param fun a string literal with the name of the Vulkan function, for logging purposes.
- * @param res a VkResult from that function.
- * @param file a string literal with the source code filename, such as from __FILE__
- * @param line a source code line number, such as from __LINE__
- *
- * @see vk_check_error, vk_check_error_with_free which wrap this for easier usage.
- *
- * @ingroup aux_vk
- */
-XRT_CHECK_RESULT bool
-vk_has_error(VkResult res, const char *fun, const char *file, int line);
-
 
 /*
  *
