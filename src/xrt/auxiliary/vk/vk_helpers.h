@@ -557,8 +557,11 @@ vk_has_error(VkResult res, const char *fun, const char *file, int line);
  */
 #define vk_check_error(fun, res, ret)                                                                                  \
 	do {                                                                                                           \
-		if (vk_has_error(res, fun, __FILE__, __LINE__))                                                        \
-			return ret;                                                                                    \
+		VkResult _ret = res;                                                                                   \
+		if (_ret != VK_SUCCESS) {                                                                              \
+			vk_print_result(vk, _ret, fun, __FILE__, __LINE__);                                            \
+			return _ret;                                                                                   \
+		}                                                                                                      \
 	} while (0)
 
 /*!

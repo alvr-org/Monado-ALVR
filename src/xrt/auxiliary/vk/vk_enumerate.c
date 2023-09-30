@@ -24,7 +24,9 @@
 
 #define CHECK_FIRST_CALL(FUNC, RET, COUNT)                                                                             \
 	do {                                                                                                           \
-		if (vk_has_error(RET, FUNC, __FILE__, __LINE__)) {                                                     \
+		VkResult _ret = RET;                                                                                   \
+		if (_ret != VK_SUCCESS) {                                                                              \
+			vk_print_result(vk, _ret, FUNC, __FILE__, __LINE__);                                           \
 			return RET;                                                                                    \
 		}                                                                                                      \
 		if (COUNT == 0) {                                                                                      \
@@ -34,7 +36,9 @@
 
 #define CHECK_SECOND_CALL(FUNC, RET, TO_FREE)                                                                          \
 	do {                                                                                                           \
-		if (vk_has_error(RET, FUNC, __FILE__, __LINE__)) {                                                     \
+		VkResult _ret = RET;                                                                                   \
+		if (_ret != VK_SUCCESS) {                                                                              \
+			vk_print_result(vk, _ret, FUNC, __FILE__, __LINE__);                                           \
 			free(TO_FREE);                                                                                 \
 			return RET;                                                                                    \
 		}                                                                                                      \
