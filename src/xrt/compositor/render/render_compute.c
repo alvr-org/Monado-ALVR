@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -10,36 +10,9 @@
 #include "math/m_api.h"
 #include "math/m_matrix_4x4_f64.h"
 
+#include "vk/vk_mini_helpers.h"
+
 #include "render/render_interface.h"
-
-#include <stdio.h>
-
-
-/*
- *
- * Defines
- *
- */
-
-#define C(c)                                                                                                           \
-	do {                                                                                                           \
-		VkResult ret = c;                                                                                      \
-		if (ret != VK_SUCCESS) {                                                                               \
-			return false;                                                                                  \
-		}                                                                                                      \
-	} while (false)
-
-#define D(TYPE, thing)                                                                                                 \
-	if (thing != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkDestroy##TYPE(vk, vk->device, thing, NULL);                                                      \
-		thing = VK_NULL_HANDLE;                                                                                \
-	}
-
-#define DD(pool, thing)                                                                                                \
-	if (thing != VK_NULL_HANDLE) {                                                                                 \
-		free_descriptor_set(vk, pool, thing);                                                                  \
-		thing = VK_NULL_HANDLE;                                                                                \
-	}
 
 
 /*
@@ -340,24 +313,28 @@ update_compute_discriptor_set_target(struct vk_bundle *vk,
 bool
 render_compute_init(struct render_compute *crc, struct render_resources *r)
 {
+	VkResult ret;
+
 	assert(crc->r == NULL);
 
 	struct vk_bundle *vk = r->vk;
 	crc->r = r;
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(crc->layer_descriptor_sets); i++) {
-		C(vk_create_descriptor_set(                 //
-		    vk,                                     //
+		ret = vk_create_descriptor_set(             //
+		    vk,                                     // vk_bundle
 		    r->compute.descriptor_pool,             // descriptor_pool
 		    r->compute.layer.descriptor_set_layout, // descriptor_set_layout
-		    &crc->layer_descriptor_sets[i]));       // descriptor_set
+		    &crc->layer_descriptor_sets[i]);        // descriptor_set
+		VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 	}
 
-	C(vk_create_descriptor_set(                      //
-	    vk,                                          //
+	ret = vk_create_descriptor_set(                  //
+	    vk,                                          // vk_bundle
 	    r->compute.descriptor_pool,                  // descriptor_pool
 	    r->compute.distortion.descriptor_set_layout, // descriptor_set_layout
-	    &crc->shared_descriptor_set));               // descriptor_set
+	    &crc->shared_descriptor_set);                // descriptor_set
+	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
 	return true;
 }
@@ -365,18 +342,21 @@ render_compute_init(struct render_compute *crc, struct render_resources *r)
 bool
 render_compute_begin(struct render_compute *crc)
 {
+	VkResult ret;
 	struct vk_bundle *vk = vk_from_crc(crc);
 
-	C(vk->vkResetCommandPool(vk->device, crc->r->cmd_pool, 0));
+	ret = vk->vkResetCommandPool(vk->device, crc->r->cmd_pool, 0);
+	VK_CHK_WITH_RET(ret, "vkResetCommandPool", false);
 
 	VkCommandBufferBeginInfo begin_info = {
 	    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 	    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 	};
 
-	C(vk->vkBeginCommandBuffer( //
-	    crc->r->cmd,            // commandBuffer
-	    &begin_info));          // pBeginInfo
+	ret = vk->vkBeginCommandBuffer( //
+	    crc->r->cmd,                // commandBuffer
+	    &begin_info);               // pBeginInfo
+	VK_CHK_WITH_RET(ret, "vkBeginCommandBuffer", false);
 
 	vk->vkCmdResetQueryPool( //
 	    crc->r->cmd,         // commandBuffer
@@ -397,6 +377,7 @@ bool
 render_compute_end(struct render_compute *crc)
 {
 	struct vk_bundle *vk = vk_from_crc(crc);
+	VkResult ret;
 
 	vk->vkCmdWriteTimestamp(                  //
 	    crc->r->cmd,                          // commandBuffer
@@ -404,7 +385,8 @@ render_compute_end(struct render_compute *crc)
 	    crc->r->query_pool,                   // queryPool
 	    1);                                   // query
 
-	C(vk->vkEndCommandBuffer(crc->r->cmd));
+	ret = vk->vkEndCommandBuffer(crc->r->cmd);
+	VK_CHK_WITH_RET(ret, "vkEndCommandBuffer", false);
 
 	return true;
 }
