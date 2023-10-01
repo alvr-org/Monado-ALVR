@@ -319,104 +319,6 @@ renderer_build_rendering_target_resources(struct comp_renderer *r,
 }
 
 /*!
- * @pre render_gfx_init(rr, &c->nr)
- * @pre comp_target_has_images(r->c->target)
- */
-static void
-renderer_build_rendering(struct comp_renderer *r,
-                         struct render_gfx *rr,
-                         struct render_gfx_target_resources *rtr,
-                         VkSampler src_samplers[2],
-                         VkImageView src_image_views[2],
-                         struct xrt_normalized_rect src_norm_rects[2])
-{
-	COMP_TRACE_MARKER();
-
-
-	/*
-	 * Rendering
-	 */
-
-	struct render_viewport_data l_viewport_data;
-	struct render_viewport_data r_viewport_data;
-
-	calc_viewport_data(r, &l_viewport_data, &r_viewport_data);
-
-	struct xrt_matrix_2x2 vertex_rots[2];
-	calc_vertex_rot_data(r, vertex_rots);
-
-
-	/*
-	 * Update
-	 */
-
-	struct render_gfx_mesh_ubo_data distortion_data[2] = {
-	    {
-	        .vertex_rot = vertex_rots[0],
-	        .post_transform = src_norm_rects[0],
-	    },
-	    {
-	        .vertex_rot = vertex_rots[1],
-	        .post_transform = src_norm_rects[1],
-	    },
-	};
-
-	render_gfx_update_distortion(rr,                   //
-	                             0,                    // view_index
-	                             src_samplers[0],      //
-	                             src_image_views[0],   //
-	                             &distortion_data[0]); //
-
-	render_gfx_update_distortion(rr,                   //
-	                             1,                    // view_index
-	                             src_samplers[1],      //
-	                             src_image_views[1],   //
-	                             &distortion_data[1]); //
-
-
-	/*
-	 * Target
-	 */
-
-	render_gfx_begin_target( //
-	    rr,                  //
-	    rtr);                //
-
-
-	/*
-	 * Viewport one
-	 */
-
-	render_gfx_begin_view(rr,                //
-	                      0,                 // view_index
-	                      &l_viewport_data); // viewport_data
-
-	render_gfx_distortion(rr);
-
-	render_gfx_end_view(rr);
-
-
-	/*
-	 * Viewport two
-	 */
-
-	render_gfx_begin_view(rr,                //
-	                      1,                 // view_index
-	                      &r_viewport_data); // viewport_data
-
-	render_gfx_distortion(rr);
-
-	render_gfx_end_view(rr);
-
-
-	/*
-	 * End
-	 */
-
-	render_gfx_end_target(rr);
-}
-
-/*!
  * @pre comp_target_has_images(r->c->target)
  * Update r->buffer_count before calling.
  */
@@ -887,6 +789,53 @@ get_image_view(const struct comp_swapchain_image *image, enum xrt_layer_composit
 	return image->views.no_alpha[array_index];
 }
 
+
+/*
+ *
+ * Graphics
+ *
+ */
+
+static void
+do_gfx_mesh(struct comp_renderer *r,
+            struct render_gfx *rr,
+            struct render_gfx_target_resources *rtr,
+            const struct render_viewport_data viewport_datas[2],
+            const struct xrt_matrix_2x2 vertex_rots[2],
+            VkSampler src_samplers[2],
+            VkImageView src_image_views[2],
+            const struct xrt_normalized_rect src_norm_rects[2])
+{
+	render_gfx_begin_target( //
+	    rr,                  //
+	    rtr);                //
+
+	for (uint32_t i = 0; i < 2; i++) {
+		render_gfx_begin_view(   //
+		    rr,                  //
+		    i,                   // view_index
+		    &viewport_datas[i]); // viewport_data
+
+		struct render_gfx_mesh_ubo_data data = {
+		    .vertex_rot = vertex_rots[i],
+		    .post_transform = src_norm_rects[i],
+		};
+
+		render_gfx_update_distortion( //
+		    rr,                       // rr
+		    i,                        // view,
+		    src_samplers[i],          // sampler,
+		    src_image_views[i],       // image_view,
+		    &data);                   // data
+
+		render_gfx_distortion(rr);
+
+		render_gfx_end_view(rr);
+	}
+
+	render_gfx_end_target(rr);
+}
+
 /*!
  * @pre render_gfx_init(rr, &c->nr)
  */
@@ -894,6 +843,8 @@ static void
 do_gfx_mesh_and_proj(struct comp_renderer *r,
                      struct render_gfx *rr,
                      struct render_gfx_target_resources *rts,
+                     const struct render_viewport_data viewport_datas[2],
+                     const struct xrt_matrix_2x2 vertex_rots[2],
                      const struct comp_layer *layer,
                      const struct xrt_layer_projection_view_data *lvd,
                      const struct xrt_layer_projection_view_data *rvd)
@@ -923,7 +874,15 @@ do_gfx_mesh_and_proj(struct comp_renderer *r,
 	    get_image_view(right, data->flags, right_array_index),
 	};
 
-	renderer_build_rendering(r, rr, rts, src_samplers, src_image_views, src_norm_rects);
+	do_gfx_mesh(         //
+	    r,               //
+	    rr,              //
+	    rts,             //
+	    viewport_datas,  //
+	    vertex_rots,     //
+	    src_samplers,    //
+	    src_image_views, //
+	    src_norm_rects); //
 }
 
 /*!
@@ -946,6 +905,14 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	// Sanity check.
 	assert(!fast_path || c->base.slot.layer_count >= 1);
 
+	// Viewport information.
+	struct render_viewport_data viewport_datas[2];
+	calc_viewport_data(r, &viewport_datas[0], &viewport_datas[1]);
+
+	// Vertex rotation information.
+	struct xrt_matrix_2x2 vertex_rots[2];
+	calc_vertex_rot_data(r, vertex_rots);
+
 	// Device view information.
 	struct xrt_fov fovs[2];
 	struct xrt_pose world_poses[2];
@@ -967,7 +934,15 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		c->base.slot.fovs[0] = lvd->fov;
 		c->base.slot.fovs[1] = rvd->fov;
 
-		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
+		do_gfx_mesh_and_proj( //
+		    r,                //
+		    rr,               //
+		    rtr,              //
+		    viewport_datas,   //
+		    vertex_rots,      //
+		    layer,            //
+		    lvd,              //
+		    rvd);             //
 
 	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		// Fast path.
@@ -980,7 +955,15 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		c->base.slot.fovs[0] = lvd->fov;
 		c->base.slot.fovs[1] = rvd->fov;
 
-		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
+		do_gfx_mesh_and_proj( //
+		    r,                //
+		    rr,               //
+		    rtr,              //
+		    viewport_datas,   //
+		    vertex_rots,      //
+		    layer,            //
+		    lvd,              //
+		    rvd);             //
 
 	} else if (fast_path) {
 
@@ -1015,7 +998,16 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		    {.x = 0, .y = 0, .w = 1, .h = 1},
 		};
 
-		renderer_build_rendering(r, rr, rtr, src_samplers, src_image_views, src_norm_rects);
+		// We are passing in the same old and new poses.
+		do_gfx_mesh(         //
+		    r,               //
+		    rr,              //
+		    rtr,             //
+		    viewport_datas,  //
+		    vertex_rots,     //
+		    src_samplers,    //
+		    src_image_views, //
+		    src_norm_rects); //
 	}
 
 	// Make the command buffer submittable.
