@@ -759,35 +759,21 @@ void
 render_gfx_end_view(struct render_gfx *rr);
 
 /*!
+ * Dispatch one mesh shader instance into the current view.
+ *
  * @public @memberof render_gfx
  */
 void
-render_gfx_distortion(struct render_gfx *rr);
+render_gfx_distortion(struct render_gfx *rr,
+                      uint32_t view_index,
+                      const struct xrt_matrix_2x2 *vertex_rot,
+                      VkSampler sampler,
+                      VkImageView image_view,
+                      const struct xrt_normalized_rect *src_rect);
 
 /*!
  * @}
  */
-
-/*
- *
- * Update functions.
- *
- */
-
-/*!
- * @name Update functions
- * @{
- */
-/*!
- * @public @memberof render_gfx
- */
-void
-render_gfx_update_distortion(struct render_gfx *rr,
-                             uint32_t view,
-                             VkSampler sampler,
-                             VkImageView image_view,
-                             struct render_gfx_mesh_ubo_data *data);
-//! @}
 
 
 /*

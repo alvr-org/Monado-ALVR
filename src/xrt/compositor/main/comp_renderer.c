@@ -816,19 +816,13 @@ do_gfx_mesh(struct comp_renderer *r,
 		    i,                   // view_index
 		    &viewport_datas[i]); // viewport_data
 
-		struct render_gfx_mesh_ubo_data data = {
-		    .vertex_rot = vertex_rots[i],
-		    .post_transform = src_norm_rects[i],
-		};
-
-		render_gfx_update_distortion( //
-		    rr,                       // rr
-		    i,                        // view,
-		    src_samplers[i],          // sampler,
-		    src_image_views[i],       // image_view,
-		    &data);                   // data
-
-		render_gfx_distortion(rr);
+		render_gfx_distortion(   //
+		    rr,                  //
+		    i,                   //
+		    &vertex_rots[i],     //
+		    src_samplers[i],     //
+		    src_image_views[i],  //
+		    &src_norm_rects[i]); //
 
 		render_gfx_end_view(rr);
 	}

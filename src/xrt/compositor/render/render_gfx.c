@@ -711,19 +711,50 @@ render_gfx_end_view(struct render_gfx *rr)
 }
 
 void
-render_gfx_distortion(struct render_gfx *rr)
+render_gfx_distortion(struct render_gfx *rr,
+                      uint32_t view_index,
+                      const struct xrt_matrix_2x2 *vertex_rot,
+                      VkSampler sampler,
+                      VkImageView image_view,
+                      const struct xrt_normalized_rect *src_rect)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;
 
-	uint32_t view = rr->current_view;
-	struct render_gfx_view *v = &rr->views[view];
+	assert(view_index == rr->current_view);
+
+	struct render_gfx_view *v = &rr->views[view_index];
+
+	struct render_buffer *ubo = &r->mesh.ubos[view_index];
+	VkDescriptorSet descriptor_set = v->mesh.descriptor_set;
+
+	/*
+	 * UBO data.
+	 */
+
+	struct render_gfx_mesh_ubo_data data = {
+	    .vertex_rot = *vertex_rot,
+	    .post_transform = *src_rect,
+	};
+
+	render_buffer_write(vk, ubo, &data, sizeof(struct render_gfx_mesh_ubo_data));
+
 
 	/*
 	 * Descriptors and pipeline.
 	 */
 
-	VkDescriptorSet descriptor_sets[1] = {v->mesh.descriptor_set};
+	update_mesh_discriptor_set( //
+	    vk,                     // vk_bundle
+	    r->mesh.src_binding,    // src_binding
+	    sampler,                // sampler
+	    image_view,             // image_view
+	    r->mesh.ubo_binding,    // ubo_binding
+	    ubo->buffer,            // buffer
+	    VK_WHOLE_SIZE,          // size
+	    descriptor_set);        // descriptor_set
+
+	VkDescriptorSet descriptor_sets[1] = {descriptor_set};
 	vk->vkCmdBindDescriptorSets(         //
 	    r->cmd,                          // commandBuffer
 	    VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
@@ -767,13 +798,13 @@ render_gfx_distortion(struct render_gfx *rr)
 		    0,                     // offset
 		    VK_INDEX_TYPE_UINT32); // indexType
 
-		vk->vkCmdDrawIndexed(            //
-		    r->cmd,                      // commandBuffer
-		    r->mesh.index_counts[view],  // indexCount
-		    1,                           // instanceCount
-		    r->mesh.index_offsets[view], // firstIndex
-		    0,                           // vertexOffset
-		    0);                          // firstInstance
+		vk->vkCmdDrawIndexed(                  //
+		    r->cmd,                            // commandBuffer
+		    r->mesh.index_counts[view_index],  // indexCount
+		    1,                                 // instanceCount
+		    r->mesh.index_offsets[view_index], // firstIndex
+		    0,                                 // vertexOffset
+		    0);                                // firstInstance
 	} else {
 		vk->vkCmdDraw(            //
 		    r->cmd,               // commandBuffer
@@ -782,28 +813,4 @@ render_gfx_distortion(struct render_gfx *rr)
 		    0,                    // firstVertex
 		    0);                   // firstInstance
 	}
-}
-
-void
-render_gfx_update_distortion(struct render_gfx *rr,
-                             uint32_t view_index,
-                             VkSampler sampler,
-                             VkImageView image_view,
-                             struct render_gfx_mesh_ubo_data *data)
-{
-	struct vk_bundle *vk = vk_from_rr(rr);
-	struct render_resources *r = rr->r;
-	struct render_gfx_view *v = &rr->views[view_index];
-
-	render_buffer_write(vk, &r->mesh.ubos[view_index], data, sizeof(struct render_gfx_mesh_ubo_data));
-
-	update_mesh_discriptor_set(          //
-	    vk,                              // vk_bundle
-	    r->mesh.src_binding,             // src_binding
-	    sampler,                         // sampler
-	    image_view,                      // image_view
-	    r->mesh.ubo_binding,             // ubo_binding
-	    r->mesh.ubos[view_index].buffer, // buffer
-	    VK_WHOLE_SIZE,                   // size
-	    v->mesh.descriptor_set);         // descriptor_set
 }
