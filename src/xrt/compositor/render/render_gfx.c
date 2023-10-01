@@ -651,7 +651,7 @@ render_gfx_end_target(struct render_gfx *rr)
 }
 
 void
-render_gfx_begin_view(struct render_gfx *rr, uint32_t view, struct render_viewport_data *viewport_data)
+render_gfx_begin_view(struct render_gfx *rr, uint32_t view, const struct render_viewport_data *viewport_data)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 

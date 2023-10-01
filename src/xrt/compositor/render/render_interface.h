@@ -750,7 +750,7 @@ render_gfx_end_target(struct render_gfx *rr);
  * @public @memberof render_gfx
  */
 void
-render_gfx_begin_view(struct render_gfx *rr, uint32_t view, struct render_viewport_data *viewport_data);
+render_gfx_begin_view(struct render_gfx *rr, uint32_t view, const struct render_viewport_data *viewport_data);
 
 /*!
  * @public @memberof render_gfx
