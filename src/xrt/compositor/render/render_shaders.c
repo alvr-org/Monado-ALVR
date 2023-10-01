@@ -8,22 +8,23 @@
  * @ingroup comp_render
  */
 
-#include "render/render_interface.h"
-
+#include "xrt/xrt_config_build.h"
 #include "vk/vk_mini_helpers.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+#include "render/render_interface.h"
+
+
+/*
+ *
+ * Shader headers.
+ *
+ */
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wnewline-eof"
 #endif
-
-#include "xrt/xrt_config_build.h"
 
 #include "shaders/blit.comp.h"
 #include "shaders/clear.comp.h"
