@@ -938,7 +938,7 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	render_gfx_begin(rr);
 
 
-	if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+	if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION) {
 		// Fast path.
 		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
 		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
