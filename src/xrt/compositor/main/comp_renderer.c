@@ -215,6 +215,54 @@ calc_viewport_data(struct comp_renderer *r,
 	*out_r_viewport_data = r_viewport_data;
 }
 
+static void
+calc_pose_data(struct comp_renderer *r,
+               struct xrt_fov out_fovs[2],
+               struct xrt_pose out_world[2],
+               struct xrt_pose out_eye[2])
+{
+	COMP_TRACE_MARKER();
+
+	struct xrt_vec3 default_eye_relation = {
+	    0.063000f, /*! @todo get actual ipd_meters */
+	    0.0f,
+	    0.0f,
+	};
+
+	struct xrt_space_relation head_relation = XRT_SPACE_RELATION_ZERO;
+	struct xrt_fov fovs[2] = XRT_STRUCT_INIT;
+	struct xrt_pose poses[2] = XRT_STRUCT_INIT;
+
+	xrt_device_get_view_poses(                           //
+	    r->c->xdev,                                      // xdev
+	    &default_eye_relation,                           // default_eye_relation
+	    r->c->frame.rendering.predicted_display_time_ns, // at_timestamp_ns
+	    2,                                               // view_count
+	    &head_relation,                                  // out_head_relation
+	    fovs,                                            // out_fovs
+	    poses);                                          // out_poses
+
+	for (uint32_t i = 0; i < 2; i++) {
+		const struct xrt_fov fov = fovs[i];
+		const struct xrt_pose eye_pose = poses[i];
+
+		struct xrt_space_relation result = {0};
+		struct xrt_relation_chain xrc = {0};
+		m_relation_chain_push_pose_if_not_identity(&xrc, &eye_pose);
+		m_relation_chain_push_relation(&xrc, &head_relation);
+		m_relation_chain_resolve(&xrc, &result);
+
+		// Results to callers.
+		out_fovs[i] = fov;
+		out_world[i] = result.pose;
+		out_eye[i] = eye_pose;
+
+		// For remote rendering targets.
+		r->c->base.slot.fovs[i] = fov;
+		r->c->base.slot.poses[i] = result.pose;
+	}
+}
+
 //! @pre comp_target_has_images(r->c->target)
 static void
 renderer_build_rendering_target_resources(struct comp_renderer *r,
@@ -717,49 +765,6 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 }
 
 static void
-renderer_get_view_projection(struct comp_renderer *r)
-{
-	COMP_TRACE_MARKER();
-
-	struct xrt_vec3 default_eye_relation = {
-	    0.063000f, /*! @todo get actual ipd_meters */
-	    0.0f,
-	    0.0f,
-	};
-
-	struct xrt_space_relation head_relation = XRT_SPACE_RELATION_ZERO;
-	struct xrt_pose poses[2] = {0};
-
-	xrt_device_get_view_poses(                           //
-	    r->c->xdev,                                      //
-	    &default_eye_relation,                           //
-	    r->c->frame.rendering.predicted_display_time_ns, //
-	    2,                                               //
-	    &head_relation,                                  //
-	    r->c->base.slot.fovs,                            //
-	    poses);                                          //
-
-	struct xrt_pose base_space_pose = XRT_POSE_IDENTITY;
-
-	for (uint32_t i = 0; i < 2; i++) {
-		const struct xrt_fov fov = r->c->base.slot.fovs[i];
-		const struct xrt_pose eye_pose = poses[i];
-
-		comp_layer_renderer_set_fov(r->lr, &fov, i);
-
-		struct xrt_space_relation result = {0};
-		struct xrt_relation_chain xrc = {0};
-		m_relation_chain_push_pose_if_not_identity(&xrc, &eye_pose);
-		m_relation_chain_push_relation(&xrc, &head_relation);
-		m_relation_chain_push_pose_if_not_identity(&xrc, &base_space_pose);
-		m_relation_chain_resolve(&xrc, &result);
-
-		r->c->base.slot.poses[i] = result.pose;
-		comp_layer_renderer_set_pose(r->lr, &eye_pose, &result.pose, i);
-	}
-}
-
-static void
 renderer_acquire_swapchain_image(struct comp_renderer *r)
 {
 	COMP_TRACE_MARKER();
@@ -934,6 +939,12 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	// Sanity check.
 	assert(!fast_path || c->base.slot.layer_count >= 1);
 
+	// Device view information.
+	struct xrt_fov fovs[2];
+	struct xrt_pose world_poses[2];
+	struct xrt_pose eye_poses[2];
+	calc_pose_data(r, fovs, world_poses, eye_poses);
+
 	// Need to be begin for all paths.
 	render_gfx_begin(rr);
 
@@ -970,7 +981,11 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 
 	} else {
 
-		renderer_get_view_projection(r);
+		// Setup the information for the layer renderer.
+		for (uint32_t i = 0; i < 2; i++) {
+			comp_layer_renderer_set_fov(r->lr, &fovs[i], i);
+			comp_layer_renderer_set_pose(r->lr, &eye_poses[i], &world_poses[i], i);
+		}
 
 		comp_layer_renderer_draw(    //
 		    r->lr,                   //
@@ -1013,47 +1028,6 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
  *
  */
 
-static void
-get_view_poses(struct comp_renderer *r, struct xrt_pose out_world[2], struct xrt_pose out_eye[2])
-{
-	COMP_TRACE_MARKER();
-
-	struct xrt_vec3 default_eye_relation = {
-	    0.063000f, /*! @todo get actual ipd_meters */
-	    0.0f,
-	    0.0f,
-	};
-
-	struct xrt_space_relation head_relation = XRT_SPACE_RELATION_ZERO;
-	struct xrt_pose poses[2] = {0};
-
-	xrt_device_get_view_poses(                           //
-	    r->c->xdev,                                      //
-	    &default_eye_relation,                           //
-	    r->c->frame.rendering.predicted_display_time_ns, //
-	    2,                                               //
-	    &head_relation,                                  //
-	    r->c->base.slot.fovs,                            //
-	    poses);                                          //
-
-	for (uint32_t i = 0; i < 2; i++) {
-		const struct xrt_fov fov = r->c->base.slot.fovs[i];
-		const struct xrt_pose eye_pose = poses[i];
-
-		comp_layer_renderer_set_fov(r->lr, &fov, i);
-
-		struct xrt_space_relation result = {0};
-		struct xrt_relation_chain xrc = {0};
-		m_relation_chain_push_pose_if_not_identity(&xrc, &eye_pose);
-		m_relation_chain_push_relation(&xrc, &head_relation);
-		m_relation_chain_resolve(&xrc, &result);
-
-		out_eye[i] = eye_pose;
-		out_world[i] = result.pose;
-		r->c->base.slot.poses[i] = result.pose;
-	}
-}
-
 /*!
  * @pre render_compute_init(crc, &c->nr)
  */
@@ -1072,9 +1046,10 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 	bool do_timewarp = !c->debug.atw_off;
 
 	// Device view information.
+	struct xrt_fov fovs[2]; // Unused
 	struct xrt_pose world_poses[2];
 	struct xrt_pose eye_poses[2]; // New eye poses, unused.
-	get_view_poses(r, world_poses, eye_poses);
+	calc_pose_data(r, fovs, world_poses, eye_poses);
 
 	// Target Vulkan resources..
 	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
