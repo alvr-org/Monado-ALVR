@@ -50,6 +50,28 @@
 
 /*
  *
+ * Helpers
+ *
+ */
+
+#define LOAD(SHADER)                                                                                                   \
+	do {                                                                                                           \
+		const uint32_t *code = shaders_##SHADER;                                                               \
+		size_t size = sizeof(shaders_##SHADER);                                                                \
+		VkResult ret = shader_load(vk,          /* vk_bundle */                                                \
+		                           code,        /* code      */                                                \
+		                           size,        /* size      */                                                \
+		                           &s->SHADER); /* out       */                                                \
+		if (ret != VK_SUCCESS) {                                                                               \
+			VK_ERROR(vk, "Failed to load shader '" #SHADER "'");                                           \
+			render_shaders_close(s, vk);                                                                   \
+			return false;                                                                                  \
+		}                                                                                                      \
+	} while (false)
+
+
+/*
+ *
  * Functions.
  *
  */
@@ -78,84 +100,33 @@ shader_load(struct vk_bundle *vk, const uint32_t *code, size_t size, VkShaderMod
 	return VK_SUCCESS;
 }
 
-#define C(c)                                                                                                           \
-	do {                                                                                                           \
-		VkResult ret = c;                                                                                      \
-		if (ret != VK_SUCCESS) {                                                                               \
-			render_shaders_close(s, vk);                                                                   \
-			return false;                                                                                  \
-		}                                                                                                      \
-	} while (false)
-
 bool
 render_shaders_load(struct render_shaders *s, struct vk_bundle *vk)
 {
-	C(shader_load(vk,                        // vk_bundle
-	              shaders_blit_comp,         // data
-	              sizeof(shaders_blit_comp), // size
-	              &s->blit_comp));           // out
+	LOAD(blit_comp);
 
-	C(shader_load(vk,                         // vk_bundle
-	              shaders_clear_comp,         // data
-	              sizeof(shaders_clear_comp), // size
-	              &s->clear_comp));           // out
+	LOAD(clear_comp);
 
-	C(shader_load(vk,                         // vk_bundle
-	              shaders_layer_comp,         // data
-	              sizeof(shaders_layer_comp), // size
-	              &s->layer_comp));           // out
+	LOAD(layer_comp);
 
-	C(shader_load(vk,                              // vk_bundle
-	              shaders_distortion_comp,         // data
-	              sizeof(shaders_distortion_comp), // size
-	              &s->distortion_comp));           // out
+	LOAD(distortion_comp);
 
-	C(shader_load(vk,                        // vk_bundle
-	              shaders_mesh_vert,         // data
-	              sizeof(shaders_mesh_vert), // size
-	              &s->mesh_vert));           // out
-	C(shader_load(vk,                        // vk_bundle
-	              shaders_mesh_frag,         // data
-	              sizeof(shaders_mesh_frag), // size
-	              &s->mesh_frag));           // out
+	LOAD(mesh_vert);
+	LOAD(mesh_frag);
 
-	C(shader_load(vk,                             // vk_bundle
-	              shaders_equirect1_vert,         // data
-	              sizeof(shaders_equirect1_vert), // size
-	              &s->equirect1_vert));           // out
-	C(shader_load(vk,                             // vk_bundle
-	              shaders_equirect1_frag,         // data
-	              sizeof(shaders_equirect1_frag), // size
-	              &s->equirect1_frag));           // out
+	LOAD(equirect1_vert);
+	LOAD(equirect1_frag);
 
-	C(shader_load(vk,                             // vk_bundle
-	              shaders_equirect2_vert,         // data
-	              sizeof(shaders_equirect2_vert), // size
-	              &s->equirect2_vert));           // out
-	C(shader_load(vk,                             // vk_bundle
-	              shaders_equirect2_frag,         // data
-	              sizeof(shaders_equirect2_frag), // size
-	              &s->equirect2_frag));           // out
+	LOAD(equirect2_vert);
+	LOAD(equirect2_frag);
 
 #ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-	C(shader_load(vk,                        // vk_bundle
-	              shaders_cube_vert,         // data
-	              sizeof(shaders_cube_vert), // size
-	              &s->cube_vert));           // out
-	C(shader_load(vk,                        // vk_bundle
-	              shaders_cube_frag,         // data
-	              sizeof(shaders_cube_frag), // size
-	              &s->cube_frag));           // out
+	LOAD(cube_vert);
+	LOAD(cube_frag);
 #endif
 
-	C(shader_load(vk,                         // vk_bundle
-	              shaders_layer_vert,         // data
-	              sizeof(shaders_layer_vert), // size
-	              &s->layer_vert));           // out
-	C(shader_load(vk,                         // vk_bundle
-	              shaders_layer_frag,         // data
-	              sizeof(shaders_layer_frag), // size
-	              &s->layer_frag));           // out
+	LOAD(layer_vert);
+	LOAD(layer_frag);
 
 	VK_DEBUG(vk, "Shaders loaded!");
 
