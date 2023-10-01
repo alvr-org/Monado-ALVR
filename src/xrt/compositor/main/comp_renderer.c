@@ -964,6 +964,10 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 
 		do_gfx_mesh_and_proj(r, rr, rtr, layer, lvd, rvd);
 
+	} else if (fast_path) {
+
+		COMP_ERROR(c, "Fast path on but no projection layer, can't use layer renderer!");
+
 	} else {
 
 		renderer_get_view_projection(r);
