@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -9,6 +9,8 @@
  */
 
 #include "render/render_interface.h"
+
+#include "vk/vk_mini_helpers.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +54,7 @@
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 shader_load(struct vk_bundle *vk, const uint32_t *code, size_t size, VkShaderModule *out_module)
 {
 	VkResult ret;
@@ -64,14 +66,12 @@ shader_load(struct vk_bundle *vk, const uint32_t *code, size_t size, VkShaderMod
 	};
 
 	VkShaderModule module;
-	ret = vk->vkCreateShaderModule(vk->device, //
-	                               &info,      //
-	                               NULL,       //
-	                               &module);   //
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkCreateShaderModule failed: %s", vk_result_string(ret));
-		return ret;
-	}
+	ret = vk->vkCreateShaderModule( //
+	    vk->device,                 //
+	    &info,                      //
+	    NULL,                       //
+	    &module);                   //
+	VK_CHK_AND_RET(ret, "vkCreateShaderModule");
 
 	*out_module = module;
 
@@ -162,31 +162,25 @@ render_shaders_load(struct render_shaders *s, struct vk_bundle *vk)
 	return true;
 }
 
-#define D(shader)                                                                                                      \
-	if (s->shader != VK_NULL_HANDLE) {                                                                             \
-		vk->vkDestroyShaderModule(vk->device, s->shader, NULL);                                                \
-		s->shader = VK_NULL_HANDLE;                                                                            \
-	}
-
 void
 render_shaders_close(struct render_shaders *s, struct vk_bundle *vk)
 {
-	D(blit_comp);
-	D(clear_comp);
-	D(distortion_comp);
-	D(layer_comp);
-	D(mesh_vert);
-	D(mesh_frag);
-	D(equirect1_vert);
-	D(equirect1_frag);
-	D(equirect2_vert);
-	D(equirect2_frag);
+	D(ShaderModule, s->blit_comp);
+	D(ShaderModule, s->clear_comp);
+	D(ShaderModule, s->distortion_comp);
+	D(ShaderModule, s->layer_comp);
+	D(ShaderModule, s->mesh_vert);
+	D(ShaderModule, s->mesh_frag);
+	D(ShaderModule, s->equirect1_vert);
+	D(ShaderModule, s->equirect1_frag);
+	D(ShaderModule, s->equirect2_vert);
+	D(ShaderModule, s->equirect2_frag);
 #ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-	D(cube_vert);
-	D(cube_frag);
+	D(ShaderModule, s->cube_vert);
+	D(ShaderModule, s->cube_frag);
 #endif
-	D(layer_vert);
-	D(layer_frag);
+	D(ShaderModule, s->layer_vert);
+	D(ShaderModule, s->layer_frag);
 
 	VK_DEBUG(vk, "Shaders destroyed!");
 }
