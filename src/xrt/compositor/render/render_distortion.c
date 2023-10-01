@@ -13,48 +13,9 @@
 #include "math/m_matrix_2x2.h"
 #include "math/m_vec2.h"
 
+#include "vk/vk_mini_helpers.h"
+
 #include "render/render_interface.h"
-
-
-/*
- *
- * Helper defines.
- *
- */
-
-/*!
- * This define will error if `RET` is not `VK_SUCCESS`, printing out that the
- * `FUNC_STR` string has failed, then goto `GOTO`, `VK` will be used for the
- * `VK_ERROR` call.
- */
-#define CG(VK, RET, FUNC_STR, GOTO)                                                                                    \
-	do {                                                                                                           \
-		VkResult CG_ret = RET;                                                                                 \
-		if (CG_ret != VK_SUCCESS) {                                                                            \
-			VK_ERROR(VK, FUNC_STR ": %s", vk_result_string(CG_ret));                                       \
-			goto GOTO;                                                                                     \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * Calls `vkDestroy##TYPE` on `THING` if it is not `VK_NULL_HANDLE`, sets it to
- * `VK_NULL_HANDLE` afterwards.
- */
-#define D(TYPE, THING)                                                                                                 \
-	if (THING != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkDestroy##TYPE(vk->device, THING, NULL);                                                          \
-		THING = VK_NULL_HANDLE;                                                                                \
-	}
-
-/*!
- * Calls `vkFree##TYPE` on `THING` if it is not `VK_NULL_HANDLE`, sets it to
- * `VK_NULL_HANDLE` afterwards.
- */
-#define DF(TYPE, THING)                                                                                                \
-	if (THING != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkFree##TYPE(vk->device, THING, NULL);                                                             \
-		THING = VK_NULL_HANDLE;                                                                                \
-	}
 
 
 /*
@@ -63,7 +24,7 @@
  *
  */
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_distortion_image_and_view(struct vk_bundle *vk,
                                  VkExtent2D extent,
                                  VkDeviceMemory *out_device_memory,
@@ -84,10 +45,7 @@ create_distortion_image_and_view(struct vk_bundle *vk,
 	    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // usage
 	    &device_memory,                                               // out_device_memory
 	    &image);                                                      // out_image
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vk_create_image_simple: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vk_create_image_simple");
 
 	VkImageSubresourceRange subresource_range = {
 	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -104,18 +62,19 @@ create_distortion_image_and_view(struct vk_bundle *vk,
 	    format,            // format
 	    subresource_range, // subresource_range
 	    &image_view);      // out_image_view
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vk_create_view: %s", vk_result_string(ret));
-		D(Image, image);
-		DF(Memory, device_memory);
-		return ret;
-	}
+	VK_CHK_WITH_GOTO(ret, "vk_create_view", err_free);
 
 	*out_device_memory = device_memory;
 	*out_image = image;
 	*out_image_view = image_view;
 
 	return VK_SUCCESS;
+
+err_free:
+	D(Image, image);
+	DF(Memory, device_memory);
+
+	return ret;
 }
 
 static void
@@ -175,7 +134,7 @@ queue_upload_for_first_level_and_layer_locked(
 	    subresource_range);                       //
 }
 
-static VkResult
+XRT_CHECK_RESULT static VkResult
 create_and_queue_upload_locked(struct vk_bundle *vk,
                                struct vk_cmd_pool *pool,
                                VkCommandBuffer cmd,
@@ -196,9 +155,7 @@ create_and_queue_upload_locked(struct vk_bundle *vk,
 	    &device_memory,                     // out_device_memory
 	    &image,                             // out_image
 	    &image_view);                       // out_image_view
-	if (ret != VK_SUCCESS) {
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "create_distortion_image_and_view");
 
 	queue_upload_for_first_level_and_layer_locked( //
 	    vk,                                        // vk_bundle
@@ -263,7 +220,7 @@ calc_uv_to_tanangle(struct xrt_device *xdev, uint32_t view, struct xrt_normalize
 	*out_rect = transform;
 }
 
-static XRT_CHECK_RESULT VkResult
+XRT_CHECK_RESULT static VkResult
 create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
                                               struct xrt_device *xdev,
                                               struct render_buffer *r_buffer,
@@ -293,18 +250,18 @@ create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
 	VkDeviceSize size = sizeof(struct texture);
 
 	ret = render_buffer_init(vk, r_buffer, usage_flags, properties, size);
-	CG(vk, ret, "render_buffer_init", err_buffers);
+	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
 	ret = render_buffer_init(vk, g_buffer, usage_flags, properties, size);
-	CG(vk, ret, "render_buffer_init", err_buffers);
+	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
 	ret = render_buffer_init(vk, b_buffer, usage_flags, properties, size);
-	CG(vk, ret, "render_buffer_init", err_buffers);
+	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
 
 	ret = render_buffer_map(vk, r_buffer);
-	CG(vk, ret, "render_buffer_map", err_buffers);
+	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
 	ret = render_buffer_map(vk, g_buffer);
-	CG(vk, ret, "render_buffer_map", err_buffers);
+	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
 	ret = render_buffer_map(vk, b_buffer);
-	CG(vk, ret, "render_buffer_map", err_buffers);
+	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
 
 	struct texture *r = r_buffer->mapped;
 	struct texture *g = g_buffer->mapped;
@@ -378,10 +335,10 @@ render_distortion_buffer_init(struct render_resources *r,
 	 */
 
 	ret = create_and_fill_in_distortion_buffer_for_view(vk, xdev, &bufs[0], &bufs[2], &bufs[4], 0, pre_rotate);
-	CG(vk, ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
+	VK_CHK_WITH_GOTO(ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
 
 	ret = create_and_fill_in_distortion_buffer_for_view(vk, xdev, &bufs[1], &bufs[3], &bufs[5], 1, pre_rotate);
-	CG(vk, ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
+	VK_CHK_WITH_GOTO(ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
 
 
 	/*
@@ -393,7 +350,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	vk_cmd_pool_lock(pool);
 
 	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &upload_buffer);
-	CG(vk, ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", err_unlock);
+	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", err_unlock);
 
 	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		ret = create_and_queue_upload_locked( //
@@ -404,11 +361,11 @@ render_distortion_buffer_init(struct render_resources *r,
 		    &device_memories[i],              // out_image_device_memory
 		    &images[i],                       // out_image
 		    &image_views[i]);                 // out_image_view
-		CG(vk, ret, "create_and_queue_upload_locked", err_cmd);
+		VK_CHK_WITH_GOTO(ret, "create_and_queue_upload_locked", err_cmd);
 	}
 
 	ret = vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked(vk, pool, upload_buffer);
-	CG(vk, ret, "vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked", err_cmd);
+	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked", err_cmd);
 
 	vk_cmd_pool_unlock(pool);
 
