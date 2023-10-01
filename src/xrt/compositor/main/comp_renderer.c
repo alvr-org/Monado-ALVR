@@ -216,6 +216,40 @@ calc_viewport_data(struct comp_renderer *r,
 }
 
 static void
+calc_vertex_rot_data(struct comp_renderer *r, struct xrt_matrix_2x2 out_vertex_rots[2])
+{
+	bool pre_rotate = false;
+	if (r->c->target->surface_transform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
+	    r->c->target->surface_transform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
+		COMP_SPEW(r->c, "Swapping width and height, since we are pre rotating");
+		pre_rotate = true;
+	}
+
+	const struct xrt_matrix_2x2 rotation_90_cw = {{
+	    .vecs =
+	        {
+	            {0, 1},
+	            {-1, 0},
+	        },
+	}};
+
+	for (uint32_t i = 0; i < 2; i++) {
+		// Get the view.
+		struct xrt_view *v = &r->c->xdev->hmd->views[i];
+
+		// Copy data.
+		struct xrt_matrix_2x2 rot = v->rot;
+
+		// Should we rotate.
+		if (pre_rotate) {
+			m_mat2x2_multiply(&rot, &rotation_90_cw, &rot);
+		}
+
+		out_vertex_rots[i] = rot;
+	}
+}
+
+static void
 calc_pose_data(struct comp_renderer *r,
                struct xrt_fov out_fovs[2],
                struct xrt_pose out_world[2],
@@ -298,28 +332,18 @@ renderer_build_rendering(struct comp_renderer *r,
 {
 	COMP_TRACE_MARKER();
 
-	struct comp_compositor *c = r->c;
-
 
 	/*
 	 * Rendering
 	 */
-
-	bool pre_rotate = false;
-	if (r->c->target->surface_transform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
-	    r->c->target->surface_transform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
-		COMP_SPEW(c, "Swapping width and height, since we are pre rotating");
-		pre_rotate = true;
-	}
 
 	struct render_viewport_data l_viewport_data;
 	struct render_viewport_data r_viewport_data;
 
 	calc_viewport_data(r, &l_viewport_data, &r_viewport_data);
 
-	struct xrt_view *l_v = &r->c->xdev->hmd->views[0];
-	struct xrt_view *r_v = &r->c->xdev->hmd->views[1];
-
+	struct xrt_matrix_2x2 vertex_rots[2];
+	calc_vertex_rot_data(r, vertex_rots);
 
 
 	/*
@@ -328,31 +352,14 @@ renderer_build_rendering(struct comp_renderer *r,
 
 	struct render_gfx_mesh_ubo_data distortion_data[2] = {
 	    {
-	        .vertex_rot = l_v->rot,
+	        .vertex_rot = vertex_rots[0],
 	        .post_transform = src_norm_rects[0],
 	    },
 	    {
-	        .vertex_rot = r_v->rot,
+	        .vertex_rot = vertex_rots[1],
 	        .post_transform = src_norm_rects[1],
 	    },
 	};
-
-	const struct xrt_matrix_2x2 rotation_90_cw = {{
-	    .vecs =
-	        {
-	            {0, 1},
-	            {-1, 0},
-	        },
-	}};
-
-	if (pre_rotate) {
-		m_mat2x2_multiply(&distortion_data[0].vertex_rot,  //
-		                  &rotation_90_cw,                 //
-		                  &distortion_data[0].vertex_rot); //
-		m_mat2x2_multiply(&distortion_data[1].vertex_rot,  //
-		                  &rotation_90_cw,                 //
-		                  &distortion_data[1].vertex_rot); //
-	}
 
 	render_gfx_update_distortion(rr,                   //
 	                             0,                    // view_index
