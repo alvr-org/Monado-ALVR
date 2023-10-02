@@ -115,6 +115,13 @@ vk_check_required_instance_extensions(struct vk_bundle *vk, struct u_string_list
 		have_missing = true;
 	}
 
+	// Clean up after us.
+	if (props != NULL) {
+		free(props);
+		props = NULL;
+		prop_count = 0;
+	}
+
 	if (!have_missing) {
 		return VK_SUCCESS;
 	}
