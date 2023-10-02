@@ -1,4 +1,4 @@
-// Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 // Author: Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
 // Author: Pete Black <pete.black@collabora.com>
@@ -6,11 +6,17 @@
 
 #version 450
 
+// Should we do timewarp.
+layout(constant_id = 0) const bool do_timewarp = false;
 
 layout (binding = 1, std140) uniform Config
 {
 	vec4 vertex_rot;
 	vec4 post_transform;
+
+	// Only used for timewarp.
+	vec4 pre_transform;
+	mat4 transform;
 } ubo;
 
 layout (location = 0)  in vec4 in_pos_ruv;
@@ -25,7 +31,7 @@ out gl_PerVertex
 };
 
 
-vec2 transform_uv(vec2 uv)
+vec2 transform_uv_subimage(vec2 uv)
 {
 	vec2 values = uv;
 
@@ -34,6 +40,37 @@ vec2 transform_uv(vec2 uv)
 
 	// Ready to be used.
 	return values.xy;
+}
+
+vec2 transform_uv_timewarp(vec2 uv)
+{
+	vec4 values = vec4(uv, -1, 1);
+
+	// From uv to tan angle (tangent space).
+	values.xy = fma(values.xy, ubo.pre_transform.zw, ubo.pre_transform.xy);
+	values.y = -values.y; // Flip to OpenXR coordinate system.
+
+	// Timewarp.
+	values = ubo.transform * values;
+	values.xy = values.xy * (1.0 / max(values.w, 0.00001));
+
+	// From [-1, 1] to [0, 1]
+	values.xy = values.xy * 0.5 + 0.5;
+
+	// To deal with OpenGL flip and sub image view.
+	values.xy = fma(values.xy, ubo.post_transform.zw, ubo.post_transform.xy);
+
+	// Done.
+	return values.xy;
+}
+
+vec2 transform_uv(vec2 uv)
+{
+	if (do_timewarp) {
+		return transform_uv_timewarp(uv);
+	} else {
+		return transform_uv_subimage(uv);
+	}
 }
 
 void main()

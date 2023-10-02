@@ -828,8 +828,11 @@ render_gfx_close(struct render_gfx *rr);
 struct render_gfx_mesh_ubo_data
 {
 	struct xrt_matrix_2x2 vertex_rot;
-
 	struct xrt_normalized_rect post_transform;
+
+	// Only used for timewarp.
+	struct xrt_normalized_rect pre_transform;
+	struct xrt_matrix_4x4 transform;
 };
 
 /*!
