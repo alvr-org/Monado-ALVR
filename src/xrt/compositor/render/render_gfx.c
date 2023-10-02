@@ -295,6 +295,11 @@ do_ubo_and_src_alloc_and_write(struct render_gfx *rr,
  *
  */
 
+struct mesh_params
+{
+	uint32_t do_timewarp;
+};
+
 XRT_CHECK_RESULT static VkResult
 create_mesh_pipeline(struct vk_bundle *vk,
                      VkRenderPass render_pass,
@@ -303,6 +308,7 @@ create_mesh_pipeline(struct vk_bundle *vk,
                      uint32_t src_binding,
                      uint32_t mesh_index_count_total,
                      uint32_t mesh_stride,
+                     const struct mesh_params *params,
                      VkShaderModule mesh_vert,
                      VkShaderModule mesh_frag,
                      VkPipeline *out_mesh_pipeline)
@@ -409,11 +415,31 @@ create_mesh_pipeline(struct vk_bundle *vk,
 	};
 	// clang-format on
 
+#define ENTRY(ID, FIELD)                                                                                               \
+	{                                                                                                              \
+	    .constantID = ID,                                                                                          \
+	    .offset = offsetof(struct mesh_params, FIELD),                                                             \
+	    .size = sizeof(params->FIELD),                                                                             \
+	}
+
+	VkSpecializationMapEntry vert_entries[] = {
+	    ENTRY(0, do_timewarp),
+	};
+#undef ENTRY
+
+	VkSpecializationInfo vert_specialization_info = {
+	    .mapEntryCount = ARRAY_SIZE(vert_entries),
+	    .pMapEntries = vert_entries,
+	    .dataSize = sizeof(*params),
+	    .pData = params,
+	};
+
 	VkPipelineShaderStageCreateInfo shader_stages[2] = {
 	    {
 	        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 	        .stage = VK_SHADER_STAGE_VERTEX_BIT,
 	        .module = mesh_vert,
+	        .pSpecializationInfo = &vert_specialization_info,
 	        .pName = "main",
 	    },
 	    {
@@ -482,6 +508,10 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    &rgrp->render_pass);           // out_render_pass
 	VK_CHK_WITH_RET(ret, "create_implicit_render_pass", false);
 
+	struct mesh_params simple_params = {
+	    .do_timewarp = false,
+	};
+
 	ret = create_mesh_pipeline(    //
 	    vk,                        // vk_bundle
 	    rgrp->render_pass,         // render_pass
@@ -490,9 +520,28 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->mesh.src_binding,       // src_binding
 	    r->mesh.index_count_total, // mesh_index_count_total
 	    r->mesh.stride,            // mesh_stride
+	    &simple_params,            // params
 	    r->shaders->mesh_vert,     // mesh_vert
 	    r->shaders->mesh_frag,     // mesh_frag
 	    &rgrp->mesh.pipeline);     // out_mesh_pipeline
+	VK_CHK_WITH_RET(ret, "create_mesh_pipeline", false);
+
+	struct mesh_params timewarp_params = {
+	    .do_timewarp = true,
+	};
+
+	ret = create_mesh_pipeline(         //
+	    vk,                             // vk_bundle
+	    rgrp->render_pass,              // render_pass
+	    r->mesh.pipeline_layout,        // pipeline_layout
+	    r->pipeline_cache,              // pipeline_cache
+	    r->mesh.src_binding,            // src_binding
+	    r->mesh.index_count_total,      // mesh_index_count_total
+	    r->mesh.stride,                 // mesh_stride
+	    &timewarp_params,               // params
+	    r->shaders->mesh_vert,          // mesh_vert
+	    r->shaders->mesh_frag,          // mesh_frag
+	    &rgrp->mesh.pipeline_timewarp); // out_mesh_pipeline
 	VK_CHK_WITH_RET(ret, "create_mesh_pipeline", false);
 
 	// Set fields.
@@ -512,6 +561,7 @@ render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp)
 
 	D(RenderPass, rgrp->render_pass);
 	D(Pipeline, rgrp->mesh.pipeline);
+	D(Pipeline, rgrp->mesh.pipeline_timewarp);
 
 	U_ZERO(rgrp);
 }
@@ -771,7 +821,7 @@ render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
 }
 
 void
-render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set)
+render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set, bool do_timewarp)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;
@@ -792,10 +842,13 @@ render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet
 	    0,                               // dynamicOffsetCount
 	    NULL);                           // pDynamicOffsets
 
+	// Select which pipeline we want.
+	VkPipeline pipeline = do_timewarp ? rr->rtr->rgrp->mesh.pipeline_timewarp : rr->rtr->rgrp->mesh.pipeline;
+
 	vk->vkCmdBindPipeline(               //
 	    r->cmd,                          // commandBuffer
 	    VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
-	    rr->rtr->rgrp->mesh.pipeline);   // pipeline
+	    pipeline);                       // pipeline
 
 
 	/*

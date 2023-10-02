@@ -686,8 +686,11 @@ struct render_gfx_render_pass
 
 	struct
 	{
-		//! Pipeline layout used for mesh, does not depend on framebuffer.
+		//! Pipeline layout used for mesh, without timewarp.
 		VkPipeline pipeline;
+
+		//! Pipeline layout used for mesh, with timewarp.
+		VkPipeline pipeline_timewarp;
 	} mesh;
 };
 
@@ -887,12 +890,12 @@ render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
 
 /*!
  * Dispatch one mesh shader instance, using the give @p mesh_index as source for
- * mesh geometry.
+ * mesh geometry, timewarp selectable via @p do_timewarp.
  *
  * @public @memberof render_gfx
  */
 void
-render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set);
+render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set, bool do_timewarp);
 
 
 /*!

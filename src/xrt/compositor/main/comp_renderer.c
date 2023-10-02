@@ -847,10 +847,11 @@ do_gfx_mesh(struct comp_renderer *r,
 		    i,                   // view_index
 		    &viewport_datas[i]); // viewport_data
 
-		render_gfx_mesh_draw(    //
-		    rr,                  // rr
-		    i,                   // mesh_index
-		    descriptor_sets[i]); // descriptor_set
+		render_gfx_mesh_draw(   //
+		    rr,                 // rr
+		    i,                  // mesh_index
+		    descriptor_sets[i], // descriptor_set
+		    false);             // do_timewarp
 
 		render_gfx_end_view(rr);
 	}
