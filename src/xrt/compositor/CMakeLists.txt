@@ -124,12 +124,14 @@ if(XRT_HAVE_VULKAN)
 		render/render_shaders.c
 		render/render_util.c
 		)
+	# The aux_vk library needs to be public to include Vulkan.
 	target_link_libraries(
 		comp_render
-		PUBLIC xrt-interfaces
-		PRIVATE aux_util aux_os aux_vk
+		PUBLIC xrt-interfaces aux_vk
+		PRIVATE aux_util aux_os
 		)
-	target_include_directories(comp_render PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+	# So it can be used without any other compositor libraries.
+	target_include_directories(comp_render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 	# Shaders - marked SYSTEM so we get no warnings
 	target_include_directories(comp_render SYSTEM PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
