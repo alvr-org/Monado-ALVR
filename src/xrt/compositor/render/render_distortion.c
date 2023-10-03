@@ -185,41 +185,6 @@ struct tan_angles_transforms
 	struct xrt_vec2 scale;
 };
 
-static void
-calc_uv_to_tanangle(struct xrt_device *xdev, uint32_t view, struct xrt_normalized_rect *out_rect)
-{
-	const struct xrt_fov fov = xdev->hmd->distortion.fov[view];
-
-	const double tan_left = tan(fov.angle_left);
-	const double tan_right = tan(fov.angle_right);
-
-	const double tan_down = tan(fov.angle_down);
-	const double tan_up = tan(fov.angle_up);
-
-	const double tan_width = tan_right - tan_left;
-	const double tan_height = tan_up - tan_down;
-
-	/*
-	 * I do not know why we have to calculate the offsets like this, but
-	 * this one is the one that seems to work with what is currently in the
-	 * calc timewarp matrix function and the distortion shader. It works
-	 * with Index (unbalanced left and right angles) and WMR (unbalanced up
-	 * and down angles) so here it is. In so far it matches what the gfx
-	 * and non-timewarp compute pipeline produces.
-	 */
-	const double tan_offset_x = ((tan_right + tan_left) - tan_width) / 2;
-	const double tan_offset_y = (-(tan_up + tan_down) - tan_height) / 2;
-
-	struct xrt_normalized_rect transform = {
-	    .x = (float)tan_offset_x,
-	    .y = (float)tan_offset_y,
-	    .w = (float)tan_width,
-	    .h = (float)tan_height,
-	};
-
-	*out_rect = transform;
-}
-
 XRT_CHECK_RESULT static VkResult
 create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
                                               struct xrt_device *xdev,
@@ -326,8 +291,8 @@ render_distortion_buffer_init(struct render_resources *r,
 
 	static_assert(RENDER_DISTORTION_NUM_IMAGES == 6, "Wrong number of distortion images!");
 
-	calc_uv_to_tanangle(xdev, 0, &r->distortion.uv_to_tanangle[0]);
-	calc_uv_to_tanangle(xdev, 1, &r->distortion.uv_to_tanangle[1]);
+	render_calc_uv_to_tangent_lengths_rect(&xdev->hmd->distortion.fov[0], &r->distortion.uv_to_tanangle[0]);
+	render_calc_uv_to_tangent_lengths_rect(&xdev->hmd->distortion.fov[1], &r->distortion.uv_to_tanangle[1]);
 
 
 	/*

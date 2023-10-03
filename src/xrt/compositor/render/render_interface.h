@@ -84,6 +84,24 @@ render_calc_time_warp_matrix(const struct xrt_pose *src_pose,
                              const struct xrt_pose *new_pose,
                              struct xrt_matrix_4x4 *matrix);
 
+/*!
+ * This function constructs a transformation in the form of a normalized rect
+ * that lets you go from a UV coordinate on a projection plane to the a point on
+ * the tangent plane. An example is that the UV coordinate `(0, 0)` would be
+ * transformed to `(tan(angle_left), tan(fov.angle_up))`. The tangent plane (aka
+ * tangent space) is really the tangent of the angle, aka length at unit distance.
+ *
+ * For the trivial case of an fov with 45 degrees angles, that is where the
+ * tangent length are `1` (aka `tan(45)`), the transformation would go from
+ * `[0 .. 1]` to `[-1 .. 1]` the expected returns are `x = -1`, `y = -1`,
+ * `w = 2` and `h = 2`.
+ *
+ * param      fov      The fov of the projection image.
+ * param[out] out_rect Transformation from UV to tangent lengths.
+ */
+void
+render_calc_uv_to_tangent_lengths_rect(const struct xrt_fov *fov, struct xrt_normalized_rect *out_rect);
+
 
 /*
  *
