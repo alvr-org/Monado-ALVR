@@ -37,7 +37,7 @@ if(XRT_HAVE_D3D12)
 	list(APPEND tests tests_comp_client_d3d12)
 endif()
 if(XRT_HAVE_VULKAN)
-	list(APPEND tests tests_comp_client_vulkan)
+	list(APPEND tests tests_comp_client_vulkan tests_uv_to_tangent)
 endif()
 if(XRT_HAVE_OPENGL
    AND XRT_HAVE_OPENGL_GLX
@@ -101,6 +101,7 @@ if(XRT_HAVE_VULKAN)
 	target_link_libraries(
 		tests_comp_client_vulkan PRIVATE comp_client comp_mock comp_util aux_vk
 		)
+	target_link_libraries(tests_uv_to_tangent PRIVATE comp_render)
 endif()
 
 if(_have_opengl_test)
