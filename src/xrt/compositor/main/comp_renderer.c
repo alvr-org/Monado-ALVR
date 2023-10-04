@@ -806,6 +806,36 @@ do_gfx_mesh(struct comp_renderer *r,
             VkImageView src_image_views[2],
             const struct xrt_normalized_rect src_norm_rects[2])
 {
+	struct vk_bundle *vk = &r->c->base.vk;
+	VkResult ret;
+
+	/*
+	 * Reserve UBOs and fill in any data a head of time, if we ever want to
+	 * copy UBO data this lets us do that easily write a copy command before
+	 * the other gfx commands.
+	 */
+	struct render_sub_alloc ubos[2];
+	for (uint32_t i = 0; i < 2; i++) {
+
+		struct render_gfx_mesh_ubo_data data = {
+		    .vertex_rot = vertex_rots[i],
+		    .post_transform = src_norm_rects[i],
+		};
+
+		ret = render_sub_alloc_ubo_alloc_and_write( //
+		    vk,                                     // vk_bundle
+		    &rr->ubo_tracker,                       // rsat
+		    &data,                                  // ptr
+		    sizeof(data),                           // size
+		    &ubos[i]);                              // out_rsa
+		VK_CHK_WITH_GOTO(ret, "render_sub_alloc_ubo_alloc_and_write", err_no_memory);
+	}
+
+
+	/*
+	 * Do command writing here.
+	 */
+
 	render_gfx_begin_target( //
 	    rr,                  //
 	    rtr);                //
@@ -819,15 +849,20 @@ do_gfx_mesh(struct comp_renderer *r,
 		render_gfx_distortion(   //
 		    rr,                  //
 		    i,                   //
-		    &vertex_rots[i],     //
+		    &ubos[i],            //
 		    src_samplers[i],     //
-		    src_image_views[i],  //
-		    &src_norm_rects[i]); //
+		    src_image_views[i]); //
 
 		render_gfx_end_view(rr);
 	}
 
 	render_gfx_end_target(rr);
+
+	return;
+
+err_no_memory:
+	// Allocator reset at end of frame, nothing to clean up.
+	VK_ERROR(vk, "Could not allocate all UBOs for frame, that's really strange and shouldn't happen!");
 }
 
 /*!

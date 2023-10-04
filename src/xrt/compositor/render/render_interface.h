@@ -898,10 +898,9 @@ render_gfx_end_view(struct render_gfx *rr);
 void
 render_gfx_distortion(struct render_gfx *rr,
                       uint32_t view_index,
-                      const struct xrt_matrix_2x2 *vertex_rot,
+                      struct render_sub_alloc *ubo,
                       VkSampler sampler,
-                      VkImageView image_view,
-                      const struct xrt_normalized_rect *src_rect);
+                      VkImageView image_view);
 
 /*!
  * @}

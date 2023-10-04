@@ -356,6 +356,7 @@ update_mesh_discriptor_set(struct vk_bundle *vk,
                            VkImageView image_view,
                            uint32_t ubo_binding,
                            VkBuffer buffer,
+                           VkDeviceSize offset,
                            VkDeviceSize size,
                            VkDescriptorSet descriptor_set)
 {
@@ -367,7 +368,7 @@ update_mesh_discriptor_set(struct vk_bundle *vk,
 
 	VkDescriptorBufferInfo buffer_info = {
 	    .buffer = buffer,
-	    .offset = 0,
+	    .offset = offset,
 	    .range = size,
 	};
 
@@ -714,12 +715,8 @@ render_gfx_end_view(struct render_gfx *rr)
 }
 
 void
-render_gfx_distortion(struct render_gfx *rr,
-                      uint32_t view_index,
-                      const struct xrt_matrix_2x2 *vertex_rot,
-                      VkSampler sampler,
-                      VkImageView image_view,
-                      const struct xrt_normalized_rect *src_rect)
+render_gfx_distortion(
+    struct render_gfx *rr, uint32_t view_index, struct render_sub_alloc *ubo, VkSampler sampler, VkImageView image_view)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;
@@ -728,19 +725,7 @@ render_gfx_distortion(struct render_gfx *rr,
 
 	struct render_gfx_view *v = &rr->views[view_index];
 
-	struct render_buffer *ubo = &r->mesh.ubos[view_index];
 	VkDescriptorSet descriptor_set = v->mesh.descriptor_set;
-
-	/*
-	 * UBO data.
-	 */
-
-	struct render_gfx_mesh_ubo_data data = {
-	    .vertex_rot = *vertex_rot,
-	    .post_transform = *src_rect,
-	};
-
-	render_buffer_write(vk, ubo, &data, sizeof(struct render_gfx_mesh_ubo_data));
 
 
 	/*
@@ -754,7 +739,8 @@ render_gfx_distortion(struct render_gfx *rr,
 	    image_view,             // image_view
 	    r->mesh.ubo_binding,    // ubo_binding
 	    ubo->buffer,            // buffer
-	    VK_WHOLE_SIZE,          // size
+	    ubo->offset,            // offset
+	    ubo->size,              // size
 	    descriptor_set);        // descriptor_set
 
 	VkDescriptorSet descriptor_sets[1] = {descriptor_set};
