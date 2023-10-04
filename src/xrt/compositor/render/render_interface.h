@@ -388,6 +388,18 @@ struct render_resources
 
 	struct
 	{
+		/*!
+		 * Shared UBO buffer that we sub-allocate out of, this is to
+		 * have fewer buffers that the kernel needs to validate on
+		 * command submission time.
+		 *
+		 * https://registry.khronos.org/vulkan/site/guide/latest/memory_allocation.html
+		 */
+		struct render_buffer shared_ubo;
+	} gfx;
+
+	struct
+	{
 		//! The binding index for the source texture.
 		uint32_t src_binding;
 
@@ -781,6 +793,9 @@ struct render_gfx
 {
 	//! Resources that we are based on.
 	struct render_resources *r;
+
+	//! Shared buffer that we sub-allocate UBOs from.
+	struct render_sub_alloc_tracker ubo_tracker;
 
 	//! The current target we are rendering too, can change during command building.
 	struct render_gfx_target_resources *rtr;

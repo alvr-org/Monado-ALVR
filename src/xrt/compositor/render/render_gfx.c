@@ -534,6 +534,9 @@ render_gfx_init(struct render_gfx *rr, struct render_resources *r)
 	    &rr->views[1].mesh.descriptor_set); // descriptor_set
 	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
+	// Used to sub-allocate UBOs from, restart from scratch each frame.
+	render_sub_alloc_tracker_init(&rr->ubo_tracker, &r->gfx.shared_ubo);
+
 	return true;
 }
 

@@ -657,6 +657,45 @@ render_resources_init(struct render_resources *r,
 
 
 	/*
+	 * Gfx.
+	 */
+
+	{
+		VkBufferUsageFlags usage_flags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		VkMemoryPropertyFlags memory_property_flags = //
+		    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |    //
+		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;      //
+
+		uint32_t num_buffers = 0;
+
+		// Number of layer shader runs (views), number of layers, two UBOs per layer.
+		num_buffers += RENDER_MAX_LAYER_RUNS * RENDER_MAX_LAYERS * 2;
+
+		// Two mesh distortion runs with one UBO each.
+		num_buffers += 2;
+
+		// We currently use the aligmnent as max UBO size.
+		static_assert(sizeof(struct render_gfx_mesh_ubo_data) <= RENDER_ALWAYS_SAFE_UBO_ALIGNMENT, "MAX");
+
+		// Calculate size.
+		VkDeviceSize size = num_buffers * RENDER_ALWAYS_SAFE_UBO_ALIGNMENT;
+
+		ret = render_buffer_init(  //
+		    vk,                    // vk_bundle
+		    &r->gfx.shared_ubo,    // buffer
+		    usage_flags,           // usage_flags
+		    memory_property_flags, // memory_property_flags
+		    size);                 // size
+		VK_CHK_WITH_RET(ret, "render_buffer_init", false);
+
+		ret = render_buffer_map( //
+		    vk,                  // vk_bundle
+		    &r->gfx.shared_ubo); // buffer
+		VK_CHK_WITH_RET(ret, "render_buffer_map", false);
+	}
+
+
+	/*
 	 * Mesh static.
 	 */
 
@@ -961,6 +1000,9 @@ render_resources_close(struct render_resources *r)
 	D(ImageView, r->mock.color.image_view);
 	D(Image, r->mock.color.image);
 	DF(Memory, r->mock.color.memory);
+
+	render_buffer_close(vk, &r->gfx.shared_ubo);
+
 	D(DescriptorSetLayout, r->mesh.descriptor_set_layout);
 	D(PipelineLayout, r->mesh.pipeline_layout);
 	D(PipelineCache, r->pipeline_cache);
