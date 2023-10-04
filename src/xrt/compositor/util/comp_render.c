@@ -360,7 +360,7 @@ do_distortion_for_layer(struct render_compute *crc,
 		src_norm_rects[1].y = 1 + src_norm_rects[1].y;
 	}
 
-	if (do_timewarp) {
+	if (!do_timewarp) {
 		render_compute_projection( //
 		    crc,                   //
 		    src_samplers,          //
