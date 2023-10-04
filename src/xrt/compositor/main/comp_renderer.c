@@ -804,7 +804,11 @@ do_gfx_mesh(struct comp_renderer *r,
             const struct xrt_matrix_2x2 vertex_rots[2],
             VkSampler src_samplers[2],
             VkImageView src_image_views[2],
-            const struct xrt_normalized_rect src_norm_rects[2])
+            const struct xrt_normalized_rect src_norm_rects[2],
+            const struct xrt_pose src_poses[2],
+            const struct xrt_fov src_fovs[2],
+            const struct xrt_pose new_poses[2],
+            bool do_timewarp)
 {
 	struct vk_bundle *vk = &r->c->base.vk;
 	VkResult ret;
@@ -822,6 +826,17 @@ do_gfx_mesh(struct comp_renderer *r,
 		    .vertex_rot = vertex_rots[i],
 		    .post_transform = src_norm_rects[i],
 		};
+
+		// Extra arguments for timewarp.
+		if (do_timewarp) {
+			data.pre_transform = rr->r->distortion.uv_to_tanangle[i];
+
+			render_calc_time_warp_matrix( //
+			    &src_poses[i],            //
+			    &src_fovs[i],             //
+			    &new_poses[i],            //
+			    &data.transform);         //
+		}
 
 		ret = render_gfx_mesh_alloc_and_write( //
 		    rr,                                //
@@ -851,7 +866,7 @@ do_gfx_mesh(struct comp_renderer *r,
 		    rr,                 // rr
 		    i,                  // mesh_index
 		    descriptor_sets[i], // descriptor_set
-		    false);             // do_timewarp
+		    do_timewarp);       // do_timewarp
 
 		render_gfx_end_view(rr);
 	}
@@ -876,7 +891,9 @@ do_gfx_mesh_and_proj(struct comp_renderer *r,
                      const struct xrt_matrix_2x2 vertex_rots[2],
                      const struct comp_layer *layer,
                      const struct xrt_layer_projection_view_data *lvd,
-                     const struct xrt_layer_projection_view_data *rvd)
+                     const struct xrt_layer_projection_view_data *rvd,
+                     const struct xrt_pose new_poses[2],
+                     bool do_timewarp)
 {
 	const struct xrt_layer_data *data = &layer->data;
 	const uint32_t left_array_index = lvd->sub.array_index;
@@ -903,6 +920,9 @@ do_gfx_mesh_and_proj(struct comp_renderer *r,
 	    get_image_view(right, data->flags, right_array_index),
 	};
 
+	const struct xrt_pose src_poses[2] = {lvd->pose, rvd->pose};
+	const struct xrt_fov src_fovs[2] = {lvd->fov, rvd->fov};
+
 	do_gfx_mesh(         //
 	    r,               //
 	    rr,              //
@@ -911,7 +931,11 @@ do_gfx_mesh_and_proj(struct comp_renderer *r,
 	    vertex_rots,     //
 	    src_samplers,    //
 	    src_image_views, //
-	    src_norm_rects); //
+	    src_norm_rects,  //
+	    src_poses,       //
+	    src_fovs,        //
+	    new_poses,       //
+	    do_timewarp);    //
 }
 
 /*!
@@ -927,6 +951,7 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 
 	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
 	bool fast_path = c->base.slot.one_projection_layer_fast_path;
+	bool do_timewarp = !c->debug.atw_off;
 
 	// Only used if fast_path is true.
 	const struct comp_layer *layer = &c->base.slot.layers[0];
@@ -971,7 +996,9 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		    vertex_rots,      //
 		    layer,            //
 		    lvd,              //
-		    rvd);             //
+		    rvd,              //
+		    world_poses,      //
+		    do_timewarp);     //
 
 	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		// Fast path.
@@ -992,7 +1019,9 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		    vertex_rots,      //
 		    layer,            //
 		    lvd,              //
-		    rvd);             //
+		    rvd,              //
+		    world_poses,      //
+		    do_timewarp);     //
 
 	} else if (fast_path) {
 
@@ -1036,7 +1065,11 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 		    vertex_rots,     //
 		    src_samplers,    //
 		    src_image_views, //
-		    src_norm_rects); //
+		    src_norm_rects,  //
+		    world_poses,     //
+		    fovs,            //
+		    world_poses,     //
+		    false);          //
 	}
 
 	// Make the command buffer submittable.
