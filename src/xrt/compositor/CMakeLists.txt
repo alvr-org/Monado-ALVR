@@ -122,6 +122,7 @@ if(XRT_HAVE_VULKAN)
 		render/render_interface.h
 		render/render_resources.c
 		render/render_shaders.c
+		render/render_sub_alloc.c
 		render/render_util.c
 		)
 	# The aux_vk library needs to be public to include Vulkan.

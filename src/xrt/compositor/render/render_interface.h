@@ -41,6 +41,17 @@ extern "C" {
  */
 
 /*!
+ * The value `minUniformBufferOffsetAlignment` is defined by the Vulkan spec as
+ * having a max value of 256. Use this value to safely figure out sizes and
+ * alignment of UBO sub-allocation. It is also the max for 'nonCoherentAtomSize`
+ * which if we need to do flushing is what we need to align UBOs to.
+ *
+ * https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPhysicalDeviceLimits.html
+ * https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#limits-minmax
+ */
+#define RENDER_ALWAYS_SAFE_UBO_ALIGNMENT (256)
+
+/*!
  * Max number of layers for layer squasher, can be different from
  * @ref COMP_MAX_LAYERS as the render module is separate from the compositor.
  */
@@ -226,6 +237,94 @@ render_buffer_map_and_write(struct vk_bundle *vk, struct render_buffer *buffer, 
  */
 VkResult
 render_buffer_write(struct vk_bundle *vk, struct render_buffer *buffer, void *data, VkDeviceSize size);
+
+
+/*
+ *
+ * Sub-alloc.
+ *
+ */
+
+/*!
+ * Per frame sub-allocation into a buffer, used to reduce the number of UBO
+ * objects we need to create. There is no way to free a sub-allocation, this is
+ * done implicitly at the end of the frame when @ref render_sub_alloc_tracker is
+ * zeroed out.
+ *
+ * @see render_sub_alloc_tracker
+ */
+struct render_sub_alloc
+{
+	/*!
+	 * The buffer this is allocated from, it's the callers responsibility
+	 * to keep it alive for as long as the sub-allocation is used.
+	 */
+	VkBuffer buffer;
+
+	//! Size of sub-allocation.
+	VkDeviceSize size;
+
+	//! Offset into buffer.
+	VkDeviceSize offset;
+};
+
+/*!
+ * A per frame tracker of sub-allocation out of a buffer, used to reduce the
+ * number of UBO objects we need to create. This code is designed with one
+ * constraint in mind, that the lifetime of a sub-allocation is only for one
+ * frame and is discarded at the end of it, but also alive for the entire frame.
+ * This removes the need to free indivudial sub-allocation, or even track them
+ * beyond filling the UBO data and descriptor sets.
+ *
+ * @see render_sub_alloc
+ */
+struct render_sub_alloc_tracker
+{
+	/*!
+	 * The buffer to allocate from, it's the callers responsibility to keep
+	 * it alive for as long as the sub-allocations are in used.
+	 */
+	VkBuffer buffer;
+
+	//! Start of memory, if buffer was mapped with initialised.
+	void *mapped;
+
+	//! Total size of buffer.
+	VkDeviceSize total_size;
+
+	//! Currently used memory.
+	VkDeviceSize used;
+};
+
+/*!
+ * Init a @ref render_sub_alloc_tracker struct from a @ref render_buffer, the
+ * caller is responsible for keeping @p buffer alive while the sub allocator
+ * is being used.
+ */
+void
+render_sub_alloc_tracker_init(struct render_sub_alloc_tracker *rsat, struct render_buffer *buffer);
+
+/*!
+ * Allocate enough memory (with constraints of UBOs) of @p size, return the
+ * pointer to the mapped memory or null if the buffer wasn't allocated.
+ */
+XRT_CHECK_RESULT VkResult
+render_sub_alloc_ubo_alloc_and_get_ptr(struct vk_bundle *vk,
+                                       struct render_sub_alloc_tracker *rsat,
+                                       VkDeviceSize size,
+                                       void **out_ptr,
+                                       struct render_sub_alloc *out_rsa);
+
+/*!
+ * Allocate enough memory (with constraints of UBOs) to hold the memory in @ptr
+ * and copy that memory to the buffer using the CPU.
+ */
+XRT_CHECK_RESULT VkResult
+render_sub_alloc_ubo_alloc_and_write(struct vk_bundle *vk,
+                                     struct render_sub_alloc_tracker *rsat,
+                                     const void *ptr,
+                                     VkDeviceSize size,
+                                     struct render_sub_alloc *out_rsa);
 
 
 /*
