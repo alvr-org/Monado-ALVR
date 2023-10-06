@@ -512,28 +512,8 @@ render_gfx_target_resources_close(struct render_gfx_target_resources *rtr)
 bool
 render_gfx_init(struct render_gfx *rr, struct render_resources *r)
 {
-	struct vk_bundle *vk = r->vk;
-	VkResult ret;
+	// Init fields.
 	rr->r = r;
-
-
-	/*
-	 * Mesh per view
-	 */
-
-	ret = vk_create_descriptor_set(         //
-	    vk,                                 // vk_bundle
-	    r->mesh.descriptor_pool,            // descriptor_pool
-	    r->mesh.descriptor_set_layout,      // descriptor_set_layout
-	    &rr->views[0].mesh.descriptor_set); // descriptor_set
-	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
-
-	ret = vk_create_descriptor_set(         //
-	    vk,                                 // vk_bundle
-	    r->mesh.descriptor_pool,            // descriptor_pool
-	    r->mesh.descriptor_set_layout,      // descriptor_set_layout
-	    &rr->views[1].mesh.descriptor_set); // descriptor_set
-	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
 	// Used to sub-allocate UBOs from, restart from scratch each frame.
 	render_sub_alloc_tracker_init(&rr->ubo_tracker, &r->gfx.shared_ubo);
@@ -600,15 +580,13 @@ render_gfx_close(struct render_gfx *rr)
 	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;
 
-	// Reclaimed by vkResetDescriptorPool.
-	rr->views[0].mesh.descriptor_set = VK_NULL_HANDLE;
-	rr->views[1].mesh.descriptor_set = VK_NULL_HANDLE;
-
+	// Reclaim all descriptor sets.
 	vk->vkResetDescriptorPool(   //
 	    vk->device,              //
 	    r->mesh.descriptor_pool, //
 	    0);                      //
 
+	// This "reclaims" the allocated UBOs.
 	U_ZERO(rr);
 }
 
@@ -662,8 +640,6 @@ render_gfx_begin_view(struct render_gfx *rr, uint32_t view, const struct render_
 	// We currently only support two views.
 	assert(view == 0 || view == 1);
 	assert(rr->rtr != NULL);
-
-	rr->current_view = view;
 
 
 	/*

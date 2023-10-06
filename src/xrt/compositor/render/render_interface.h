@@ -720,14 +720,9 @@ render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp);
 
 /*!
  * Each rendering (@ref render_gfx) render to one or more targets
- * (@ref render_gfx_target_resources), each target can have one or more
- * views (@ref render_gfx_view), this struct holds all the vulkan resources
- * that is specific to the target.
- *
- * Technically the framebuffer could be moved out of this struct and all of this
- * state be turned into a CSO object that depends only only the format and
- * external status of the target, but is combined to reduce the number of
- * objects needed to render.
+ * (@ref render_gfx_target_resources), the target points to one render pass and
+ * it's pipelines (@ref render_gfx_render_pass). It is up to the code using
+ * these to do reuse of render passes and ensure they match.
  */
 struct render_gfx_target_resources
 {
@@ -772,20 +767,6 @@ render_gfx_target_resources_close(struct render_gfx_target_resources *rtr);
  */
 
 /*!
- * Each rendering (@ref render_gfx) render to one or more targets
- * (@ref render_gfx_target_resources), each target can have one or more
- * views (@ref render_gfx_view), this struct holds all the vulkan resources
- * that is specific to the view.
- */
-struct render_gfx_view
-{
-	struct
-	{
-		VkDescriptorSet descriptor_set;
-	} mesh;
-};
-
-/*!
  * A rendering is used to create command buffers needed to do one frame of
  * compositor rendering, it holds onto resources used by the command buffer.
  */
@@ -799,12 +780,6 @@ struct render_gfx
 
 	//! The current target we are rendering too, can change during command building.
 	struct render_gfx_target_resources *rtr;
-
-	//! Holds per view data.
-	struct render_gfx_view views[2];
-
-	//! The current view we are rendering to.
-	uint32_t current_view;
 };
 
 /*!
