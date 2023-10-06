@@ -388,6 +388,9 @@ struct render_resources
 
 	struct
 	{
+		//! Pool for shaders that uses one ubo and sampler.
+		VkDescriptorPool ubo_and_src_descriptor_pool;
+
 		/*!
 		 * Shared UBO buffer that we sub-allocate out of, this is to
 		 * have fewer buffers that the kernel needs to validate on
@@ -420,9 +423,6 @@ struct render_resources
 		uint32_t stride;
 		uint32_t index_offsets[2];
 		uint32_t index_count_total;
-
-		//! Descriptor pool for mesh shaders.
-		VkDescriptorPool descriptor_pool;
 
 		//! Info ubos, only supports two views currently.
 		struct render_buffer ubos[2];

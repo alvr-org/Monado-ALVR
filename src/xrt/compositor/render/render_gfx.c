@@ -581,10 +581,10 @@ render_gfx_close(struct render_gfx *rr)
 	struct render_resources *r = rr->r;
 
 	// Reclaim all descriptor sets.
-	vk->vkResetDescriptorPool(   //
-	    vk->device,              //
-	    r->mesh.descriptor_pool, //
-	    0);                      //
+	vk->vkResetDescriptorPool(              //
+	    vk->device,                         //
+	    r->gfx.ubo_and_src_descriptor_pool, //
+	    0);                                 //
 
 	// This "reclaims" the allocated UBOs.
 	U_ZERO(rr);
@@ -721,11 +721,11 @@ render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
 	 * Create and fill out destriptor.
 	 */
 
-	ret = vk_create_descriptor_set(    //
-	    vk,                            // vk_bundle
-	    r->mesh.descriptor_pool,       // descriptor_pool
-	    r->mesh.descriptor_set_layout, // descriptor_set_layout
-	    &descriptor_set);              // descriptor_set
+	ret = vk_create_descriptor_set(         //
+	    vk,                                 // vk_bundle
+	    r->gfx.ubo_and_src_descriptor_pool, // descriptor_pool
+	    r->mesh.descriptor_set_layout,      // descriptor_set_layout
+	    &descriptor_set);                   // descriptor_set
 	VK_CHK_AND_RET(ret, "vk_create_descriptor_set");
 
 	update_mesh_discriptor_set( //

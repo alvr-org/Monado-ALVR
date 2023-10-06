@@ -661,24 +661,45 @@ render_resources_init(struct render_resources *r,
 	 */
 
 	{
+		// Number of layer shader runs (views) times number of layers.
+		const uint32_t layer_shader_count = RENDER_MAX_LAYER_RUNS * RENDER_MAX_LAYERS;
+
+		// Two mesh distortion runs.
+		const uint32_t mesh_shader_count = 2;
+
+		struct vk_descriptor_pool_info mesh_pool_info = {
+		    .uniform_per_descriptor_count = 1,
+		    .sampler_per_descriptor_count = 1,
+		    .storage_image_per_descriptor_count = 0,
+		    .storage_buffer_per_descriptor_count = 0,
+		    .descriptor_count = layer_shader_count + mesh_shader_count,
+		    .freeable = false,
+		};
+
+		ret = vk_create_descriptor_pool(          //
+		    vk,                                   // vk_bundle
+		    &mesh_pool_info,                      // info
+		    &r->gfx.ubo_and_src_descriptor_pool); // out_descriptor_pool
+		VK_CHK_WITH_RET(ret, "vk_create_descriptor_pool", false);
+
 		VkBufferUsageFlags usage_flags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		VkMemoryPropertyFlags memory_property_flags = //
 		    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |    //
 		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;      //
 
-		uint32_t num_buffers = 0;
+		uint32_t buffer_count = 0;
 
-		// Number of layer shader runs (views), number of layers, two UBOs per layer.
-		num_buffers += RENDER_MAX_LAYER_RUNS * RENDER_MAX_LAYERS * 2;
+		// One UBO per layer shader.
+		buffer_count += layer_shader_count;
 
-		// Two mesh distortion runs with one UBO each.
-		num_buffers += 2;
+		// One UBO per mesh shader.
+		buffer_count += 2;
 
 		// We currently use the aligmnent as max UBO size.
 		static_assert(sizeof(struct render_gfx_mesh_ubo_data) <= RENDER_ALWAYS_SAFE_UBO_ALIGNMENT, "MAX");
 
 		// Calculate size.
-		VkDeviceSize size = num_buffers * RENDER_ALWAYS_SAFE_UBO_ALIGNMENT;
+		VkDeviceSize size = buffer_count * RENDER_ALWAYS_SAFE_UBO_ALIGNMENT;
 
 		ret = render_buffer_init(  //
 		    vk,                    // vk_bundle
@@ -698,21 +719,6 @@ render_resources_init(struct render_resources *r,
 	/*
 	 * Mesh static.
 	 */
-
-	struct vk_descriptor_pool_info mesh_pool_info = {
-	    .uniform_per_descriptor_count = 1,
-	    .sampler_per_descriptor_count = 1,
-	    .storage_image_per_descriptor_count = 0,
-	    .storage_buffer_per_descriptor_count = 0,
-	    .descriptor_count = 16 * 2,
-	    .freeable = false,
-	};
-
-	ret = vk_create_descriptor_pool( //
-	    vk,                          // vk_bundle
-	    &mesh_pool_info,             // info
-	    &r->mesh.descriptor_pool);   // out_descriptor_pool
-	VK_CHK_WITH_RET(ret, "vk_create_descriptor_pool", false);
 
 	ret = create_mesh_descriptor_set_layout( //
 	    vk,                                  // vk_bundle
@@ -1002,11 +1008,11 @@ render_resources_close(struct render_resources *r)
 	DF(Memory, r->mock.color.memory);
 
 	render_buffer_close(vk, &r->gfx.shared_ubo);
+	D(DescriptorPool, r->gfx.ubo_and_src_descriptor_pool);
 
 	D(DescriptorSetLayout, r->mesh.descriptor_set_layout);
 	D(PipelineLayout, r->mesh.pipeline_layout);
 	D(PipelineCache, r->pipeline_cache);
-	D(DescriptorPool, r->mesh.descriptor_pool);
 	D(QueryPool, r->query_pool);
 	render_buffer_close(vk, &r->mesh.vbo);
 	render_buffer_close(vk, &r->mesh.ibo);
