@@ -891,16 +891,31 @@ void
 render_gfx_end_view(struct render_gfx *rr);
 
 /*!
- * Dispatch one mesh shader instance into the current view.
+ * Allocate needed resources for one mesh shader dispatch, will also update the
+ * descriptor set, ubo will be filled out with the given @p data argument.
+ *
+ * Uses the @ref render_sub_alloc_tracker of the @ref render_gfx and the
+ * descriptor pool of @ref render_resources, both of which will be reset once
+ * closed, so don't save any reference to these objects beyond the frame.
+ *
+ * @public @memberof render_gfx
+ */
+XRT_CHECK_RESULT VkResult
+render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
+                                const struct render_gfx_mesh_ubo_data *data,
+                                VkSampler src_sampler,
+                                VkImageView src_image_view,
+                                VkDescriptorSet *out_descriptor_set);
+
+/*!
+ * Dispatch one mesh shader instance, using the give @p mesh_index as source for
+ * mesh geometry.
  *
  * @public @memberof render_gfx
  */
 void
-render_gfx_distortion(struct render_gfx *rr,
-                      uint32_t view_index,
-                      struct render_sub_alloc *ubo,
-                      VkSampler sampler,
-                      VkImageView image_view);
+render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set);
+
 
 /*!
  * @}

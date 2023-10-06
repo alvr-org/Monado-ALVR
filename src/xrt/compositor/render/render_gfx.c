@@ -714,34 +714,70 @@ render_gfx_end_view(struct render_gfx *rr)
 	assert(rr->rtr != NULL);
 }
 
+XRT_CHECK_RESULT VkResult
+render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
+                                const struct render_gfx_mesh_ubo_data *data,
+                                VkSampler src_sampler,
+                                VkImageView src_image_view,
+                                VkDescriptorSet *out_descriptor_set)
+{
+	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+	struct render_sub_alloc ubo = XRT_STRUCT_INIT;
+	struct vk_bundle *vk = vk_from_rr(rr);
+	struct render_resources *r = rr->r;
+	VkResult ret;
+
+
+	/*
+	 * Allocate and upload data.
+	 */
+
+	ret = render_sub_alloc_ubo_alloc_and_write( //
+	    vk,                                     // vk_bundle
+	    &rr->ubo_tracker,                       // rsat
+	    data,                                   // ptr
+	    sizeof(*data),                          // size
+	    &ubo);                                  // out_rsa
+	VK_CHK_AND_RET(ret, "render_sub_alloc_ubo_alloc_and_write");
+
+
+	/*
+	 * Create and fill out destriptor.
+	 */
+
+	ret = vk_create_descriptor_set(    //
+	    vk,                            // vk_bundle
+	    r->mesh.descriptor_pool,       // descriptor_pool
+	    r->mesh.descriptor_set_layout, // descriptor_set_layout
+	    &descriptor_set);              // descriptor_set
+	VK_CHK_AND_RET(ret, "vk_create_descriptor_set");
+
+	update_mesh_discriptor_set( //
+	    vk,                     // vk_bundle
+	    r->mesh.src_binding,    // src_binding
+	    src_sampler,            // sampler
+	    src_image_view,         // image_view
+	    r->mesh.ubo_binding,    // ubo_binding
+	    ubo.buffer,             // buffer
+	    ubo.offset,             // offset
+	    ubo.size,               // size
+	    descriptor_set);        // descriptor_set
+
+	*out_descriptor_set = descriptor_set;
+
+	return VK_SUCCESS;
+}
+
 void
-render_gfx_distortion(
-    struct render_gfx *rr, uint32_t view_index, struct render_sub_alloc *ubo, VkSampler sampler, VkImageView image_view)
+render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;
-
-	assert(view_index == rr->current_view);
-
-	struct render_gfx_view *v = &rr->views[view_index];
-
-	VkDescriptorSet descriptor_set = v->mesh.descriptor_set;
 
 
 	/*
 	 * Descriptors and pipeline.
 	 */
-
-	update_mesh_discriptor_set( //
-	    vk,                     // vk_bundle
-	    r->mesh.src_binding,    // src_binding
-	    sampler,                // sampler
-	    image_view,             // image_view
-	    r->mesh.ubo_binding,    // ubo_binding
-	    ubo->buffer,            // buffer
-	    ubo->offset,            // offset
-	    ubo->size,              // size
-	    descriptor_set);        // descriptor_set
 
 	VkDescriptorSet descriptor_sets[1] = {descriptor_set};
 	vk->vkCmdBindDescriptorSets(         //
@@ -789,9 +825,9 @@ render_gfx_distortion(
 
 		vk->vkCmdDrawIndexed(                  //
 		    r->cmd,                            // commandBuffer
-		    r->mesh.index_counts[view_index],  // indexCount
+		    r->mesh.index_counts[mesh_index],  // indexCount
 		    1,                                 // instanceCount
-		    r->mesh.index_offsets[view_index], // firstIndex
+		    r->mesh.index_offsets[mesh_index], // firstIndex
 		    0,                                 // vertexOffset
 		    0);                                // firstInstance
 	} else {

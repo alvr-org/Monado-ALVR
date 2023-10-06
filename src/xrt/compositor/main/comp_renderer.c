@@ -810,11 +810,12 @@ do_gfx_mesh(struct comp_renderer *r,
 	VkResult ret;
 
 	/*
-	 * Reserve UBOs and fill in any data a head of time, if we ever want to
-	 * copy UBO data this lets us do that easily write a copy command before
-	 * the other gfx commands.
+	 * Reserve UBOs, create descriptor sets, and fill in any data a head of
+	 * time, if we ever want to copy UBO data this lets us do that easily
+	 * write a copy command before the other gfx commands.
 	 */
-	struct render_sub_alloc ubos[2];
+
+	VkDescriptorSet descriptor_sets[2] = XRT_STRUCT_INIT;
 	for (uint32_t i = 0; i < 2; i++) {
 
 		struct render_gfx_mesh_ubo_data data = {
@@ -822,13 +823,13 @@ do_gfx_mesh(struct comp_renderer *r,
 		    .post_transform = src_norm_rects[i],
 		};
 
-		ret = render_sub_alloc_ubo_alloc_and_write( //
-		    vk,                                     // vk_bundle
-		    &rr->ubo_tracker,                       // rsat
-		    &data,                                  // ptr
-		    sizeof(data),                           // size
-		    &ubos[i]);                              // out_rsa
-		VK_CHK_WITH_GOTO(ret, "render_sub_alloc_ubo_alloc_and_write", err_no_memory);
+		ret = render_gfx_mesh_alloc_and_write( //
+		    rr,                                //
+		    &data,                             //
+		    src_samplers[i],                   //
+		    src_image_views[i],                //
+		    &descriptor_sets[i]);              //
+		VK_CHK_WITH_GOTO(ret, "render_gfx_mesh_alloc", err_no_memory);
 	}
 
 
@@ -846,12 +847,10 @@ do_gfx_mesh(struct comp_renderer *r,
 		    i,                   // view_index
 		    &viewport_datas[i]); // viewport_data
 
-		render_gfx_distortion(   //
-		    rr,                  //
-		    i,                   //
-		    &ubos[i],            //
-		    src_samplers[i],     //
-		    src_image_views[i]); //
+		render_gfx_mesh_draw(    //
+		    rr,                  // rr
+		    i,                   // mesh_index
+		    descriptor_sets[i]); // descriptor_set
 
 		render_gfx_end_view(rr);
 	}
