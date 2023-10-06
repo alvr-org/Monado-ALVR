@@ -21,15 +21,15 @@
 
 /*
  *
- * Mesh
+ * Gfx shared
  *
  */
 
 XRT_CHECK_RESULT static VkResult
-create_mesh_descriptor_set_layout(struct vk_bundle *vk,
-                                  uint32_t src_binding,
-                                  uint32_t ubo_binding,
-                                  VkDescriptorSetLayout *out_descriptor_set_layout)
+create_gfx_ubo_and_src_descriptor_set_layout(struct vk_bundle *vk,
+                                             uint32_t ubo_binding,
+                                             uint32_t src_binding,
+                                             VkDescriptorSetLayout *out_descriptor_set_layout)
 {
 	VkResult ret;
 
@@ -65,6 +65,13 @@ create_mesh_descriptor_set_layout(struct vk_bundle *vk,
 
 	return VK_SUCCESS;
 }
+
+
+/*
+ *
+ * Mesh
+ *
+ */
 
 XRT_CHECK_RESULT static bool
 init_mesh_vertex_buffers(struct vk_bundle *vk,
@@ -720,12 +727,12 @@ render_resources_init(struct render_resources *r,
 	 * Mesh static.
 	 */
 
-	ret = create_mesh_descriptor_set_layout( //
-	    vk,                                  // vk_bundle
-	    r->mesh.src_binding,                 // src_binding
-	    r->mesh.ubo_binding,                 // ubo_binding
-	    &r->mesh.descriptor_set_layout);     // out_mesh_descriptor_set_layout
-	VK_CHK_WITH_RET(ret, "create_mesh_descriptor_set_layout", false);
+	ret = create_gfx_ubo_and_src_descriptor_set_layout( //
+	    vk,                                             // vk_bundle
+	    r->mesh.ubo_binding,                            // ubo_binding
+	    r->mesh.src_binding,                            // src_binding
+	    &r->mesh.descriptor_set_layout);                // out_mesh_descriptor_set_layout
+	VK_CHK_WITH_RET(ret, "create_gfx_ubo_and_src_descriptor_set_layout", false);
 
 	ret = vk_create_pipeline_layout(   //
 	    vk,                            // vk_bundle
