@@ -26,15 +26,8 @@
 static void
 destroy(struct xrt_system_devices *xsysd)
 {
-	struct u_system_devices *usysd = u_system_devices(xsysd);
-
-	for (uint32_t i = 0; i < ARRAY_SIZE(usysd->base.xdevs); i++) {
-		xrt_device_destroy(&usysd->base.xdevs[i]);
-	}
-
-	xrt_frame_context_destroy_nodes(&usysd->xfctx);
-
-	free(usysd);
+	u_system_devices_close(xsysd);
+	free(xsysd);
 }
 
 
@@ -51,6 +44,18 @@ u_system_devices_allocate(void)
 	usysd->base.destroy = destroy;
 
 	return usysd;
+}
+
+void
+u_system_devices_close(struct xrt_system_devices *xsysd)
+{
+	struct u_system_devices *usysd = u_system_devices(xsysd);
+
+	for (uint32_t i = 0; i < ARRAY_SIZE(usysd->base.xdevs); i++) {
+		xrt_device_destroy(&usysd->base.xdevs[i]);
+	}
+
+	xrt_frame_context_destroy_nodes(&usysd->xfctx);
 }
 
 xrt_result_t

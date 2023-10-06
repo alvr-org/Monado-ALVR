@@ -62,6 +62,16 @@ struct u_system_devices *
 u_system_devices_allocate(void);
 
 /*!
+ * Destroys all devices and clears out the frame context, doesn't free the
+ * struct itself, useful for code embedding the system devices struct into
+ * other objects where it's not the first member or C++ classes.
+ *
+ * @ingroup aux_util
+ */
+void
+u_system_devices_close(struct xrt_system_devices *xsysd);
+
+/*!
  * Takes a @ref xrt_instance, gets the prober from it and then uses the prober
  * to allocate a filled in @ref u_system_devices.
  *
