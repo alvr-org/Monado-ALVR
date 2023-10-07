@@ -180,6 +180,114 @@ begin_render_pass(struct vk_bundle *vk,
 	vk->vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
+static void
+update_ubo_and_src_discriptor_set(struct vk_bundle *vk,
+                                  uint32_t ubo_binding,
+                                  VkBuffer buffer,
+                                  VkDeviceSize offset,
+                                  VkDeviceSize size,
+                                  uint32_t src_binding,
+                                  VkSampler sampler,
+                                  VkImageView image_view,
+                                  VkDescriptorSet descriptor_set)
+{
+	VkDescriptorImageInfo image_info = {
+	    .sampler = sampler,
+	    .imageView = image_view,
+	    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	};
+
+	VkDescriptorBufferInfo buffer_info = {
+	    .buffer = buffer,
+	    .offset = offset,
+	    .range = size,
+	};
+
+	VkWriteDescriptorSet write_descriptor_sets[2] = {
+	    {
+	        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+	        .dstSet = descriptor_set,
+	        .dstBinding = src_binding,
+	        .descriptorCount = 1,
+	        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+	        .pImageInfo = &image_info,
+	    },
+	    {
+	        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+	        .dstSet = descriptor_set,
+	        .dstBinding = ubo_binding,
+	        .descriptorCount = 1,
+	        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+	        .pBufferInfo = &buffer_info,
+	    },
+	};
+
+	vk->vkUpdateDescriptorSets(            //
+	    vk->device,                        //
+	    ARRAY_SIZE(write_descriptor_sets), // descriptorWriteCount
+	    write_descriptor_sets,             // pDescriptorWrites
+	    0,                                 // descriptorCopyCount
+	    NULL);                             // pDescriptorCopies
+}
+
+XRT_CHECK_RESULT static VkResult
+do_ubo_and_src_alloc_and_write(struct render_gfx *rr,
+                               uint32_t ubo_binding,
+                               const void *ubo_ptr,
+                               VkDeviceSize ubo_size,
+                               uint32_t src_binding,
+                               VkSampler src_sampler,
+                               VkImageView src_image_view,
+                               VkDescriptorPool descriptor_pool,
+                               VkDescriptorSetLayout descriptor_set_layout,
+                               VkDescriptorSet *out_descriptor_set)
+{
+	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+	struct render_sub_alloc ubo = XRT_STRUCT_INIT;
+	struct vk_bundle *vk = vk_from_rr(rr);
+
+	VkResult ret;
+
+
+	/*
+	 * Allocate and upload data.
+	 */
+	ret = render_sub_alloc_ubo_alloc_and_write( //
+	    vk,                                     // vk_bundle
+	    &rr->ubo_tracker,                       // rsat
+	    ubo_ptr,                                // ptr
+	    ubo_size,                               // size
+	    &ubo);                                  // out_rsa
+	VK_CHK_AND_RET(ret, "render_sub_alloc_ubo_alloc_and_write");
+
+
+	/*
+	 * Create and fill out destriptor.
+	 */
+
+	ret = vk_create_descriptor_set( //
+	    vk,                         // vk_bundle
+	    descriptor_pool,            // descriptor_pool
+	    descriptor_set_layout,      // descriptor_set_layout
+	    &descriptor_set);           // descriptor_set
+	VK_CHK_AND_RET(ret, "vk_create_descriptor_set");
+
+	update_ubo_and_src_discriptor_set( //
+	    vk,                            // vk_bundle
+	    ubo_binding,                   // ubo_binding
+	    ubo.buffer,                    // buffer
+	    ubo.offset,                    // offset
+	    ubo.size,                      // size
+	    src_binding,                   // src_binding
+	    src_sampler,                   // sampler
+	    src_image_view,                // image_view
+	    descriptor_set);               // descriptor_set
+
+	*out_descriptor_set = descriptor_set;
+
+	return VK_SUCCESS;
+}
+
 
 /*
  *
@@ -347,56 +455,6 @@ create_mesh_pipeline(struct vk_bundle *vk,
 	*out_mesh_pipeline = pipeline;
 
 	return VK_SUCCESS;
-}
-
-static void
-update_mesh_discriptor_set(struct vk_bundle *vk,
-                           uint32_t src_binding,
-                           VkSampler sampler,
-                           VkImageView image_view,
-                           uint32_t ubo_binding,
-                           VkBuffer buffer,
-                           VkDeviceSize offset,
-                           VkDeviceSize size,
-                           VkDescriptorSet descriptor_set)
-{
-	VkDescriptorImageInfo image_info = {
-	    .sampler = sampler,
-	    .imageView = image_view,
-	    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	};
-
-	VkDescriptorBufferInfo buffer_info = {
-	    .buffer = buffer,
-	    .offset = offset,
-	    .range = size,
-	};
-
-	VkWriteDescriptorSet write_descriptor_sets[2] = {
-	    {
-	        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-	        .dstSet = descriptor_set,
-	        .dstBinding = src_binding,
-	        .descriptorCount = 1,
-	        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-	        .pImageInfo = &image_info,
-	    },
-	    {
-	        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-	        .dstSet = descriptor_set,
-	        .dstBinding = ubo_binding,
-	        .descriptorCount = 1,
-	        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	        .pBufferInfo = &buffer_info,
-	    },
-	};
-
-	vk->vkUpdateDescriptorSets(            //
-	    vk->device,                        //
-	    ARRAY_SIZE(write_descriptor_sets), // descriptorWriteCount
-	    write_descriptor_sets,             // pDescriptorWrites
-	    0,                                 // descriptorCopyCount
-	    NULL);                             // pDescriptorCopies
 }
 
 
@@ -697,51 +755,19 @@ render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
                                 VkImageView src_image_view,
                                 VkDescriptorSet *out_descriptor_set)
 {
-	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-	struct render_sub_alloc ubo = XRT_STRUCT_INIT;
-	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;
-	VkResult ret;
 
-
-	/*
-	 * Allocate and upload data.
-	 */
-
-	ret = render_sub_alloc_ubo_alloc_and_write( //
-	    vk,                                     // vk_bundle
-	    &rr->ubo_tracker,                       // rsat
-	    data,                                   // ptr
-	    sizeof(*data),                          // size
-	    &ubo);                                  // out_rsa
-	VK_CHK_AND_RET(ret, "render_sub_alloc_ubo_alloc_and_write");
-
-
-	/*
-	 * Create and fill out destriptor.
-	 */
-
-	ret = vk_create_descriptor_set(         //
-	    vk,                                 // vk_bundle
+	return do_ubo_and_src_alloc_and_write(  //
+	    rr,                                 // rr
+	    r->mesh.ubo_binding,                // ubo_binding
+	    data,                               // ubo_ptr
+	    sizeof(*data),                      // ubo_size
+	    r->mesh.src_binding,                // src_binding
+	    src_sampler,                        // src_sampler
+	    src_image_view,                     // src_image_view
 	    r->gfx.ubo_and_src_descriptor_pool, // descriptor_pool
 	    r->mesh.descriptor_set_layout,      // descriptor_set_layout
-	    &descriptor_set);                   // descriptor_set
-	VK_CHK_AND_RET(ret, "vk_create_descriptor_set");
-
-	update_mesh_discriptor_set( //
-	    vk,                     // vk_bundle
-	    r->mesh.src_binding,    // src_binding
-	    src_sampler,            // sampler
-	    src_image_view,         // image_view
-	    r->mesh.ubo_binding,    // ubo_binding
-	    ubo.buffer,             // buffer
-	    ubo.offset,             // offset
-	    ubo.size,               // size
-	    descriptor_set);        // descriptor_set
-
-	*out_descriptor_set = descriptor_set;
-
-	return VK_SUCCESS;
+	    out_descriptor_set);                // out_descriptor_set
 }
 
 void
