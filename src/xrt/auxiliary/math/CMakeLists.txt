@@ -8,6 +8,7 @@ add_library(
 	m_api.h
 	m_base.cpp
 	m_clock_offset.h
+	m_documentation.hpp
 	m_eigen_interop.hpp
 	m_filter_fifo.c
 	m_filter_fifo.h
@@ -25,6 +26,8 @@ add_library(
 	m_lowpass_integer.cpp
 	m_lowpass_integer.h
 	m_lowpass_integer.hpp
+	m_matrix_2x2.h
+	m_matrix_4x4_f64.h
 	m_optics.c
 	m_permutation.c
 	m_permutation.h
