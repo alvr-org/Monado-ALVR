@@ -655,6 +655,19 @@ math_matrix_4x4_inverse_view_projection(const struct xrt_matrix_4x4 *view,
                                         const struct xrt_matrix_4x4 *projection,
                                         struct xrt_matrix_4x4 *result);
 
+/*!
+ * Compute a projection matrix with settings for Vulkan, it will also have it's
+ * far plane at infinite and the NDC depth will be reversed.
+ *
+ * @relates xrt_matrix_4x4
+ * @ingroup aux_math
+ */
+void
+math_matrix_4x4_projection_vulkan_infinite_reverse(const struct xrt_fov *fov,
+                                                   float near_plane,
+                                                   struct xrt_matrix_4x4 *result);
+
+
 /*
  *
  * Pose functions.

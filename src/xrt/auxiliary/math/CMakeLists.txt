@@ -28,6 +28,7 @@ add_library(
 	m_lowpass_integer.hpp
 	m_matrix_2x2.h
 	m_matrix_4x4_f64.h
+	m_matrix_projection.cpp
 	m_optics.c
 	m_permutation.c
 	m_permutation.h
