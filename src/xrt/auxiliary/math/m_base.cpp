@@ -211,7 +211,7 @@ math_quat_from_angle_vector(float angle_rads, const struct xrt_vec3 *vector, str
 	map_quat(*result) = Eigen::AngleAxisf(angle_rads, copy(vector));
 }
 
-void
+extern "C" void
 math_quat_from_euler_angles(const struct xrt_vec3 *angles, struct xrt_quat *result)
 {
 	map_quat(*result) = Eigen::AngleAxisf(angles->z, Eigen::Vector3f::UnitZ()) *
