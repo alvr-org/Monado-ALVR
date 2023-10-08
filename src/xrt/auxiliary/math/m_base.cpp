@@ -173,10 +173,31 @@ math_vec3_normalize(struct xrt_vec3 *in)
 }
 
 extern "C" void
+math_vec3_translation_from_isometry(const struct xrt_matrix_4x4 *transform, struct xrt_vec3 *result)
+{
+	Eigen::Isometry3f isometry{map_matrix_4x4(*transform)};
+	map_vec3(*result) = isometry.translation();
+}
+
+
+/*
+ *
+ * Exported 64 bit vector functions.
+ *
+ */
+
+extern "C" void
+math_vec3_f64_cross(const struct xrt_vec3_f64 *l, const struct xrt_vec3_f64 *r, struct xrt_vec3_f64 *result)
+{
+	map_vec3_f64(*result) = map_vec3_f64(*l).cross(map_vec3_f64(*r));
+}
+
+extern "C" void
 math_vec3_f64_normalize(struct xrt_vec3_f64 *in)
 {
 	map_vec3_f64(*in) = map_vec3_f64(*in).normalized();
 }
+
 
 /*
  *
@@ -787,19 +808,6 @@ m_mat4_f64_multiply(const struct xrt_matrix_4x4_f64 *left,
 	Eigen::Matrix4d r = map_matrix_4x4_f64(*right);
 
 	map_matrix_4x4_f64(*result) = l * r;
-}
-
-extern "C" void
-math_vec3_f64_cross(const struct xrt_vec3_f64 *l, const struct xrt_vec3_f64 *r, struct xrt_vec3_f64 *result)
-{
-	map_vec3_f64(*result) = map_vec3_f64(*l).cross(map_vec3_f64(*r));
-}
-
-extern "C" void
-math_vec3_translation_from_isometry(const struct xrt_matrix_4x4 *transform, struct xrt_vec3 *result)
-{
-	Eigen::Isometry3f isometry{map_matrix_4x4(*transform)};
-	map_vec3(*result) = isometry.translation();
 }
 
 extern "C" void
