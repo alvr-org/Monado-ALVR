@@ -1126,18 +1126,18 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 	// Start the compute pipeline.
 	render_compute_begin(crc);
 
-	comp_render_dispatch_compute( //
-	    crc,                      // crc
-	    &r->scratch,              // rsi
-	    world_poses,              // world_poses
-	    eye_poses,                // eye_poses
-	    layers,                   // layers
-	    layer_count,              // layer_count
-	    target_image,             // target_image
-	    target_image_view,        // target_image_view
-	    views,                    // views
-	    fast_path,                // fast_path
-	    do_timewarp);             // do_timewarp
+	comp_render_cs_dispatch( //
+	    crc,                 // crc
+	    &r->scratch,         // rsi
+	    world_poses,         // world_poses
+	    eye_poses,           // eye_poses
+	    layers,              // layers
+	    layer_count,         // layer_count
+	    target_image,        // target_image
+	    target_image_view,   // target_image_view
+	    views,               // views
+	    fast_path,           // fast_path
+	    do_timewarp);        // do_timewarp
 
 	render_compute_end(crc);
 
