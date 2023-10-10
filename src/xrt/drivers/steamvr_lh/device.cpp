@@ -141,6 +141,28 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
             },
         },
     },
+    {
+        "tundra_tracker",
+        InputClass{
+            XRT_DEVICE_VIVE_TRACKER,
+            "Tundra Tracker",
+            {
+                XRT_INPUT_GENERIC_TRACKER_POSE,
+            },
+            {
+                {"/input/system/click", XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK},
+                {"/input/squeeze/click", XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK},
+                {"/input/menu/click", XRT_INPUT_VIVE_TRACKER_MENU_CLICK},
+                {"/input/trigger/value", XRT_INPUT_VIVE_TRACKER_TRIGGER_VALUE},
+                {"/input/trackpad/click", XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK},
+                {"/input/trackpad/touch", XRT_INPUT_VIVE_TRACKER_TRACKPAD_TOUCH},
+                {"/input/trackpad/position", XRT_INPUT_VIVE_TRACKER_TRACKPAD},
+            },
+            {
+                // No fingers on this controller type
+            },
+        },
+    },
 };
 
 uint64_t
