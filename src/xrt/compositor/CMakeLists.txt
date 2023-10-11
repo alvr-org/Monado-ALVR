@@ -153,6 +153,7 @@ if(XRT_HAVE_VULKAN)
 		util/comp_base.c
 		util/comp_render.h
 		util/comp_render_cs.c
+		util/comp_render_gfx.c
 		util/comp_render_helpers.h
 		util/comp_semaphore.h
 		util/comp_semaphore.c

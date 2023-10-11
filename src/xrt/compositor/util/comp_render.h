@@ -23,6 +23,45 @@ struct comp_layer;
 
 
 /*!
+ * Helper function that takes a set of layers, new device poses, a scratch
+ * images with associated @ref render_gfx_target_resources and writes the needed
+ * commands to the @ref render_gfx to do a full composition with distortion.
+ * The scratch images are optionally used to squash layers should it not be
+ * possible to do a @p fast_path. Will use the render passes of the targets
+ * which set the layout.
+ *
+ * The render passes of @p rsi_rtrs must be created with a final_layout of
+ * VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL or there will be validation errors.
+ *
+ * Expected layouts:
+ * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Scratch images: Any (as per the @ref render_gfx_render_pass)
+ * * Target image: Any (as per the @ref render_gfx_render_pass)
+ *
+ * After call layouts:
+ * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Scratch images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ * * Target image: What the render pass of @p rtr specifies.
+ *
+ * @ingroup comp_util
+ */
+void
+comp_render_gfx_dispatch(struct render_gfx *rr,
+                         struct render_scratch_images *rsi,
+                         struct render_gfx_target_resources rsi_rtrs[2],
+                         const struct comp_layer *layers,
+                         const uint32_t layer_count,
+                         struct xrt_pose world_poses[2],
+                         struct xrt_pose eye_poses[2],
+                         struct xrt_fov fovs[2],
+                         struct xrt_matrix_2x2 vertex_rots[2],
+                         struct render_gfx_target_resources *rtr,
+                         const struct render_viewport_data viewport_datas[2],
+                         bool fast_path,
+                         bool do_timewarp);
+
+
+/*!
  * Helper to dispatch the layer squasher for a single view.
  *
  * All source layer images and target image needs to be in the correct image
