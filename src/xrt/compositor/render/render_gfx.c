@@ -289,6 +289,213 @@ do_ubo_and_src_alloc_and_write(struct render_gfx *rr,
 	return VK_SUCCESS;
 }
 
+static inline void
+dispatch_no_vbo(struct render_gfx *rr, uint32_t vertex_count, VkPipeline pipeline, VkDescriptorSet descriptor_set)
+{
+	struct vk_bundle *vk = vk_from_rr(rr);
+	struct render_resources *r = rr->r;
+
+
+	VkDescriptorSet descriptor_sets[1] = {descriptor_set};
+	vk->vkCmdBindDescriptorSets(             //
+	    r->cmd,                              // commandBuffer
+	    VK_PIPELINE_BIND_POINT_GRAPHICS,     // pipelineBindPoint
+	    r->gfx.layer.shared.pipeline_layout, // layout
+	    0,                                   // firstSet
+	    ARRAY_SIZE(descriptor_sets),         // descriptorSetCount
+	    descriptor_sets,                     // pDescriptorSets
+	    0,                                   // dynamicOffsetCount
+	    NULL);                               // pDynamicOffsets
+
+	vk->vkCmdBindPipeline(               //
+	    r->cmd,                          // commandBuffer
+	    VK_PIPELINE_BIND_POINT_GRAPHICS, // pipelineBindPoint
+	    pipeline);                       // pipeline
+
+	// This pipeline doesn't have any VBO input or indices.
+
+	vk->vkCmdDraw(    //
+	    r->cmd,       // commandBuffer
+	    vertex_count, // vertexCount
+	    1,            // instanceCount
+	    0,            // firstVertex
+	    0);           // firstInstance
+}
+
+
+/*
+ *
+ * Layer
+ *
+ */
+
+XRT_CHECK_RESULT static VkResult
+create_layer_pipeline(struct vk_bundle *vk,
+                      VkRenderPass render_pass,
+                      VkPipelineLayout pipeline_layout,
+                      VkPipelineCache pipeline_cache,
+                      VkBlendFactor src_blend_factor,
+                      VkShaderModule module_vert,
+                      VkShaderModule module_frag,
+                      VkPipeline *out_pipeline)
+{
+	VkResult ret;
+
+	// Might be changed to line for debugging.
+	VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL;
+
+	// Generate vertices inside of the vertex shader.
+	const VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+	    .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+	    .primitiveRestartEnable = VK_FALSE,
+	};
+
+	const VkPipelineVertexInputStateCreateInfo vertex_input_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+	    .vertexAttributeDescriptionCount = 0,
+	    .pVertexAttributeDescriptions = NULL,
+	    .vertexBindingDescriptionCount = 0,
+	    .pVertexBindingDescriptions = NULL,
+	};
+
+
+	/*
+	 * Target and rasterisation.
+	 */
+
+	const VkPipelineViewportStateCreateInfo viewport_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+	    .viewportCount = 1,
+	    .scissorCount = 1,
+	};
+
+	const VkPipelineMultisampleStateCreateInfo multisample_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+	    .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+	};
+
+	const VkPipelineRasterizationStateCreateInfo rasterization_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+	    .depthClampEnable = VK_FALSE,
+	    .rasterizerDiscardEnable = VK_FALSE,
+	    .polygonMode = polygonMode,
+	    .cullMode = VK_CULL_MODE_BACK_BIT,
+	    .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+	    .lineWidth = 1.0f,
+	};
+
+
+	/*
+	 * Blending.
+	 */
+
+	const VkColorComponentFlags all_components = //
+	    VK_COLOR_COMPONENT_R_BIT |               //
+	    VK_COLOR_COMPONENT_G_BIT |               //
+	    VK_COLOR_COMPONENT_B_BIT |               //
+	    VK_COLOR_COMPONENT_A_BIT;                //
+
+	const VkPipelineColorBlendAttachmentState blend_attachment_state = {
+	    .blendEnable = VK_TRUE,
+	    .colorWriteMask = all_components,
+	    .srcColorBlendFactor = src_blend_factor,
+	    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	    .colorBlendOp = VK_BLEND_OP_ADD,
+	    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+	    .alphaBlendOp = VK_BLEND_OP_ADD,
+	};
+
+	const VkPipelineColorBlendStateCreateInfo color_blend_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+	    .attachmentCount = 1,
+	    .pAttachments = &blend_attachment_state,
+	};
+
+	const VkPipelineDepthStencilStateCreateInfo depth_stencil_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+	    .depthTestEnable = VK_FALSE,
+	    .depthWriteEnable = VK_FALSE,
+	    .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+	    .front = {.compareOp = VK_COMPARE_OP_ALWAYS},
+	    .back = {.compareOp = VK_COMPARE_OP_ALWAYS},
+	};
+
+
+	/*
+	 * Dynamic state.
+	 */
+
+	const VkDynamicState dynamic_states[] = {
+	    VK_DYNAMIC_STATE_VIEWPORT,
+	    VK_DYNAMIC_STATE_SCISSOR,
+	};
+
+	const VkPipelineDynamicStateCreateInfo dynamic_state = {
+	    .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+	    .dynamicStateCount = ARRAY_SIZE(dynamic_states),
+	    .pDynamicStates = dynamic_states,
+	};
+
+
+	/*
+	 * Shaders.
+	 */
+
+	const VkPipelineShaderStageCreateInfo shader_stages[2] = {
+	    {
+	        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+	        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+	        .module = module_vert,
+	        .pName = "main",
+	    },
+	    {
+	        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+	        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+	        .module = module_frag,
+	        .pName = "main",
+	    },
+	};
+
+
+	/*
+	 * Bringing it all together.
+	 */
+
+	const VkGraphicsPipelineCreateInfo pipeline_info = {
+	    .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+	    .stageCount = ARRAY_SIZE(shader_stages),
+	    .pStages = shader_stages,
+	    .pVertexInputState = &vertex_input_state,
+	    .pInputAssemblyState = &input_assembly_state,
+	    .pViewportState = &viewport_state,
+	    .pRasterizationState = &rasterization_state,
+	    .pMultisampleState = &multisample_state,
+	    .pDepthStencilState = &depth_stencil_state,
+	    .pColorBlendState = &color_blend_state,
+	    .pDynamicState = &dynamic_state,
+	    .layout = pipeline_layout,
+	    .renderPass = render_pass,
+	    .basePipelineHandle = VK_NULL_HANDLE,
+	    .basePipelineIndex = -1,
+	};
+
+	VkPipeline pipeline = VK_NULL_HANDLE;
+	ret = vk->vkCreateGraphicsPipelines( //
+	    vk->device,                      //
+	    pipeline_cache,                  //
+	    1,                               //
+	    &pipeline_info,                  //
+	    NULL,                            //
+	    &pipeline);                      //
+	VK_CHK_AND_RET(ret, "vkCreateGraphicsPipelines");
+
+	*out_pipeline = pipeline;
+
+	return VK_SUCCESS;
+}
+
 
 /*
  *
@@ -545,6 +752,53 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    &rgrp->mesh.pipeline_timewarp); // out_mesh_pipeline
 	VK_CHK_WITH_RET(ret, "create_mesh_pipeline", false);
 
+	const VkBlendFactor blend_factor_premultiplied_alpha = VK_BLEND_FACTOR_ONE;
+	const VkBlendFactor blend_factor_unpremultiplied_alpha = VK_BLEND_FACTOR_SRC_ALPHA;
+
+	ret = create_layer_pipeline(                //
+	    vk,                                     // vk
+	    rgrp->render_pass,                      // render_pass
+	    r->gfx.layer.shared.pipeline_layout,    // pipeline_layout
+	    r->pipeline_cache,                      // pipeline_cache
+	    blend_factor_premultiplied_alpha,       // src_blend_factor
+	    r->shaders->layer_projection_vert,      // module_vert
+	    r->shaders->layer_shared_frag,          // module_frag
+	    &rgrp->layer.proj_premultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	ret = create_layer_pipeline(                  //
+	    vk,                                       // vk
+	    rgrp->render_pass,                        // render_pass
+	    r->gfx.layer.shared.pipeline_layout,      // pipeline_layout
+	    r->pipeline_cache,                        // pipeline_cache
+	    blend_factor_unpremultiplied_alpha,       // src_blend_factor
+	    r->shaders->layer_projection_vert,        // module_vert
+	    r->shaders->layer_shared_frag,            // module_frag
+	    &rgrp->layer.proj_unpremultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	ret = create_layer_pipeline(                //
+	    vk,                                     // vk
+	    rgrp->render_pass,                      // render_pass
+	    r->gfx.layer.shared.pipeline_layout,    // pipeline_layout
+	    r->pipeline_cache,                      // pipeline_cache
+	    blend_factor_premultiplied_alpha,       // src_blend_factor
+	    r->shaders->layer_quad_vert,            // module_vert
+	    r->shaders->layer_shared_frag,          // module_frag
+	    &rgrp->layer.quad_premultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	ret = create_layer_pipeline(                  //
+	    vk,                                       // vk
+	    rgrp->render_pass,                        // render_pass
+	    r->gfx.layer.shared.pipeline_layout,      // pipeline_layout
+	    r->pipeline_cache,                        // pipeline_cache
+	    blend_factor_unpremultiplied_alpha,       // src_blend_factor
+	    r->shaders->layer_quad_vert,              // module_vert
+	    r->shaders->layer_shared_frag,            // module_frag
+	    &rgrp->layer.quad_unpremultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
 	// Set fields.
 	rgrp->r = r;
 	rgrp->format = format;
@@ -563,6 +817,11 @@ render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp)
 	D(RenderPass, rgrp->render_pass);
 	D(Pipeline, rgrp->mesh.pipeline);
 	D(Pipeline, rgrp->mesh.pipeline_timewarp);
+
+	D(Pipeline, rgrp->layer.proj_premultiplied_alpha);
+	D(Pipeline, rgrp->layer.proj_unpremultiplied_alpha);
+	D(Pipeline, rgrp->layer.quad_premultiplied_alpha);
+	D(Pipeline, rgrp->layer.quad_unpremultiplied_alpha);
 
 	U_ZERO(rgrp);
 }
@@ -895,4 +1154,87 @@ render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet
 		    0,                    // firstVertex
 		    0);                   // firstInstance
 	}
+}
+
+
+/*
+ *
+ * 'Exported' layer functions.
+ *
+ */
+
+XRT_CHECK_RESULT VkResult
+render_gfx_layer_projection_alloc_and_write(struct render_gfx *rr,
+                                            const struct render_gfx_layer_projection_data *data,
+                                            VkSampler src_sampler,
+                                            VkImageView src_image_view,
+                                            VkDescriptorSet *out_descriptor_set)
+{
+	struct render_resources *r = rr->r;
+
+	return do_ubo_and_src_alloc_and_write(         //
+	    rr,                                        // rr
+	    RENDER_BINDING_LAYER_SHARED_UBO,           // ubo_binding
+	    data,                                      // ubo_ptr
+	    sizeof(*data),                             // ubo_size
+	    RENDER_BINDING_LAYER_SHARED_SRC,           // src_binding
+	    src_sampler,                               // src_sampler
+	    src_image_view,                            // src_image_view
+	    r->gfx.ubo_and_src_descriptor_pool,        // descriptor_pool
+	    r->gfx.layer.shared.descriptor_set_layout, // descriptor_set_layout
+	    out_descriptor_set);                       // out_descriptor_set
+}
+
+XRT_CHECK_RESULT VkResult
+render_gfx_layer_quad_alloc_and_write(struct render_gfx *rr,
+                                      const struct render_gfx_layer_quad_data *data,
+                                      VkSampler src_sampler,
+                                      VkImageView src_image_view,
+                                      VkDescriptorSet *out_descriptor_set)
+{
+	struct render_resources *r = rr->r;
+
+	return do_ubo_and_src_alloc_and_write(         //
+	    rr,                                        // rr
+	    RENDER_BINDING_LAYER_SHARED_UBO,           // ubo_binding
+	    data,                                      // ubo_ptr
+	    sizeof(*data),                             // ubo_size
+	    RENDER_BINDING_LAYER_SHARED_SRC,           // src_binding
+	    src_sampler,                               // src_sampler
+	    src_image_view,                            // src_image_view
+	    r->gfx.ubo_and_src_descriptor_pool,        // descriptor_pool
+	    r->gfx.layer.shared.descriptor_set_layout, // descriptor_set_layout
+	    out_descriptor_set);                       // out_descriptor_set
+}
+
+void
+render_gfx_layer_projection(struct render_gfx *rr, bool premultiplied_alpha, VkDescriptorSet descriptor_set)
+{
+	VkPipeline pipeline =                                      //
+	    premultiplied_alpha                                    //
+	        ? rr->rtr->rgrp->layer.proj_premultiplied_alpha    //
+	        : rr->rtr->rgrp->layer.proj_unpremultiplied_alpha; //
+
+	// Hardcoded to 4 vertices.
+	dispatch_no_vbo(     //
+	    rr,              // rr
+	    4,               // vertex_count
+	    pipeline,        // pipeline
+	    descriptor_set); // descriptor_set
+}
+
+void
+render_gfx_layer_quad(struct render_gfx *rr, bool premultiplied_alpha, VkDescriptorSet descriptor_set)
+{
+	VkPipeline pipeline =                                      //
+	    premultiplied_alpha                                    //
+	        ? rr->rtr->rgrp->layer.quad_premultiplied_alpha    //
+	        : rr->rtr->rgrp->layer.quad_unpremultiplied_alpha; //
+
+	// Hardcoded to 4 vertices.
+	dispatch_no_vbo(     //
+	    rr,              // rr
+	    4,               // vertex_count
+	    pipeline,        // pipeline
+	    descriptor_set); // descriptor_set
 }

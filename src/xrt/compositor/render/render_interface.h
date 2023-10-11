@@ -413,6 +413,18 @@ struct render_resources
 		 * https://registry.khronos.org/vulkan/site/guide/latest/memory_allocation.html
 		 */
 		struct render_buffer shared_ubo;
+
+		struct
+		{
+			struct
+			{
+				//! For projection and quad layer.
+				VkDescriptorSetLayout descriptor_set_layout;
+
+				//! For projection and quad layer.
+				VkPipelineLayout pipeline_layout;
+			} shared;
+		} layer;
 	} gfx;
 
 	struct
@@ -706,6 +718,14 @@ struct render_gfx_render_pass
 		//! Pipeline layout used for mesh, with timewarp.
 		VkPipeline pipeline_timewarp;
 	} mesh;
+
+	struct
+	{
+		VkPipeline proj_premultiplied_alpha;
+		VkPipeline proj_unpremultiplied_alpha;
+		VkPipeline quad_premultiplied_alpha;
+		VkPipeline quad_unpremultiplied_alpha;
+	} layer;
 };
 
 /*!
@@ -931,6 +951,50 @@ render_gfx_mesh_alloc_and_write(struct render_gfx *rr,
 void
 render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet descriptor_set, bool do_timewarp);
 
+/*!
+ * Allocate and write a UBO and descriptor_set to be used for projection layer
+ * rendering, the content of @p data need to be valid at the time of the call.
+ *
+ * @public @memberof render_gfx
+ */
+XRT_CHECK_RESULT VkResult
+render_gfx_layer_projection_alloc_and_write(struct render_gfx *rr,
+                                            const struct render_gfx_layer_projection_data *data,
+                                            VkSampler src_sampler,
+                                            VkImageView src_image_view,
+                                            VkDescriptorSet *out_descriptor_set);
+
+/*!
+ * Allocate and write a UBO and descriptor_set to be used for quad layer
+ * rendering, the content of @p data need to be valid at the time of the call.
+ *
+ * @public @memberof render_gfx
+ */
+XRT_CHECK_RESULT VkResult
+render_gfx_layer_quad_alloc_and_write(struct render_gfx *rr,
+                                      const struct render_gfx_layer_quad_data *data,
+                                      VkSampler src_sampler,
+                                      VkImageView src_image_view,
+                                      VkDescriptorSet *out_descriptor_set);
+
+/*!
+ * Dispatch a projection layer shader into the current target and view,
+ * allocate @p descriptor_set and ubo with
+ * @ref render_gfx_layer_projection_alloc_and_write.
+ *
+ * @public @memberof render_gfx
+ */
+void
+render_gfx_layer_projection(struct render_gfx *rr, bool premultiplied_alpha, VkDescriptorSet descriptor_set);
+
+/*!
+ * Dispatch a quad layer shader into the current target and view, allocate
+ * @p descriptor_set and ubo with @ref render_gfx_layer_quad_alloc_and_write.
+ *
+ * @public @memberof render_gfx
+ */
+void
+render_gfx_layer_quad(struct render_gfx *rr, bool premultiplied_alpha, VkDescriptorSet descriptor_set);
 
 /*!
  * @}

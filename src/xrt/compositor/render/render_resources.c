@@ -724,6 +724,24 @@ render_resources_init(struct render_resources *r,
 
 
 	/*
+	 * Gfx layer.
+	 */
+
+	ret = create_gfx_ubo_and_src_descriptor_set_layout( //
+	    vk,                                             // vk_bundle
+	    RENDER_BINDING_LAYER_SHARED_UBO,                // ubo_binding
+	    RENDER_BINDING_LAYER_SHARED_SRC,                // src_binding
+	    &r->gfx.layer.shared.descriptor_set_layout);    // out_descriptor_set_layout
+	VK_CHK_WITH_RET(ret, "create_gfx_ubo_and_src_descriptor_set_layout", false);
+
+	ret = vk_create_pipeline_layout(               //
+	    vk,                                        // vk_bundle
+	    r->gfx.layer.shared.descriptor_set_layout, // descriptor_set_layout
+	    &r->gfx.layer.shared.pipeline_layout);     // out_pipeline_layout
+	VK_CHK_WITH_RET(ret, "vk_create_pipeline_layout", false);
+
+
+	/*
 	 * Mesh static.
 	 */
 
@@ -1016,6 +1034,9 @@ render_resources_close(struct render_resources *r)
 
 	render_buffer_close(vk, &r->gfx.shared_ubo);
 	D(DescriptorPool, r->gfx.ubo_and_src_descriptor_pool);
+
+	D(DescriptorSetLayout, r->gfx.layer.shared.descriptor_set_layout);
+	D(PipelineLayout, r->gfx.layer.shared.pipeline_layout);
 
 	D(DescriptorSetLayout, r->mesh.descriptor_set_layout);
 	D(PipelineLayout, r->mesh.pipeline_layout);
