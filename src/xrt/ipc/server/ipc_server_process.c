@@ -359,13 +359,10 @@ init_shm(struct ipc_server *s)
 	s->ism->isdev_count = count;
 
 	// Assign all of the roles.
-	ism->roles.head = find_xdev_index(s, s->xsysd->roles.head);
-	ism->roles.left = find_xdev_index(s, s->xsysd->roles.left);
-	ism->roles.right = find_xdev_index(s, s->xsysd->roles.right);
-	ism->roles.gamepad = find_xdev_index(s, s->xsysd->roles.gamepad);
-	ism->roles.hand_tracking.left = find_xdev_index(s, s->xsysd->roles.hand_tracking.left);
-	ism->roles.hand_tracking.right = find_xdev_index(s, s->xsysd->roles.hand_tracking.right);
-	ism->roles.eyes = find_xdev_index(s, s->xsysd->roles.eyes);
+	ism->roles.head = find_xdev_index(s, s->xsysd->static_roles.head);
+	ism->roles.eyes = find_xdev_index(s, s->xsysd->static_roles.eyes);
+	ism->roles.hand_tracking.left = find_xdev_index(s, s->xsysd->static_roles.hand_tracking.left);
+	ism->roles.hand_tracking.right = find_xdev_index(s, s->xsysd->static_roles.hand_tracking.right);
 
 	// Fill out git version info.
 	snprintf(s->ism->u_git_tag, IPC_VERSION_NAME_LEN, "%s", u_git_tag);

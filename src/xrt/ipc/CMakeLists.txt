@@ -64,6 +64,7 @@ add_library(
 	client/ipc_client_hmd.c
 	client/ipc_client_instance.c
 	client/ipc_client_space_overseer.c
+	client/ipc_client_system_devices.c
 	)
 target_include_directories(
 	ipc_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}

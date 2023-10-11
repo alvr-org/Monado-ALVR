@@ -1489,3 +1489,9 @@ ipc_handle_device_is_form_factor_available(volatile struct ipc_client_state *ics
 	*out_available = xrt_device_is_form_factor_available(xdev, form_factor);
 	return XRT_SUCCESS;
 }
+
+xrt_result_t
+ipc_handle_system_devices_get_roles(volatile struct ipc_client_state *ics, struct xrt_system_roles *out_roles)
+{
+	return xrt_system_devices_get_roles(ics->server->xsysd, out_roles);
+}

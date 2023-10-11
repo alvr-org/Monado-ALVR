@@ -50,6 +50,12 @@
 		]
 	},
 
+	"system_devices_get_roles": {
+		"out": [
+			{"name": "system_roles", "type": "struct xrt_system_roles"}
+		]
+	},
+
 	"system_compositor_get_info": {
 		"out": [
 			{"name": "info", "type": "struct xrt_system_compositor_info"}

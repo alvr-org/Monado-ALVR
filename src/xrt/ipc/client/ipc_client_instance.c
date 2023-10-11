@@ -4,6 +4,7 @@
  * @file
  * @brief  Client side wrapper of instance.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup ipc_client
  */
 
@@ -56,6 +57,7 @@
 #endif // XRT_OS_ANDROID
 
 DEBUG_GET_ONCE_LOG_OPTION(ipc_log, "IPC_LOG", U_LOGGING_WARN)
+
 
 /*
  *
@@ -130,24 +132,24 @@ ipc_client_instance_create_system(struct xrt_instance *xinst,
 	assert(*out_xsysd == NULL);
 	assert(out_xsysc == NULL || *out_xsysc == NULL);
 
-	// Allocate a helper u_system_devices struct.
-	struct u_system_devices *usysd = u_system_devices_allocate();
+	// Allocate a helper xrt_system_devices struct.
+	struct xrt_system_devices *xsysd = ipc_client_system_devices_create(&ii->ipc_c);
 
 	// Take the devices from this instance.
 	for (uint32_t i = 0; i < ii->xdev_count; i++) {
-		usysd->base.xdevs[i] = ii->xdevs[i];
+		xsysd->xdevs[i] = ii->xdevs[i];
 		ii->xdevs[i] = NULL;
 	}
-	usysd->base.xdev_count = ii->xdev_count;
+	xsysd->xdev_count = ii->xdev_count;
 	ii->xdev_count = 0;
 
 #define SET_ROLE(ROLE)                                                                                                 \
-	usysd->base.roles.ROLE = ii->ipc_c.ism->roles.ROLE >= 0 ? usysd->base.xdevs[ii->ipc_c.ism->roles.ROLE] : NULL;
+	do {                                                                                                           \
+		int32_t index = ii->ipc_c.ism->roles.ROLE;                                                             \
+		xsysd->static_roles.ROLE = index >= 0 ? xsysd->xdevs[index] : NULL;                                    \
+	} while (false)
 
 	SET_ROLE(head);
-	SET_ROLE(left);
-	SET_ROLE(right);
-	SET_ROLE(gamepad);
 	SET_ROLE(eyes);
 	SET_ROLE(hand_tracking.left);
 	SET_ROLE(hand_tracking.right);
@@ -165,25 +167,25 @@ ipc_client_instance_create_system(struct xrt_instance *xinst,
 
 	// Done here now.
 	if (out_xsysc == NULL) {
-		*out_xsysd = &usysd->base;
+		*out_xsysd = xsysd;
 		*out_xso = ipc_client_space_overseer_create(&ii->ipc_c);
 		return XRT_SUCCESS;
 	}
 
-	if (usysd->base.roles.head == NULL) {
+	if (xsysd->static_roles.head == NULL) {
 		IPC_ERROR((&ii->ipc_c), "No head device found but asking for system compositor!");
-		u_system_devices_destroy(&usysd);
+		xrt_system_devices_destroy(&xsysd);
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
 	struct xrt_system_compositor *xsysc = NULL;
-	xret = create_system_compositor(ii, usysd->base.roles.head, &xsysc);
+	xret = create_system_compositor(ii, xsysd->static_roles.head, &xsysc);
 	if (xret != XRT_SUCCESS) {
-		u_system_devices_destroy(&usysd);
+		xrt_system_devices_destroy(&xsysd);
 		return xret;
 	}
 
-	*out_xsysd = &usysd->base;
+	*out_xsysd = xsysd;
 	*out_xso = ipc_client_space_overseer_create(&ii->ipc_c);
 	*out_xsysc = xsysc;
 

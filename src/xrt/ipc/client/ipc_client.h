@@ -5,6 +5,7 @@
  * @brief  Common client side code.
  * @author Pete Black <pblack@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup ipc_client
  */
 
@@ -118,3 +119,6 @@ ipc_client_device_create(struct ipc_connection *ipc_c, struct xrt_tracking_origi
 
 struct xrt_space_overseer *
 ipc_client_space_overseer_create(struct ipc_connection *ipc_c);
+
+struct xrt_system_devices *
+ipc_client_system_devices_create(struct ipc_connection *ipc_c);
