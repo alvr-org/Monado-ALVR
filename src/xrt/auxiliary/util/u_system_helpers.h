@@ -72,6 +72,34 @@ void
 u_system_devices_close(struct xrt_system_devices *xsysd);
 
 /*!
+ * Destroy an u_system_devices_allocate and owned devices - helper function.
+ *
+ * @param[in,out] usysd_ptr A pointer to the u_system_devices_allocate struct pointer.
+ *
+ * Will destroy the system devices if *usysd_ptr is not NULL. Will then set *usysd_ptr to NULL.
+ *
+ * @public @memberof u_system_devices_allocate
+ */
+static inline void
+u_system_devices_destroy(struct u_system_devices **usysd_ptr)
+{
+	struct u_system_devices *usysd = *usysd_ptr;
+	if (usysd == NULL) {
+		return;
+	}
+
+	*usysd_ptr = NULL;
+	usysd->base.destroy(&usysd->base);
+}
+
+
+/*
+ *
+ * Generic system devices helper.
+ *
+ */
+
+/*!
  * Takes a @ref xrt_instance, gets the prober from it and then uses the prober
  * to allocate a filled in @ref u_system_devices.
  *
@@ -94,27 +122,6 @@ u_system_devices_create_from_prober(struct xrt_instance *xinst,
  */
 struct xrt_device *
 u_system_devices_get_ht_device(struct u_system_devices *usysd, enum xrt_input_name name);
-
-/*!
- * Destroy an u_system_devices_allocate and owned devices - helper function.
- *
- * @param[in,out] usysd_ptr A pointer to the u_system_devices_allocate struct pointer.
- *
- * Will destroy the system devices if *usysd_ptr is not NULL. Will then set *usysd_ptr to NULL.
- *
- * @public @memberof u_system_devices_allocate
- */
-static inline void
-u_system_devices_destroy(struct u_system_devices **usysd_ptr)
-{
-	struct u_system_devices *usysd = *usysd_ptr;
-	if (usysd == NULL) {
-		return;
-	}
-
-	*usysd_ptr = NULL;
-	usysd->base.destroy(&usysd->base);
-}
 
 
 #ifdef __cplusplus

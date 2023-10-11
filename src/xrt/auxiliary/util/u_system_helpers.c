@@ -58,6 +58,13 @@ u_system_devices_close(struct xrt_system_devices *xsysd)
 	xrt_frame_context_destroy_nodes(&usysd->xfctx);
 }
 
+
+/*
+ *
+ * Generic system devices helper.
+ *
+ */
+
 xrt_result_t
 u_system_devices_create_from_prober(struct xrt_instance *xinst,
                                     struct xrt_system_devices **out_xsysd,
