@@ -1477,7 +1477,7 @@ CServerDriver_Monado::Init(vr::IVRDriverContext *pDriverContext)
 		xrt_instance_destroy(&m_xinst);
 		return vr::VRInitError_Init_HmdNotFound;
 	}
-	if (m_xsysd->roles.head == NULL) {
+	if (m_xsysd->static_roles.head == NULL) {
 		ovrd_log("Didn't get a HMD device!\n");
 		xrt_space_overseer_destroy(&m_xso);
 		xrt_system_devices_destroy(&m_xsysd);
@@ -1485,15 +1485,24 @@ CServerDriver_Monado::Init(vr::IVRDriverContext *pDriverContext)
 		return vr::VRInitError_Init_HmdNotFound;
 	}
 
-	m_xhmd = m_xsysd->roles.head;
+	m_xhmd = m_xsysd->static_roles.head;
 
 	ovrd_log("Selected HMD %s\n", m_xhmd->str);
 	m_MonadoDeviceDriver = new CDeviceDriver_Monado(m_xinst, m_xhmd);
 	//! @todo provide a serial number
 	vr::VRServerDriverHost()->TrackedDeviceAdded(m_xhmd->str, vr::TrackedDeviceClass_HMD, m_MonadoDeviceDriver);
 
-	struct xrt_device *left_xdev = m_xsysd->roles.left;
-	struct xrt_device *right_xdev = m_xsysd->roles.right;
+	xrt_system_roles system_roles = XRT_SYSTEM_ROLES_INIT;
+	xrt_system_devices_get_roles(m_xsysd, &system_roles);
+
+	struct xrt_device *left_xdev = nullptr;
+	if (system_roles.left >= 0 && system_roles.left < XRT_SYSTEM_MAX_DEVICES) {
+		left_xdev = m_xsysd->xdevs[system_roles.left];
+	}
+	struct xrt_device *right_xdev = nullptr;
+	if (system_roles.right >= 0 && system_roles.right < XRT_SYSTEM_MAX_DEVICES) {
+		right_xdev = m_xsysd->xdevs[system_roles.right];
+	}
 
 	// use steamvr room setup instead
 	struct xrt_vec3 offset = {0, 0, 0};
