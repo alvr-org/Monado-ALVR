@@ -78,6 +78,12 @@ extern "C" {
 //! How many distortion images we have, one for each channel (3 rgb) and per view, total 6.
 #define RENDER_DISTORTION_NUM_IMAGES (6)
 
+//! Which binding does the layer projection and quad shader has it's UBO on.
+#define RENDER_BINDING_LAYER_SHARED_UBO 0
+
+//! Which binding does the shared layer fragment shader has it's source on.
+#define RENDER_BINDING_LAYER_SHARED_SRC 1
+
 
 /*
  *
@@ -144,6 +150,14 @@ struct render_shaders
 
 	VkShaderModule layer_vert;
 	VkShaderModule layer_frag;
+
+	/*
+	 * New layer renderer.
+	 */
+
+	VkShaderModule layer_projection_vert;
+	VkShaderModule layer_quad_vert;
+	VkShaderModule layer_shared_frag;
 };
 
 /*!
@@ -837,6 +851,26 @@ struct render_gfx_mesh_ubo_data
 	struct xrt_normalized_rect pre_transform;
 	struct xrt_matrix_4x4 transform;
 };
+
+/*!
+ * UBO data that is sent to the layer projection shader.
+ */
+struct render_gfx_layer_projection_data
+{
+	struct xrt_normalized_rect post_transform;
+	struct xrt_normalized_rect to_tanget;
+	struct xrt_matrix_4x4 mvp;
+};
+
+/*!
+ * UBO data that is sent to the layer quad shader.
+ */
+struct render_gfx_layer_quad_data
+{
+	struct xrt_normalized_rect post_transform;
+	struct xrt_matrix_4x4 mvp;
+};
+
 
 /*!
  * @name Drawing functions

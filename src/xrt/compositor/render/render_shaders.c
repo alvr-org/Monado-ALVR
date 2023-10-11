@@ -36,6 +36,9 @@
 #include "shaders/equirect1.vert.h"
 #include "shaders/equirect2.frag.h"
 #include "shaders/equirect2.vert.h"
+#include "shaders/layer_projection.vert.h"
+#include "shaders/layer_quad.vert.h"
+#include "shaders/layer_shared.frag.h"
 #include "shaders/mesh.frag.h"
 #include "shaders/mesh.vert.h"
 
@@ -129,6 +132,10 @@ render_shaders_load(struct render_shaders *s, struct vk_bundle *vk)
 	LOAD(layer_vert);
 	LOAD(layer_frag);
 
+	LOAD(layer_projection_vert);
+	LOAD(layer_quad_vert);
+	LOAD(layer_shared_frag);
+
 	VK_DEBUG(vk, "Shaders loaded!");
 
 	return true;
@@ -153,6 +160,10 @@ render_shaders_close(struct render_shaders *s, struct vk_bundle *vk)
 #endif
 	D(ShaderModule, s->layer_vert);
 	D(ShaderModule, s->layer_frag);
+
+	D(ShaderModule, s->layer_projection_vert);
+	D(ShaderModule, s->layer_quad_vert);
+	D(ShaderModule, s->layer_shared_frag);
 
 	VK_DEBUG(vk, "Shaders destroyed!");
 }
