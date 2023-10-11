@@ -75,21 +75,6 @@ struct xrt_system_devices
 		} hand_tracking;
 	} static_roles;
 
-	struct
-	{
-		struct xrt_device *head;
-		struct xrt_device *left;
-		struct xrt_device *right;
-		struct xrt_device *gamepad;
-		struct xrt_device *eyes;
-
-		struct
-		{
-			struct xrt_device *left;
-			struct xrt_device *right;
-		} hand_tracking;
-	} roles;
-
 
 	/*!
 	 * Function to get the dynamic input device roles from this system
