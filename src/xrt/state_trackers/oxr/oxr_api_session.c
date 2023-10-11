@@ -367,9 +367,9 @@ oxr_hand_tracker_create(struct oxr_logger *log,
 	// Find the assigned device.
 	struct xrt_device *xdev = NULL;
 	if (createInfo->hand == XR_HAND_LEFT_EXT) {
-		xdev = sess->sys->xsysd->roles.hand_tracking.left;
+		xdev = GET_XDEV_BY_ROLE(sess->sys, hand_tracking_left);
 	} else if (createInfo->hand == XR_HAND_RIGHT_EXT) {
-		xdev = sess->sys->xsysd->roles.hand_tracking.right;
+		xdev = GET_XDEV_BY_ROLE(sess->sys, hand_tracking_right);
 	}
 
 	// Find the correct input on the device.

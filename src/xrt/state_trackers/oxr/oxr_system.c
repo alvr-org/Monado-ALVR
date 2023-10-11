@@ -190,8 +190,8 @@ bool
 oxr_system_get_hand_tracking_support(struct oxr_logger *log, struct oxr_instance *inst)
 {
 	struct oxr_system *sys = &inst->system;
-	struct xrt_device *ht_left = GET_XDEV_BY_ROLE(sys, hand_tracking.left);
-	struct xrt_device *ht_right = GET_XDEV_BY_ROLE(sys, hand_tracking.right);
+	struct xrt_device *ht_left = GET_XDEV_BY_ROLE(sys, hand_tracking_left);
+	struct xrt_device *ht_right = GET_XDEV_BY_ROLE(sys, hand_tracking_right);
 
 	bool left_supported = ht_left && ht_left->hand_tracking_supported;
 	bool right_supported = ht_right && ht_right->hand_tracking_supported;
@@ -212,8 +212,8 @@ bool
 oxr_system_get_force_feedback_support(struct oxr_logger *log, struct oxr_instance *inst)
 {
 	struct oxr_system *sys = &inst->system;
-	struct xrt_device *ffb_left = GET_XDEV_BY_ROLE(sys, hand_tracking.left);
-	struct xrt_device *ffb_right = GET_XDEV_BY_ROLE(sys, hand_tracking.right);
+	struct xrt_device *ffb_left = GET_XDEV_BY_ROLE(sys, hand_tracking_left);
+	struct xrt_device *ffb_right = GET_XDEV_BY_ROLE(sys, hand_tracking_right);
 
 	bool left_supported = ffb_left && ffb_left->force_feedback_supported;
 	bool right_supported = ffb_right && ffb_right->force_feedback_supported;

@@ -1283,7 +1283,27 @@ struct oxr_system
 #endif
 };
 
-#define GET_XDEV_BY_ROLE(SYS, ROLE) ((SYS)->xsysd->roles.ROLE)
+
+/*
+ * Device roles helpers.
+ */
+
+// clang-format off
+static inline struct xrt_device *get_role_head(struct oxr_system *sys) {return sys->xsysd->roles.head; }
+static inline struct xrt_device *get_role_eyes(struct oxr_system *sys) {return sys->xsysd->roles.eyes; }
+static inline struct xrt_device *get_role_left(struct oxr_system *sys) {return sys->xsysd->roles.left; }
+static inline struct xrt_device *get_role_right(struct oxr_system *sys) {return sys->xsysd->roles.right; }
+static inline struct xrt_device *get_role_gamepad(struct oxr_system *sys) {return sys->xsysd->roles.gamepad; }
+static inline struct xrt_device *get_role_hand_tracking_left(struct oxr_system* sys) { return sys->xsysd->roles.hand_tracking.left; }
+static inline struct xrt_device *get_role_hand_tracking_right(struct oxr_system* sys) { return sys->xsysd->roles.hand_tracking.right; }
+// clang-format on
+
+#define GET_XDEV_BY_ROLE(SYS, ROLE) (get_role_##ROLE((SYS)))
+
+
+/*
+ * Extensions helpers.
+ */
 
 #define MAKE_EXT_STATUS(mixed_case, all_caps) bool mixed_case;
 /*!

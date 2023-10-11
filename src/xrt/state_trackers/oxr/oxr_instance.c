@@ -119,8 +119,8 @@ debug_print_devices(struct oxr_logger *log, struct oxr_system *sys)
 	struct xrt_device *l = GET_XDEV_BY_ROLE(sys, left);
 	struct xrt_device *r = GET_XDEV_BY_ROLE(sys, right);
 	struct xrt_device *e = GET_XDEV_BY_ROLE(sys, eyes);
-	struct xrt_device *hl = GET_XDEV_BY_ROLE(sys, hand_tracking.left);
-	struct xrt_device *hr = GET_XDEV_BY_ROLE(sys, hand_tracking.right);
+	struct xrt_device *hl = GET_XDEV_BY_ROLE(sys, hand_tracking_left);
+	struct xrt_device *hr = GET_XDEV_BY_ROLE(sys, hand_tracking_right);
 
 #define P(thing) (thing != NULL ? thing->str : "<none>")
 
