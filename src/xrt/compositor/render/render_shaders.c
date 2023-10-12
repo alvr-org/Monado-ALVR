@@ -30,12 +30,6 @@
 #include "shaders/clear.comp.h"
 #include "shaders/layer.comp.h"
 #include "shaders/distortion.comp.h"
-#include "shaders/layer.frag.h"
-#include "shaders/layer.vert.h"
-#include "shaders/equirect1.frag.h"
-#include "shaders/equirect1.vert.h"
-#include "shaders/equirect2.frag.h"
-#include "shaders/equirect2.vert.h"
 #include "shaders/layer_cylinder.frag.h"
 #include "shaders/layer_cylinder.vert.h"
 #include "shaders/layer_equirect2.frag.h"
@@ -123,20 +117,6 @@ render_shaders_load(struct render_shaders *s, struct vk_bundle *vk)
 	LOAD(mesh_vert);
 	LOAD(mesh_frag);
 
-	LOAD(equirect1_vert);
-	LOAD(equirect1_frag);
-
-	LOAD(equirect2_vert);
-	LOAD(equirect2_frag);
-
-#ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-	LOAD(cube_vert);
-	LOAD(cube_frag);
-#endif
-
-	LOAD(layer_vert);
-	LOAD(layer_frag);
-
 	LOAD(layer_cylinder_frag);
 	LOAD(layer_cylinder_vert);
 	LOAD(layer_equirect2_frag);
@@ -159,16 +139,6 @@ render_shaders_close(struct render_shaders *s, struct vk_bundle *vk)
 	D(ShaderModule, s->layer_comp);
 	D(ShaderModule, s->mesh_vert);
 	D(ShaderModule, s->mesh_frag);
-	D(ShaderModule, s->equirect1_vert);
-	D(ShaderModule, s->equirect1_frag);
-	D(ShaderModule, s->equirect2_vert);
-	D(ShaderModule, s->equirect2_frag);
-#ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-	D(ShaderModule, s->cube_vert);
-	D(ShaderModule, s->cube_frag);
-#endif
-	D(ShaderModule, s->layer_vert);
-	D(ShaderModule, s->layer_frag);
 
 	D(ShaderModule, s->layer_cylinder_frag);
 	D(ShaderModule, s->layer_cylinder_vert);

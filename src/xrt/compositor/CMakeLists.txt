@@ -93,8 +93,6 @@ if(XRT_HAVE_VULKAN)
 	    shaders/layer.comp
 	    shaders/mesh.frag
 	    shaders/mesh.vert
-	    shaders/layer.frag
-	    shaders/layer.vert
 	    shaders/layer_cylinder.frag
 	    shaders/layer_cylinder.vert
 	    shaders/layer_equirect2.frag
@@ -102,14 +100,7 @@ if(XRT_HAVE_VULKAN)
 	    shaders/layer_projection.vert
 	    shaders/layer_quad.vert
 	    shaders/layer_shared.frag
-	    shaders/equirect1.vert
-	    shaders/equirect1.frag
-	    shaders/equirect2.vert
-	    shaders/equirect2.frag
 		)
-	if(XRT_FEATURE_OPENXR_LAYER_CUBE)
-		list(APPEND SHADERS shaders/cube.vert shaders/cube.frag)
-	endif()
 
 	spirv_shaders(
 		SHADER_HEADERS

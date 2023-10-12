@@ -139,17 +139,6 @@ struct render_shaders
 	VkShaderModule mesh_vert;
 	VkShaderModule mesh_frag;
 
-	VkShaderModule equirect1_vert;
-	VkShaderModule equirect1_frag;
-
-	VkShaderModule equirect2_vert;
-	VkShaderModule equirect2_frag;
-
-	VkShaderModule cube_vert;
-	VkShaderModule cube_frag;
-
-	VkShaderModule layer_vert;
-	VkShaderModule layer_frag;
 
 	/*
 	 * New layer renderer.
