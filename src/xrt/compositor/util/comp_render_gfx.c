@@ -164,6 +164,140 @@ add_layer(struct gfx_view_state *state, const struct xrt_layer_data *data, VkDes
 }
 
 static VkResult
+do_cylinder_layer(struct render_gfx *rr,
+                  const struct comp_layer *layer,
+                  uint32_t view_index,
+                  VkSampler clamp_to_edge,
+                  VkSampler clamp_to_border_black,
+                  struct gfx_view_state *state)
+{
+	const struct xrt_layer_data *layer_data = &layer->data;
+	const struct xrt_layer_cylinder_data *c = &layer_data->cylinder;
+	struct vk_bundle *vk = rr->r->vk;
+	VkResult ret;
+
+	// Should we actually do a layer here?
+	if (!is_view_index_visible(view_index, c->visibility)) {
+		return VK_SUCCESS;
+	}
+
+	const uint32_t array_index = c->sub.array_index;
+	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[c->sub.image_index];
+
+	// Color
+	VkSampler src_sampler = clamp_to_edge; // WIP: Is this correct?
+	VkImageView src_image_view = get_image_view(image, layer_data->flags, array_index);
+
+	// Fully initialised below.
+	struct render_gfx_layer_cylinder_data data;
+
+	// Used for Subimage and OpenGL flip.
+	set_post_transform_rect(   //
+	    layer_data,            // data
+	    &c->sub.norm_rect,     // src_norm_rect
+	    false,                 // invert_flip
+	    &data.post_transform); // out_norm_rect
+
+	// Shared scale for all paths.
+	struct xrt_vec3 scale = {1, 1, 1};
+
+	// Handle infinite radius.
+	if (c->radius == 0 || c->radius == INFINITY) {
+		// Use rotation only to center the cylinder on the eye.
+		calc_mvp_rot_only(state, layer_data, &c->pose, &scale, &data.mvp);
+		data.radius = 1.0; // Fixed radius at one.
+		data.central_angle = c->central_angle;
+		data.aspect_ratio = c->aspect_ratio;
+	} else {
+		calc_mvp_full(state, layer_data, &c->pose, &scale, &data.mvp);
+		data.radius = c->radius;
+		data.central_angle = c->central_angle;
+		data.aspect_ratio = c->aspect_ratio;
+	}
+
+	// Can fail if we have too many layers.
+	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+	ret = render_gfx_layer_cylinder_alloc_and_write( //
+	    rr,                                          // rr
+	    &data,                                       // data
+	    src_sampler,                                 // src_sampler
+	    src_image_view,                              // src_image_view
+	    &descriptor_set);                            // out_descriptor_set
+	VK_CHK_AND_RET(ret, "render_gfx_layer_quad_alloc_and_write");
+
+	add_layer(state, layer_data, descriptor_set);
+
+	return VK_SUCCESS;
+}
+
+static VkResult
+do_equirect2_layer(struct render_gfx *rr,
+                   const struct comp_layer *layer,
+                   uint32_t view_index,
+                   VkSampler clamp_to_edge,
+                   VkSampler clamp_to_border_black,
+                   struct gfx_view_state *state)
+{
+	const struct xrt_layer_data *layer_data = &layer->data;
+	const struct xrt_layer_equirect2_data *eq2 = &layer_data->equirect2;
+	struct vk_bundle *vk = rr->r->vk;
+	VkResult ret;
+
+	// Should we actually do a layer here?
+	if (!is_view_index_visible(view_index, eq2->visibility)) {
+		return VK_SUCCESS;
+	}
+
+	const uint32_t array_index = eq2->sub.array_index;
+	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[eq2->sub.image_index];
+
+	// Color
+	VkSampler src_sampler = clamp_to_edge;
+	VkImageView src_image_view = get_image_view(image, layer_data->flags, array_index);
+
+	// Fully initialised below.
+	struct render_gfx_layer_equirect2_data data;
+
+	// Used for Subimage and OpenGL flip.
+	set_post_transform_rect(   //
+	    layer_data,            // data
+	    &eq2->sub.norm_rect,   // src_norm_rect
+	    false,                 // invert_flip
+	    &data.post_transform); // out_norm_rect
+
+	struct xrt_vec3 scale = {1.f, 1.f, 1.f};
+	calc_mv_inv_full(state, layer_data, &eq2->pose, &scale, &data.mv_inverse);
+
+	// Make it possible to go tangent lengths.
+	data.to_tangent = state->to_tangent;
+
+	// Simplifies the shader.
+	if (eq2->radius >= INFINITY) {
+		data.radius = 0.0;
+	} else {
+		data.radius = eq2->radius;
+	}
+
+	data.central_horizontal_angle = eq2->central_horizontal_angle;
+	data.upper_vertical_angle = eq2->upper_vertical_angle;
+	data.lower_vertical_angle = eq2->lower_vertical_angle;
+
+	// Can fail if we have too many layers.
+	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+	ret = render_gfx_layer_equirect2_alloc_and_write( //
+	    rr,                                           // rr
+	    &data,                                        // data
+	    src_sampler,                                  // src_sampler
+	    src_image_view,                               // src_image_view
+	    &descriptor_set);                             // out_descriptor_set
+	VK_CHK_AND_RET(ret, "render_gfx_layer_quad_alloc_and_write");
+
+	add_layer(state, layer_data, descriptor_set);
+
+	return VK_SUCCESS;
+}
+
+static VkResult
 do_projection_layer(struct render_gfx *rr,
                     const struct comp_layer *layer,
                     uint32_t view_index,
@@ -340,6 +474,26 @@ do_layers(struct render_gfx *rr,
 	for (uint32_t view = 0; view < ARRAY_SIZE(views); view++) {
 		for (uint32_t i = 0; i < layer_count; i++) {
 			switch (layers[i].data.type) {
+			case XRT_LAYER_CYLINDER:
+				ret = do_cylinder_layer(   //
+				    rr,                    // rr
+				    &layers[i],            // layer
+				    view,                  // view_index
+				    clamp_to_edge,         // clamp_to_edge
+				    clamp_to_border_black, // clamp_to_border_black
+				    &views[view]);         // state
+				VK_CHK_WITH_GOTO(ret, "do_cylinder_layer", err_layer);
+				break;
+			case XRT_LAYER_EQUIRECT2:
+				ret = do_equirect2_layer(  //
+				    rr,                    // rr
+				    &layers[i],            // layer
+				    view,                  // view_index
+				    clamp_to_edge,         // clamp_to_edge
+				    clamp_to_border_black, // clamp_to_border_black
+				    &views[view]);         // state
+				VK_CHK_WITH_GOTO(ret, "do_equirect2_layer", err_layer);
+				break;
 			case XRT_LAYER_STEREO_PROJECTION:
 			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 				ret = do_projection_layer( //
@@ -388,6 +542,18 @@ do_layers(struct render_gfx *rr,
 
 		for (uint32_t i = 0; i < state->layer_count; i++) {
 			switch (state->types[i]) {
+			case XRT_LAYER_CYLINDER:
+				render_gfx_layer_cylinder(          //
+				    rr,                             //
+				    state->premultiplied_alphas[i], //
+				    state->descriptor_sets[i]);     //
+				break;
+			case XRT_LAYER_EQUIRECT2:
+				render_gfx_layer_equirect2(         //
+				    rr,                             //
+				    state->premultiplied_alphas[i], //
+				    state->descriptor_sets[i]);     //
+				break;
 			case XRT_LAYER_STEREO_PROJECTION:
 			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 				render_gfx_layer_projection(        //
