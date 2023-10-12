@@ -956,9 +956,6 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	bool fast_path = c->base.slot.one_projection_layer_fast_path;
 	bool do_timewarp = !c->debug.atw_off;
 
-	// Only used if fast_path is true.
-	const struct comp_layer *layer = &c->base.slot.layers[0];
-
 	// Sanity check.
 	assert(!fast_path || c->base.slot.layer_count >= 1);
 
@@ -976,104 +973,31 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	struct xrt_pose eye_poses[2];
 	calc_pose_data(r, fovs, world_poses, eye_poses);
 
+	// We are rendering for distortion, use their fov values.
+	struct xrt_fov target_fovs[2] = {
+	    r->c->xdev->hmd->distortion.fov[0],
+	    r->c->xdev->hmd->distortion.fov[1],
+	};
+
 	// Need to be begin for all paths.
 	render_gfx_begin(rr);
 
 
-	if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION) {
-		// Fast path.
-		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
+	comp_render_gfx_dispatch(     //
+	    rr,                       // rr
+	    &r->scratch,              // rsi
+	    r->scratch_targets,       // rsi_rtrs
+	    c->base.slot.layers,      // layers
+	    c->base.slot.layer_count, // layer_count
+	    world_poses,              // world_poses
+	    eye_poses,                // eye_poses
+	    target_fovs,              // fovs
+	    vertex_rots,              // vertex_rots
+	    rtr,                      // rtr
+	    viewport_datas,           // viewport_datas
+	    fast_path,                // fast_path
+	    do_timewarp);             // do_timewarp
 
-		c->base.slot.poses[0] = lvd->pose;
-		c->base.slot.poses[1] = rvd->pose;
-		c->base.slot.fovs[0] = lvd->fov;
-		c->base.slot.fovs[1] = rvd->fov;
-
-		do_gfx_mesh_and_proj( //
-		    r,                //
-		    rr,               //
-		    rtr,              //
-		    viewport_datas,   //
-		    vertex_rots,      //
-		    layer,            //
-		    lvd,              //
-		    rvd,              //
-		    world_poses,      //
-		    do_timewarp);     //
-
-	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
-		// Fast path.
-		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
-		c->base.slot.poses[0] = lvd->pose;
-		c->base.slot.poses[1] = rvd->pose;
-		c->base.slot.fovs[0] = lvd->fov;
-		c->base.slot.fovs[1] = rvd->fov;
-
-		do_gfx_mesh_and_proj( //
-		    r,                //
-		    rr,               //
-		    rtr,              //
-		    viewport_datas,   //
-		    vertex_rots,      //
-		    layer,            //
-		    lvd,              //
-		    rvd,              //
-		    world_poses,      //
-		    do_timewarp);     //
-
-	} else if (fast_path) {
-
-		COMP_ERROR(c, "Fast path on but no projection layer, can't use layer renderer!");
-
-	} else {
-
-		// Setup the information for the layer renderer.
-		for (uint32_t i = 0; i < 2; i++) {
-			comp_layer_renderer_set_fov(r->lr, &fovs[i], i);
-			comp_layer_renderer_set_pose(r->lr, &eye_poses[i], &world_poses[i], i);
-		}
-
-		comp_layer_renderer_draw(    //
-		    r->lr,                   //
-		    c->nr.cmd,               //
-		    &r->scratch_targets[0],  //
-		    &r->scratch_targets[1]); //
-
-		VkSampler clamp_to_border_black = r->c->nr.samplers.clamp_to_border_black;
-		VkSampler src_samplers[2] = {
-		    clamp_to_border_black,
-		    clamp_to_border_black,
-		};
-		VkImageView src_image_views[2] = {
-		    r->scratch.color[0].srgb_view,
-		    r->scratch.color[1].srgb_view,
-		};
-
-		struct xrt_normalized_rect src_norm_rects[2] = {
-		    {.x = 0, .y = 0, .w = 1, .h = 1},
-		    {.x = 0, .y = 0, .w = 1, .h = 1},
-		};
-
-		// We are passing in the same old and new poses.
-		do_gfx_mesh(         //
-		    r,               //
-		    rr,              //
-		    rtr,             //
-		    viewport_datas,  //
-		    vertex_rots,     //
-		    src_samplers,    //
-		    src_image_views, //
-		    src_norm_rects,  //
-		    world_poses,     //
-		    fovs,            //
-		    world_poses,     //
-		    false);          //
-	}
 
 	// Make the command buffer submittable.
 	render_gfx_end(rr);
