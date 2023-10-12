@@ -755,6 +755,53 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	const VkBlendFactor blend_factor_premultiplied_alpha = VK_BLEND_FACTOR_ONE;
 	const VkBlendFactor blend_factor_unpremultiplied_alpha = VK_BLEND_FACTOR_SRC_ALPHA;
 
+	// Cylinder
+	ret = create_layer_pipeline(                    //
+	    vk,                                         // vk
+	    rgrp->render_pass,                          // render_pass
+	    r->gfx.layer.shared.pipeline_layout,        // pipeline_layout
+	    r->pipeline_cache,                          // pipeline_cache
+	    blend_factor_premultiplied_alpha,           // src_blend_factor
+	    r->shaders->layer_cylinder_vert,            // module_vert
+	    r->shaders->layer_cylinder_frag,            // module_frag
+	    &rgrp->layer.cylinder_premultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	ret = create_layer_pipeline(                      //
+	    vk,                                           // vk
+	    rgrp->render_pass,                            // render_pass
+	    r->gfx.layer.shared.pipeline_layout,          // pipeline_layout
+	    r->pipeline_cache,                            // pipeline_cache
+	    blend_factor_unpremultiplied_alpha,           // src_blend_factor
+	    r->shaders->layer_cylinder_vert,              // module_vert
+	    r->shaders->layer_cylinder_frag,              // module_frag
+	    &rgrp->layer.cylinder_unpremultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	// Equirect2
+	ret = create_layer_pipeline(                     //
+	    vk,                                          // vk
+	    rgrp->render_pass,                           // render_pass
+	    r->gfx.layer.shared.pipeline_layout,         // pipeline_layout
+	    r->pipeline_cache,                           // pipeline_cache
+	    blend_factor_premultiplied_alpha,            // src_blend_factor
+	    r->shaders->layer_equirect2_vert,            // module_vert
+	    r->shaders->layer_equirect2_frag,            // module_frag
+	    &rgrp->layer.equirect2_premultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	ret = create_layer_pipeline(                       //
+	    vk,                                            // vk
+	    rgrp->render_pass,                             // render_pass
+	    r->gfx.layer.shared.pipeline_layout,           // pipeline_layout
+	    r->pipeline_cache,                             // pipeline_cache
+	    blend_factor_unpremultiplied_alpha,            // src_blend_factor
+	    r->shaders->layer_equirect2_vert,              // module_vert
+	    r->shaders->layer_equirect2_frag,              // module_frag
+	    &rgrp->layer.equirect2_unpremultiplied_alpha); // out_pipeline
+	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+
+	// Projection.
 	ret = create_layer_pipeline(                //
 	    vk,                                     // vk
 	    rgrp->render_pass,                      // render_pass
@@ -777,6 +824,7 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    &rgrp->layer.proj_unpremultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
 
+	// Quad
 	ret = create_layer_pipeline(                //
 	    vk,                                     // vk
 	    rgrp->render_pass,                      // render_pass
@@ -818,6 +866,10 @@ render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp)
 	D(Pipeline, rgrp->mesh.pipeline);
 	D(Pipeline, rgrp->mesh.pipeline_timewarp);
 
+	D(Pipeline, rgrp->layer.cylinder_premultiplied_alpha);
+	D(Pipeline, rgrp->layer.cylinder_unpremultiplied_alpha);
+	D(Pipeline, rgrp->layer.equirect2_premultiplied_alpha);
+	D(Pipeline, rgrp->layer.equirect2_unpremultiplied_alpha);
 	D(Pipeline, rgrp->layer.proj_premultiplied_alpha);
 	D(Pipeline, rgrp->layer.proj_unpremultiplied_alpha);
 	D(Pipeline, rgrp->layer.quad_premultiplied_alpha);
@@ -1164,6 +1216,50 @@ render_gfx_mesh_draw(struct render_gfx *rr, uint32_t mesh_index, VkDescriptorSet
  */
 
 XRT_CHECK_RESULT VkResult
+render_gfx_layer_cylinder_alloc_and_write(struct render_gfx *rr,
+                                          const struct render_gfx_layer_cylinder_data *data,
+                                          VkSampler src_sampler,
+                                          VkImageView src_image_view,
+                                          VkDescriptorSet *out_descriptor_set)
+{
+	struct render_resources *r = rr->r;
+
+	return do_ubo_and_src_alloc_and_write(         //
+	    rr,                                        // rr
+	    RENDER_BINDING_LAYER_SHARED_UBO,           // ubo_binding
+	    data,                                      // ubo_ptr
+	    sizeof(*data),                             // ubo_size
+	    RENDER_BINDING_LAYER_SHARED_SRC,           // src_binding
+	    src_sampler,                               // src_sampler
+	    src_image_view,                            // src_image_view
+	    r->gfx.ubo_and_src_descriptor_pool,        // descriptor_pool
+	    r->gfx.layer.shared.descriptor_set_layout, // descriptor_set_layout
+	    out_descriptor_set);                       // out_descriptor_set
+}
+
+XRT_CHECK_RESULT VkResult
+render_gfx_layer_equirect2_alloc_and_write(struct render_gfx *rr,
+                                           const struct render_gfx_layer_equirect2_data *data,
+                                           VkSampler src_sampler,
+                                           VkImageView src_image_view,
+                                           VkDescriptorSet *out_descriptor_set)
+{
+	struct render_resources *r = rr->r;
+
+	return do_ubo_and_src_alloc_and_write(         //
+	    rr,                                        // rr
+	    RENDER_BINDING_LAYER_SHARED_UBO,           // ubo_binding
+	    data,                                      // ubo_ptr
+	    sizeof(*data),                             // ubo_size
+	    RENDER_BINDING_LAYER_SHARED_SRC,           // src_binding
+	    src_sampler,                               // src_sampler
+	    src_image_view,                            // src_image_view
+	    r->gfx.ubo_and_src_descriptor_pool,        // descriptor_pool
+	    r->gfx.layer.shared.descriptor_set_layout, // descriptor_set_layout
+	    out_descriptor_set);                       // out_descriptor_set
+}
+
+XRT_CHECK_RESULT VkResult
 render_gfx_layer_projection_alloc_and_write(struct render_gfx *rr,
                                             const struct render_gfx_layer_projection_data *data,
                                             VkSampler src_sampler,
@@ -1205,6 +1301,46 @@ render_gfx_layer_quad_alloc_and_write(struct render_gfx *rr,
 	    r->gfx.ubo_and_src_descriptor_pool,        // descriptor_pool
 	    r->gfx.layer.shared.descriptor_set_layout, // descriptor_set_layout
 	    out_descriptor_set);                       // out_descriptor_set
+}
+
+void
+render_gfx_layer_cylinder(struct render_gfx *rr, bool premultiplied_alpha, VkDescriptorSet descriptor_set)
+{
+	VkPipeline pipeline =                                          //
+	    premultiplied_alpha                                        //
+	        ? rr->rtr->rgrp->layer.cylinder_premultiplied_alpha    //
+	        : rr->rtr->rgrp->layer.cylinder_unpremultiplied_alpha; //
+
+	// One per degree.
+	uint32_t subdivisions = 360;
+
+	// One edge on either endstop and one between each subdivision.
+	uint32_t edges = subdivisions + 1;
+
+	// With triangle strip we get 2 vertices per edge.
+	uint32_t vertex_count = edges * 2;
+
+	dispatch_no_vbo(     //
+	    rr,              // rr
+	    vertex_count,    // vertex_count
+	    pipeline,        // pipeline
+	    descriptor_set); // descriptor_set
+}
+
+void
+render_gfx_layer_equirect2(struct render_gfx *rr, bool premultiplied_alpha, VkDescriptorSet descriptor_set)
+{
+	VkPipeline pipeline =                                           //
+	    premultiplied_alpha                                         //
+	        ? rr->rtr->rgrp->layer.equirect2_premultiplied_alpha    //
+	        : rr->rtr->rgrp->layer.equirect2_unpremultiplied_alpha; //
+
+	// Hardcoded to 4 vertices.
+	dispatch_no_vbo(     //
+	    rr,              // rr
+	    4,               // vertex_count
+	    pipeline,        // pipeline
+	    descriptor_set); // descriptor_set
 }
 
 void

@@ -36,6 +36,11 @@
 #include "shaders/equirect1.vert.h"
 #include "shaders/equirect2.frag.h"
 #include "shaders/equirect2.vert.h"
+#include "shaders/layer_cylinder.frag.h"
+#include "shaders/layer_cylinder.vert.h"
+#include "shaders/layer_equirect2.frag.h"
+#include "shaders/layer_equirect2.vert.h"
+#include "shaders/layer_projection.vert.h"
 #include "shaders/layer_projection.vert.h"
 #include "shaders/layer_quad.vert.h"
 #include "shaders/layer_shared.frag.h"
@@ -132,6 +137,10 @@ render_shaders_load(struct render_shaders *s, struct vk_bundle *vk)
 	LOAD(layer_vert);
 	LOAD(layer_frag);
 
+	LOAD(layer_cylinder_frag);
+	LOAD(layer_cylinder_vert);
+	LOAD(layer_equirect2_frag);
+	LOAD(layer_equirect2_vert);
 	LOAD(layer_projection_vert);
 	LOAD(layer_quad_vert);
 	LOAD(layer_shared_frag);
@@ -161,6 +170,10 @@ render_shaders_close(struct render_shaders *s, struct vk_bundle *vk)
 	D(ShaderModule, s->layer_vert);
 	D(ShaderModule, s->layer_frag);
 
+	D(ShaderModule, s->layer_cylinder_frag);
+	D(ShaderModule, s->layer_cylinder_vert);
+	D(ShaderModule, s->layer_equirect2_frag);
+	D(ShaderModule, s->layer_equirect2_vert);
 	D(ShaderModule, s->layer_projection_vert);
 	D(ShaderModule, s->layer_quad_vert);
 	D(ShaderModule, s->layer_shared_frag);

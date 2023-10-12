@@ -95,6 +95,10 @@ if(XRT_HAVE_VULKAN)
 	    shaders/mesh.vert
 	    shaders/layer.frag
 	    shaders/layer.vert
+	    shaders/layer_cylinder.frag
+	    shaders/layer_cylinder.vert
+	    shaders/layer_equirect2.frag
+	    shaders/layer_equirect2.vert
 	    shaders/layer_projection.vert
 	    shaders/layer_quad.vert
 	    shaders/layer_shared.frag
