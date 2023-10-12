@@ -33,6 +33,15 @@ client_vk_swapchain(struct xrt_swapchain *xsc)
 }
 
 /*!
+ * Helper to get the native swapchain.
+ */
+static inline struct xrt_swapchain *
+to_native_swapchain(struct xrt_swapchain *xsc)
+{
+	return &client_vk_swapchain(xsc)->xscn->base;
+}
+
+/*!
  * Down-cast helper.
  *
  * @private @memberof client_vk_compositor
@@ -41,6 +50,15 @@ static inline struct client_vk_compositor *
 client_vk_compositor(struct xrt_compositor *xc)
 {
 	return (struct client_vk_compositor *)xc;
+}
+
+/*!
+ * Helper to get the native swapchain.
+ */
+static inline struct xrt_compositor *
+to_native_compositor(struct xrt_compositor *xc)
+{
+	return &client_vk_compositor(xc)->xcn->base;
 }
 
 
@@ -303,10 +321,8 @@ client_vk_swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, u
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_swapchain *sc = client_vk_swapchain(xsc);
-
 	// Pipe down call into native swapchain.
-	return xrt_swapchain_wait_image(&sc->xscn->base, timeout_ns, index);
+	return xrt_swapchain_wait_image(to_native_swapchain(xsc), timeout_ns, index);
 }
 
 static xrt_result_t
@@ -331,10 +347,8 @@ client_vk_swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_swapchain *sc = client_vk_swapchain(xsc);
-
 	// Pipe down call into native swapchain.
-	return xrt_swapchain_release_image(&sc->xscn->base, index);
+	return xrt_swapchain_release_image(to_native_swapchain(xsc), index);
 }
 
 
@@ -349,10 +363,8 @@ client_vk_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_poll_events(&c->xcn->base, out_xce);
+	return xrt_comp_poll_events(to_native_compositor(xc), out_xce);
 }
 
 static void
@@ -390,10 +402,8 @@ client_vk_compositor_begin_session(struct xrt_compositor *xc, const struct xrt_b
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_begin_session(&c->xcn->base, info);
+	return xrt_comp_begin_session(to_native_compositor(xc), info);
 }
 
 static xrt_result_t
@@ -401,10 +411,8 @@ client_vk_compositor_end_session(struct xrt_compositor *xc)
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_end_session(&c->xcn->base);
+	return xrt_comp_end_session(to_native_compositor(xc));
 }
 
 static xrt_result_t
@@ -415,28 +423,26 @@ client_vk_compositor_wait_frame(struct xrt_compositor *xc,
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_wait_frame(&c->xcn->base, out_frame_id, predicted_display_time, predicted_display_period);
+	return xrt_comp_wait_frame(    //
+	    to_native_compositor(xc),  //
+	    out_frame_id,              //
+	    predicted_display_time,    //
+	    predicted_display_period); //
 }
 
 static xrt_result_t
 client_vk_compositor_begin_frame(struct xrt_compositor *xc, int64_t frame_id)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_begin_frame(&c->xcn->base, frame_id);
+	return xrt_comp_begin_frame(to_native_compositor(xc), frame_id);
 }
 
 static xrt_result_t
 client_vk_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_discard_frame(&c->xcn->base, frame_id);
+	return xrt_comp_discard_frame(to_native_compositor(xc), frame_id);
 }
 
 static xrt_result_t
@@ -444,9 +450,7 @@ client_vk_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_lay
 {
 	COMP_TRACE_MARKER();
 
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
-	return xrt_comp_layer_begin(&c->xcn->base, data);
+	return xrt_comp_layer_begin(to_native_compositor(xc), data);
 }
 
 static xrt_result_t
@@ -456,16 +460,17 @@ client_vk_compositor_layer_stereo_projection(struct xrt_compositor *xc,
                                              struct xrt_swapchain *r_xsc,
                                              const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *l_xscn;
 	struct xrt_swapchain *r_xscn;
 
 	assert(data->type == XRT_LAYER_STEREO_PROJECTION);
 
-	l_xscn = &client_vk_swapchain(l_xsc)->xscn->base;
-	r_xscn = &client_vk_swapchain(r_xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	l_xscn = to_native_swapchain(l_xsc);
+	r_xscn = to_native_swapchain(r_xsc);
 
-	return xrt_comp_layer_stereo_projection(&c->xcn->base, xdev, l_xscn, r_xscn, data);
+	return xrt_comp_layer_stereo_projection(xcn, xdev, l_xscn, r_xscn, data);
 }
 
 
@@ -478,7 +483,7 @@ client_vk_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
                                                    struct xrt_swapchain *r_d_xsc,
                                                    const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *l_xscn;
 	struct xrt_swapchain *r_xscn;
 	struct xrt_swapchain *l_d_xscn;
@@ -486,12 +491,13 @@ client_vk_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
 
 	assert(data->type == XRT_LAYER_STEREO_PROJECTION_DEPTH);
 
-	l_xscn = &client_vk_swapchain(l_xsc)->xscn->base;
-	r_xscn = &client_vk_swapchain(r_xsc)->xscn->base;
-	l_d_xscn = &client_vk_swapchain(l_d_xsc)->xscn->base;
-	r_d_xscn = &client_vk_swapchain(r_d_xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	l_xscn = to_native_swapchain(l_xsc);
+	r_xscn = to_native_swapchain(r_xsc);
+	l_d_xscn = to_native_swapchain(l_d_xsc);
+	r_d_xscn = to_native_swapchain(r_d_xsc);
 
-	return xrt_comp_layer_stereo_projection_depth(&c->xcn->base, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, data);
+	return xrt_comp_layer_stereo_projection_depth(xcn, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, data);
 }
 
 static xrt_result_t
@@ -500,14 +506,15 @@ client_vk_compositor_layer_quad(struct xrt_compositor *xc,
                                 struct xrt_swapchain *xsc,
                                 const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_QUAD);
 
-	xscfb = &client_vk_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
-	return xrt_comp_layer_quad(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_quad(xcn, xdev, xscfb, data);
 }
 
 static xrt_result_t
@@ -516,14 +523,15 @@ client_vk_compositor_layer_cube(struct xrt_compositor *xc,
                                 struct xrt_swapchain *xsc,
                                 const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_CUBE);
 
-	xscfb = &client_vk_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
-	return xrt_comp_layer_cube(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_cube(xcn, xdev, xscfb, data);
 }
 
 static xrt_result_t
@@ -532,14 +540,15 @@ client_vk_compositor_layer_cylinder(struct xrt_compositor *xc,
                                     struct xrt_swapchain *xsc,
                                     const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_CYLINDER);
 
-	xscfb = &client_vk_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
-	return xrt_comp_layer_cylinder(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_cylinder(xcn, xdev, xscfb, data);
 }
 
 static xrt_result_t
@@ -548,14 +557,15 @@ client_vk_compositor_layer_equirect1(struct xrt_compositor *xc,
                                      struct xrt_swapchain *xsc,
                                      const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_EQUIRECT1);
 
-	xscfb = &client_vk_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
-	return xrt_comp_layer_equirect1(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_equirect1(xcn, xdev, xscfb, data);
 }
 
 static xrt_result_t
@@ -564,14 +574,15 @@ client_vk_compositor_layer_equirect2(struct xrt_compositor *xc,
                                      struct xrt_swapchain *xsc,
                                      const struct xrt_layer_data *data)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_EQUIRECT2);
 
-	xscfb = &client_vk_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
-	return xrt_comp_layer_equirect2(&c->xcn->base, xdev, xscfb, data);
+	return xrt_comp_layer_equirect2(xcn, xdev, xscfb, data);
 }
 
 static xrt_result_t
@@ -601,9 +612,7 @@ client_vk_compositor_get_swapchain_create_properties(struct xrt_compositor *xc,
                                                      const struct xrt_swapchain_create_info *info,
                                                      struct xrt_swapchain_create_properties *xsccp)
 {
-	struct client_vk_compositor *c = client_vk_compositor(xc);
-
-	return xrt_comp_get_swapchain_create_properties(&c->xcn->base, info, xsccp);
+	return xrt_comp_get_swapchain_create_properties(to_native_compositor(xc), info, xsccp);
 }
 
 static xrt_result_t

@@ -49,6 +49,18 @@ client_gl_swapchain(struct xrt_swapchain *xsc)
 	return (struct client_gl_swapchain *)xsc;
 }
 
+static inline struct xrt_swapchain *
+to_native_swapchain(struct xrt_swapchain *xsc)
+{
+	return &client_gl_swapchain(xsc)->xscn->base;
+}
+
+static inline struct xrt_compositor *
+to_native_compositor(struct xrt_compositor *xc)
+{
+	return &client_gl_compositor(xc)->xcn->base;
+}
+
 static int64_t
 gl_format_to_vk(int64_t format)
 {
@@ -136,19 +148,15 @@ handle_fencing_or_finish(struct client_gl_compositor *c)
 static xrt_result_t
 client_gl_swapchain_acquire_image(struct xrt_swapchain *xsc, uint32_t *out_index)
 {
-	struct client_gl_swapchain *sc = client_gl_swapchain(xsc);
-
 	// Pipe down call into native swapchain.
-	return xrt_swapchain_acquire_image(&sc->xscn->base, out_index);
+	return xrt_swapchain_acquire_image(to_native_swapchain(xsc), out_index);
 }
 
 static xrt_result_t
 client_gl_swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t index)
 {
-	struct client_gl_swapchain *sc = client_gl_swapchain(xsc);
-
 	// Pipe down call into native swapchain.
-	return xrt_swapchain_wait_image(&sc->xscn->base, timeout_ns, index);
+	return xrt_swapchain_wait_image(to_native_swapchain(xsc), timeout_ns, index);
 }
 
 static xrt_result_t
@@ -160,10 +168,8 @@ client_gl_swapchain_barrier_image(struct xrt_swapchain *xsc, enum xrt_barrier_di
 static xrt_result_t
 client_gl_swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
 {
-	struct client_gl_swapchain *sc = client_gl_swapchain(xsc);
-
 	// Pipe down call into native swapchain.
-	return xrt_swapchain_release_image(&sc->xscn->base, index);
+	return xrt_swapchain_release_image(to_native_swapchain(xsc), index);
 }
 
 
@@ -176,19 +182,15 @@ client_gl_swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
 static xrt_result_t
 client_gl_compositor_begin_session(struct xrt_compositor *xc, const struct xrt_begin_session_info *info)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_begin_session(&c->xcn->base, info);
+	return xrt_comp_begin_session(to_native_compositor(xc), info);
 }
 
 static xrt_result_t
 client_gl_compositor_end_session(struct xrt_compositor *xc)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_end_session(&c->xcn->base);
+	return xrt_comp_end_session(to_native_compositor(xc));
 }
 
 static xrt_result_t
@@ -197,36 +199,33 @@ client_gl_compositor_wait_frame(struct xrt_compositor *xc,
                                 uint64_t *predicted_display_time,
                                 uint64_t *predicted_display_period)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_wait_frame(&c->xcn->base, out_frame_id, predicted_display_time, predicted_display_period);
+	return xrt_comp_wait_frame(    //
+	    to_native_compositor(xc),  //
+	    out_frame_id,              //
+	    predicted_display_time,    //
+	    predicted_display_period); //
 }
 
 static xrt_result_t
 client_gl_compositor_begin_frame(struct xrt_compositor *xc, int64_t frame_id)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_begin_frame(&c->xcn->base, frame_id);
+	return xrt_comp_begin_frame(to_native_compositor(xc), frame_id);
 }
 
 static xrt_result_t
 client_gl_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_discard_frame(&c->xcn->base, frame_id);
+	return xrt_comp_discard_frame(to_native_compositor(xc), frame_id);
 }
 
 static xrt_result_t
 client_gl_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_frame_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
-	return xrt_comp_layer_begin(&c->xcn->base, data);
+	// Pipe down call into native compositor.
+	return xrt_comp_layer_begin(to_native_compositor(xc), data);
 }
 
 static xrt_result_t
@@ -236,19 +235,20 @@ client_gl_compositor_layer_stereo_projection(struct xrt_compositor *xc,
                                              struct xrt_swapchain *r_xsc,
                                              const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *l_xscn;
 	struct xrt_swapchain *r_xscn;
 
 	assert(data->type == XRT_LAYER_STEREO_PROJECTION);
 
-	l_xscn = &client_gl_swapchain(l_xsc)->xscn->base;
-	r_xscn = &client_gl_swapchain(r_xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	l_xscn = to_native_swapchain(l_xsc);
+	r_xscn = to_native_swapchain(r_xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_stereo_projection(&c->xcn->base, xdev, l_xscn, r_xscn, &d);
+	return xrt_comp_layer_stereo_projection(xcn, xdev, l_xscn, r_xscn, &d);
 }
 
 static xrt_result_t
@@ -260,7 +260,7 @@ client_gl_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
                                                    struct xrt_swapchain *r_d_xsc,
                                                    const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *l_xscn;
 	struct xrt_swapchain *r_xscn;
 	struct xrt_swapchain *l_d_xscn;
@@ -268,15 +268,16 @@ client_gl_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
 
 	assert(data->type == XRT_LAYER_STEREO_PROJECTION_DEPTH);
 
-	l_xscn = &client_gl_swapchain(l_xsc)->xscn->base;
-	r_xscn = &client_gl_swapchain(r_xsc)->xscn->base;
-	l_d_xscn = &client_gl_swapchain(l_d_xsc)->xscn->base;
-	r_d_xscn = &client_gl_swapchain(r_d_xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	l_xscn = to_native_swapchain(l_xsc);
+	r_xscn = to_native_swapchain(r_xsc);
+	l_d_xscn = to_native_swapchain(l_d_xsc);
+	r_d_xscn = to_native_swapchain(r_d_xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_stereo_projection_depth(&c->xcn->base, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, &d);
+	return xrt_comp_layer_stereo_projection_depth(xcn, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, &d);
 }
 
 static xrt_result_t
@@ -285,17 +286,18 @@ client_gl_compositor_layer_quad(struct xrt_compositor *xc,
                                 struct xrt_swapchain *xsc,
                                 const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_QUAD);
 
-	xscfb = &client_gl_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_quad(&c->xcn->base, xdev, xscfb, &d);
+	return xrt_comp_layer_quad(xcn, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -304,17 +306,18 @@ client_gl_compositor_layer_cube(struct xrt_compositor *xc,
                                 struct xrt_swapchain *xsc,
                                 const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_CUBE);
 
-	xscfb = &client_gl_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_cube(&c->xcn->base, xdev, xscfb, &d);
+	return xrt_comp_layer_cube(xcn, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -323,17 +326,18 @@ client_gl_compositor_layer_cylinder(struct xrt_compositor *xc,
                                     struct xrt_swapchain *xsc,
                                     const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_CYLINDER);
 
-	xscfb = &client_gl_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_cylinder(&c->xcn->base, xdev, xscfb, &d);
+	return xrt_comp_layer_cylinder(xcn, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -342,17 +346,18 @@ client_gl_compositor_layer_equirect1(struct xrt_compositor *xc,
                                      struct xrt_swapchain *xsc,
                                      const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_EQUIRECT1);
 
-	xscfb = &client_gl_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_equirect1(&c->xcn->base, xdev, xscfb, &d);
+	return xrt_comp_layer_equirect1(xcn, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -361,17 +366,18 @@ client_gl_compositor_layer_equirect2(struct xrt_compositor *xc,
                                      struct xrt_swapchain *xsc,
                                      const struct xrt_layer_data *data)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
+	struct xrt_compositor *xcn;
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_EQUIRECT2);
 
-	xscfb = &client_gl_swapchain(xsc)->xscn->base;
+	xcn = to_native_compositor(xc);
+	xscfb = to_native_swapchain(xsc);
 
 	struct xrt_layer_data d = *data;
 	d.flip_y = !d.flip_y;
 
-	return xrt_comp_layer_equirect2(&c->xcn->base, xdev, xscfb, &d);
+	return xrt_comp_layer_equirect2(xcn, xdev, xscfb, &d);
 }
 
 static xrt_result_t
@@ -521,10 +527,8 @@ client_gl_swapchain_create(struct xrt_compositor *xc,
 static xrt_result_t
 client_gl_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
 {
-	struct client_gl_compositor *c = client_gl_compositor(xc);
-
 	// Pipe down call into native compositor.
-	return xrt_comp_poll_events(&c->xcn->base, out_xce);
+	return xrt_comp_poll_events(to_native_compositor(xc), out_xce);
 }
 
 static void
