@@ -130,12 +130,6 @@ struct comp_renderer
 	 */
 	uint32_t buffer_count;
 
-	/*!
-	 * @brief The layer renderer, which actually knows how to composite layers.
-	 *
-	 * Depends on the target extents.
-	 */
-	struct comp_layer_renderer *lr;
 	//! @}
 };
 
@@ -406,30 +400,6 @@ renderer_close_renderings_and_fences(struct comp_renderer *r)
 	r->fenced_buffer = -1;
 }
 
-//! @pre comp_target_check_ready(r->c->target)
-static void
-renderer_create_layer_renderer(struct comp_renderer *r)
-{
-	struct vk_bundle *vk = &r->c->base.vk;
-
-	assert(comp_target_check_ready(r->c->target));
-
-	uint32_t layer_count = 0;
-	if (r->lr != NULL) {
-		// if we already had one, re-populate it after recreation.
-		layer_count = r->lr->layer_count;
-		comp_layer_renderer_destroy(&r->lr);
-	}
-
-	r->lr = comp_layer_renderer_create( //
-	    vk,                             //
-	    &r->c->shaders,                 //
-	    &r->scratch_render_pass);       //
-	if (layer_count != 0) {
-		comp_layer_renderer_allocate_layers(r->lr, layer_count);
-	}
-}
-
 /*!
  * @brief Ensure that target images and renderings are created, if possible.
  *
@@ -503,7 +473,6 @@ renderer_ensure_images_and_renderings(struct comp_renderer *r, bool force_recrea
 
 	r->buffer_count = r->c->target->image_count;
 
-	renderer_create_layer_renderer(r);
 	renderer_create_renderings_and_fences(r);
 
 	assert(r->buffer_count != 0);
@@ -764,9 +733,6 @@ renderer_fini(struct comp_renderer *r)
 	// Do before layer render just in case it holds any references.
 	comp_mirror_fini(&r->mirror_to_debug_gui, vk);
 
-	// Do this after the mirror struct.
-	comp_layer_renderer_destroy(&(r->lr));
-
 	// Do this after the layer renderer.
 	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch_targets); i++) {
 		render_gfx_target_resources_close(&r->scratch_targets[i]);
@@ -777,16 +743,6 @@ renderer_fini(struct comp_renderer *r)
 
 	// Destroy any scratch images created.
 	render_scratch_images_close(&r->c->nr, &r->scratch);
-}
-
-static VkImageView
-get_image_view(const struct comp_swapchain_image *image, enum xrt_layer_composition_flags flags, uint32_t array_index)
-{
-	if (flags & XRT_LAYER_COMPOSITION_BLEND_TEXTURE_SOURCE_ALPHA_BIT) {
-		return image->views.alpha[array_index];
-	}
-
-	return image->views.no_alpha[array_index];
 }
 
 
@@ -931,267 +887,6 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
  * Interface functions.
  *
  */
-
-void
-comp_renderer_set_quad_layer(struct comp_renderer *r,
-                             uint32_t layer,
-                             struct comp_swapchain_image *image,
-                             struct xrt_layer_data *data)
-{
-	struct comp_render_layer *l = r->lr->layers[layer];
-
-	l->transformation_ubo_binding = r->lr->transformation_ubo_binding;
-	l->texture_binding = r->lr->texture_binding;
-
-	VkSampler clamp_to_edge = r->c->nr.samplers.clamp_to_edge;
-	VkImageView image_view = get_image_view( //
-	    image,                               //
-	    data->flags,                         //
-	    data->quad.sub.array_index);         //
-
-	comp_layer_update_descriptors( //
-	    l,                         //
-	    clamp_to_edge,             //
-	    image_view);               //
-
-	struct xrt_vec3 s = {data->quad.size.x, data->quad.size.y, 1.0f};
-	struct xrt_matrix_4x4 model_matrix;
-	math_matrix_4x4_model(&data->quad.pose, &s, &model_matrix);
-
-	comp_layer_set_model_matrix(r->lr->layers[layer], &model_matrix);
-
-	comp_layer_set_flip_y(r->lr->layers[layer], data->flip_y);
-
-	l->type = XRT_LAYER_QUAD;
-	l->visibility = data->quad.visibility;
-	l->flags = data->flags;
-	l->view_space = (data->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT) != 0;
-
-	for (uint32_t i = 0; i < 2; i++) {
-		l->transformation[i].offset = data->quad.sub.rect.offset;
-		l->transformation[i].extent = data->quad.sub.rect.extent;
-	}
-}
-
-void
-comp_renderer_set_cylinder_layer(struct comp_renderer *r,
-                                 uint32_t layer,
-                                 struct comp_swapchain_image *image,
-                                 struct xrt_layer_data *data)
-{
-	struct comp_render_layer *l = r->lr->layers[layer];
-
-	l->transformation_ubo_binding = r->lr->transformation_ubo_binding;
-	l->texture_binding = r->lr->texture_binding;
-
-	l->type = XRT_LAYER_CYLINDER;
-	l->visibility = data->cylinder.visibility;
-	l->flags = data->flags;
-	l->view_space = (data->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT) != 0;
-
-	// skip "infinite cylinder"
-	if (data->cylinder.radius == 0.f || data->cylinder.aspect_ratio == INFINITY) {
-		/* skipping the descriptor set update means the renderer must
-		 * entirely skip rendering of invisible layer */
-		l->visibility = XRT_LAYER_EYE_VISIBILITY_NONE;
-		return;
-	}
-
-	VkSampler clamp_to_edge = r->c->nr.samplers.clamp_to_edge;
-	VkImageView image_view = get_image_view( //
-	    image,                               //
-	    data->flags,                         //
-	    data->cylinder.sub.array_index);     //
-
-	comp_layer_update_descriptors( //
-	    r->lr->layers[layer],      //
-	    clamp_to_edge,             //
-	    image_view);               //
-
-	float height = (data->cylinder.radius * data->cylinder.central_angle) / data->cylinder.aspect_ratio;
-
-	// scale unit cylinder to diameter
-	float diameter = data->cylinder.radius * 2;
-	struct xrt_vec3 scale = {diameter, height, diameter};
-	struct xrt_matrix_4x4 model_matrix;
-	math_matrix_4x4_model(&data->cylinder.pose, &scale, &model_matrix);
-
-	comp_layer_set_model_matrix(r->lr->layers[layer], &model_matrix);
-
-	comp_layer_set_flip_y(r->lr->layers[layer], data->flip_y);
-
-	for (uint32_t i = 0; i < 2; i++) {
-		l->transformation[i].offset = data->cylinder.sub.rect.offset;
-		l->transformation[i].extent = data->cylinder.sub.rect.extent;
-	}
-
-	comp_layer_update_cylinder_vertex_buffer(l, data->cylinder.central_angle);
-}
-
-void
-comp_renderer_set_projection_layer(struct comp_renderer *r,
-                                   uint32_t layer,
-                                   struct comp_swapchain_image *left_image,
-                                   struct comp_swapchain_image *right_image,
-                                   struct xrt_layer_data *data)
-{
-	uint32_t left_array_index = data->stereo.l.sub.array_index;
-	uint32_t right_array_index = data->stereo.r.sub.array_index;
-
-	struct comp_render_layer *l = r->lr->layers[layer];
-
-	l->transformation_ubo_binding = r->lr->transformation_ubo_binding;
-	l->texture_binding = r->lr->texture_binding;
-
-	VkSampler clamp_to_border_black = r->c->nr.samplers.clamp_to_border_black;
-
-	VkImageView left_image_view = get_image_view( //
-	    left_image,                               //
-	    data->flags,                              //
-	    left_array_index);                        //
-
-	VkImageView right_image_view = get_image_view( //
-	    right_image,                               //
-	    data->flags,                               //
-	    right_array_index);                        //
-
-	comp_layer_update_stereo_descriptors( //
-	    l,                                //
-	    clamp_to_border_black,            //
-	    clamp_to_border_black,            //
-	    left_image_view,                  //
-	    right_image_view);                //
-
-	comp_layer_set_flip_y(l, data->flip_y);
-
-	l->type = XRT_LAYER_STEREO_PROJECTION;
-	l->flags = data->flags;
-	l->view_space = (data->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT) != 0;
-
-	l->transformation[0].offset = data->stereo.l.sub.rect.offset;
-	l->transformation[0].extent = data->stereo.l.sub.rect.extent;
-	l->transformation[1].offset = data->stereo.r.sub.rect.offset;
-	l->transformation[1].extent = data->stereo.r.sub.rect.extent;
-}
-
-#ifdef XRT_FEATURE_OPENXR_LAYER_EQUIRECT1
-void
-comp_renderer_set_equirect1_layer(struct comp_renderer *r,
-                                  uint32_t layer,
-                                  struct comp_swapchain_image *image,
-                                  struct xrt_layer_data *data)
-{
-
-	struct xrt_vec3 s = {1.0f, 1.0f, 1.0f};
-	struct xrt_matrix_4x4 model_matrix;
-	math_matrix_4x4_model(&data->equirect1.pose, &s, &model_matrix);
-
-	comp_layer_set_flip_y(r->lr->layers[layer], data->flip_y);
-
-	struct comp_render_layer *l = r->lr->layers[layer];
-	l->type = XRT_LAYER_EQUIRECT1;
-	l->visibility = data->equirect1.visibility;
-	l->flags = data->flags;
-	l->view_space = (data->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT) != 0;
-	l->transformation_ubo_binding = r->lr->transformation_ubo_binding;
-	l->texture_binding = r->lr->texture_binding;
-
-	VkSampler repeat = r->c->nr.samplers.repeat;
-	VkImageView image_view = get_image_view( //
-	    image,                               //
-	    data->flags,                         //
-	    data->equirect1.sub.array_index);    //
-
-	comp_layer_update_descriptors( //
-	    l,                         //
-	    repeat,                    //
-	    image_view);               //
-
-	comp_layer_update_equirect1_descriptor(l, &data->equirect1);
-
-	for (uint32_t i = 0; i < 2; i++) {
-		l->transformation[i].offset = data->equirect1.sub.rect.offset;
-		l->transformation[i].extent = data->equirect1.sub.rect.extent;
-	}
-}
-#endif
-
-#ifdef XRT_FEATURE_OPENXR_LAYER_EQUIRECT2
-void
-comp_renderer_set_equirect2_layer(struct comp_renderer *r,
-                                  uint32_t layer,
-                                  struct comp_swapchain_image *image,
-                                  struct xrt_layer_data *data)
-{
-
-	struct xrt_vec3 s = {1.0f, 1.0f, 1.0f};
-	struct xrt_matrix_4x4 model_matrix;
-	math_matrix_4x4_model(&data->equirect2.pose, &s, &model_matrix);
-
-	comp_layer_set_flip_y(r->lr->layers[layer], data->flip_y);
-
-	struct comp_render_layer *l = r->lr->layers[layer];
-	l->type = XRT_LAYER_EQUIRECT2;
-	l->visibility = data->equirect2.visibility;
-	l->flags = data->flags;
-	l->view_space = (data->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT) != 0;
-	l->transformation_ubo_binding = r->lr->transformation_ubo_binding;
-	l->texture_binding = r->lr->texture_binding;
-
-	VkSampler repeat = r->c->nr.samplers.repeat;
-	VkImageView image_view = get_image_view( //
-	    image,                               //
-	    data->flags,                         //
-	    data->equirect2.sub.array_index);    //
-
-	comp_layer_update_descriptors( //
-	    l,                         //
-	    repeat,                    //
-	    image_view);               //
-
-	comp_layer_update_equirect2_descriptor(l, &data->equirect2);
-
-	for (uint32_t i = 0; i < 2; i++) {
-		l->transformation[i].offset = data->equirect2.sub.rect.offset;
-		l->transformation[i].extent = data->equirect2.sub.rect.extent;
-	}
-}
-#endif
-
-#ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-void
-comp_renderer_set_cube_layer(struct comp_renderer *r,
-                             uint32_t layer,
-                             struct comp_swapchain_image *image,
-                             struct xrt_layer_data *data)
-{
-
-	struct xrt_vec3 s = {1.0f, 1.0f, 1.0f};
-	struct xrt_matrix_4x4 model_matrix;
-	math_matrix_4x4_model(&data->cube.pose, &s, &model_matrix);
-
-	comp_layer_set_flip_y(r->lr->layers[layer], data->flip_y);
-
-	struct comp_render_layer *l = r->lr->layers[layer];
-	l->type = XRT_LAYER_CUBE;
-	l->visibility = data->cube.visibility;
-	l->flags = data->flags;
-	l->view_space = (data->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT) != 0;
-	l->transformation_ubo_binding = r->lr->transformation_ubo_binding;
-	l->texture_binding = r->lr->texture_binding;
-
-	VkSampler repeat = r->c->nr.samplers.repeat;
-	VkImageView image_view = get_image_view( //
-	    image,                               //
-	    data->flags,                         //
-	    data->cube.sub.array_index);         //
-
-	comp_layer_update_descriptors( //
-	    l,                         //
-	    repeat,                    //
-	    image_view);               //
-}
-#endif
 
 void
 comp_renderer_draw(struct comp_renderer *r)
@@ -1364,22 +1059,6 @@ comp_renderer_draw(struct comp_renderer *r)
 	}
 
 	comp_target_update_timings(ct);
-}
-
-void
-comp_renderer_allocate_layers(struct comp_renderer *self, uint32_t layer_count)
-{
-	COMP_TRACE_MARKER();
-
-	comp_layer_renderer_allocate_layers(self->lr, layer_count);
-}
-
-void
-comp_renderer_destroy_layers(struct comp_renderer *self)
-{
-	COMP_TRACE_MARKER();
-
-	comp_layer_renderer_destroy_layers(self->lr);
 }
 
 struct comp_renderer *

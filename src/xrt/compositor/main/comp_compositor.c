@@ -253,100 +253,6 @@ compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 	return XRT_SUCCESS;
 }
 
-static void
-do_graphics_layers(struct comp_compositor *c)
-{
-	// Always zero for now.
-	uint32_t layer_count = c->base.slot.layer_count;
-
-	comp_renderer_destroy_layers(c->r);
-
-	if (c->base.slot.one_projection_layer_fast_path) {
-		return;
-	}
-
-	comp_renderer_allocate_layers(c->r, layer_count);
-
-	for (uint32_t i = 0; i < layer_count; i++) {
-		struct comp_layer *layer = &c->base.slot.layers[i];
-		struct xrt_layer_data *data = &layer->data;
-
-		COMP_SPEW(c, "LAYER_COMMIT (%d) predicted display time: %8.3fms", i, ns_to_ms(data->timestamp));
-
-		switch (data->type) {
-		case XRT_LAYER_QUAD: {
-			struct xrt_layer_quad_data *quad = &layer->data.quad;
-			struct comp_swapchain_image *image;
-			image = &layer->sc_array[0]->images[quad->sub.image_index];
-			comp_renderer_set_quad_layer(c->r, i, image, data);
-		} break;
-		case XRT_LAYER_STEREO_PROJECTION: {
-			struct xrt_layer_stereo_projection_data *stereo = &data->stereo;
-			struct comp_swapchain_image *right;
-			struct comp_swapchain_image *left;
-			left = &layer->sc_array[0]->images[stereo->l.sub.image_index];
-			right = &layer->sc_array[1]->images[stereo->r.sub.image_index];
-
-			comp_renderer_set_projection_layer(c->r, i, left, right, data);
-		} break;
-		case XRT_LAYER_STEREO_PROJECTION_DEPTH: {
-			struct xrt_layer_stereo_projection_depth_data *stereo = &data->stereo_depth;
-			struct comp_swapchain_image *right;
-			struct comp_swapchain_image *left;
-			left = &layer->sc_array[0]->images[stereo->l.sub.image_index];
-			right = &layer->sc_array[1]->images[stereo->r.sub.image_index];
-
-			//! @todo: Make use of stereo->l_d and stereo->r_d
-
-			comp_renderer_set_projection_layer(c->r, i, left, right, data);
-		} break;
-		case XRT_LAYER_CYLINDER: {
-			struct xrt_layer_cylinder_data *cyl = &layer->data.cylinder;
-			struct comp_swapchain_image *image;
-			image = &layer->sc_array[0]->images[cyl->sub.image_index];
-			comp_renderer_set_cylinder_layer(c->r, i, image, data);
-		} break;
-#ifdef XRT_FEATURE_OPENXR_LAYER_EQUIRECT1
-		case XRT_LAYER_EQUIRECT1: {
-			struct xrt_layer_equirect1_data *eq = &layer->data.equirect1;
-			struct comp_swapchain_image *image;
-			image = &layer->sc_array[0]->images[eq->sub.image_index];
-			comp_renderer_set_equirect1_layer(c->r, i, image, data);
-		} break;
-#endif
-#ifdef XRT_FEATURE_OPENXR_LAYER_EQUIRECT2
-		case XRT_LAYER_EQUIRECT2: {
-			struct xrt_layer_equirect2_data *eq = &layer->data.equirect2;
-			struct comp_swapchain_image *image;
-			image = &layer->sc_array[0]->images[eq->sub.image_index];
-			comp_renderer_set_equirect2_layer(c->r, i, image, data);
-		} break;
-#endif
-#ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-		case XRT_LAYER_CUBE: {
-			struct xrt_layer_cube_data *cu = &layer->data.cube;
-			struct comp_swapchain_image *image;
-			image = &layer->sc_array[0]->images[cu->sub.image_index];
-			comp_renderer_set_cube_layer(c->r, i, image, data);
-		} break;
-#endif
-
-#ifndef XRT_FEATURE_OPENXR_LAYER_EQUIRECT1
-		case XRT_LAYER_EQUIRECT1:
-#endif
-#ifndef XRT_FEATURE_OPENXR_LAYER_EQUIRECT2
-		case XRT_LAYER_EQUIRECT2:
-#endif
-#ifndef XRT_FEATURE_OPENXR_LAYER_CUBE
-		case XRT_LAYER_CUBE:
-#endif
-		default:
-			// Should never end up here.
-			assert(false);
-		}
-	}
-}
-
 /*!
  * We have a fast path for single projection layer that goes directly
  * to the distortion shader, so no need to use the layer renderer.
@@ -389,10 +295,7 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 
 	u_graphics_sync_unref(&sync_handle);
 
-	if (!c->settings.use_compute) {
-		do_graphics_layers(c);
-	}
-
+	// Do the drawing
 	comp_renderer_draw(c->r);
 
 	u_frame_times_widget_push_sample(&c->compositor_frame_times, os_monotonic_get_ns());
