@@ -852,9 +852,12 @@ do_gfx_mesh(struct comp_renderer *r,
 	 * Do command writing here.
 	 */
 
+	const VkClearColorValue black = {.float32 = {0.0f, 0.0f, 0.0f, 1.0f}};
+
 	render_gfx_begin_target( //
 	    rr,                  //
-	    rtr);                //
+	    rtr,                 //
+	    &black);             //
 
 	for (uint32_t i = 0; i < 2; i++) {
 		render_gfx_begin_view(   //

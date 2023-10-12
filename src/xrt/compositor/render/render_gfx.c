@@ -150,10 +150,11 @@ begin_render_pass(struct vk_bundle *vk,
                   VkRenderPass render_pass,
                   VkFramebuffer framebuffer,
                   uint32_t width,
-                  uint32_t height)
+                  uint32_t height,
+                  const VkClearColorValue *color)
 {
 	VkClearValue clear_color[1] = {{
-	    .color = {.float32 = {0.0f, 0.0f, 0.0f, 0.0f}},
+	    .color = *color,
 	}};
 
 	VkRenderPassBeginInfo render_pass_begin_info = {
@@ -706,7 +707,7 @@ render_gfx_close(struct render_gfx *rr)
  */
 
 bool
-render_gfx_begin_target(struct render_gfx *rr, struct render_gfx_target_resources *rtr)
+render_gfx_begin_target(struct render_gfx *rr, struct render_gfx_target_resources *rtr, const VkClearColorValue *color)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 
@@ -717,13 +718,14 @@ render_gfx_begin_target(struct render_gfx *rr, struct render_gfx_target_resource
 	VkFramebuffer framebuffer = rtr->framebuffer;
 	VkExtent2D extent = rtr->extent;
 
-	// This is shared across both views.
-	begin_render_pass(vk,             //
-	                  rr->r->cmd,     //
-	                  render_pass,    //
-	                  framebuffer,    //
-	                  extent.width,   //
-	                  extent.height); //
+	begin_render_pass( //
+	    vk,            //
+	    rr->r->cmd,    //
+	    render_pass,   //
+	    framebuffer,   //
+	    extent.width,  //
+	    extent.height, //
+	    color);        //
 
 	return true;
 }

@@ -851,7 +851,7 @@ struct render_gfx_mesh_ubo_data
  * @public @memberof render_gfx
  */
 bool
-render_gfx_begin_target(struct render_gfx *rr, struct render_gfx_target_resources *rtr);
+render_gfx_begin_target(struct render_gfx *rr, struct render_gfx_target_resources *rtr, const VkClearColorValue *color);
 
 /*!
  * @public @memberof render_gfx
