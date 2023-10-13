@@ -182,7 +182,7 @@ begin_render_pass(struct vk_bundle *vk,
 }
 
 static void
-update_ubo_and_src_discriptor_set(struct vk_bundle *vk,
+update_ubo_and_src_descriptor_set(struct vk_bundle *vk,
                                   uint32_t ubo_binding,
                                   VkBuffer buffer,
                                   VkDeviceSize offset,
@@ -273,7 +273,7 @@ do_ubo_and_src_alloc_and_write(struct render_gfx *rr,
 	    &descriptor_set);           // descriptor_set
 	VK_CHK_AND_RET(ret, "vk_create_descriptor_set");
 
-	update_ubo_and_src_discriptor_set( //
+	update_ubo_and_src_descriptor_set( //
 	    vk,                            // vk_bundle
 	    ubo_binding,                   // ubo_binding
 	    ubo.buffer,                    // buffer

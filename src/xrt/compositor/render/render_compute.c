@@ -257,7 +257,7 @@ update_compute_shared_descriptor_set(struct vk_bundle *vk,
 }
 
 XRT_MAYBE_UNUSED static void
-update_compute_discriptor_set_target(struct vk_bundle *vk,
+update_compute_descriptor_set_target(struct vk_bundle *vk,
                                      uint32_t target_binding,
                                      VkImageView target_image_view,
                                      uint32_t ubo_binding,
