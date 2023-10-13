@@ -1,0 +1,1 @@
+OpenXR: Refactor device getters.
