@@ -688,7 +688,7 @@ steamvr_lh_get_devices(struct xrt_device **out_xdevs)
 	while (true) {
 		driver->RunFrame();
 		auto cur_time = std::chrono::steady_clock::now();
-		if (cur_time - start_time >= 1s) {
+		if (cur_time - start_time >= 3s) {
 			break;
 		}
 	}

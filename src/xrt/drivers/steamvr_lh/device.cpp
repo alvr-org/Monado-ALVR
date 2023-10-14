@@ -769,6 +769,10 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 	case vr::Prop_ControllerRoleHint_Int32: {
 		vr::ETrackedControllerRole role = *static_cast<vr::ETrackedControllerRole *>(prop.pvBuffer);
 		switch (role) {
+		case vr::TrackedControllerRole_Invalid:{
+			this->device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
+			break;
+		}
 		case vr::TrackedControllerRole_RightHand: {
 			this->device_type = XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER;
 			set_hand_tracking_hand(XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
@@ -784,7 +788,6 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 			break;
 		}
 		default: {
-			this->device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
 			break;
 		}
 		}
