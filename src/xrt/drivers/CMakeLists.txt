@@ -8,6 +8,10 @@ set(ENABLED_DRIVERS)
 add_library(drv_includes INTERFACE)
 target_include_directories(drv_includes INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(XRT_BUILD_DRIVER_ALVR)
+		list(APPEND ENABLED_DRIVERS alvr)
+endif()
+
 if(XRT_BUILD_DRIVER_ARDUINO)
 	add_library(
 		drv_arduino STATIC arduino/arduino_device.c arduino/arduino_interface.h
