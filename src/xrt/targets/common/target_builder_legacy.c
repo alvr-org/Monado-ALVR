@@ -134,6 +134,7 @@ legacy_open_system(struct xrt_builder *xb,
 	ret = xrt_prober_select(xp, usysd->base.xdevs, ARRAY_SIZE(usysd->base.xdevs));
 	if (ret < 0) {
 		u_system_devices_destroy(&usysd);
+		return XRT_ERROR_DEVICE_CREATION_FAILED;
 	}
 
 	// Count the xdevs.
