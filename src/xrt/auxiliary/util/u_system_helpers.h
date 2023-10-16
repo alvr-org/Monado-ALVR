@@ -113,15 +113,40 @@ u_system_devices_create_from_prober(struct xrt_instance *xinst,
 /*!
  * Helper function.
  *
- * Looks through @ref u_system_devices's devices and returns the first device that supports hand tracking and the
- * supplied input name.
+ * Looks through @ref xrt_system_devices's devices and returns the first device
+ * that supports hand tracking and the supplied input name.
  *
- * Used by target_builder_lighthouse to find Knuckles controllers in the list of devices returned.
+ * Used by target_builder_lighthouse to find Knuckles controllers in the list of
+ * devices returned, the legacy builder to find hand tracking devices, etc.
  *
  * @ingroup aux_util
  */
 struct xrt_device *
-u_system_devices_get_ht_device(struct u_system_devices *usysd, enum xrt_input_name name);
+u_system_devices_get_ht_device(struct xrt_system_devices *xsysd, enum xrt_input_name name);
+
+/*!
+ * Helper to get the first left hand-tracking device,
+ * uses @ref u_system_devices_get_ht_device.
+ *
+ * @ingroup aux_util
+ */
+static inline struct xrt_device *
+u_system_devices_get_ht_device_left(struct xrt_system_devices *xsysd)
+{
+	return u_system_devices_get_ht_device(xsysd, XRT_INPUT_GENERIC_HAND_TRACKING_LEFT);
+}
+
+/*!
+ * Helper to get the first right hand-tracking device,
+ * uses @ref u_system_devices_get_ht_device.
+ *
+ * @ingroup aux_util
+ */
+static inline struct xrt_device *
+u_system_devices_get_ht_device_right(struct xrt_system_devices *xsysd)
+{
+	return u_system_devices_get_ht_device(xsysd, XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
+}
 
 
 #ifdef __cplusplus

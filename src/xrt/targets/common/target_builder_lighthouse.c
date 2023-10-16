@@ -677,15 +677,13 @@ lighthouse_open_system(struct xrt_builder *xb,
 	if (left_idx >= 0) {
 		lhs->vive_tstatus.controllers_found = true;
 		usysd->base.roles.left = usysd->base.xdevs[left_idx];
-		usysd->base.roles.hand_tracking.left =
-		    u_system_devices_get_ht_device(usysd, XRT_INPUT_GENERIC_HAND_TRACKING_LEFT);
+		usysd->base.roles.hand_tracking.left = u_system_devices_get_ht_device_left(&usysd->base);
 	}
 
 	if (right_idx >= 0) {
 		lhs->vive_tstatus.controllers_found = true;
 		usysd->base.roles.right = usysd->base.xdevs[right_idx];
-		usysd->base.roles.hand_tracking.right =
-		    u_system_devices_get_ht_device(usysd, XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
+		usysd->base.roles.hand_tracking.right = u_system_devices_get_ht_device_right(&usysd->base);
 	}
 
 	if (lhs->is_valve_index) {

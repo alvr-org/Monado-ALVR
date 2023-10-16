@@ -300,10 +300,8 @@ wmr_open_system(struct xrt_builder *xb,
 	}
 
 	// Find hand tracking devices.
-	usysd->base.roles.hand_tracking.left =
-	    u_system_devices_get_ht_device(usysd, XRT_INPUT_GENERIC_HAND_TRACKING_LEFT);
-	usysd->base.roles.hand_tracking.right =
-	    u_system_devices_get_ht_device(usysd, XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
+	usysd->base.roles.hand_tracking.left = u_system_devices_get_ht_device_left(&usysd->base);
+	usysd->base.roles.hand_tracking.right = u_system_devices_get_ht_device_right(&usysd->base);
 
 	// Create space overseer last once all devices set.
 	struct xrt_space_overseer *xso = NULL;
