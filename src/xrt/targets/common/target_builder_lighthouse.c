@@ -545,32 +545,22 @@ stream_data_sources(struct lighthouse_system *lhs,
 }
 
 static void
-try_add_opengloves(struct u_system_devices *usysd)
+try_add_opengloves(struct xrt_device *left,
+                   struct xrt_device *right,
+                   struct xrt_device **out_left_ht,
+                   struct xrt_device **out_right_ht)
 {
 #ifdef XRT_BUILD_DRIVER_OPENGLOVES
-	size_t openglove_device_count =
-	    opengloves_create_devices(&usysd->base.xdevs[usysd->base.xdev_count], &usysd->base);
-	for (size_t i = usysd->base.xdev_count; i < usysd->base.xdev_count + openglove_device_count; i++) {
-		struct xrt_device *xdev = usysd->base.xdevs[i];
+	struct xrt_device *og_left = NULL, *og_right = NULL;
+	opengloves_create_devices(left, right, &og_left, &og_right);
 
-		for (uint32_t j = 0; j < xdev->input_count; j++) {
-			struct xrt_input *input = &xdev->inputs[j];
-
-			if (input->name == XRT_INPUT_GENERIC_HAND_TRACKING_LEFT) {
-				usysd->base.roles.hand_tracking.left = xdev;
-
-				break;
-			}
-			if (input->name == XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT) {
-				usysd->base.roles.hand_tracking.right = xdev;
-
-				break;
-			}
-		}
+	// Overwrite the hand tracking roles with openglove ones.
+	if (og_left != NULL) {
+		*out_left_ht = og_left;
 	}
-
-	usysd->base.xdev_count += openglove_device_count;
-
+	if (og_right != NULL) {
+		*out_right_ht = og_right;
+	}
 #endif
 }
 
@@ -802,9 +792,10 @@ end_valve_index:
 		goto end_err;
 	}
 
+	// Should we use OpenGloves.
 	if (!lhs->vive_tstatus.hand_enabled) {
 		// We only want to try to add opengloves if we aren't optically tracking hands
-		try_add_opengloves(lhs->devices);
+		try_add_opengloves(left, right, &left_ht, &right_ht);
 	}
 
 	// Assign to role(s).

@@ -22,8 +22,11 @@ struct u_system_devices;
  * @brief Driver for OpenGloves VR Gloves Devices
  */
 
-int
-opengloves_create_devices(struct xrt_device **out_xdevs, const struct xrt_system_devices *sysdevs);
+void
+opengloves_create_devices(struct xrt_device *old_left,
+                          struct xrt_device *old_right,
+                          struct xrt_device **out_left,
+                          struct xrt_device **out_right);
 
 /*!
  * @dir drivers/opengloves
