@@ -835,6 +835,9 @@ find_builder_by_identifier(struct prober *p, const char *ident)
 static void
 print_system_devices(u_pp_delegate_t dg, struct xrt_system_devices *xsysd)
 {
+	struct xrt_system_roles roles = XRT_SYSTEM_ROLES_INIT;
+	xrt_system_devices_get_roles(xsysd, &roles);
+
 	u_pp(dg, "\n\tGot devices:");
 
 	for (uint32_t i = 0; i < xsysd->xdev_count; i++) {
@@ -843,15 +846,19 @@ print_system_devices(u_pp_delegate_t dg, struct xrt_system_devices *xsysd)
 
 	u_pp(dg, "\n\tIn roles:");
 
-#define P(IDENT) u_pp(dg, "\n\t\t%s: %s", #IDENT, xsysd->roles.IDENT ? xsysd->roles.IDENT->str : "<none>")
+#define P(IDENT) u_pp(dg, "\n\t\t%s: %s", #IDENT, xsysd->static_roles.IDENT ? xsysd->static_roles.IDENT->str : "<none>")
+#define PD(IDENT) u_pp(dg, "\n\t\t%s: %s", #IDENT, roles.IDENT >= 0 ? xsysd->xdevs[roles.IDENT]->str : "<none>")
+
 	P(head);
-	P(left);
-	P(right);
-	P(gamepad);
 	P(eyes);
+	PD(left);
+	PD(right);
+	PD(gamepad);
 	P(hand_tracking.left);
 	P(hand_tracking.right);
+
 #undef P
+#undef PD
 }
 
 
