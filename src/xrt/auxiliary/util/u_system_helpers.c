@@ -12,9 +12,39 @@
 
 #include "util/u_misc.h"
 #include "util/u_device.h"
+#include "util/u_logging.h"
 #include "util/u_system_helpers.h"
 
 #include <assert.h>
+#include <limits.h>
+#include <inttypes.h>
+
+
+/*
+ *
+ * Helper functions.
+ *
+ */
+
+static int32_t
+get_index_for_device(const struct xrt_system_devices *xsysd, const struct xrt_device *xdev)
+{
+	assert(xsysd->xdev_count <= ARRAY_SIZE(xsysd->xdevs));
+	assert(xsysd->xdev_count < INT_MAX);
+
+	if (xdev == NULL) {
+		return -1;
+	}
+
+	for (int32_t i = 0; i < (int32_t)xsysd->xdev_count; i++) {
+		if (xsysd->xdevs[i] == xdev) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 
 
 /*
@@ -28,6 +58,18 @@ destroy(struct xrt_system_devices *xsysd)
 {
 	u_system_devices_close(xsysd);
 	free(xsysd);
+}
+
+static xrt_result_t
+get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
+{
+	struct u_system_devices_static *usysds = u_system_devices_static(xsysd);
+
+	assert(usysds->cached.generation_id == 1);
+
+	*out_roles = usysds->cached;
+
+	return XRT_SUCCESS;
 }
 
 
@@ -56,6 +98,48 @@ u_system_devices_close(struct xrt_system_devices *xsysd)
 	}
 
 	xrt_frame_context_destroy_nodes(&usysd->xfctx);
+}
+
+
+
+struct u_system_devices_static *
+u_system_devices_static_allocate(void)
+{
+	struct u_system_devices_static *usysds = U_TYPED_CALLOC(struct u_system_devices_static);
+	usysds->base.base.destroy = destroy;
+	usysds->base.base.get_roles = get_roles;
+
+	return usysds;
+}
+
+void
+u_system_devices_static_finalize(struct u_system_devices_static *usysds,
+                                 struct xrt_device *left,
+                                 struct xrt_device *right)
+{
+	struct xrt_system_devices *xsysd = &usysds->base.base;
+	int32_t left_index = get_index_for_device(xsysd, left);
+	int32_t right_index = get_index_for_device(xsysd, right);
+
+	U_LOG_D(
+	    "Devices:"
+	    "\n\t%i: %p"
+	    "\n\t%i: %p",
+	    left_index, (void *)left,    //
+	    right_index, (void *)right); //
+
+	// Sanity checking.
+	assert(usysds->cached.generation_id == 0);
+	assert(left_index < 0 || left != NULL);
+	assert(left_index >= 0 || left == NULL);
+	assert(right_index < 0 || right != NULL);
+	assert(right_index >= 0 || right == NULL);
+
+	// Completely clear the struct.
+	usysds->cached = (struct xrt_system_roles)XRT_SYSTEM_ROLES_INIT;
+	usysds->cached.generation_id = 1;
+	usysds->cached.left = left_index;
+	usysds->cached.right = right_index;
 }
 
 

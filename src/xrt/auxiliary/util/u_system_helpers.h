@@ -95,6 +95,59 @@ u_system_devices_destroy(struct u_system_devices **usysd_ptr)
 
 /*
  *
+ * Static helper.
+ *
+ */
+
+/*!
+ * Helper struct to manage devices by implementing the @ref xrt_system_devices,
+ * this has only static device roles.
+ *
+ * @ingroup aux_util
+ */
+struct u_system_devices_static
+{
+	struct u_system_devices base;
+
+	//! Is automatically returned.
+	struct xrt_system_roles cached;
+};
+
+/*!
+ * Small inline helper to cast from @ref xrt_system_devices.
+ *
+ * @ingroup aux_util
+ */
+static inline struct u_system_devices_static *
+u_system_devices_static(struct xrt_system_devices *xsysd)
+{
+	return (struct u_system_devices_static *)xsysd;
+}
+
+/*!
+ * Allocates a empty @ref u_system_devices to be filled in by the caller, only
+ * the destroy function is filled in.
+ *
+ * @ingroup aux_util
+ */
+struct u_system_devices_static *
+u_system_devices_static_allocate(void);
+
+/*!
+ * Finalizes the static struct with the given input devices, the system devices
+ * will always return these devices for the left and right role. This function
+ * must be called before @ref xrt_system_devices_get_roles is called.
+ *
+ * @ingroup aux_util
+ */
+void
+u_system_devices_static_finalize(struct u_system_devices_static *usysds,
+                                 struct xrt_device *left,
+                                 struct xrt_device *right);
+
+
+/*
+ *
  * Generic system devices helper.
  *
  */
