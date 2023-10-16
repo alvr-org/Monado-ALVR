@@ -87,22 +87,7 @@ remote_open_system(struct xrt_builder *xb,
 		port = 4242;
 	}
 
-	struct xrt_system_devices *xsysd = NULL;
-	xrt_result_t xret = r_create_devices(port, &xsysd);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
-
-	*out_xsysd = xsysd;
-	u_builder_create_space_overseer_legacy( //
-	    xsysd->roles.head,                  // head
-	    xsysd->roles.left,                  // left
-	    xsysd->roles.right,                 // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    out_xso);                           // out_xso
-
-	return xret;
+	return r_create_devices(port, out_xsysd, out_xso);
 }
 
 static void

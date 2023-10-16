@@ -19,6 +19,7 @@ extern "C" {
 
 
 struct xrt_system_devices;
+struct xrt_space_overseer;
 
 /*!
  * @defgroup drv_remote Remote debugging driver
@@ -136,7 +137,7 @@ struct r_remote_connection
  * @ingroup drv_remote
  */
 xrt_result_t
-r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd);
+r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd, struct xrt_space_overseer **out_xso);
 
 /*!
  * Initializes and connects the connection.

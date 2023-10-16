@@ -54,6 +54,12 @@ struct r_hub
 
 	struct os_thread_helper oth;
 
+	//! Index to the left controller.
+	int32_t left_index;
+
+	//! Index to the right controller.
+	int32_t right_index;
+
 	struct
 	{
 		bool hmd, left, right;

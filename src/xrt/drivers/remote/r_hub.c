@@ -10,6 +10,7 @@
 #include "util/u_var.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
+#include "util/u_space_overseer.h"
 
 #include "r_interface.h"
 #include "r_internal.h"
@@ -335,6 +336,21 @@ run_thread(void *ptr)
 	return NULL;
 }
 
+static xrt_result_t
+r_hub_system_devices_get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
+{
+	struct r_hub *r = (struct r_hub *)xsysd;
+
+	struct xrt_system_roles roles = XRT_SYSTEM_ROLES_INIT;
+	roles.generation_id = 1;
+	roles.left = r->left_index;
+	roles.right = r->right_index;
+
+	*out_roles = roles;
+
+	return XRT_SUCCESS;
+}
+
 static void
 r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
 {
@@ -377,12 +393,13 @@ r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
  */
 
 xrt_result_t
-r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd)
+r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd, struct xrt_space_overseer **out_xso)
 {
 	struct r_hub *r = U_TYPED_CALLOC(struct r_hub);
 	int ret;
 
 	r->base.destroy = r_hub_system_devices_destroy;
+	r->base.get_roles = r_hub_system_devices_get_roles;
 	r->origin.type = XRT_TRACKING_TYPE_RGB;
 	r->origin.offset = (struct xrt_pose)XRT_POSE_IDENTITY;
 	r->reset.head.center = (struct xrt_pose)XRT_POSE_IDENTITY;
@@ -435,14 +452,44 @@ r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd)
 	struct xrt_device *right = r_device_create(r, false);
 
 	r->base.xdevs[r->base.xdev_count++] = head;
+	r->left_index = (int32_t)r->base.xdev_count;
 	r->base.xdevs[r->base.xdev_count++] = left;
+	r->right_index = (int32_t)r->base.xdev_count;
 	r->base.xdevs[r->base.xdev_count++] = right;
 
-	r->base.roles.head = head;
-	r->base.roles.left = left;
-	r->base.roles.right = right;
-	r->base.roles.hand_tracking.left = left;
-	r->base.roles.hand_tracking.right = right;
+	r->base.static_roles.head = head;
+	r->base.static_roles.hand_tracking.left = left;
+	r->base.static_roles.hand_tracking.right = right;
+
+
+	/*
+	 * Space overseer.
+	 */
+
+	struct u_space_overseer *uso = u_space_overseer_create();
+	struct xrt_space_overseer *xso = (struct xrt_space_overseer *)uso;
+	assert(uso != NULL);
+
+	struct xrt_space *root = xso->semantic.root; // Convenience
+	struct xrt_space *offset = NULL;
+	u_space_overseer_create_offset_space(uso, root, &r->origin.offset, &offset);
+
+	for (uint32_t i = 0; i < r->base.xdev_count; i++) {
+		u_space_overseer_link_space_to_device(uso, offset, r->base.xdevs[i]);
+	}
+
+	// Unreference now
+	xrt_space_reference(&offset, NULL);
+
+	// Set root as stage space.
+	xrt_space_reference(&xso->semantic.stage, root);
+
+	// Local 1.6 meters up.
+	struct xrt_pose local_offset = {XRT_QUAT_IDENTITY, {0.0f, 1.6f, 0.0f}};
+	u_space_overseer_create_offset_space(uso, root, &local_offset, &xso->semantic.local);
+
+	// Make view space be the head pose.
+	u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_HEAD_POSE, &xso->semantic.view);
 
 
 	/*
@@ -464,6 +511,7 @@ r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd)
 	 */
 
 	*out_xsysd = &r->base;
+	*out_xso = xso;
 
 	return XRT_SUCCESS;
 }
