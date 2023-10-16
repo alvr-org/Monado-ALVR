@@ -116,26 +116,36 @@ starts_with(const char *with, const char *string)
 static void
 debug_print_devices(struct oxr_logger *log, struct oxr_system *sys)
 {
+#define D(INDEX) (roles.INDEX < 0 ? NULL : sys->xsysd->xdevs[roles.INDEX])
+#define P(XDEV) (XDEV != NULL ? XDEV->str : "<none>")
+
+	// Static roles.
 	struct xrt_device *h = GET_XDEV_BY_ROLE(sys, head);
-	struct xrt_device *l = GET_XDEV_BY_ROLE(sys, left);
-	struct xrt_device *r = GET_XDEV_BY_ROLE(sys, right);
 	struct xrt_device *e = GET_XDEV_BY_ROLE(sys, eyes);
 	struct xrt_device *hl = GET_XDEV_BY_ROLE(sys, hand_tracking_left);
 	struct xrt_device *hr = GET_XDEV_BY_ROLE(sys, hand_tracking_right);
 
-#define P(thing) (thing != NULL ? thing->str : "<none>")
+	// Dynamic roles, the system cache might not have been updated yet.
+	struct xrt_system_roles roles = XRT_SYSTEM_ROLES_INIT;
+	xrt_system_devices_get_roles(sys->xsysd, &roles);
+
+	struct xrt_device *l = D(left);
+	struct xrt_device *r = D(right);
+	struct xrt_device *gp = D(gamepad);
 
 	oxr_log(log,
 	        "Selected devices"
 	        "\n\tHead: '%s'"
+	        "\n\tEyes: '%s'"
 	        "\n\tLeft: '%s'"
 	        "\n\tRight: '%s'"
-	        "\n\tEyes: '%s'"
+	        "\n\tGamepad: '%s'"
 	        "\n\tHand-Tracking Left: '%s'"
 	        "\n\tHand-Tracking Right: '%s'",
-	        P(h), P(l), P(r), P(e), P(hl), P(hr));
+	        P(h), P(e), P(l), P(r), P(gp), P(hl), P(hr));
 
 #undef P
+#undef D
 }
 
 static void
