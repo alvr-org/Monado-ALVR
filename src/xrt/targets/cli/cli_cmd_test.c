@@ -105,21 +105,33 @@ cli_cmd_test(int argc, const char **argv)
 		printf("\t%2u: %s\n", i, xsysd->xdevs[i]->str);
 	}
 
+	struct xrt_system_roles roles = XRT_SYSTEM_ROLES_INIT;
+	xrt_system_devices_get_roles(xsysd, &roles);
+
 	printf(" :: Listing role assignments!\n");
 
 #define PRINT_ROLE(ROLE, PAD)                                                                                          \
 	do {                                                                                                           \
-		if (xsysd->roles.ROLE == NULL) {                                                                       \
+		if (xsysd->static_roles.ROLE == NULL) {                                                                \
 			printf("\t" #ROLE ": " PAD "<none>\n");                                                        \
 		} else {                                                                                               \
-			printf("\t" #ROLE ": " PAD "%s\n", xsysd->roles.ROLE->str);                                    \
+			printf("\t" #ROLE ": " PAD "%s\n", xsysd->static_roles.ROLE->str);                             \
+		}                                                                                                      \
+	} while (false)
+
+#define PRINT_DYNR(ROLE, PAD)                                                                                          \
+	do {                                                                                                           \
+		if (roles.ROLE < 0) {                                                                                  \
+			printf("\t" #ROLE ": " PAD "<none>\n");                                                        \
+		} else {                                                                                               \
+			printf("\t" #ROLE ": " PAD "%s\n", xsysd->xdevs[roles.ROLE]->str);                             \
 		}                                                                                                      \
 	} while (false)
 
 	PRINT_ROLE(head, "               ");
-	PRINT_ROLE(left, "               ");
-	PRINT_ROLE(right, "              ");
-	PRINT_ROLE(gamepad, "            ");
+	PRINT_DYNR(left, "               ");
+	PRINT_DYNR(right, "              ");
+	PRINT_DYNR(gamepad, "            ");
 	PRINT_ROLE(hand_tracking.left, " ");
 	PRINT_ROLE(hand_tracking.right, "");
 
