@@ -118,7 +118,7 @@ enum lighthouse_driver
 struct lighthouse_system
 {
 	struct xrt_builder base;
-	struct u_system_devices *devices;
+	struct u_system_devices_static *devices;
 	enum lighthouse_driver driver; //!< Which lighthouse implementation we are using
 	bool is_valve_index; //!< Is our HMD a Valve Index? If so, try to set up hand-tracking and SLAM as needed
 	struct vive_tracking_status vive_tstatus; //!< Visual tracking status for Index under Vive driver
@@ -164,11 +164,12 @@ on_video_device(struct xrt_prober *xp,
                 void *ptr)
 {
 	struct lighthouse_system *lhs = (struct lighthouse_system *)ptr;
+	struct u_system_devices *usysd = &lhs->devices->base;
 
 	// Hardcoded for the Index.
 	if (product != NULL && manufacturer != NULL) {
 		if ((strcmp(product, "3D Camera") == 0) && (strcmp(manufacturer, "Etron Technology, Inc.") == 0)) {
-			xrt_prober_open_video_device(xp, pdev, &lhs->devices->xfctx, &lhs->xfs);
+			xrt_prober_open_video_device(xp, pdev, &usysd->xfctx, &lhs->xfs);
 			return;
 		}
 	}
@@ -572,9 +573,12 @@ lighthouse_open_system(struct xrt_builder *xb,
                        struct xrt_space_overseer **out_xso)
 {
 	struct lighthouse_system *lhs = (struct lighthouse_system *)xb;
-	lhs->devices = u_system_devices_allocate();
-	struct xrt_system_devices *xsysd = &lhs->devices->base;
-	struct xrt_frame_context *xfctx = &lhs->devices->xfctx;
+
+	// Use the static system devices helper, no dynamic roles.
+	lhs->devices = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &lhs->devices->base.base;
+	struct xrt_frame_context *xfctx = &lhs->devices->base.xfctx;
+
 
 	xrt_result_t result = XRT_SUCCESS;
 
@@ -799,11 +803,14 @@ end_valve_index:
 	}
 
 	// Assign to role(s).
-	xsysd->roles.head = head;
-	xsysd->roles.left = left;
-	xsysd->roles.hand_tracking.left = left_ht;
-	xsysd->roles.right = right;
-	xsysd->roles.hand_tracking.right = right_ht;
+	xsysd->static_roles.head = head;
+	xsysd->static_roles.hand_tracking.left = left_ht;
+	xsysd->static_roles.hand_tracking.right = right_ht;
+
+	u_system_devices_static_finalize( //
+	    lhs->devices,                 // usysds
+	    left,                         // left
+	    right);                       // right
 
 	*out_xsysd = xsysd;
 	u_builder_create_space_overseer_legacy( //

@@ -442,11 +442,9 @@ ns_open_system(struct xrt_builder *xb,
 	struct ns_builder *nsb = (struct ns_builder *)xb;
 	xrt_result_t result = XRT_SUCCESS;
 
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysds = u_system_devices_allocate();
-		xsysd = &usysds->base;
-	}
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	if (out_xsysd == NULL || *out_xsysd != NULL) {
 		NS_ERROR("Invalid output system pointer");
@@ -579,11 +577,15 @@ ns_open_system(struct xrt_builder *xb,
 	}
 
 	// Assign to role(s).
-	xsysd->roles.head = head_wrap;
-	xsysd->roles.left = left;
-	xsysd->roles.right = right;
-	xsysd->roles.hand_tracking.left = left_ht;
-	xsysd->roles.hand_tracking.right = right_ht;
+	xsysd->static_roles.head = head_wrap;
+	xsysd->static_roles.hand_tracking.left = left_ht;
+	xsysd->static_roles.hand_tracking.right = right_ht;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    left,                         // left
+	    right);                       // right
+
 
 end:
 	if (result == XRT_SUCCESS) {

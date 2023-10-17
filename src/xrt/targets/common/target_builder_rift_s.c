@@ -98,11 +98,10 @@ rift_s_open_system(struct xrt_builder *xb,
 	DRV_TRACE_MARKER();
 
 	rift_s_log_level = debug_get_log_option_rift_s_log();
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysd = u_system_devices_allocate();
-		xsysd = &usysd->base;
-	}
+
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -179,8 +178,8 @@ rift_s_open_system(struct xrt_builder *xb,
 		struct xrt_device *two_hands[2];
 		cemu_devices_create(hmd_xdev, ht_xdev, two_hands);
 
-		xsysd->roles.hand_tracking.left = two_hands[0];
-		xsysd->roles.hand_tracking.right = two_hands[1];
+		xsysd->static_roles.hand_tracking.left = two_hands[0];
+		xsysd->static_roles.hand_tracking.right = two_hands[1];
 
 		xsysd->xdevs[xsysd->xdev_count++] = two_hands[0];
 		xsysd->xdevs[xsysd->xdev_count++] = two_hands[1];
@@ -193,9 +192,12 @@ rift_s_open_system(struct xrt_builder *xb,
 #endif
 
 	// Assign to role(s).
-	xsysd->roles.head = hmd_xdev;
-	xsysd->roles.left = left_xdev;
-	xsysd->roles.right = right_xdev;
+	xsysd->static_roles.head = hmd_xdev;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    left_xdev,                    // left
+	    right_xdev);                  // right
 
 
 	/*

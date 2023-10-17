@@ -87,11 +87,9 @@ qwerty_open_system(struct xrt_builder *xb,
 		return xret;
 	}
 
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysds = u_system_devices_allocate();
-		xsysd = &usysds->base;
-	}
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	// Add to device list.
 	xsysd->xdevs[xsysd->xdev_count++] = head;
@@ -103,9 +101,12 @@ qwerty_open_system(struct xrt_builder *xb,
 	}
 
 	// Assign to role(s).
-	xsysd->roles.head = head;
-	xsysd->roles.left = left;
-	xsysd->roles.right = right;
+	xsysd->static_roles.head = head;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    left,                         // left
+	    right);                       // right
 
 
 	/*

@@ -133,11 +133,9 @@ legacy_open_system(struct xrt_builder *xb,
 		return xret;
 	}
 
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysd = u_system_devices_allocate();
-		xsysd = &usysd->base;
-	}
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	ret = xrt_prober_select(xp, xsysd->xdevs, ARRAY_SIZE(xsysd->xdevs));
 	if (ret < 0) {
@@ -181,11 +179,14 @@ legacy_open_system(struct xrt_builder *xb,
 	right_ht = u_system_devices_get_ht_device_right(xsysd);
 
 	// Assign to role(s).
-	xsysd->roles.head = head;
-	xsysd->roles.left = left;
-	xsysd->roles.right = right;
-	xsysd->roles.hand_tracking.left = left_ht;
-	xsysd->roles.hand_tracking.right = right_ht;
+	xsysd->static_roles.head = head;
+	xsysd->static_roles.hand_tracking.left = left_ht;
+	xsysd->static_roles.hand_tracking.right = right_ht;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    left,                         // left
+	    right);                       // right
 
 
 	/*

@@ -290,16 +290,11 @@ rgb_open_system(struct xrt_builder *xb,
 	assert(out_xsysd != NULL);
 	assert(*out_xsysd == NULL);
 
-	struct xrt_tracking_origin *origin = NULL;
-	struct xrt_system_devices *xsysd = NULL;
-	struct xrt_frame_context *xfctx = NULL;
-
-	{
-		struct u_system_devices *usysd = u_system_devices_allocate();
-		xsysd = &usysd->base;
-		xfctx = &usysd->xfctx;
-		origin = &usysd->origin;
-	}
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_tracking_origin *origin = &usysds->base.origin;
+	struct xrt_system_devices *xsysd = &usysds->base.base;
+	struct xrt_frame_context *xfctx = &usysds->base.xfctx;
 
 
 	/*
@@ -411,9 +406,12 @@ rgb_open_system(struct xrt_builder *xb,
 	}
 
 	// Assign to role(s).
-	xsysd->roles.head = head;
-	xsysd->roles.left = left;
-	xsysd->roles.right = right;
+	xsysd->static_roles.head = head;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    left,                         // left
+	    right);                       // right
 
 
 	/*

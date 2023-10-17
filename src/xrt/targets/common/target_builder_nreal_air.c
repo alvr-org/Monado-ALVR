@@ -86,11 +86,10 @@ nreal_air_open_system(struct xrt_builder *xb,
 	DRV_TRACE_MARKER();
 
 	nreal_air_log_level = debug_get_log_option_nreal_air_log();
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysd = u_system_devices_allocate();
-		xsysd = &usysd->base;
-	}
+
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -141,7 +140,12 @@ nreal_air_open_system(struct xrt_builder *xb,
 	xsysd->xdevs[xsysd->xdev_count++] = na_device;
 
 	// Assign to role(s).
-	xsysd->roles.head = na_device;
+	xsysd->static_roles.head = na_device;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    NULL,                         // left
+	    NULL);                        // right
 
 
 	/*

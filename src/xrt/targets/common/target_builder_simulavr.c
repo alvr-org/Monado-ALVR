@@ -210,21 +210,24 @@ svr_open_system(struct xrt_builder *xb,
 	struct xrt_device *head_device = multi_create_tracking_override(
 	    XRT_TRACKING_OVERRIDE_ATTACHED, svr_dev, t265_dev, XRT_INPUT_GENERIC_TRACKER_POSE, &ident);
 
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysd = u_system_devices_allocate();
-		xsysd = &usysd->base;
-	}
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	// Add to device list.
 	xsysd->xdevs[xsysd->xdev_count++] = head_device;
 
 	// Assign to role(s).
-	xsysd->roles.head = head_device;
+	xsysd->static_roles.head = head_device;
 
 
 end:
 	if (result == XRT_SUCCESS) {
+		u_system_devices_static_finalize( //
+		    usysds,                       // usysds
+		    NULL,                         // left
+		    NULL);                        // right
+
 		*out_xsysd = xsysd;
 		u_builder_create_space_overseer_legacy( //
 		    head_device,                        // head

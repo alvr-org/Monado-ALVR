@@ -271,11 +271,8 @@ wmr_open_system(struct xrt_builder *xb,
 	assert(xret_unlock == XRT_SUCCESS);
 	(void)xret_unlock;
 
-	struct xrt_system_devices *xsysd = NULL;
-	{
-		struct u_system_devices *usysd = u_system_devices_allocate();
-		xsysd = &usysd->base;
-	}
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	xsysd->xdevs[xsysd->xdev_count++] = head;
 	if (left != NULL) {
@@ -301,12 +298,14 @@ wmr_open_system(struct xrt_builder *xb,
 
 
 	// Assign to role(s).
-	xsysd->roles.head = head;
-	xsysd->roles.left = left;
-	xsysd->roles.right = right;
-	xsysd->roles.hand_tracking.left = ht_left;
-	xsysd->roles.hand_tracking.right = ht_right;
+	xsysd->static_roles.head = head;
+	xsysd->static_roles.hand_tracking.left = ht_left;
+	xsysd->static_roles.hand_tracking.right = ht_right;
 
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    left,                         // left
+	    right);                       // right
 
 	// Create space overseer last once all devices set.
 	struct xrt_space_overseer *xso = NULL;
