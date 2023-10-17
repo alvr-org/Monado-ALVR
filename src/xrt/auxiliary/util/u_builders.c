@@ -143,7 +143,12 @@ u_builder_setup_tracking_origins(struct xrt_device *head,
 }
 
 void
-u_builder_create_space_overseer(struct xrt_system_devices *xsysd, struct xrt_space_overseer **out_xso)
+u_builder_create_space_overseer_legacy(struct xrt_device *head,
+                                       struct xrt_device *left,
+                                       struct xrt_device *right,
+                                       struct xrt_device **xdevs,
+                                       uint32_t xdev_count,
+                                       struct xrt_space_overseer **out_xso)
 {
 	/*
 	 * Tracking origins.
@@ -156,9 +161,9 @@ u_builder_create_space_overseer(struct xrt_system_devices *xsysd, struct xrt_spa
 	};
 
 	u_builder_setup_tracking_origins(    //
-	    xsysd->roles.head,               //
-	    xsysd->roles.left,               //
-	    xsysd->roles.right,              //
+	    head,                            //
+	    left,                            //
+	    right,                           //
 	    &global_tracking_origin_offset); //
 
 
@@ -171,7 +176,7 @@ u_builder_create_space_overseer(struct xrt_system_devices *xsysd, struct xrt_spa
 	struct xrt_pose T_stage_local = XRT_POSE_IDENTITY;
 	T_stage_local.position.y = 1.6;
 
-	u_space_overseer_legacy_setup(uso, xsysd->xdevs, xsysd->xdev_count, xsysd->roles.head, &T_stage_local);
+	u_space_overseer_legacy_setup(uso, xdevs, xdev_count, head, &T_stage_local);
 
 	*out_xso = (struct xrt_space_overseer *)uso;
 }

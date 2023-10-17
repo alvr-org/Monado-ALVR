@@ -113,7 +113,13 @@ sdl_system_devices_init(struct sdl_program *sp)
 	sp->xsysd_base.xdev_count = 1;
 	sp->xsysd_base.roles.head = head;
 
-	u_builder_create_space_overseer(&sp->xsysd_base, &sp->xso);
+	u_builder_create_space_overseer_legacy( //
+	    head,                               // head
+	    NULL,                               // left
+	    NULL,                               // right
+	    sp->xsysd_base.xdevs,               // xdevs
+	    sp->xsysd_base.xdev_count,          // xdev_count
+	    &sp->xso);                          // out_xso
 }
 
 void

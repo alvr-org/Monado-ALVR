@@ -226,7 +226,13 @@ svr_open_system(struct xrt_builder *xb,
 end:
 	if (result == XRT_SUCCESS) {
 		*out_xsysd = xsysd;
-		u_builder_create_space_overseer(xsysd, out_xso);
+		u_builder_create_space_overseer_legacy( //
+		    head_device,                        // head
+		    NULL,                               // left
+		    NULL,                               // right
+		    xsysd->xdevs,                       // xdevs
+		    xsysd->xdev_count,                  // xdev_count
+		    out_xso);                           // out_xso
 	} else {
 		xrt_system_devices_destroy(&xsysd);
 	}

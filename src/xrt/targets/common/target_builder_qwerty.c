@@ -113,7 +113,13 @@ qwerty_open_system(struct xrt_builder *xb,
 	 */
 
 	*out_xsysd = xsysd;
-	u_builder_create_space_overseer(xsysd, out_xso);
+	u_builder_create_space_overseer_legacy( //
+	    head,                               // head
+	    left,                               // left
+	    right,                              // right
+	    xsysd->xdevs,                       // xdevs
+	    xsysd->xdev_count,                  // xdev_count
+	    out_xso);                           // out_xso
 
 	return XRT_SUCCESS;
 }

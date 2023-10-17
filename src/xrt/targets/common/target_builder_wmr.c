@@ -307,9 +307,16 @@ wmr_open_system(struct xrt_builder *xb,
 	xsysd->roles.hand_tracking.left = ht_left;
 	xsysd->roles.hand_tracking.right = ht_right;
 
+
 	// Create space overseer last once all devices set.
 	struct xrt_space_overseer *xso = NULL;
-	u_builder_create_space_overseer(xsysd, &xso);
+	u_builder_create_space_overseer_legacy( //
+	    head,                               // head
+	    left,                               // left
+	    right,                              // right
+	    xsysd->xdevs,                       // xdevs
+	    xsysd->xdev_count,                  // xdev_count
+	    &xso);                              // out_xso
 	assert(xso != NULL);
 
 

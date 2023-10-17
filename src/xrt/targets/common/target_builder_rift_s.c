@@ -203,7 +203,13 @@ rift_s_open_system(struct xrt_builder *xb,
 	 */
 
 	*out_xsysd = xsysd;
-	u_builder_create_space_overseer(xsysd, out_xso);
+	u_builder_create_space_overseer_legacy( //
+	    hmd_xdev,                           // head
+	    left_xdev,                          // left
+	    right_xdev,                         // right
+	    xsysd->xdevs,                       // xdevs
+	    xsysd->xdev_count,                  // xdev_count
+	    out_xso);                           // out_xso
 
 
 unlock_and_fail:

@@ -90,13 +90,20 @@ u_builder_setup_tracking_origins(struct xrt_device *head,
                                  struct xrt_vec3 *global_tracking_origin_offset);
 
 /*!
- * Create a legacy space overseer, most builders probably want to have more
- * smart then this especially stand alone ones.
+ * Create a legacy space overseer, most builders probably want to have a more
+ * advanced setup then this, especially stand alone ones. Uses
+ * @ref u_builder_setup_tracking_origins internally and
+ * @ref u_space_overseer_legacy_setup.
  *
  * @ingroup aux_util
  */
 void
-u_builder_create_space_overseer(struct xrt_system_devices *xsysd, struct xrt_space_overseer **out_xso);
+u_builder_create_space_overseer_legacy(struct xrt_device *head,
+                                       struct xrt_device *left,
+                                       struct xrt_device *right,
+                                       struct xrt_device **xdevs,
+                                       uint32_t xdev_count,
+                                       struct xrt_space_overseer **out_xso);
 
 
 #ifdef __cplusplus
