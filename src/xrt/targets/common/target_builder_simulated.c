@@ -119,21 +119,33 @@ simulated_open_system(struct xrt_builder *xb,
 	//! @todo Create a shared tracking origin on the system devices struct instead.
 	head->tracking_origin->type = XRT_TRACKING_TYPE_OTHER; // Just anything other then none.
 
-	struct u_system_devices *usysd = u_system_devices_allocate();
-	usysd->base.roles.head = head;
-	usysd->base.roles.left = left;
-	usysd->base.roles.right = right;
+	struct xrt_system_devices *xsysd = NULL;
+	{
+		struct u_system_devices *usysd = u_system_devices_allocate();
+		xsysd = &usysd->base;
+	}
 
-	usysd->base.xdevs[usysd->base.xdev_count++] = head;
+	// Add to device list.
+	xsysd->xdevs[xsysd->xdev_count++] = head;
 	if (left != NULL) {
-		usysd->base.xdevs[usysd->base.xdev_count++] = left;
+		xsysd->xdevs[xsysd->xdev_count++] = left;
 	}
 	if (right != NULL) {
-		usysd->base.xdevs[usysd->base.xdev_count++] = right;
+		xsysd->xdevs[xsysd->xdev_count++] = right;
 	}
 
-	*out_xsysd = &usysd->base;
-	u_builder_create_space_overseer(&usysd->base, out_xso);
+	// Assign to role(s).
+	xsysd->roles.head = head;
+	xsysd->roles.left = left;
+	xsysd->roles.right = right;
+
+
+	/*
+	 * Done.
+	 */
+
+	*out_xsysd = xsysd;
+	u_builder_create_space_overseer(xsysd, out_xso);
 
 	return XRT_SUCCESS;
 }
