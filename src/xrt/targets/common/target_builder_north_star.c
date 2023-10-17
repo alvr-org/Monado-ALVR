@@ -440,10 +440,13 @@ ns_open_system(struct xrt_builder *xb,
                struct xrt_space_overseer **out_xso)
 {
 	struct ns_builder *nsb = (struct ns_builder *)xb;
-
-
-	struct u_system_devices *usysd = u_system_devices_allocate();
 	xrt_result_t result = XRT_SUCCESS;
+
+	struct xrt_system_devices *xsysd = NULL;
+	{
+		struct u_system_devices *usysds = u_system_devices_allocate();
+		xsysd = &usysds->base;
+	}
 
 	if (out_xsysd == NULL || *out_xsysd != NULL) {
 		NS_ERROR("Invalid output system pointer");
@@ -533,11 +536,11 @@ ns_open_system(struct xrt_builder *xb,
 	}
 
 
-
+	// Devices to be created and filled in.
 	struct xrt_device *head_wrap = NULL;
 
 	if (slam_device != NULL) {
-		usysd->base.xdevs[usysd->base.xdev_count++] = slam_device;
+		xsysd->xdevs[xsysd->xdev_count++] = slam_device;
 		head_wrap = multi_create_tracking_override(XRT_TRACKING_OVERRIDE_DIRECT, ns_hmd, slam_device,
 		                                           XRT_INPUT_GENERIC_TRACKER_POSE, &head_offset);
 	} else {
@@ -545,8 +548,10 @@ ns_open_system(struct xrt_builder *xb,
 		head_wrap = ns_hmd;
 	}
 
-	usysd->base.xdevs[usysd->base.xdev_count++] = head_wrap;
-	usysd->base.roles.head = head_wrap;
+	// Add the device now.
+	struct xrt_device *left = NULL, *right = NULL;
+	struct xrt_device *left_ht = NULL, *right_ht = NULL;
+	xsysd->xdevs[xsysd->xdev_count++] = head_wrap;
 
 	if (hand_device != NULL) {
 		// note: hand_parented_to_head_tracker is always false when slam_device is NULL
@@ -558,27 +563,34 @@ ns_open_system(struct xrt_builder *xb,
 		struct xrt_device *two_hands[2];
 		cemu_devices_create(head_wrap, hand_wrap, two_hands);
 
+		xsysd->xdevs[xsysd->xdev_count++] = two_hands[0];
+		xsysd->xdevs[xsysd->xdev_count++] = two_hands[1];
 
-		// usysd->base.xdev_count = 0;
-		usysd->base.xdevs[usysd->base.xdev_count++] = two_hands[0];
-		usysd->base.xdevs[usysd->base.xdev_count++] = two_hands[1];
-
-
-		usysd->base.roles.hand_tracking.left = two_hands[0];
-		usysd->base.roles.hand_tracking.right = two_hands[1];
-
-		usysd->base.roles.left = two_hands[0];
-		usysd->base.roles.right = two_hands[1];
+		left_ht = two_hands[0];
+		right_ht = two_hands[1];
 	}
 
+	// Fallback to hand-tracking if no controllers have been used.
+	if (left == NULL) {
+		left = left_ht;
+	}
+	if (right == NULL) {
+		right = right_ht;
+	}
 
+	// Assign to role(s).
+	xsysd->roles.head = head_wrap;
+	xsysd->roles.left = left;
+	xsysd->roles.right = right;
+	xsysd->roles.hand_tracking.left = left_ht;
+	xsysd->roles.hand_tracking.right = right_ht;
 
 end:
 	if (result == XRT_SUCCESS) {
-		*out_xsysd = &usysd->base;
-		u_builder_create_space_overseer(&usysd->base, out_xso);
+		*out_xsysd = xsysd;
+		u_builder_create_space_overseer(xsysd, out_xso);
 	} else {
-		u_system_devices_destroy(&usysd);
+		xrt_system_devices_destroy(&xsysd);
 	}
 	if (nsb->config_json != NULL) {
 		cJSON_Delete(nsb->config_json);
