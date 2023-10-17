@@ -500,7 +500,6 @@ stream_data_sources(struct lighthouse_system *lhs, struct xrt_prober *xp, struct
 	xrt_prober_list_video_devices(xp, on_video_device, lhs);
 	if (lhs->xfs == NULL) {
 		LH_WARN("Couldn't find Index camera at all. Is it plugged in?");
-		xrt_frame_context_destroy_nodes(&lhs->devices->xfctx);
 		return false;
 	}
 
@@ -519,7 +518,6 @@ stream_data_sources(struct lighthouse_system *lhs, struct xrt_prober *xp, struct
 
 	if (!success) {
 		LH_ERROR("Unable to start data streaming");
-		xrt_frame_context_destroy_nodes(&lhs->devices->xfctx);
 	}
 
 	return success;
