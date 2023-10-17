@@ -651,6 +651,8 @@ oxr_session_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 
 	XrResult ret = oxr_event_remove_session_events(log, sess);
 
+	oxr_session_binding_destroy_all(log, sess);
+
 	for (size_t i = 0; i < sess->action_set_attachment_count; ++i) {
 		oxr_action_set_attachment_teardown(&sess->act_set_attachments[i]);
 	}

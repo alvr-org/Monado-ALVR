@@ -555,9 +555,12 @@ oxr_hand_tracker_create(struct oxr_logger *log,
  */
 void
 oxr_find_profile_for_device(struct oxr_logger *log,
-                            struct oxr_instance *inst,
+                            struct oxr_session *sess,
                             struct xrt_device *xdev,
                             struct oxr_interaction_profile **out_p);
+
+struct oxr_interaction_profile *
+oxr_clone_profile(const struct oxr_interaction_profile *src_profile);
 
 /*!
  * Free all memory allocated by the binding system.
@@ -566,6 +569,14 @@ oxr_find_profile_for_device(struct oxr_logger *log,
  */
 void
 oxr_binding_destroy_all(struct oxr_logger *log, struct oxr_instance *inst);
+
+/*!
+ * Free all memory allocated by the binding system.
+ *
+ * @public @memberof oxr_instance
+ */
+void
+oxr_session_binding_destroy_all(struct oxr_logger *log, struct oxr_session *sess);
 
 /*!
  * Find all bindings that is the given action key is bound to.
@@ -1521,6 +1532,12 @@ struct oxr_session
 	 */
 	struct u_hashmap_int *act_attachments_by_key;
 
+	/*!
+	 * Clone of all suggested binding profiles at the point of action set/session attachment.
+	 * ref to @oxr_session_attach_action_sets
+	 */
+	size_t profiles_on_attachment_size;
+	struct oxr_interaction_profile **profiles_on_attachment;
 
 	/*!
 	 * Currently bound interaction profile.

@@ -1522,14 +1522,36 @@ oxr_handle_base_get_num_children(struct oxr_handle_base *hb)
 	return ret;
 }
 
+static void
+oxr_clone_profiles_to_session(struct oxr_logger *log, struct oxr_instance *inst, struct oxr_session *sess)
+{
+
+	if (inst == NULL || sess == NULL)
+		return;
+
+	oxr_session_binding_destroy_all(log, sess);
+
+	if (inst->profiles == NULL || inst->profile_count == 0)
+		return;
+
+	sess->profiles_on_attachment_size = inst->profile_count;
+	sess->profiles_on_attachment = U_TYPED_ARRAY_CALLOC(struct oxr_interaction_profile *, inst->profile_count);
+
+	for (size_t profile_idx = 0; profile_idx < inst->profile_count; ++profile_idx) {
+		sess->profiles_on_attachment[profile_idx] = oxr_clone_profile(inst->profiles[profile_idx]);
+	}
+}
+
 XrResult
 oxr_session_attach_action_sets(struct oxr_logger *log,
                                struct oxr_session *sess,
                                const XrSessionActionSetsAttachInfo *bindInfo)
 {
 	struct oxr_instance *inst = sess->sys->inst;
+	oxr_clone_profiles_to_session(log, inst, sess);
+
 	struct oxr_profiles_per_subaction profiles = {0};
-#define FIND_PROFILE(X) oxr_find_profile_for_device(log, inst, GET_XDEV_BY_ROLE(sess->sys, X), &profiles.X);
+#define FIND_PROFILE(X) oxr_find_profile_for_device(log, sess, GET_XDEV_BY_ROLE(sess->sys, X), &profiles.X);
 	OXR_FOR_EACH_VALID_SUBACTION_PATH(FIND_PROFILE)
 #undef FIND_PROFILE
 
