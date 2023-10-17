@@ -86,7 +86,11 @@ nreal_air_open_system(struct xrt_builder *xb,
 	DRV_TRACE_MARKER();
 
 	nreal_air_log_level = debug_get_log_option_nreal_air_log();
-	struct u_system_devices *usysd = u_system_devices_allocate();
+	struct xrt_system_devices *xsysd = NULL;
+	{
+		struct u_system_devices *usysd = u_system_devices_allocate();
+		xsysd = &usysd->base;
+	}
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -132,13 +136,27 @@ nreal_air_open_system(struct xrt_builder *xb,
 		NA_ERROR("Failed to initialise Nreal Air driver");
 		goto fail;
 	}
-	usysd->base.xdevs[usysd->base.xdev_count++] = na_device;
-	usysd->base.roles.head = na_device;
 
-	*out_xsysd = &usysd->base;
-	u_builder_create_space_overseer(&usysd->base, out_xso);
+	// Add to device list.
+	xsysd->xdevs[xsysd->xdev_count++] = na_device;
+
+	// Assign to role(s).
+	xsysd->roles.head = na_device;
+
+
+	/*
+	 * Done.
+	 */
+
+	*out_xsysd = xsysd;
+	u_builder_create_space_overseer(xsysd, out_xso);
 
 	return XRT_SUCCESS;
+
+
+	/*
+	 * Error path.
+	 */
 
 unlock_and_fail:
 	xret = xrt_prober_unlock_list(xp, &xpdevs);
@@ -148,7 +166,8 @@ unlock_and_fail:
 
 	/* Fallthrough */
 fail:
-	u_system_devices_destroy(&usysd);
+	xrt_system_devices_destroy(&xsysd);
+
 	return XRT_ERROR_DEVICE_CREATION_FAILED;
 }
 
