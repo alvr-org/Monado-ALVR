@@ -14,19 +14,20 @@
 #include <cjson/cJSON.h>
 #include <string.h>
 
+
 /*
  *
- * Helper functions.
+ * Buffer reading helpers.
  *
  */
 
-inline static void
+static inline void
 skip(const uint8_t **buffer, size_t num)
 {
 	*buffer += num;
 }
 
-inline static void
+static inline void
 read_i16(const uint8_t **buffer, int16_t *out_value)
 {
 	*out_value = (*(*buffer + 0) << 0u) | // Byte 0
@@ -34,7 +35,7 @@ read_i16(const uint8_t **buffer, int16_t *out_value)
 	*buffer += 2;
 }
 
-inline static void
+static inline void
 read_i24_to_i32(const uint8_t **buffer, int32_t *out_value)
 {
 	*out_value = (*(*buffer + 0) << 0u) | // Byte 0
@@ -45,7 +46,7 @@ read_i24_to_i32(const uint8_t **buffer, int32_t *out_value)
 	*buffer += 3;
 }
 
-inline static void
+static inline void
 read_i32(const uint8_t **buffer, int32_t *out_value)
 {
 	*out_value = (*(*buffer + 0) << 0u) |  // Byte 0
@@ -55,7 +56,7 @@ read_i32(const uint8_t **buffer, int32_t *out_value)
 	*buffer += 4;
 }
 
-inline static void
+static inline void
 read_i16_rev(const uint8_t **buffer, int16_t *out_value)
 {
 	*out_value = (*(*buffer + 1) << 0u) | // Byte 1
@@ -63,7 +64,7 @@ read_i16_rev(const uint8_t **buffer, int16_t *out_value)
 	*buffer += 2;
 }
 
-inline static void
+static inline void
 read_i15_to_i32(const uint8_t **buffer, int32_t *out_value)
 {
 	int16_t v = (*(*buffer + 0) << 0u) | // Byte 0
@@ -73,7 +74,7 @@ read_i15_to_i32(const uint8_t **buffer, int32_t *out_value)
 	*buffer += 2;
 }
 
-inline static void
+static inline void
 read_i32_rev(const uint8_t **buffer, int32_t *out_value)
 {
 	*out_value = (*(*buffer + 3) << 0u) |  // Byte 3
@@ -83,14 +84,14 @@ read_i32_rev(const uint8_t **buffer, int32_t *out_value)
 	*buffer += 4;
 }
 
-inline static void
+static inline void
 read_u8(const uint8_t **buffer, uint8_t *out_value)
 {
 	*out_value = **buffer;
 	*buffer += 1;
 }
 
-inline static void
+static inline void
 read_u16(const uint8_t **buffer, uint16_t *out_value)
 {
 	*out_value = (*(*buffer + 0) << 0u) | // Byte 0
@@ -98,7 +99,7 @@ read_u16(const uint8_t **buffer, uint16_t *out_value)
 	*buffer += 2;
 }
 
-inline static void
+static inline void
 read_u32(const uint8_t **buffer, uint32_t *out_value)
 {
 	*out_value = (*(*buffer + 0) << 0u) |  // Byte 0
@@ -108,7 +109,7 @@ read_u32(const uint8_t **buffer, uint32_t *out_value)
 	*buffer += 4;
 }
 
-inline static void
+static inline void
 read_u64(const uint8_t **buffer, uint64_t *out_value)
 {
 	*out_value = ((uint64_t) * (*buffer + 0) << 0u) |  // Byte 0
@@ -122,12 +123,19 @@ read_u64(const uint8_t **buffer, uint64_t *out_value)
 	*buffer += 8;
 }
 
-inline static void
+static inline void
 read_u8_array(const uint8_t **buffer, uint8_t *out_value, size_t num)
 {
 	memcpy(out_value, (*buffer), num);
 	*buffer += num;
 }
+
+
+/*
+ *
+ * JSON helpers.
+ *
+ */
 
 static void
 read_json_vec3(cJSON *object, const char *const string, struct xrt_vec3 *out_vec3)
@@ -187,6 +195,13 @@ read_json_array(cJSON *object, const char *const string, int size, float *out_ar
 	}
 }
 
+
+/*
+ *
+ * Helpers.
+ *
+ */
+
 static void
 read_sample(const uint8_t **buffer, struct na_parsed_sample *sample)
 {
@@ -211,6 +226,7 @@ read_sample(const uint8_t **buffer, struct na_parsed_sample *sample)
 	read_i15_to_i32(buffer, &sample->mag.y);
 	read_i15_to_i32(buffer, &sample->mag.z);
 }
+
 
 /*
  *
