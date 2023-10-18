@@ -226,7 +226,7 @@ create_tracked_rs_device(struct xrt_prober *xp)
 
 //! Basically just for T265
 struct xrt_device *
-rs_create_tracked_device_internal_slam()
+rs_create_tracked_device_internal_slam(void)
 {
 	rs2_error *e = NULL;
 	struct rs_container rsc = {0};
@@ -271,7 +271,7 @@ rs_prober_autoprobe(struct xrt_auto_prober *xap,
 }
 
 struct xrt_auto_prober *
-rs_create_auto_prober()
+rs_create_auto_prober(void)
 {
 	struct rs_prober *dp = U_TYPED_CALLOC(struct rs_prober);
 	dp->base.name = "Realsense";
