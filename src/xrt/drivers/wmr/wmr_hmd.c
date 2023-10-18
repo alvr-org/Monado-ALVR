@@ -82,6 +82,11 @@ DEBUG_GET_ONCE_BOOL_OPTION(wmr_handtracking, "WMR_HANDTRACKING", true)
 DEBUG_GET_ONCE_OPTION(slam_submit_from_start, "SLAM_SUBMIT_FROM_START", NULL)
 #endif
 
+//! Specifies the y offset of the views.
+DEBUG_GET_ONCE_NUM_OPTION(left_view_y_offset, "WMR_LEFT_DISPLAY_VIEW_Y_OFFSET", 0)
+DEBUG_GET_ONCE_NUM_OPTION(right_view_y_offset, "WMR_RIGHT_DISPLAY_VIEW_Y_OFFSET", 0)
+
+
 #define WMR_TRACE(d, ...) U_LOG_XDEV_IFL_T(&d->base, d->log_level, __VA_ARGS__)
 #define WMR_DEBUG(d, ...) U_LOG_XDEV_IFL_D(&d->base, d->log_level, __VA_ARGS__)
 #define WMR_DEBUG_HEX(d, data, data_size) U_LOG_XDEV_IFL_D_HEX(&d->base, d->log_level, data, data_size)
@@ -1254,6 +1259,12 @@ compute_distortion_wmr(struct xrt_device *xdev, uint32_t view, float u, float v,
 		                                 distortion3K->eye_center.x,
 		                             v * ec->display_size.y - distortion3K->eye_center.y};
 
+		if (view == 0) {
+			pix_coord.y += (float)wh->left_view_y_offset;
+		} else if (view == 1) {
+			pix_coord.y += (float)wh->right_view_y_offset;
+		}
+
 		float r2 = m_vec2_dot(pix_coord, pix_coord);
 		float k1 = (float)distortion3K->k[0];
 		float k2 = (float)distortion3K->k[1];
@@ -1881,6 +1892,9 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 	wh->base.name = XRT_DEVICE_GENERIC_HMD;
 	wh->base.device_type = XRT_DEVICE_TYPE_HMD;
 	wh->log_level = log_level;
+
+	wh->left_view_y_offset = debug_get_num_option_left_view_y_offset();
+	wh->right_view_y_offset = debug_get_num_option_right_view_y_offset();
 
 	wh->hid_hololens_sensors_dev = hid_holo;
 	wh->hid_control_dev = hid_ctrl;

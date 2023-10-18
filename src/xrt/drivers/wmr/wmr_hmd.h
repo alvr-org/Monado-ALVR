@@ -85,6 +85,8 @@ struct wmr_hmd
 
 	enum u_logging_level log_level;
 
+	int32_t left_view_y_offset, right_view_y_offset;
+
 	/*!
 	 * This is the Hololens Sensors device, this is where we get all of the
 	 * IMU data and read the config from.
