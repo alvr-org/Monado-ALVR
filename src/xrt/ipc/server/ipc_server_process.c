@@ -687,13 +687,14 @@ update_server_state_locked(struct ipc_server *s)
 		}
 	}
 
-	// if our currently-set active primary application is not
+	// if there is a currently-set active primary application and it is not
 	// actually active/displayable, use the fallback application
 	// instead.
-	volatile struct ipc_client_state *ics = &s->threads[s->global_state.active_client_index].ics;
-	if (!(ics->client_state.session_overlay == false && s->global_state.active_client_index >= 0 &&
-	      ics->client_state.session_active)) {
-		s->global_state.active_client_index = fallback_active_application;
+	if (s->global_state.active_client_index >= 0) {
+		volatile struct ipc_client_state *ics = &s->threads[s->global_state.active_client_index].ics;
+		if (!(ics->client_state.session_overlay == false && ics->client_state.session_active)) {
+			s->global_state.active_client_index = fallback_active_application;
+		}
 	}
 
 
