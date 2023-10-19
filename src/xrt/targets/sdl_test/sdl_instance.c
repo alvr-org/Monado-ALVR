@@ -28,6 +28,17 @@
  *
  */
 
+static xrt_result_t
+sdl_system_devices_get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
+{
+	struct xrt_system_roles roles = XRT_SYSTEM_ROLES_INIT;
+	roles.generation_id = 1; // Never changes.
+
+	*out_roles = roles;
+
+	return XRT_SUCCESS;
+}
+
 static void
 sdl_system_devices_destroy(struct xrt_system_devices *xsysd)
 {
@@ -100,6 +111,7 @@ void
 sdl_system_devices_init(struct sdl_program *sp)
 {
 	sp->xsysd_base.destroy = sdl_system_devices_destroy;
+	sp->xsysd_base.get_roles = sdl_system_devices_get_roles;
 
 #ifdef USE_SIMULATED
 	const struct xrt_pose center = XRT_POSE_IDENTITY;
@@ -111,7 +123,7 @@ sdl_system_devices_init(struct sdl_program *sp)
 	// Setup the device base as the only device.
 	sp->xsysd_base.xdevs[0] = head;
 	sp->xsysd_base.xdev_count = 1;
-	sp->xsysd_base.roles.head = head;
+	sp->xsysd_base.static_roles.head = head;
 
 	u_builder_create_space_overseer_legacy( //
 	    head,                               // head
