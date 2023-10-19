@@ -1068,10 +1068,13 @@ p_create_system(struct xrt_prober *xp, struct xrt_system_devices **out_xsysd, st
 		if (xret == XRT_SUCCESS) {
 			print_system_devices(dg, *out_xsysd);
 		}
-
-		u_pp(dg, "\n\tResult: ");
-		u_pp_xrt_result(dg, xret);
+	} else {
+		u_pp(dg, "\n\tNo builder can be used to create a head device");
+		xret = XRT_ERROR_DEVICE_CREATION_FAILED;
 	}
+
+	u_pp(dg, "\n\tResult: ");
+	u_pp_xrt_result(dg, xret);
 
 	P_INFO(p, "%s", sink.buffer);
 
