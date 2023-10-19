@@ -44,7 +44,7 @@ create_gfx_ubo_and_src_descriptor_set_layout(struct vk_bundle *vk,
 	        .binding = ubo_binding,
 	        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 	        .descriptorCount = 1,
-	        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+	        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 	    },
 	};
 
