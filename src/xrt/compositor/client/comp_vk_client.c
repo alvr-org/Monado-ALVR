@@ -11,12 +11,15 @@
 #include "util/u_misc.h"
 #include "util/u_handles.h"
 #include "util/u_trace_marker.h"
+#include "util/u_debug.h"
 
 #include "comp_vk_client.h"
 
 //! We are not allowed to touch the queue in xrDestroySwapchain
 #define BREAK_OPENXR_SPEC_IN_DESTROY_SWAPCHAIN (true)
 
+// Prefixed with OXR since the only user right now is the OpenXR state tracker.
+DEBUG_GET_ONCE_LOG_OPTION(vulkan_log, "OXR_VULKAN_LOG", U_LOGGING_INFO)
 
 /*!
  * Down-cast helper.
@@ -799,7 +802,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	c->base.base.info.format_count = xcn->base.info.format_count;
 
 	// Default to info.
-	enum u_logging_level log_level = U_LOGGING_INFO;
+	enum u_logging_level log_level = debug_get_log_option_vulkan_log();
 
 	ret = vk_init_from_given(          //
 	    &c->vk,                        // vk_bundle
