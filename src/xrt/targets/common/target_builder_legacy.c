@@ -99,9 +99,12 @@ legacy_estimate_system(struct xrt_builder *xb,
                        struct xrt_prober *xp,
                        struct xrt_builder_estimate *estimate)
 {
-	estimate->maybe.head = true;
-	estimate->maybe.left = true;
-	estimate->maybe.right = true;
+	// If no driver is enabled, there is no way to create a HMD
+	bool may_create_hmd = xb->driver_identifier_count > 0;
+
+	estimate->maybe.head = may_create_hmd;
+	estimate->maybe.left = may_create_hmd;
+	estimate->maybe.right = may_create_hmd;
 	estimate->priority = -20;
 
 	return XRT_SUCCESS;
