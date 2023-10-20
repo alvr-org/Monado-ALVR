@@ -49,6 +49,12 @@ struct gfx_view_state
 	struct xrt_matrix_4x4 world_vp_full;
 	// Full rotation and translation VP matrix, in view space.
 	struct xrt_matrix_4x4 eye_vp_full;
+
+	// Full rotation and translation inverse V matrix, in world space.
+	struct xrt_matrix_4x4 world_v_inv_full;
+	// Full rotation and translation inverse V matrix, in view space.
+	struct xrt_matrix_4x4 eye_v_inv_full;
+
 	// Only rotation and translation VP matrix, in world space.
 	struct xrt_matrix_4x4 world_vp_rot_only;
 	// Only rotation and translation VP matrix, in view space.
@@ -275,6 +281,7 @@ do_layers(struct render_gfx *rr,
 		// World
 		math_matrix_4x4_view_from_pose(&world_poses[view], &v);
 		math_matrix_4x4_multiply(&p, &v, &views[view].world_vp_full);
+		math_matrix_4x4_inverse(&v, &views[view].world_v_inv_full);
 
 		struct xrt_pose world_rot_only = {world_poses[view].orientation, XRT_VEC3_ZERO};
 		math_matrix_4x4_view_from_pose(&world_rot_only, &v);
@@ -283,6 +290,7 @@ do_layers(struct render_gfx *rr,
 		// Eye
 		math_matrix_4x4_view_from_pose(&eye_poses[view], &v);
 		math_matrix_4x4_multiply(&p, &v, &views[view].eye_vp_full);
+		math_matrix_4x4_inverse(&v, &views[view].eye_v_inv_full);
 
 		struct xrt_pose eye_rot_only = {eye_poses[view].orientation, XRT_VEC3_ZERO};
 		math_matrix_4x4_view_from_pose(&eye_rot_only, &v);
