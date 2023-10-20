@@ -42,6 +42,9 @@ struct gfx_view_state
 	// Is the alpha premultipled, false means unpremultiplied.
 	bool premultiplied_alphas[RENDER_MAX_LAYERS];
 
+	// To go to this view's tangent lengths.
+	struct xrt_normalized_rect to_tangent;
+
 	// Number of layers filed in.
 	uint32_t layer_count;
 
@@ -293,6 +296,9 @@ do_layers(struct render_gfx *rr,
 	struct gfx_view_state views[2] = XRT_STRUCT_INIT;
 
 	for (uint32_t view = 0; view < ARRAY_SIZE(views); view++) {
+
+		// Used to go from UV to tangent space.
+		render_calc_uv_to_tangent_lengths_rect(&new_fovs[view], &views[view].to_tangent);
 
 		// Projection
 		struct xrt_matrix_4x4 p;
