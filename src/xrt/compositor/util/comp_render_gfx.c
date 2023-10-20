@@ -101,6 +101,29 @@ calc_mvp_full(struct gfx_view_state *state,
 }
 
 static inline void
+calc_mv_inv_full(struct gfx_view_state *state,
+                 const struct xrt_layer_data *layer_data,
+                 const struct xrt_pose *pose,
+                 const struct xrt_vec3 *scale,
+                 struct xrt_matrix_4x4 *result)
+{
+	struct xrt_matrix_4x4 model;
+	math_matrix_4x4_model(pose, scale, &model);
+
+	struct xrt_matrix_4x4 model_inv;
+	math_matrix_4x4_inverse(&model, &model_inv);
+
+	struct xrt_matrix_4x4 *v;
+	if (is_layer_view_space(layer_data)) {
+		v = &state->eye_v_inv_full;
+	} else {
+		v = &state->world_v_inv_full;
+	}
+
+	math_matrix_4x4_multiply(&model_inv, v, result);
+}
+
+static inline void
 calc_mvp_rot_only(struct gfx_view_state *state,
                   const struct xrt_layer_data *data,
                   const struct xrt_pose *pose,
