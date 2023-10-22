@@ -10,6 +10,7 @@
 #include "xrt/xrt_compositor.h"
 
 #include "math/m_api.h"
+#include "math/m_mathinclude.h"
 
 #include "util/u_misc.h"
 #include "util/u_trace_marker.h"
