@@ -45,17 +45,6 @@ is_view_index_right(uint32_t view_index)
 	return view_index % 2 == 1;
 }
 
-static inline bool
-is_view_index_visible(uint32_t view_index, enum xrt_layer_eye_visibility visibility)
-{
-	switch (visibility) {
-	case XRT_LAYER_EYE_VISIBILITY_NONE: return false;
-	case XRT_LAYER_EYE_VISIBILITY_LEFT_BIT: return !is_view_index_right(view_index);
-	case XRT_LAYER_EYE_VISIBILITY_RIGHT_BIT: return is_view_index_right(view_index);
-	case XRT_LAYER_EYE_VISIBILITY_BOTH: return true;
-	}
-}
-
 static inline void
 view_index_to_projection_data(uint32_t view_index,
                               const struct xrt_layer_data *data,
@@ -93,6 +82,30 @@ view_index_to_depth_data(uint32_t view_index,
  * Layer data helpers.
  *
  */
+
+static inline bool
+is_layer_view_visible(const struct xrt_layer_data *data, uint32_t view_index)
+{
+	enum xrt_layer_eye_visibility visibility;
+	switch (data->type) {
+	case XRT_LAYER_CUBE: visibility = data->cube.visibility; break;
+	case XRT_LAYER_CYLINDER: visibility = data->cylinder.visibility; break;
+	case XRT_LAYER_EQUIRECT1: visibility = data->equirect1.visibility; break;
+	case XRT_LAYER_EQUIRECT2: visibility = data->equirect2.visibility; break;
+	case XRT_LAYER_QUAD: visibility = data->quad.visibility; break;
+	case XRT_LAYER_STEREO_PROJECTION:
+	case XRT_LAYER_STEREO_PROJECTION_DEPTH: return true;
+	default: return false;
+	};
+
+	switch (visibility) {
+	case XRT_LAYER_EYE_VISIBILITY_LEFT_BIT: return !is_view_index_right(view_index);
+	case XRT_LAYER_EYE_VISIBILITY_RIGHT_BIT: return is_view_index_right(view_index);
+	case XRT_LAYER_EYE_VISIBILITY_BOTH: return true;
+	case XRT_LAYER_EYE_VISIBILITY_NONE:
+	default: return false;
+	}
+}
 
 static inline bool
 is_layer_view_space(const struct xrt_layer_data *data)

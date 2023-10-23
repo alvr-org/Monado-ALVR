@@ -176,11 +176,6 @@ do_cylinder_layer(struct render_gfx *rr,
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
 
-	// Should we actually do a layer here?
-	if (!is_view_index_visible(view_index, c->visibility)) {
-		return VK_SUCCESS;
-	}
-
 	const uint32_t array_index = c->sub.array_index;
 	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[c->sub.image_index];
 
@@ -242,11 +237,6 @@ do_equirect2_layer(struct render_gfx *rr,
 	const struct xrt_layer_equirect2_data *eq2 = &layer_data->equirect2;
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
-
-	// Should we actually do a layer here?
-	if (!is_view_index_visible(view_index, eq2->visibility)) {
-		return VK_SUCCESS;
-	}
 
 	const uint32_t array_index = eq2->sub.array_index;
 	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[eq2->sub.image_index];
@@ -370,11 +360,6 @@ do_quad_layer(struct render_gfx *rr,
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
 
-	// Should we actually do a layer here?
-	if (!is_view_index_visible(view_index, q->visibility)) {
-		return VK_SUCCESS;
-	}
-
 	const uint32_t array_index = q->sub.array_index;
 	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[q->sub.image_index];
 
@@ -473,7 +458,12 @@ do_layers(struct render_gfx *rr,
 
 	for (uint32_t view = 0; view < ARRAY_SIZE(views); view++) {
 		for (uint32_t i = 0; i < layer_count; i++) {
-			switch (layers[i].data.type) {
+			const struct xrt_layer_data *data = &layers[i].data;
+			if (!is_layer_view_visible(data, view)) {
+				continue;
+			}
+
+			switch (data->type) {
 			case XRT_LAYER_CYLINDER:
 				ret = do_cylinder_layer(   //
 				    rr,                    // rr

@@ -331,6 +331,10 @@ comp_render_cs_layer(struct render_compute *crc,
 		const struct comp_layer *layer = &layers[c_layer_i];
 		const struct xrt_layer_data *data = &layer->data;
 
+		if (!is_layer_view_visible(data, view_index)) {
+			continue;
+		}
+
 		/*!
 		 * Stop compositing layers if device's sampled image limit is
 		 * reached. For most hardware this isn't a problem, most have
@@ -342,13 +346,7 @@ comp_render_cs_layer(struct render_compute *crc,
 		switch (data->type) {
 		case XRT_LAYER_STEREO_PROJECTION: required_image_samplers = 1; break;
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH: required_image_samplers = 2; break;
-		case XRT_LAYER_QUAD:
-			if (!is_view_index_visible(view_index, data->quad.visibility)) {
-				continue;
-			}
-
-			required_image_samplers = 1;
-			break;
+		case XRT_LAYER_QUAD: required_image_samplers = 1; break;
 		default:
 			VK_ERROR(crc->r->vk, "Skipping layer #%u, unknown type: %u", c_layer_i, data->type);
 			continue; // Skip this layer if don't know about it.
