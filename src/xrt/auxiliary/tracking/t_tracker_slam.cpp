@@ -90,6 +90,7 @@ using std::ifstream;
 using std::make_shared;
 using std::map;
 using std::ofstream;
+using std::ostream;
 using std::pair;
 using std::shared_ptr;
 using std::string;
@@ -97,6 +98,7 @@ using std::to_string;
 using std::vector;
 using std::filesystem::create_directories;
 using Trajectory = map<timepoint_ns, xrt_pose>;
+using timing_sample = vector<timepoint_ns>;
 
 using xrt::auxiliary::math::RelationHistory;
 
@@ -195,62 +197,64 @@ public:
 	}
 };
 
-//! Writes poses and their timestamps to a CSV file
-class TrajectoryWriter
+
+/*
+ *
+ * CSV Writers
+ *
+ */
+
+ostream &
+operator<<(ostream &os, const xrt_pose_sample &s)
 {
-public:
-	bool enabled; // Modified through UI
+	timepoint_ns ts = s.timestamp_ns;
+	xrt_vec3 p = s.pose.position;
+	xrt_quat r = s.pose.orientation;
+	os << ts << ",";
+	os << p.x << "," << p.y << "," << p.z << ",";
+	os << r.w << "," << r.x << "," << r.y << "," << r.z << CSV_EOL;
+	return os;
+}
 
-private:
-	string directory;
-	string filename;
-	ofstream file;
-	bool created = false;
-
-	void
-	create()
-	{
-		create_directories(directory);
-		file = ofstream{directory + "/" + filename};
-		file << "#timestamp [ns], p_RS_R_x [m], p_RS_R_y [m], p_RS_R_z [m], "
-		        "q_RS_w [], q_RS_x [], q_RS_y [], q_RS_z []" CSV_EOL;
-		file << std::fixed << std::setprecision(CSV_PRECISION);
+ostream &
+operator<<(ostream &os, const timing_sample &timestamps)
+{
+	for (const timepoint_ns &ts : timestamps) {
+		string delimiter = &ts != &timestamps.back() ? "," : CSV_EOL;
+		os << ts << delimiter;
 	}
+	return os;
+}
 
-
-public:
-	TrajectoryWriter(const string &dir, const string &fn, bool e) : enabled(e), directory(dir), filename(fn) {}
-
-	void
-	push(timepoint_ns ts, const xrt_pose &pose)
-	{
-		if (!enabled) {
-			return;
-		}
-
-		if (!created) {
-			created = true;
-			create();
-		}
-
-		xrt_vec3 p = pose.position;
-		xrt_quat r = pose.orientation;
-		file << ts << ",";
-		file << p.x << "," << p.y << "," << p.z << ",";
-		file << r.w << "," << r.x << "," << r.y << "," << r.z << CSV_EOL;
-	}
+struct feature_count_sample
+{
+	timepoint_ns ts;
+	vector<int> counts;
 };
 
-//! Writes timestamps measured when estimating a new pose by the SLAM system
-class TimingWriter
+ostream &
+operator<<(ostream &os, const feature_count_sample &s)
+{
+	os << s.ts;
+	for (int count : s.counts) {
+		os << "," << count;
+	}
+	os << CSV_EOL;
+	return os;
+}
+
+//! Writes a CSV file for a particular row type
+template <typename RowType> class CSVWriter
 {
 public:
 	bool enabled; // Modified through UI
 
+protected:
+	vector<string> column_names;
+
 private:
 	string directory;
 	string filename;
-	vector<string> column_names;
 	ofstream file;
 	bool created = false;
 
@@ -264,59 +268,18 @@ private:
 			string delimiter = &col != &column_names.back() ? "," : CSV_EOL;
 			file << col << delimiter;
 		}
-	}
-
-public:
-	TimingWriter(const string &dir, const string &fn, bool e, const vector<string> &cn)
-	    : enabled(e), directory(dir), filename(fn), column_names(cn)
-	{}
-
-	void
-	push(const vector<timepoint_ns> &timestamps)
-	{
-		if (!enabled) {
-			return;
-		}
-
-		if (!created) {
-			created = true;
-			create();
-		}
-
-		for (const timepoint_ns &ts : timestamps) {
-			string delimiter = &ts != &timestamps.back() ? "," : CSV_EOL;
-			file << ts << delimiter;
-		}
-	}
-};
-
-//! Writes feature information specific to a particular estimated pose
-class FeaturesWriter
-{
-public:
-	bool enabled; // Modified through UI
-
-private:
-	string directory;
-	string filename;
-	ofstream file;
-	bool created = false;
-
-	void
-	create()
-	{
-		create_directories(directory);
-		file = ofstream{directory + "/" + filename};
-		file << "#timestamp, cam0 feature count, cam1 feature count" CSV_EOL;
 		file << std::fixed << std::setprecision(CSV_PRECISION);
 	}
 
-
 public:
-	FeaturesWriter(const string &dir, const string &fn, bool e) : enabled(e), directory(dir), filename(fn) {}
+	CSVWriter(const string &dir, const string &fn, bool e, const vector<string> &cn = {})
+	    : enabled(e), column_names(cn), directory(dir), filename(fn)
+	{}
+
+	virtual ~CSVWriter() {}
 
 	void
-	push(timepoint_ns ts, const vector<int> &counts)
+	push(RowType row)
 	{
 		if (!enabled) {
 			return;
@@ -327,13 +290,41 @@ public:
 			create();
 		}
 
-		file << ts;
-		for (int count : counts) {
-			file << "," << count;
-		}
-		file << CSV_EOL;
+		file << row;
 	}
 };
+
+//! Writes poses and their timestamps to a CSV file
+struct TrajectoryWriter : public CSVWriter<xrt_pose_sample>
+{
+	TrajectoryWriter(const string &dir, const string &fn, bool e) : CSVWriter<xrt_pose_sample>(dir, fn, e)
+	{
+		column_names = {"timestamp [ns]", "p_RS_R_x [m]", "p_RS_R_y [m]", "p_RS_R_z [m]",
+		                "q_RS_w []",      "q_RS_x []",    "q_RS_y []",    "q_RS_z []"};
+	}
+};
+
+//! Writes timestamps measured when estimating a new pose by the SLAM system
+struct TimingWriter : public CSVWriter<timing_sample>
+{
+	TimingWriter(const string &dir, const string &fn, bool e, const vector<string> &cn)
+	    : CSVWriter<timing_sample>(dir, fn, e, cn)
+	{}
+};
+
+//! Writes feature information specific to a particular estimated pose
+struct FeaturesWriter : public CSVWriter<feature_count_sample>
+{
+	FeaturesWriter(const string &dir, const string &fn, bool e, size_t cam_count)
+	    : CSVWriter<feature_count_sample>(dir, fn, e)
+	{
+		column_names.push_back("timestamp");
+		for (size_t i = 0; i < cam_count; i++) {
+			column_names.push_back("cam" + to_string(i) + " feature count");
+		}
+	}
+};
+
 /*!
  * Main implementation of @ref xrt_tracked_slam. This is an adapter class for
  * SLAM tracking that wraps an external SLAM implementation.
@@ -829,7 +820,7 @@ flush_poses(TrackerSlam &t)
 		t.dbg_pred_counter = (t.dbg_pred_counter + 1) % t.dbg_pred_every;
 
 		gt_ui_push(t, nts, rel.pose);
-		t.slam_traj_writer->push(nts, rel.pose);
+		t.slam_traj_writer->push({nts, rel.pose});
 		xrt_pose_sample pose_sample = {nts, rel.pose};
 		xrt_sink_push_pose(t.euroc_recorder->gt, &pose_sample);
 
@@ -839,7 +830,7 @@ flush_poses(TrackerSlam &t)
 
 		if (t.features.ext_enabled) {
 			vector feat_count = features_ui_push(t, np);
-			t.slam_features_writer->push(nts, feat_count);
+			t.slam_features_writer->push({nts, feat_count});
 		}
 
 		dequeued = t.slam->try_dequeue_pose(tracked_pose);
@@ -1273,10 +1264,10 @@ t_slam_get_tracked_pose(struct xrt_tracked_slam *xts, timepoint_ns when_ns, stru
 	flush_poses(t);
 
 	predict_pose(t, when_ns, out_relation);
-	t.pred_traj_writer->push(when_ns, out_relation->pose);
+	t.pred_traj_writer->push({when_ns, out_relation->pose});
 
 	filter_pose(t, when_ns, out_relation);
-	t.filt_traj_writer->push(when_ns, out_relation->pose);
+	t.filt_traj_writer->push({when_ns, out_relation->pose});
 
 	t.last_rel = *out_relation;
 	t.last_ts = when_ns;
@@ -1606,11 +1597,11 @@ t_slam_create(struct xrt_frame_context *xfctx,
 	// Setup CSV files
 	bool write_csvs = config->write_csvs;
 	string dir = config->csv_path;
-	t.slam_times_writer = new TimingWriter{dir, "timing.csv", write_csvs, t.timing.columns};
-	t.slam_features_writer = new FeaturesWriter{dir, "features.csv", write_csvs};
-	t.slam_traj_writer = new TrajectoryWriter{dir, "tracking.csv", write_csvs};
-	t.pred_traj_writer = new TrajectoryWriter{dir, "prediction.csv", write_csvs};
-	t.filt_traj_writer = new TrajectoryWriter{dir, "filtering.csv", write_csvs};
+	t.slam_times_writer = new TimingWriter(dir, "timing.csv", write_csvs, t.timing.columns);
+	t.slam_features_writer = new FeaturesWriter(dir, "features.csv", write_csvs, t.cam_count);
+	t.slam_traj_writer = new TrajectoryWriter(dir, "tracking.csv", write_csvs);
+	t.pred_traj_writer = new TrajectoryWriter(dir, "prediction.csv", write_csvs);
+	t.filt_traj_writer = new TrajectoryWriter(dir, "filtering.csv", write_csvs);
 
 	setup_ui(t);
 
