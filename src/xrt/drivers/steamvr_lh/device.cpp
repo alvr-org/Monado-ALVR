@@ -789,6 +789,8 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 			break;
 		}
 		default: {
+			this->device_type = XRT_DEVICE_TYPE_UNKNOWN;
+			DEV_WARN("requested unimplemented role hint %i", this->device_type);
 			break;
 		}
 		}
