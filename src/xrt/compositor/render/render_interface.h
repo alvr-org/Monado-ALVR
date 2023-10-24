@@ -1151,6 +1151,19 @@ struct render_compute_layer_ubo_data
 
 
 	/*!
+	 * For equirect2 layers
+	 */
+	struct xrt_matrix_4x4 mv_inverse[RENDER_MAX_LAYERS];
+	struct
+	{
+		float radius;
+		float central_horizontal_angle;
+		float upper_vertical_angle;
+		float lower_vertical_angle;
+	} eq2_data[RENDER_MAX_LAYERS];
+
+
+	/*!
 	 * For projection layers
 	 */
 

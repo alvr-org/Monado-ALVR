@@ -14,6 +14,7 @@
 #include "os/os_time.h"
 
 #include "math/m_api.h"
+#include "math/m_mathinclude.h"
 
 #include "util/u_misc.h"
 #include "util/u_trace_marker.h"
@@ -32,6 +33,69 @@
  * Compute layer data builders.
  *
  */
+
+static inline void
+do_cs_equirect2_layer(const struct xrt_layer_data *data,
+                      const struct comp_layer *layer,
+                      const struct xrt_matrix_4x4 *eye_view_mat,
+                      const struct xrt_matrix_4x4 *world_view_mat,
+                      uint32_t view_index,
+                      uint32_t cur_layer,
+                      uint32_t cur_image,
+                      VkSampler clamp_to_edge,
+                      VkSampler clamp_to_border_black,
+                      VkSampler src_samplers[RENDER_MAX_IMAGES],
+                      VkImageView src_image_views[RENDER_MAX_IMAGES],
+                      struct render_compute_layer_ubo_data *ubo_data,
+                      uint32_t *out_cur_image)
+{
+	const struct xrt_layer_equirect2_data *eq2 = &data->equirect2;
+
+	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[eq2->sub.image_index];
+	uint32_t array_index = eq2->sub.array_index;
+
+	// Image to use.
+	src_samplers[cur_image] = clamp_to_edge;
+	src_image_views[cur_image] = get_image_view(image, data->flags, array_index);
+
+	// Used for Subimage and OpenGL flip.
+	set_post_transform_rect(                    //
+	    data,                                   // data
+	    &eq2->sub.norm_rect,                    // src_norm_rect
+	    false,                                  // invert_flip
+	    &ubo_data->post_transforms[cur_layer]); // out_norm_rect
+
+	struct xrt_vec3 scale = {1.f, 1.f, 1.f};
+
+	struct xrt_matrix_4x4 model;
+	math_matrix_4x4_model(&eq2->pose, &scale, &model);
+
+	struct xrt_matrix_4x4 model_inv;
+	math_matrix_4x4_inverse(&model, &model_inv);
+
+	const struct xrt_matrix_4x4 *v = is_layer_view_space(data) ? eye_view_mat : world_view_mat;
+
+	struct xrt_matrix_4x4 v_inv;
+	math_matrix_4x4_inverse(v, &v_inv);
+
+	math_matrix_4x4_multiply(&model_inv, &v_inv, &ubo_data->mv_inverse[cur_layer]);
+
+	// Simplifies the shader.
+	if (eq2->radius >= INFINITY) {
+		ubo_data->eq2_data[cur_layer].radius = 0.f;
+	} else {
+		ubo_data->eq2_data[cur_layer].radius = eq2->radius;
+	}
+
+	ubo_data->eq2_data[cur_layer].central_horizontal_angle = eq2->central_horizontal_angle;
+	ubo_data->eq2_data[cur_layer].upper_vertical_angle = eq2->upper_vertical_angle;
+	ubo_data->eq2_data[cur_layer].lower_vertical_angle = eq2->lower_vertical_angle;
+
+	ubo_data->images_samplers[cur_layer].images[0] = cur_image;
+	cur_image++;
+
+	*out_cur_image = cur_image;
+}
 
 static inline void
 do_cs_projection_layer(const struct xrt_layer_data *data,
@@ -344,6 +408,7 @@ comp_render_cs_layer(struct render_compute *crc,
 		 */
 		uint32_t required_image_samplers;
 		switch (data->type) {
+		case XRT_LAYER_EQUIRECT2: required_image_samplers = 1; break;
 		case XRT_LAYER_STEREO_PROJECTION: required_image_samplers = 1; break;
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH: required_image_samplers = 2; break;
 		case XRT_LAYER_QUAD: required_image_samplers = 1; break;
@@ -358,6 +423,22 @@ comp_render_cs_layer(struct render_compute *crc,
 		}
 
 		switch (data->type) {
+		case XRT_LAYER_EQUIRECT2:
+			do_cs_equirect2_layer(     //
+			    data,                  // data
+			    layer,                 // layer
+			    &eye_view_mat,         // eye_view_mat
+			    &world_view_mat,       // world_view_mat
+			    view_index,            // view_index
+			    cur_layer,             // cur_layer
+			    cur_image,             // cur_image
+			    clamp_to_edge,         // clamp_to_edge
+			    clamp_to_border_black, // clamp_to_border_black
+			    src_samplers,          // src_samplers
+			    src_image_views,       // src_image_views
+			    ubo_data,              // ubo_data
+			    &cur_image);           // out_cur_image
+			break;
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 		case XRT_LAYER_STEREO_PROJECTION: {
 			do_cs_projection_layer(    //
