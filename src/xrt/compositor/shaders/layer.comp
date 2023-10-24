@@ -81,7 +81,7 @@ vec2 transform_uv_subimage(vec2 uv, uint layer)
 	vec2 values = uv;
 
 	// To deal with OpenGL flip and sub image view.
-	values.xy = values.xy * ubo.post_transform[layer].zw + ubo.post_transform[layer].xy;
+	values.xy = fma(values.xy, ubo.post_transform[layer].zw, ubo.post_transform[layer].xy);
 
 	// Ready to be used.
 	return values.xy;
@@ -92,7 +92,7 @@ vec2 transform_uv_timewarp(vec2 uv, uint layer)
 	vec4 values = vec4(uv, -1, 1);
 
 	// From uv to tan angle (tangent space).
-	values.xy = values.xy * ubo.pre_transform.zw + ubo.pre_transform.xy;
+	values.xy = fma(values.xy, ubo.pre_transform.zw, ubo.pre_transform.xy);
 	values.y = -values.y; // Flip to OpenXR coordinate system.
 
 	// Timewarp.
@@ -103,7 +103,7 @@ vec2 transform_uv_timewarp(vec2 uv, uint layer)
 	values.xy = values.xy * 0.5 + 0.5;
 
 	// To deal with OpenGL flip and sub image view.
-	values.xy = values.xy * ubo.post_transform[layer].zw + ubo.post_transform[layer].xy;
+	values.xy = fma(values.xy, ubo.post_transform[layer].zw, ubo.post_transform[layer].xy);
 
 	// Done.
 	return values.xy;
@@ -137,7 +137,7 @@ vec3 get_direction(vec2 uv)
 	vec4 values = vec4(uv, -1, 1);
 
 	// From uv to tan angle (tangent space).
-	values.xy = values.xy * ubo.pre_transform.zw + ubo.pre_transform.xy;
+	values.xy = fma(values.xy, ubo.pre_transform.zw, ubo.pre_transform.xy);
 	values.y = -values.y; // Flip to OpenXR coordinate system.
 
 	// This works because values.xy are now in tangent space, that is the
@@ -213,7 +213,7 @@ vec4 do_quad(vec2 view_uv, uint layer)
 			vec2 plane_uv = (intersection_ps.xy + ubo.quad_extent[layer] / 2.) / ubo.quad_extent[layer];
 
 			// sample on the desired subimage, not the entire texture
-			plane_uv = plane_uv * ubo.post_transform[layer].zw + ubo.post_transform[layer].xy;
+			plane_uv = fma(plane_uv, ubo.post_transform[layer].zw, ubo.post_transform[layer].xy);
 
 			colour = texture(source[source_image_index], plane_uv);
 		} else {
@@ -256,7 +256,7 @@ vec4 do_layers(vec2 view_uv)
 			// Premultiplied blend factor of 1.
 			accum.rgb = (accum.rgb * (1 - rgba.a)) + rgba.rgb;
 		}
-		accum.a = rgba.a + accum.a * (1.0 - rgba.a);
+		accum.a = fma((1.f - rgba.a), accum.a, rgba.a);
 	}
 
 	return accum;
