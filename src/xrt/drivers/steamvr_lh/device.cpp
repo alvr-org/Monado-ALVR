@@ -128,13 +128,11 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
                 XRT_INPUT_GENERIC_TRACKER_POSE,
             },
             {
-                {"/input/system/click", XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK},
-                {"/input/squeeze/click", XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK},
-                {"/input/menu/click", XRT_INPUT_VIVE_TRACKER_MENU_CLICK},
-                {"/input/trigger/value", XRT_INPUT_VIVE_TRACKER_TRIGGER_VALUE},
-                {"/input/trackpad/click", XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK},
-                {"/input/trackpad/touch", XRT_INPUT_VIVE_TRACKER_TRACKPAD_TOUCH},
-                {"/input/trackpad/position", XRT_INPUT_VIVE_TRACKER_TRACKPAD},
+                {"/input/power/click", XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK},
+                {"/input/grip/click", XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK},
+                {"/input/application_menu/click", XRT_INPUT_VIVE_TRACKER_MENU_CLICK},
+                {"/input/trigger/click", XRT_INPUT_VIVE_TRACKER_TRIGGER_CLICK},
+                {"/input/thumb/click", XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK},
             },
             {
                 // No fingers on this controller type
@@ -150,13 +148,11 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
                 XRT_INPUT_GENERIC_TRACKER_POSE,
             },
             {
-                {"/input/system/click", XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK},
-                {"/input/squeeze/click", XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK},
-                {"/input/menu/click", XRT_INPUT_VIVE_TRACKER_MENU_CLICK},
-                {"/input/trigger/value", XRT_INPUT_VIVE_TRACKER_TRIGGER_VALUE},
-                {"/input/trackpad/click", XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK},
-                {"/input/trackpad/touch", XRT_INPUT_VIVE_TRACKER_TRACKPAD_TOUCH},
-                {"/input/trackpad/position", XRT_INPUT_VIVE_TRACKER_TRACKPAD},
+                {"/input/power/click", XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK},
+                {"/input/grip/click", XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK},
+                {"/input/application_menu/click", XRT_INPUT_VIVE_TRACKER_MENU_CLICK},
+                {"/input/trigger/click", XRT_INPUT_VIVE_TRACKER_TRIGGER_CLICK},
+                {"/input/thumb/click", XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK},
             },
             {
                 // No fingers on this controller type
@@ -352,6 +348,11 @@ ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
 xrt_input *
 Device::get_input_from_name(const std::string_view name)
 {
+	// Return nullptr without any other output to suppress a pile of useless warnings found below.
+	if (name == "/input/finger/index" || name == "/input/finger/middle" || name == "/input/finger/ring" ||
+	    name == "/input/finger/pinky") {
+		return nullptr;
+	}
 	auto input = inputs_map.find(name);
 	if (input == inputs_map.end()) {
 		DEV_WARN("requested unknown input name %s for device %s", std::string(name).c_str(), serial);
@@ -769,7 +770,7 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 	case vr::Prop_ControllerRoleHint_Int32: {
 		vr::ETrackedControllerRole role = *static_cast<vr::ETrackedControllerRole *>(prop.pvBuffer);
 		switch (role) {
-		case vr::TrackedControllerRole_Invalid:{
+		case vr::TrackedControllerRole_Invalid: {
 			this->device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
 			break;
 		}
