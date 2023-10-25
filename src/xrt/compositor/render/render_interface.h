@@ -1149,11 +1149,25 @@ struct render_compute_layer_ubo_data
 		uint32_t padding[2];
 	} images_samplers[RENDER_MAX_LAYERS];
 
+	//! Shared between cylinder and equirect2.
+	struct xrt_matrix_4x4 mv_inverse[RENDER_MAX_LAYERS];
+
+
+	/*!
+	 * For cylinder layer
+	 */
+	struct
+	{
+		float radius;
+		float central_angle;
+		float aspect_ratio;
+		float padding;
+	} cylinder_data[RENDER_MAX_LAYERS];
+
 
 	/*!
 	 * For equirect2 layers
 	 */
-	struct xrt_matrix_4x4 mv_inverse[RENDER_MAX_LAYERS];
 	struct
 	{
 		float radius;
