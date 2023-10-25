@@ -213,6 +213,8 @@ rift_s_open_system(struct xrt_builder *xb,
 	    xsysd->xdev_count,                  // xdev_count
 	    out_xso);                           // out_xso
 
+	return XRT_SUCCESS;
+
 
 unlock_and_fail:
 	xret = xrt_prober_unlock_list(xp, &xpdevs);
