@@ -38,6 +38,7 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -85,6 +86,7 @@ constexpr int UI_TIMING_POSE_COUNT = 192;
 constexpr int UI_FEATURES_POSE_COUNT = 192;
 constexpr int UI_GTDIFF_POSE_COUNT = 192;
 
+using os::Mutex;
 using std::deque;
 using std::ifstream;
 using std::make_shared;
@@ -95,6 +97,7 @@ using std::pair;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
+using std::unique_lock;
 using std::vector;
 using std::filesystem::create_directories;
 using Trajectory = map<timepoint_ns, xrt_pose>;
@@ -257,6 +260,7 @@ private:
 	string filename;
 	ofstream file;
 	bool created = false;
+	Mutex mutex;
 
 	void
 	create()
@@ -281,6 +285,8 @@ public:
 	void
 	push(RowType row)
 	{
+		unique_lock lock(mutex);
+
 		if (!enabled) {
 			return;
 		}
@@ -1338,7 +1344,7 @@ receive_frame(TrackerSlam &t, struct xrt_frame *frame, int cam_index)
 {
 	XRT_TRACE_MARKER();
 
-	if (cam_index == 1) {
+	if (cam_index == t.cam_count - 1) {
 		flush_poses(t); // Useful to flush SLAM poses when no openxr app is open
 	}
 	SLAM_DASSERT(t.last_cam_ts[0] != INT64_MIN || cam_index == 0, "First frame was not a cam0 frame");
