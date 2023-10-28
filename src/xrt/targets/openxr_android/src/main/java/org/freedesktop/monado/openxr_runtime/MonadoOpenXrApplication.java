@@ -8,7 +8,6 @@
 package org.freedesktop.monado.openxr_runtime;
 
 import android.app.Application;
-
 import dagger.hilt.android.HiltAndroidApp;
 
 /** Subclass required for Hilt usage. */

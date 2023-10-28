@@ -22,16 +22,13 @@ import android.os.RemoteException;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
-
 import androidx.annotation.Keep;
 import androidx.annotation.Nullable;
-
+import java.io.IOException;
+import java.util.concurrent.Executors;
 import org.freedesktop.monado.auxiliary.MonadoView;
 import org.freedesktop.monado.auxiliary.NativeCounterpart;
 import org.freedesktop.monado.auxiliary.SystemUiController;
-
-import java.io.IOException;
-import java.util.concurrent.Executors;
 
 /**
  * Provides the client-side code to initiate connection to Monado IPC service.
@@ -41,10 +38,13 @@ import java.util.concurrent.Executors;
 @Keep
 public class Client implements ServiceConnection {
     private static final String TAG = "monado-ipc-client";
+
     /** Used to block until binder is ready. */
     private final Object binderSync = new Object();
+
     /** Keep track of the ipc_client_android instance over on the native side. */
     private final NativeCounterpart nativeCounterpart;
+
     /**
      * Pointer to local IPC proxy: calling methods on it automatically transports arguments across
      * binder IPC.
@@ -52,6 +52,7 @@ public class Client implements ServiceConnection {
      * <p>May be null!
      */
     @Keep public IMonado monado = null;
+
     /**
      * Indicates that we tried to connect but failed.
      *
@@ -59,15 +60,19 @@ public class Client implements ServiceConnection {
      * failed" null monado member.
      */
     @Keep public boolean failed = false;
+
     /**
      * "Our" side of the socket pair - the other side is sent to the server automatically on
      * connection.
      */
     private ParcelFileDescriptor fd = null;
+
     /** Context provided by app. */
     private Context context = null;
+
     /** Context of the runtime package */
     private Context runtimePackageContext = null;
+
     /** Control system ui visibility */
     private SystemUiController systemUiController = null;
 

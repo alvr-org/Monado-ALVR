@@ -13,18 +13,14 @@ import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
-
 import dagger.hilt.android.AndroidEntryPoint;
-
+import javax.inject.Inject;
 import org.freedesktop.monado.auxiliary.NameAndLogoProvider;
 import org.freedesktop.monado.auxiliary.UiProvider;
-
-import javax.inject.Inject;
 
 @AndroidEntryPoint
 public class AboutActivity extends AppCompatActivity {

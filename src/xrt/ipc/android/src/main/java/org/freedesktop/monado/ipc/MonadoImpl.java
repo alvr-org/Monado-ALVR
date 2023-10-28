@@ -15,10 +15,8 @@ import android.os.RemoteException;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Surface;
-
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
-
 import java.io.IOException;
 
 /**

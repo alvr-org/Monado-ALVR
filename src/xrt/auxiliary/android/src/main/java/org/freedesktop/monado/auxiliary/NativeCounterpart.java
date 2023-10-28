@@ -10,10 +10,8 @@
 package org.freedesktop.monado.auxiliary;
 
 import android.util.Log;
-
 import androidx.annotation.CheckResult;
 import androidx.annotation.NonNull;
-
 import java.security.InvalidParameterException;
 
 /**
