@@ -34,7 +34,7 @@ spotless {
 
 android {
     compileSdk project.sharedCompileSdk
-    buildToolsVersion buildToolsVersion
+    buildToolsVersion = buildToolsVersion
 
     defaultConfig {
         minSdkVersion project.sharedMinSdk

@@ -10,7 +10,7 @@ plugins {
 
 android {
     compileSdk project.sharedCompileSdk
-    buildToolsVersion buildToolsVersion
+    buildToolsVersion = buildToolsVersion
 
     defaultConfig {
         minSdkVersion 24

@@ -110,7 +110,7 @@ if (project.hasProperty("sharedStl") && project.getProperty("sharedStl")) {
 
 android {
     compileSdk project.sharedCompileSdk
-    buildToolsVersion buildToolsVersion
+    buildToolsVersion = buildToolsVersion
 
     ndkVersion "${ndk_version}"
 
