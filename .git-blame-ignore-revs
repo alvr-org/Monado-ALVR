@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2023, Collabora, Ltd. and the Monado contributors
+
+# Use with `git config --local blame.ignoreRevsFile .git-blame-ignore-revs`
+
+# Apply spotless 6.22 and google-java-format 1.18.1
+30ebd2fe1bb28f7c7247bf2203801267f137d4f6
