@@ -46,7 +46,6 @@
     <application
         android:name="org.freedesktop.monado.openxr_runtime.MonadoOpenXrApplication"
         android:allowBackup="true"
-        android:extractNativeLibs="true"
         android:icon="@drawable/ic_monado_logo"
         android:label="@string/app_name"
         android:supportsRtl="true"

@@ -193,6 +193,9 @@ android {
         resources {
             excludes += ['META-INF/*.kotlin_module']
         }
+        jniLibs {
+            useLegacyPackaging true
+        }
     }
     namespace 'org.freedesktop.monado.openxr_runtime'
     lint {
