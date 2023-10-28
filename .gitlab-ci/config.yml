@@ -138,7 +138,7 @@ distributions:
           pkg-config:
           ca-certificates:
           glslang-tools:
-          default-jdk-headless:
+          openjdk-17-jdk-headless:
         build_jobs:
           - name: "ndk:armeabi-v7a"
             cmake_defines:
