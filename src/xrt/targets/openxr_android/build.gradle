@@ -160,8 +160,7 @@ android {
         }
     }
 
-
-    flavorDimensions 'deployment'
+    flavorDimensions = ['deployment']
     productFlavors {
         inProcess {
             dimension 'deployment'
