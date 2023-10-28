@@ -54,6 +54,9 @@ android {
     lint {
         fatal 'StopShip'
     }
+    buildFeatures {
+        aidl true
+    }
 }
 
 dependencies {
