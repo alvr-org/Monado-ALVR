@@ -22,6 +22,10 @@
 #include <stdarg.h>
 #include <limits.h>
 
+#ifdef XRT_OS_ANDROID
+#include <android/log.h>
+#endif
+
 
 #define LOG_BUFFER_SIZE (1024)
 
@@ -91,9 +95,14 @@ print_prefix(struct oxr_logger *logger, const char *fmt, const char *prefix, cha
 static void
 do_output(const char *buf)
 {
-#ifdef XRT_OS_WINDOWS
+#if defined(XRT_OS_WINDOWS)
 	OutputDebugStringA(buf);
 
+	if (debug_get_bool_option_no_printing_stderr()) {
+		return;
+	}
+#elif defined(XRT_OS_ANDROID)
+	__android_log_write(ANDROID_LOG_DEBUG, "OXR", buf);
 	if (debug_get_bool_option_no_printing_stderr()) {
 		return;
 	}
