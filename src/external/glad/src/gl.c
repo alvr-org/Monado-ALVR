@@ -1,3 +1,6 @@
+/**
+ * SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +41,7 @@ int GLAD_GL_VERSION_4_2 = 0;
 int GLAD_GL_VERSION_4_3 = 0;
 int GLAD_GL_VERSION_4_4 = 0;
 int GLAD_GL_VERSION_4_5 = 0;
+int GLAD_GL_VERSION_4_6 = 0;
 int GLAD_GL_ES_VERSION_2_0 = 0;
 int GLAD_GL_ES_VERSION_3_0 = 0;
 int GLAD_GL_ES_VERSION_3_1 = 0;
@@ -422,9 +426,11 @@ PFNGLMEMORYOBJECTPARAMETERIVEXTPROC glad_glMemoryObjectParameterivEXT = NULL;
 PFNGLMINSAMPLESHADINGPROC glad_glMinSampleShading = NULL;
 PFNGLMULTIDRAWARRAYSPROC glad_glMultiDrawArrays = NULL;
 PFNGLMULTIDRAWARRAYSINDIRECTPROC glad_glMultiDrawArraysIndirect = NULL;
+PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC glad_glMultiDrawArraysIndirectCount = NULL;
 PFNGLMULTIDRAWELEMENTSPROC glad_glMultiDrawElements = NULL;
 PFNGLMULTIDRAWELEMENTSBASEVERTEXPROC glad_glMultiDrawElementsBaseVertex = NULL;
 PFNGLMULTIDRAWELEMENTSINDIRECTPROC glad_glMultiDrawElementsIndirect = NULL;
+PFNGLMULTIDRAWELEMENTSINDIRECTCOUNTPROC glad_glMultiDrawElementsIndirectCount = NULL;
 PFNGLNAMEDBUFFERDATAPROC glad_glNamedBufferData = NULL;
 PFNGLNAMEDBUFFERSTORAGEPROC glad_glNamedBufferStorage = NULL;
 PFNGLNAMEDBUFFERSTORAGEEXTERNALEXTPROC glad_glNamedBufferStorageExternalEXT = NULL;
@@ -453,6 +459,7 @@ PFNGLPOINTPARAMETERIVPROC glad_glPointParameteriv = NULL;
 PFNGLPOINTSIZEPROC glad_glPointSize = NULL;
 PFNGLPOLYGONMODEPROC glad_glPolygonMode = NULL;
 PFNGLPOLYGONOFFSETPROC glad_glPolygonOffset = NULL;
+PFNGLPOLYGONOFFSETCLAMPPROC glad_glPolygonOffsetClamp = NULL;
 PFNGLPOPDEBUGGROUPPROC glad_glPopDebugGroup = NULL;
 PFNGLPRIMITIVERESTARTINDEXPROC glad_glPrimitiveRestartIndex = NULL;
 PFNGLPROGRAMBINARYPROC glad_glProgramBinary = NULL;
@@ -534,6 +541,7 @@ PFNGLSHADERBINARYPROC glad_glShaderBinary = NULL;
 PFNGLSHADERSOURCEPROC glad_glShaderSource = NULL;
 PFNGLSHADERSTORAGEBLOCKBINDINGPROC glad_glShaderStorageBlockBinding = NULL;
 PFNGLSIGNALSEMAPHOREEXTPROC glad_glSignalSemaphoreEXT = NULL;
+PFNGLSPECIALIZESHADERPROC glad_glSpecializeShader = NULL;
 PFNGLSTENCILFUNCPROC glad_glStencilFunc = NULL;
 PFNGLSTENCILFUNCSEPARATEPROC glad_glStencilFuncSeparate = NULL;
 PFNGLSTENCILMASKPROC glad_glStencilMask = NULL;
@@ -1462,6 +1470,13 @@ static void glad_gl_load_GL_VERSION_4_5( GLADuserptrloadfunc load, void* userptr
     glad_glVertexArrayVertexBuffer = (PFNGLVERTEXARRAYVERTEXBUFFERPROC) load(userptr, "glVertexArrayVertexBuffer");
     glad_glVertexArrayVertexBuffers = (PFNGLVERTEXARRAYVERTEXBUFFERSPROC) load(userptr, "glVertexArrayVertexBuffers");
 }
+static void glad_gl_load_GL_VERSION_4_6( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_GL_VERSION_4_6) return;
+    glad_glMultiDrawArraysIndirectCount = (PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC) load(userptr, "glMultiDrawArraysIndirectCount");
+    glad_glMultiDrawElementsIndirectCount = (PFNGLMULTIDRAWELEMENTSINDIRECTCOUNTPROC) load(userptr, "glMultiDrawElementsIndirectCount");
+    glad_glPolygonOffsetClamp = (PFNGLPOLYGONOFFSETCLAMPPROC) load(userptr, "glPolygonOffsetClamp");
+    glad_glSpecializeShader = (PFNGLSPECIALIZESHADERPROC) load(userptr, "glSpecializeShader");
+}
 static void glad_gl_load_GL_ES_VERSION_2_0( GLADuserptrloadfunc load, void* userptr) {
     if(!GLAD_GL_ES_VERSION_2_0) return;
     glad_glActiveTexture = (PFNGLACTIVETEXTUREPROC) load(userptr, "glActiveTexture");
@@ -1893,36 +1908,24 @@ static void glad_gl_load_GL_OES_EGL_image( GLADuserptrloadfunc load, void* userp
 
 
 
-#if defined(GL_ES_VERSION_3_0) || defined(GL_VERSION_3_0)
-#define GLAD_GL_IS_SOME_NEW_VERSION 1
-#else
-#define GLAD_GL_IS_SOME_NEW_VERSION 0
-#endif
-
-static int glad_gl_get_extensions( int version, const char **out_exts, unsigned int *out_num_exts_i, char ***out_exts_i) {
-#if GLAD_GL_IS_SOME_NEW_VERSION
-    if(GLAD_VERSION_MAJOR(version) < 3) {
-#else
-    (void) version;
-    (void) out_num_exts_i;
-    (void) out_exts_i;
-#endif
-        if (glad_glGetString == NULL) {
-            return 0;
+static void glad_gl_free_extensions(char **exts_i) {
+    if (exts_i != NULL) {
+        unsigned int index;
+        for(index = 0; exts_i[index]; index++) {
+            free((void *) (exts_i[index]));
         }
-        *out_exts = (const char *)glad_glGetString(GL_EXTENSIONS);
-#if GLAD_GL_IS_SOME_NEW_VERSION
-    } else {
+        free((void *)exts_i);
+        exts_i = NULL;
+    }
+}
+static int glad_gl_get_extensions( const char **out_exts, char ***out_exts_i) {
+#if defined(GL_ES_VERSION_3_0) || defined(GL_VERSION_3_0)
+    if (glad_glGetStringi != NULL && glad_glGetIntegerv != NULL) {
         unsigned int index = 0;
         unsigned int num_exts_i = 0;
         char **exts_i = NULL;
-        if (glad_glGetStringi == NULL || glad_glGetIntegerv == NULL) {
-            return 0;
-        }
         glad_glGetIntegerv(GL_NUM_EXTENSIONS, (int*) &num_exts_i);
-        if (num_exts_i > 0) {
-            exts_i = (char **) malloc(num_exts_i * (sizeof *exts_i));
-        }
+        exts_i = (char **) malloc((num_exts_i + 1) * (sizeof *exts_i));
         if (exts_i == NULL) {
             return 0;
         }
@@ -1931,31 +1934,40 @@ static int glad_gl_get_extensions( int version, const char **out_exts, unsigned 
             size_t len = strlen(gl_str_tmp) + 1;
 
             char *local_str = (char*) malloc(len * sizeof(char));
-            if(local_str != NULL) {
-                memcpy(local_str, gl_str_tmp, len * sizeof(char));
+            if(local_str == NULL) {
+                exts_i[index] = NULL;
+                glad_gl_free_extensions(exts_i);
+                return 0;
             }
 
+            memcpy(local_str, gl_str_tmp, len * sizeof(char));
             exts_i[index] = local_str;
         }
+        exts_i[index] = NULL;
 
-        *out_num_exts_i = num_exts_i;
         *out_exts_i = exts_i;
+
+        return 1;
     }
+#else
+    GLAD_UNUSED(out_exts_i);
 #endif
+    if (glad_glGetString == NULL) {
+        return 0;
+    }
+    *out_exts = (const char *)glad_glGetString(GL_EXTENSIONS);
     return 1;
 }
-static void glad_gl_free_extensions(char **exts_i, unsigned int num_exts_i) {
-    if (exts_i != NULL) {
+static int glad_gl_has_extension(const char *exts, char **exts_i, const char *ext) {
+    if(exts_i) {
         unsigned int index;
-        for(index = 0; index < num_exts_i; index++) {
-            free((void *) (exts_i[index]));
+        for(index = 0; exts_i[index]; index++) {
+            const char *e = exts_i[index];
+            if(strcmp(e, ext) == 0) {
+                return 1;
+            }
         }
-        free((void *)exts_i);
-        exts_i = NULL;
-    }
-}
-static int glad_gl_has_extension(int version, const char *exts, unsigned int num_exts_i, char **exts_i, const char *ext) {
-    if(GLAD_VERSION_MAJOR(version) < 3 || !GLAD_GL_IS_SOME_NEW_VERSION) {
+    } else {
         const char *extensions;
         const char *loc;
         const char *terminator;
@@ -1975,14 +1987,6 @@ static int glad_gl_has_extension(int version, const char *exts, unsigned int num
             }
             extensions = terminator;
         }
-    } else {
-        unsigned int index;
-        for(index = 0; index < num_exts_i; index++) {
-            const char *e = exts_i[index];
-            if(strcmp(e, ext) == 0) {
-                return 1;
-            }
-        }
     }
     return 0;
 }
@@ -1991,20 +1995,19 @@ static GLADapiproc glad_gl_get_proc_from_userptr(void *userptr, const char* name
     return (GLAD_GNUC_EXTENSION (GLADapiproc (*)(const char *name)) userptr)(name);
 }
 
-static int glad_gl_find_extensions_gl( int version) {
+static int glad_gl_find_extensions_gl(void) {
     const char *exts = NULL;
-    unsigned int num_exts_i = 0;
     char **exts_i = NULL;
-    if (!glad_gl_get_extensions(version, &exts, &num_exts_i, &exts_i)) return 0;
+    if (!glad_gl_get_extensions(&exts, &exts_i)) return 0;
 
-    GLAD_GL_EXT_EGL_image_storage = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_EGL_image_storage");
-    GLAD_GL_EXT_external_buffer = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_external_buffer");
-    GLAD_GL_EXT_memory_object = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_memory_object");
-    GLAD_GL_EXT_memory_object_fd = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_memory_object_fd");
-    GLAD_GL_EXT_memory_object_win32 = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_memory_object_win32");
-    GLAD_GL_EXT_semaphore = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_semaphore");
+    GLAD_GL_EXT_EGL_image_storage = glad_gl_has_extension(exts, exts_i, "GL_EXT_EGL_image_storage");
+    GLAD_GL_EXT_external_buffer = glad_gl_has_extension(exts, exts_i, "GL_EXT_external_buffer");
+    GLAD_GL_EXT_memory_object = glad_gl_has_extension(exts, exts_i, "GL_EXT_memory_object");
+    GLAD_GL_EXT_memory_object_fd = glad_gl_has_extension(exts, exts_i, "GL_EXT_memory_object_fd");
+    GLAD_GL_EXT_memory_object_win32 = glad_gl_has_extension(exts, exts_i, "GL_EXT_memory_object_win32");
+    GLAD_GL_EXT_semaphore = glad_gl_has_extension(exts, exts_i, "GL_EXT_semaphore");
 
-    glad_gl_free_extensions(exts_i, num_exts_i);
+    glad_gl_free_extensions(exts_i);
 
     return 1;
 }
@@ -2051,6 +2054,7 @@ static int glad_gl_find_core_gl(void) {
     GLAD_GL_VERSION_4_3 = (major == 4 && minor >= 3) || major > 4;
     GLAD_GL_VERSION_4_4 = (major == 4 && minor >= 4) || major > 4;
     GLAD_GL_VERSION_4_5 = (major == 4 && minor >= 5) || major > 4;
+    GLAD_GL_VERSION_4_6 = (major == 4 && minor >= 6) || major > 4;
 
     return GLAD_MAKE_VERSION(major, minor);
 }
@@ -2060,7 +2064,6 @@ int gladLoadGLUserPtr( GLADuserptrloadfunc load, void *userptr) {
 
     glad_glGetString = (PFNGLGETSTRINGPROC) load(userptr, "glGetString");
     if(glad_glGetString == NULL) return 0;
-    if(glad_glGetString(GL_VERSION) == NULL) return 0;
     version = glad_gl_find_core_gl();
 
     glad_gl_load_GL_VERSION_1_0(load, userptr);
@@ -2081,8 +2084,9 @@ int gladLoadGLUserPtr( GLADuserptrloadfunc load, void *userptr) {
     glad_gl_load_GL_VERSION_4_3(load, userptr);
     glad_gl_load_GL_VERSION_4_4(load, userptr);
     glad_gl_load_GL_VERSION_4_5(load, userptr);
+    glad_gl_load_GL_VERSION_4_6(load, userptr);
 
-    if (!glad_gl_find_extensions_gl(version)) return 0;
+    if (!glad_gl_find_extensions_gl()) return 0;
     glad_gl_load_GL_EXT_EGL_image_storage(load, userptr);
     glad_gl_load_GL_EXT_external_buffer(load, userptr);
     glad_gl_load_GL_EXT_memory_object(load, userptr);
@@ -2100,28 +2104,27 @@ int gladLoadGL( GLADloadfunc load) {
     return gladLoadGLUserPtr( glad_gl_get_proc_from_userptr, GLAD_GNUC_EXTENSION (void*) load);
 }
 
-static int glad_gl_find_extensions_gles2( int version) {
+static int glad_gl_find_extensions_gles2(void) {
     const char *exts = NULL;
-    unsigned int num_exts_i = 0;
     char **exts_i = NULL;
-    if (!glad_gl_get_extensions(version, &exts, &num_exts_i, &exts_i)) return 0;
+    if (!glad_gl_get_extensions(&exts, &exts_i)) return 0;
 
-    GLAD_GL_EXT_EGL_image_storage = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_EGL_image_storage");
-    GLAD_GL_EXT_external_buffer = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_external_buffer");
-    GLAD_GL_EXT_memory_object = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_memory_object");
-    GLAD_GL_EXT_memory_object_fd = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_memory_object_fd");
-    GLAD_GL_EXT_memory_object_win32 = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_memory_object_win32");
-    GLAD_GL_EXT_semaphore = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_semaphore");
-    GLAD_GL_EXT_YUV_target = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_YUV_target");
-    GLAD_GL_EXT_sRGB = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_EXT_sRGB");
-    GLAD_GL_OES_EGL_image = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_OES_EGL_image");
-    GLAD_GL_OES_EGL_image_external = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_OES_EGL_image_external");
-    GLAD_GL_OES_EGL_image_external_essl3 = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_OES_EGL_image_external_essl3");
-    GLAD_GL_OES_depth_texture = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_OES_depth_texture");
-    GLAD_GL_OES_packed_depth_stencil = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_OES_packed_depth_stencil");
-    GLAD_GL_OES_rgb8_rgba8 = glad_gl_has_extension(version, exts, num_exts_i, exts_i, "GL_OES_rgb8_rgba8");
+    GLAD_GL_EXT_EGL_image_storage = glad_gl_has_extension(exts, exts_i, "GL_EXT_EGL_image_storage");
+    GLAD_GL_EXT_external_buffer = glad_gl_has_extension(exts, exts_i, "GL_EXT_external_buffer");
+    GLAD_GL_EXT_memory_object = glad_gl_has_extension(exts, exts_i, "GL_EXT_memory_object");
+    GLAD_GL_EXT_memory_object_fd = glad_gl_has_extension(exts, exts_i, "GL_EXT_memory_object_fd");
+    GLAD_GL_EXT_memory_object_win32 = glad_gl_has_extension(exts, exts_i, "GL_EXT_memory_object_win32");
+    GLAD_GL_EXT_semaphore = glad_gl_has_extension(exts, exts_i, "GL_EXT_semaphore");
+    GLAD_GL_EXT_YUV_target = glad_gl_has_extension(exts, exts_i, "GL_EXT_YUV_target");
+    GLAD_GL_EXT_sRGB = glad_gl_has_extension(exts, exts_i, "GL_EXT_sRGB");
+    GLAD_GL_OES_EGL_image = glad_gl_has_extension(exts, exts_i, "GL_OES_EGL_image");
+    GLAD_GL_OES_EGL_image_external = glad_gl_has_extension(exts, exts_i, "GL_OES_EGL_image_external");
+    GLAD_GL_OES_EGL_image_external_essl3 = glad_gl_has_extension(exts, exts_i, "GL_OES_EGL_image_external_essl3");
+    GLAD_GL_OES_depth_texture = glad_gl_has_extension(exts, exts_i, "GL_OES_depth_texture");
+    GLAD_GL_OES_packed_depth_stencil = glad_gl_has_extension(exts, exts_i, "GL_OES_packed_depth_stencil");
+    GLAD_GL_OES_rgb8_rgba8 = glad_gl_has_extension(exts, exts_i, "GL_OES_rgb8_rgba8");
 
-    glad_gl_free_extensions(exts_i, num_exts_i);
+    glad_gl_free_extensions(exts_i);
 
     return 1;
 }
@@ -2163,7 +2166,6 @@ int gladLoadGLES2UserPtr( GLADuserptrloadfunc load, void *userptr) {
 
     glad_glGetString = (PFNGLGETSTRINGPROC) load(userptr, "glGetString");
     if(glad_glGetString == NULL) return 0;
-    if(glad_glGetString(GL_VERSION) == NULL) return 0;
     version = glad_gl_find_core_gles2();
 
     glad_gl_load_GL_ES_VERSION_2_0(load, userptr);
@@ -2171,7 +2173,7 @@ int gladLoadGLES2UserPtr( GLADuserptrloadfunc load, void *userptr) {
     glad_gl_load_GL_ES_VERSION_3_1(load, userptr);
     glad_gl_load_GL_ES_VERSION_3_2(load, userptr);
 
-    if (!glad_gl_find_extensions_gles2(version)) return 0;
+    if (!glad_gl_find_extensions_gles2()) return 0;
     glad_gl_load_GL_EXT_EGL_image_storage(load, userptr);
     glad_gl_load_GL_EXT_external_buffer(load, userptr);
     glad_gl_load_GL_EXT_memory_object(load, userptr);

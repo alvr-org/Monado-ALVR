@@ -1,3 +1,6 @@
+/**
+ * SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +27,7 @@ int GLAD_GLX_VERSION_1_0 = 0;
 int GLAD_GLX_VERSION_1_1 = 0;
 int GLAD_GLX_VERSION_1_2 = 0;
 int GLAD_GLX_VERSION_1_3 = 0;
+int GLAD_GLX_VERSION_1_4 = 0;
 
 
 
@@ -49,6 +53,7 @@ PFNGLXGETCURRENTDRAWABLEPROC glad_glXGetCurrentDrawable = NULL;
 PFNGLXGETCURRENTREADDRAWABLEPROC glad_glXGetCurrentReadDrawable = NULL;
 PFNGLXGETFBCONFIGATTRIBPROC glad_glXGetFBConfigAttrib = NULL;
 PFNGLXGETFBCONFIGSPROC glad_glXGetFBConfigs = NULL;
+PFNGLXGETPROCADDRESSPROC glad_glXGetProcAddress = NULL;
 PFNGLXGETSELECTEDEVENTPROC glad_glXGetSelectedEvent = NULL;
 PFNGLXGETVISUALFROMFBCONFIGPROC glad_glXGetVisualFromFBConfig = NULL;
 PFNGLXISDIRECTPROC glad_glXIsDirect = NULL;
@@ -117,14 +122,18 @@ static void glad_glx_load_GLX_VERSION_1_3( GLADuserptrloadfunc load, void* userp
     glad_glXQueryDrawable = (PFNGLXQUERYDRAWABLEPROC) load(userptr, "glXQueryDrawable");
     glad_glXSelectEvent = (PFNGLXSELECTEVENTPROC) load(userptr, "glXSelectEvent");
 }
+static void glad_glx_load_GLX_VERSION_1_4( GLADuserptrloadfunc load, void* userptr) {
+    if(!GLAD_GLX_VERSION_1_4) return;
+    glad_glXGetProcAddress = (PFNGLXGETPROCADDRESSPROC) load(userptr, "glXGetProcAddress");
+}
 
 
 
 static int glad_glx_has_extension(Display *display, int screen, const char *ext) {
 #ifndef GLX_VERSION_1_1
-    (void) display;
-    (void) screen;
-    (void) ext;
+    GLAD_UNUSED(display);
+    GLAD_UNUSED(screen);
+    GLAD_UNUSED(ext);
 #else
     const char *terminator;
     const char *loc;
@@ -162,7 +171,7 @@ static GLADapiproc glad_glx_get_proc_from_userptr(void *userptr, const char* nam
 }
 
 static int glad_glx_find_extensions(Display *display, int screen) {
-    (void) glad_glx_has_extension;
+    GLAD_UNUSED(glad_glx_has_extension);
     return 1;
 }
 
@@ -170,7 +179,7 @@ static int glad_glx_find_core_glx(Display **display, int *screen) {
     int major = 0, minor = 0;
     if(*display == NULL) {
 #ifdef GLAD_GLX_NO_X11
-        (void) screen;
+        GLAD_UNUSED(screen);
         return 0;
 #else
         *display = XOpenDisplay(0);
@@ -185,6 +194,7 @@ static int glad_glx_find_core_glx(Display **display, int *screen) {
     GLAD_GLX_VERSION_1_1 = (major == 1 && minor >= 1) || major > 1;
     GLAD_GLX_VERSION_1_2 = (major == 1 && minor >= 2) || major > 1;
     GLAD_GLX_VERSION_1_3 = (major == 1 && minor >= 3) || major > 1;
+    GLAD_GLX_VERSION_1_4 = (major == 1 && minor >= 4) || major > 1;
     return GLAD_MAKE_VERSION(major, minor);
 }
 
@@ -198,8 +208,10 @@ int gladLoadGLXUserPtr(Display *display, int screen, GLADuserptrloadfunc load, v
     glad_glx_load_GLX_VERSION_1_1(load, userptr);
     glad_glx_load_GLX_VERSION_1_2(load, userptr);
     glad_glx_load_GLX_VERSION_1_3(load, userptr);
+    glad_glx_load_GLX_VERSION_1_4(load, userptr);
 
     if (!glad_glx_find_extensions(display, screen)) return 0;
+
 
     return version;
 }
