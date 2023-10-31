@@ -1,5 +1,5 @@
 /**
- * SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0
+ * SPDX-License-Identifier: CC0-1.0 AND Apache-2.0
  */
 #include <stdio.h>
 #include <stdlib.h>
