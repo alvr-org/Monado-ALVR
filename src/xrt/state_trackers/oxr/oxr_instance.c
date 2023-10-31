@@ -387,7 +387,7 @@ oxr_instance_create(struct oxr_logger *log,
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif // __GNUC_
 
-#ifdef XRT_OS_LINUX
+#if defined(XRT_OS_LINUX) && !defined(XRT_OS_ANDROID)
 	void *mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD);
 	if (mod) {
 		pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
