@@ -621,15 +621,15 @@ xrt_swapchain_usage_flag_string(enum xrt_swapchain_usage_bits bits, bool null_on
  *
  */
 
-#if defined(VK_EXT_debug_marker) || defined(XRT_DOXYGEN)
+#if defined(VK_EXT_debug_utils) || defined(XRT_DOXYGEN)
 
 /*!
- * Uses VK_EXT_debug_marker to name objects for easier debugging.
+ * Uses VK_EXT_debug_utils to set a name for an object, for easier debugging.
  *
  * @ingroup aux_vk
  */
 void
-vk_name_object(struct vk_bundle *vk, VkDebugReportObjectTypeEXT object_type, uint64_t object, const char *name);
+vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const char *name);
 
 /*!
  * Small helper for @ref vk_name_object that makes use of pre-process to avoid
@@ -637,10 +637,12 @@ vk_name_object(struct vk_bundle *vk, VkDebugReportObjectTypeEXT object_type, uin
  *
  * @ingroup aux_vk
  */
-#define VK_NAME_OBJECT(vk, TYPE, obj, name)                                                                            \
-	if (vk->has_EXT_debug_marker) {                                                                                \
-		vk_name_object(vk, VK_DEBUG_REPORT_OBJECT_TYPE_##TYPE##_EXT, (uint64_t)obj, name);                     \
-	}
+#define VK_NAME_OBJECT(VK, TYPE, OBJ, NAME)                                                                            \
+	do {                                                                                                           \
+		if ((VK)->has_EXT_debug_utils) {                                                                       \
+			vk_name_object(VK, VK_OBJECT_TYPE_##TYPE, (uint64_t)OBJ, NAME);                                \
+		}                                                                                                      \
+	} while (false)
 
 #else
 

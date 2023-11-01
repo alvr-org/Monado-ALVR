@@ -10,29 +10,35 @@
 #include "vk/vk_helpers.h"
 
 
-#ifdef VK_EXT_debug_marker
+#ifdef VK_EXT_debug_utils
 
 void
-vk_name_object(struct vk_bundle *vk, VkDebugReportObjectTypeEXT object_type, uint64_t object, const char *name)
+vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const char *name)
 {
-	if (!vk->has_EXT_debug_marker) {
+	if (!vk->has_EXT_debug_utils) {
 		return;
 	}
 
-	if (object == 0) {
-		U_LOG_W("Called with null object!");
+	/*
+	 * VUID-VkDebugUtilsObjectNameInfoEXT-objectType-02589
+	 * If objectType is VK_OBJECT_TYPE_UNKNOWN, objectHandle must not be VK_NULL_HANDLE
+	 */
+	if (type == VK_OBJECT_TYPE_UNKNOWN && object == 0) {
+		U_LOG_W("Unknown object type can't be VK_NULL_HANDLE");
 		return;
 	}
 
-	VkDebugMarkerObjectNameInfoEXT name_info = {
-	    .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
-	    .pNext = NULL,
-	    .objectType = object_type,
-	    .object = object,
+	const VkDebugUtilsObjectNameInfoEXT name_info = {
+	    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+	    .objectType = type,
+	    .objectHandle = object,
 	    .pObjectName = name,
 	};
 
-	vk->vkDebugMarkerSetObjectNameEXT(vk->device, &name_info);
+	VkResult ret = vk->vkSetDebugUtilsObjectNameEXT(vk->device, &name_info);
+	if (ret != VK_SUCCESS) {
+		VK_ERROR(vk, "vkSetDebugUtilsObjectNameEXT: %s", vk_result_string(ret));
+	}
 }
 
 #endif
