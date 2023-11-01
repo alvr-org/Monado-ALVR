@@ -179,12 +179,6 @@ def get_device_cmds():
         Cmd("vkQueueInsertDebugUtilsLabelEXT", requires=("VK_EXT_debug_utils",)),
         Cmd("vkSetDebugUtilsObjectNameEXT", requires=("VK_EXT_debug_utils",)),
         Cmd("vkSetDebugUtilsObjectTagEXT", requires=("VK_EXT_debug_utils",)),
-        None,
-        Cmd("vkCmdDebugMarkerBeginEXT", requires=("VK_EXT_debug_marker",)),
-        Cmd("vkCmdDebugMarkerEndEXT", requires=("VK_EXT_debug_marker",)),
-        Cmd("vkCmdDebugMarkerInsertEXT", requires=("VK_EXT_debug_marker",)),
-        Cmd("vkDebugMarkerSetObjectNameEXT", requires=("VK_EXT_debug_marker",)),
-        Cmd("vkDebugMarkerSetObjectTagEXT", requires=("VK_EXT_debug_marker",)),
     ]
 
 
@@ -289,7 +283,6 @@ DEVICE_EXTENSIONS_TO_CHECK = [
     "VK_KHR_maintenance4",
     "VK_KHR_timeline_semaphore",
     "VK_EXT_calibrated_timestamps",
-    "VK_EXT_debug_marker",
     "VK_EXT_display_control",
     "VK_EXT_external_memory_dma_buf",
     "VK_EXT_global_priority",

@@ -326,16 +326,7 @@ vk_get_device_functions(struct vk_bundle *vk)
 	vk->vkQueueInsertDebugUtilsLabelEXT             = GET_DEV_PROC(vk, vkQueueInsertDebugUtilsLabelEXT);
 	vk->vkSetDebugUtilsObjectNameEXT                = GET_DEV_PROC(vk, vkSetDebugUtilsObjectNameEXT);
 	vk->vkSetDebugUtilsObjectTagEXT                 = GET_DEV_PROC(vk, vkSetDebugUtilsObjectTagEXT);
-
 #endif // defined(VK_EXT_debug_utils)
-
-#if defined(VK_EXT_debug_marker)
-	vk->vkCmdDebugMarkerBeginEXT                    = GET_DEV_PROC(vk, vkCmdDebugMarkerBeginEXT);
-	vk->vkCmdDebugMarkerEndEXT                      = GET_DEV_PROC(vk, vkCmdDebugMarkerEndEXT);
-	vk->vkCmdDebugMarkerInsertEXT                   = GET_DEV_PROC(vk, vkCmdDebugMarkerInsertEXT);
-	vk->vkDebugMarkerSetObjectNameEXT               = GET_DEV_PROC(vk, vkDebugMarkerSetObjectNameEXT);
-	vk->vkDebugMarkerSetObjectTagEXT                = GET_DEV_PROC(vk, vkDebugMarkerSetObjectTagEXT);
-#endif // defined(VK_EXT_debug_marker)
 
 	// end of GENERATED device loader code - do not modify - used by scripts
 	// clang-format on
