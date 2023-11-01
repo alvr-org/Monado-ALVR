@@ -29,6 +29,31 @@ ipc_client_connection_init(struct ipc_connection *ipc_c,
                            enum u_logging_level log_level,
                            const struct xrt_instance_info *i_info);
 
+/*!
+ * Locks the connection, allows sending complex messages.
+ *
+ * @param ipc_c The IPC connection to lock.
+ *
+ * @ingroup ipc_client
+ */
+static inline void
+ipc_client_connection_lock(struct ipc_connection *ipc_c)
+{
+	os_mutex_lock(&ipc_c->mutex);
+}
+
+/*!
+ * Unlocks the connection.
+ *
+ * @param ipc_c A locked IPC connection to unlock.
+ *
+ * @ingroup ipc_client
+ */
+static inline void
+ipc_client_connection_unlock(struct ipc_connection *ipc_c)
+{
+	os_mutex_unlock(&ipc_c->mutex);
+}
 
 /*!
  * Tear down the basics of the client connection: socket and shared mem
