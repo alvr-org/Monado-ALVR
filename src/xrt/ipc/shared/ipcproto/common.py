@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2020, Collabora, Ltd.
+# Copyright 2020-2023, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 """Generate code from a JSON file describing the IPC protocol."""
 
@@ -62,6 +62,45 @@ def write_result_handler(f, result, cleanup="", indent=""):
 
     f.write("return {};".format(result))
     f.write("\n" + indent + "}\n")
+
+
+def write_msg_struct(f, call, ident):
+    # Message struct
+    if call.needs_msg_struct:
+        f.write(ident + "struct ipc_" + call.name + "_msg _msg = {\n")
+    else:
+        f.write(ident + "struct ipc_command_msg _msg = {\n")
+
+    f.write(ident + "    .cmd = " + str(call.id) + ",\n")
+    for arg in call.in_args:
+        if arg.is_aggregate:
+            f.write(ident + "    ." + arg.name + " = *" + arg.name + ",\n")
+        else:
+            f.write(ident + "    ." + arg.name + " = " + arg.name + ",\n")
+    if call.in_handles:
+        f.write(ident + "    ." + call.in_handles.count_arg_name + " = " +
+                call.in_handles.count_arg_name + ",\n")
+    f.write(ident + "};\n")
+
+
+def write_reply_struct(f, call, ident):
+    # Reply struct
+    if call.out_args:
+        f.write(ident + "struct ipc_" + call.name + "_reply _reply;\n")
+    else:
+        f.write(ident + "struct ipc_result_reply _reply = {0};\n")
+    if call.in_handles:
+        f.write(ident + "struct ipc_result_reply _sync = {0};\n")
+
+
+def write_msg_send(f, ret, indent):
+    # Prepare initial sending
+    func = 'ipc_send'
+    args = ['&ipc_c->imc', '&_msg', 'sizeof(_msg)']
+
+    f.write("\n" + indent + "// Send our request")
+    write_invocation(f, ret, func, args, indent=indent)
+    f.write(';')
 
 
 class Arg:

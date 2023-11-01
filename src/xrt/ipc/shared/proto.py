@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2020, Collabora, Ltd.
+# Copyright 2020-2023, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 """Generate code from a JSON file describing the IPC protocol."""
 
@@ -7,9 +7,10 @@ import argparse
 
 from ipcproto.common import (Proto, write_decl, write_invocation,
                              write_result_handler, write_cpp_header_guard_start,
-                             write_cpp_header_guard_end)
+                             write_cpp_header_guard_end, write_msg_struct,
+                             write_reply_struct, write_msg_send)
 
-header = '''// Copyright 2020, Collabora, Ltd.
+header = '''// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -113,29 +114,8 @@ def generate_client_c(file, p):
 
         f.write("\tIPC_TRACE(ipc_c, \"Calling " + call.name + "\");\n\n")
 
-        # Message struct
-        if call.needs_msg_struct:
-            f.write("\tstruct ipc_" + call.name + "_msg _msg = {\n")
-        else:
-            f.write("\tstruct ipc_command_msg _msg = {\n")
-        f.write("\t    .cmd = " + str(call.id) + ",\n")
-        for arg in call.in_args:
-            if arg.is_aggregate:
-                f.write("\t    ." + arg.name + " = *" + arg.name + ",\n")
-            else:
-                f.write("\t    ." + arg.name + " = " + arg.name + ",\n")
-        if call.in_handles:
-            f.write("\t    ." + call.in_handles.count_arg_name +
-                    " = " + call.in_handles.count_arg_name + ",\n")
-        f.write("\t};\n")
-
-        # Reply struct
-        if call.out_args:
-            f.write("\tstruct ipc_" + call.name + "_reply _reply;\n")
-        else:
-            f.write("\tstruct ipc_result_reply _reply = {0};\n")
-        if call.in_handles:
-            f.write("\tstruct ipc_result_reply _sync = {0};\n")
+        write_msg_struct(f, call, '\t')
+        write_reply_struct(f, call, '\t')
 
         f.write("""
 \t// Other threads must not read/write the fd while we wait for reply
@@ -144,11 +124,7 @@ def generate_client_c(file, p):
         cleanup = "os_mutex_unlock(&ipc_c->mutex);"
 
         # Prepare initial sending
-        func = 'ipc_send'
-        args = ['&ipc_c->imc', '&_msg', 'sizeof(_msg)']
-        f.write("\n\t// Send our request")
-        write_invocation(f, 'xrt_result_t ret', func, args, indent="\t")
-        f.write(';')
+        write_msg_send(f, 'xrt_result_t ret', indent="\t")
         write_result_handler(f, 'ret', cleanup, indent="\t")
 
         if call.in_handles:
