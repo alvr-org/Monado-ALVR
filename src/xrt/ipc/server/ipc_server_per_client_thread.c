@@ -85,7 +85,7 @@ client_loop(volatile struct ipc_client_state *ics)
 		struct epoll_event event = XRT_STRUCT_INIT;
 
 		// We use epoll here to be able to timeout.
-		int ret = epoll_wait(epoll_fd, &event, 1, half_a_second_ms);
+		int ret = TEMP_FAILURE_RETRY(epoll_wait(epoll_fd, &event, 1, half_a_second_ms));
 		if (ret < 0) {
 			IPC_ERROR(ics->server, "Failed epoll_wait '%i', disconnecting client.", ret);
 			break;
