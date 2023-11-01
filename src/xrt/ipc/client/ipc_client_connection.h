@@ -27,7 +27,7 @@
 xrt_result_t
 ipc_client_connection_init(struct ipc_connection *ipc_c,
                            enum u_logging_level log_level,
-                           struct xrt_instance_info *i_info);
+                           const struct xrt_instance_info *i_info);
 
 
 /*!
