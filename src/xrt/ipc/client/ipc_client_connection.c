@@ -200,13 +200,8 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 	return true;
 }
 
-int
-getpid()
-{
-	return GetCurrentProcessId();
-}
-
 #else
+
 static bool
 ipc_client_socket_connect(struct ipc_connection *ipc_c)
 {
@@ -248,22 +243,117 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 
 	return true;
 }
+
 #endif
 
+
+static xrt_result_t
+ipc_client_setup_shm(struct ipc_connection *ipc_c)
+{
+	/*
+	 * Get our shared memory area from the server.
+	 */
+
+	xrt_result_t xret = ipc_call_instance_get_shm_fd(ipc_c, &ipc_c->ism_handle, 1);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ipc_c, "Failed to retrieve shm fd!");
+		return xret;
+	}
+
+	/*
+	 * Now map it.
+	 */
+
+	const size_t size = sizeof(struct ipc_shared_memory);
+
+#ifdef XRT_OS_WINDOWS
+	DWORD access = FILE_MAP_READ | FILE_MAP_WRITE;
+
+	ipc_c->ism = MapViewOfFile(ipc_c->ism_handle, access, 0, 0, size);
+#else
+	const int flags = MAP_SHARED;
+	const int access = PROT_READ | PROT_WRITE;
+
+	ipc_c->ism = mmap(NULL, size, access, flags, ipc_c->ism_handle, 0);
+#endif
+
+	if (ipc_c->ism == NULL) {
+		IPC_ERROR(ipc_c, "Failed to mmap shm!");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+ipc_client_check_git_tag(struct ipc_connection *ipc_c)
+{
+	// Does the git tags match?
+	if (strncmp(u_git_tag, ipc_c->ism->u_git_tag, IPC_VERSION_NAME_LEN) == 0) {
+		return XRT_SUCCESS;
+	}
+
+	IPC_ERROR(ipc_c, "Monado client library version %s does not match service version %s", u_git_tag,
+	          ipc_c->ism->u_git_tag);
+
+	if (!debug_get_bool_option_ipc_ignore_version()) {
+		IPC_ERROR(ipc_c, "Set IPC_IGNORE_VERSION=1 to ignore this version conflict");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	// Error is ignored.
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+ipc_client_describe_client(struct ipc_connection *ipc_c, const struct xrt_instance_info *i_info)
+{
+#ifdef XRT_OS_WINDOWS
+	DWORD pid = GetCurrentProcessId();
+#else
+	pid_t pid = getpid();
+#endif
+
+	struct ipc_client_description desc = {0};
+	desc.info = *i_info;
+	desc.pid = pid; // Extra info.
+
+	xrt_result_t xret = ipc_call_instance_describe_client(ipc_c, &desc);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ipc_c, "Failed to set instance description!");
+		return xret;
+	}
+
+	return XRT_SUCCESS;
+}
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 xrt_result_t
 ipc_client_connection_init(struct ipc_connection *ipc_c,
                            enum u_logging_level log_level,
                            const struct xrt_instance_info *i_info)
 {
+	xrt_result_t xret;
+
 	U_ZERO(ipc_c);
 	ipc_c->imc.ipc_handle = XRT_IPC_HANDLE_INVALID;
 	ipc_c->ism_handle = XRT_SHMEM_HANDLE_INVALID;
-
-	os_mutex_init(&ipc_c->mutex);
-
 	ipc_c->log_level = log_level;
 
+	// Must be done first.
+	int ret = os_mutex_init(&ipc_c->mutex);
+	if (ret != 0) {
+		U_LOG_E("Failed to init mutex!");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	// Connect the service.
 	if (!ipc_client_socket_connect(ipc_c)) {
 		IPC_ERROR(ipc_c,
 		          "Failed to connect to monado service process\n\n"
@@ -280,54 +370,29 @@ ipc_client_connection_init(struct ipc_connection *ipc_c,
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
-	// get our xdev shm from the server and mmap it
-	xrt_result_t xret = ipc_call_instance_get_shm_fd(ipc_c, &ipc_c->ism_handle, 1);
+	// Do this first so we can use it to check git tags.
+	xret = ipc_client_setup_shm(ipc_c);
 	if (xret != XRT_SUCCESS) {
-		IPC_ERROR(ipc_c, "Failed to retrieve shm fd!");
-		ipc_client_connection_fini(ipc_c);
-
-		return xret;
+		goto err_fini; // Already logged.
 	}
 
-	struct ipc_client_description desc = {0};
-	desc.info = *i_info;
-	desc.pid = getpid(); // Extra info.
-
-	xret = ipc_call_instance_describe_client(ipc_c, &desc);
+	// Requires shm.
+	xret = ipc_client_check_git_tag(ipc_c);
 	if (xret != XRT_SUCCESS) {
-		IPC_ERROR(ipc_c, "Failed to set instance description!");
-		ipc_client_connection_fini(ipc_c);
-
-
-		return xret;
+		goto err_fini; // Already logged.
 	}
 
-	const size_t size = sizeof(struct ipc_shared_memory);
-
-#ifdef XRT_OS_WINDOWS
-	ipc_c->ism = MapViewOfFile(ipc_c->ism_handle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, size);
-#else
-	const int flags = MAP_SHARED;
-	const int access = PROT_READ | PROT_WRITE;
-
-	ipc_c->ism = mmap(NULL, size, access, flags, ipc_c->ism_handle, 0);
-#endif
-	if (ipc_c->ism == NULL) {
-		IPC_ERROR(ipc_c, "Failed to mmap shm!");
-		ipc_client_connection_fini(ipc_c);
-		return XRT_ERROR_IPC_FAILURE;
+	// Do this last.
+	xret = ipc_client_describe_client(ipc_c, i_info);
+	if (xret != XRT_SUCCESS) {
+		goto err_fini; // Already logged.
 	}
 
-	if (strncmp(u_git_tag, ipc_c->ism->u_git_tag, IPC_VERSION_NAME_LEN) != 0) {
-		IPC_ERROR(ipc_c, "Monado client library version %s does not match service version %s", u_git_tag,
-		          ipc_c->ism->u_git_tag);
-		if (!debug_get_bool_option_ipc_ignore_version()) {
-			IPC_ERROR(ipc_c, "Set IPC_IGNORE_VERSION=1 to ignore this version conflict");
-
-			return XRT_ERROR_IPC_FAILURE;
-		}
-	}
 	return XRT_SUCCESS;
+
+err_fini:
+	ipc_client_connection_fini(ipc_c);
+	return xret;
 }
 
 void
