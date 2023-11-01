@@ -27,6 +27,7 @@
 #include "vive/vive_common.h"
 #include "vive/vive_config.h"
 #include "vive/vive_calibration.h"
+#include "vive/vive_builder.h"
 #include "vive/vive_device.h"
 #include "vive/vive_source.h"
 #include "v4l2/v4l2_interface.h"
@@ -337,70 +338,20 @@ lighthouse_estimate_system(struct xrt_builder *xb,
 		LH_WARN("Requested driver %s was not available, so we went with %s instead", drv, selected);
 	}
 
-	U_ZERO(estimate);
-
-	struct u_builder_search_results results = {0};
-	struct xrt_prober_device **xpdevs = NULL;
-	size_t xpdev_count = 0;
-	xrt_result_t xret = XRT_SUCCESS;
-
-	// Lock the device list
-	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
-
-	bool have_vive = u_builder_find_prober_device(xpdevs, xpdev_count, HTC_VID, VIVE_PID, XRT_BUS_TYPE_USB);
-	bool have_vive_pro =
-	    u_builder_find_prober_device(xpdevs, xpdev_count, HTC_VID, VIVE_PRO_MAINBOARD_PID, XRT_BUS_TYPE_USB);
-	lhs->is_valve_index =
-	    u_builder_find_prober_device(xpdevs, xpdev_count, VALVE_VID, VIVE_PRO_LHR_PID, XRT_BUS_TYPE_USB);
-
-
-	if (have_vive || have_vive_pro || lhs->is_valve_index) {
-		estimate->certain.head = true;
-		if (lhs->driver != DRIVER_VIVE) {
-			estimate->maybe.dof6 = true;
-			estimate->certain.dof6 = true;
-		}
-	}
-
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
-	// Valve Indices have UVC stereo cameras on the front. If we've found an Index, we'll probably be able to open
-	// the camera and use it to track hands even if we haven't found controllers.
-	if (lhs->is_valve_index) {
-		estimate->maybe.left = true;
-		estimate->maybe.right = true;
-	}
+	bool have_hand_tracking = true;
+#else
+	bool have_hand_tracking = false;
 #endif
 
-	static struct u_builder_search_filter maybe_controller_filters[] = {
-	    {VALVE_VID, VIVE_WATCHMAN_DONGLE, XRT_BUS_TYPE_USB},
-	    {VALVE_VID, VIVE_WATCHMAN_DONGLE_GEN2, XRT_BUS_TYPE_USB},
-	};
+	bool have_6dof = lhs->driver != DRIVER_VIVE;
 
-	results.xpdev_count = 0;
-	xpdev_count = 0;
-
-	u_builder_search(xp, xpdevs, xpdev_count, maybe_controller_filters, ARRAY_SIZE(maybe_controller_filters),
-	                 &results);
-	if (results.xpdev_count != 0) {
-		estimate->maybe.left = true;
-		estimate->maybe.right = true;
-
-		// Good assumption that if the user has more than 2 wireless devices, two of them will be controllers
-		// and the rest will be vive trackers.
-		if (results.xpdev_count > 2) {
-			estimate->maybe.extra_device_count = results.xpdev_count - 2;
-		}
-	}
-
-	estimate->priority = 0;
-
-	xret = xrt_prober_unlock_list(xp, &xpdevs);
-	LH_ASSERT_(xret == XRT_SUCCESS);
-
-	return XRT_SUCCESS;
+	return vive_builder_estimate( //
+	    xp,                       // xp
+	    have_6dof,                // have_6dof
+	    have_hand_tracking,       // have_hand_tracking
+	    &lhs->is_valve_index,     // out_have_valve_index
+	    estimate);                // out_estimate
 }
 
 // If the HMD is a Valve Index, decide if we want visual (HT/Slam) trackers, and if so set them up.
