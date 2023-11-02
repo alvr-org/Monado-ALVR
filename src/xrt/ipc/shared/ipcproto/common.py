@@ -241,6 +241,18 @@ class Call:
             for arg in self.out_args:
                 arg.dump()
 
+    def write_send_decl(self, f):
+        """Write declaration of ipc_send_CALLNAME_locked."""
+        args = ["struct ipc_connection *ipc_c"]
+        args.extend(arg.get_func_argument_in() for arg in self.in_args)
+        write_decl(f, 'xrt_result_t', 'ipc_send_' + self.name + "_locked", args)
+
+    def write_receive_decl(self, f):
+        """Write declaration of ipc_receive_CALLNAME_locked."""
+        args = ["struct ipc_connection *ipc_c"]
+        args.extend(arg.get_func_argument_out() for arg in self.out_args)
+        write_decl(f, 'xrt_result_t', 'ipc_receive_' + self.name + "_locked", args)
+
     def write_call_decl(self, f):
         """Write declaration of ipc_call_CALLNAME."""
         args = ["struct ipc_connection *ipc_c"]
@@ -255,12 +267,19 @@ class Call:
     def write_handler_decl(self, f):
         """Write declaration of ipc_handle_CALLNAME."""
         args = ["volatile struct ipc_client_state *ics"]
+
+        # Always get in arguments.
         args.extend(arg.get_func_argument_in() for arg in self.in_args)
-        args.extend(arg.get_func_argument_out() for arg in self.out_args)
+
+        # Handle sending reply in the function itself.
+        if not self.varlen:
+            args.extend(arg.get_func_argument_out() for arg in self.out_args)
+
         if self.out_handles:
             args.extend(self.out_handles.handler_arg_decls)
         if self.in_handles:
             args.extend(self.in_handles.const_arg_decls)
+
         write_decl(f, 'xrt_result_t', 'ipc_handle_' + self.name, args)
 
     @property
@@ -276,6 +295,7 @@ class Call:
         self.out_args = []
         self.in_handles = None
         self.out_handles = None
+        self.varlen = False
         for key, val in data.items():
             if key == 'id':
                 self.id = val
@@ -287,10 +307,14 @@ class Call:
                 self.out_handles = HandleType(val)
             elif key == 'in_handles':
                 self.in_handles = HandleType(val)
+            elif key == 'varlen':
+                self.varlen = val
             else:
                 raise RuntimeError("Unrecognized key")
         if not self.id:
             self.id = "IPC_" + name.upper()
+        if self.varlen and (self.in_handles or self.out_handles):
+            raise Exception("Can not have handles with varlen functions")
 
 
 class Proto:

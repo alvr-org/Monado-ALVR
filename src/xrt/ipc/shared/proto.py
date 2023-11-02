@@ -21,6 +21,116 @@ header = '''// Copyright 2020-2023, Collabora, Ltd.
 '''
 
 
+def write_send_definition(f, call):
+    """Write a ipc_send_CALLNAME_locked function."""
+    call.write_send_decl(f)
+    f.write("\n{\n")
+    f.write("\tIPC_TRACE(ipc_c, \"Sending " + call.name + "\");\n\n")
+
+    write_msg_struct(f, call, '\t')
+
+    write_msg_send(f, 'xrt_result_t ret', indent="\t")
+
+    f.write("\n\treturn ret;\n}\n")
+
+
+def write_receive_definition(f, call):
+    """Write a ipc_receive_CALLNAME_locked function."""
+    call.write_receive_decl(f)
+    f.write("\n{\n")
+    f.write("\tIPC_TRACE(ipc_c, \"Receiving " + call.name + "\");\n\n")
+
+    write_reply_struct(f, call, '\t')
+
+    f.write("\n\t// Await the reply")
+    func = 'ipc_receive'
+    args = ['&ipc_c->imc', '&_reply', 'sizeof(_reply)']
+    write_invocation(f, 'xrt_result_t ret', func, args, indent="\t")
+    f.write(";")
+    write_result_handler(f, 'ret', None, indent="\t")
+
+    for arg in call.out_args:
+        f.write("\t*out_" + arg.name + " = _reply." + arg.name + ";\n")
+
+    f.write("\n\treturn _reply.result;\n}\n")
+
+
+def write_call_definition(f, call):
+    """Write a ipc_call_CALLNAME function."""
+    call.write_call_decl(f)
+    f.write("\n{\n")
+
+    f.write("\tIPC_TRACE(ipc_c, \"Calling " + call.name + "\");\n\n")
+
+    write_msg_struct(f, call, '\t')
+    write_reply_struct(f, call, '\t')
+
+    f.write("""
+\t// Other threads must not read/write the fd while we wait for reply
+\tos_mutex_lock(&ipc_c->mutex);
+""")
+    cleanup = "os_mutex_unlock(&ipc_c->mutex);"
+
+    # Prepare initial sending
+    write_msg_send(f, 'xrt_result_t ret', indent="\t")
+    write_result_handler(f, 'ret', cleanup, indent="\t")
+
+    if call.in_handles:
+        f.write("\n\t// Send our handles separately\n")
+        f.write("\n\t// Wait for server sync")
+        # Must sync with the server so it's expecting the next message.
+        write_invocation(
+            f,
+            'ret',
+            'ipc_receive',
+            (
+                '&ipc_c->imc',
+                '&_sync',
+                'sizeof(_sync)'
+                ),
+            indent="\t"
+        )
+        f.write(';')
+        write_result_handler(f, 'ret', cleanup, indent="\t")
+
+        # Must send these in a second message
+        # since the server doesn't know how many to expect.
+        f.write("\n\t// We need this message data as filler only\n")
+        f.write("\tstruct ipc_command_msg _handle_msg = {\n")
+        f.write("\t    .cmd = " + str(call.id) + ",\n")
+        f.write("\t};\n")
+        write_invocation(
+            f,
+            'ret',
+            'ipc_send_handles_' + call.in_handles.stem,
+            (
+                '&ipc_c->imc',
+                "&_handle_msg",
+                "sizeof(_handle_msg)",
+                call.in_handles.arg_name,
+                call.in_handles.count_arg_name
+            ),
+            indent="\t"
+        )
+        f.write(';')
+        write_result_handler(f, 'ret', cleanup, indent="\t")
+
+    f.write("\n\t// Await the reply")
+    func = 'ipc_receive'
+    args = ['&ipc_c->imc', '&_reply', 'sizeof(_reply)']
+    if call.out_handles:
+        func += '_handles_' + call.out_handles.stem
+        args.extend(call.out_handles.arg_names)
+    write_invocation(f, 'ret', func, args, indent="\t")
+    f.write(';')
+    write_result_handler(f, 'ret', cleanup, indent="\t")
+
+    for arg in call.out_args:
+        f.write("\t*out_" + arg.name + " = _reply." + arg.name + ";\n")
+    f.write("\n\t" + cleanup)
+    f.write("\n\treturn _reply.result;\n}\n")
+
+
 def generate_h(file, p):
     """Generate protocol header.
 
@@ -109,78 +219,12 @@ def generate_client_c(file, p):
 
     # Loop over all of the calls.
     for call in p.calls:
-        call.write_call_decl(f)
-        f.write("\n{\n")
+        if call.varlen:
+            write_send_definition(f, call)
+            write_receive_definition(f, call)
+        else:
+            write_call_definition(f, call)
 
-        f.write("\tIPC_TRACE(ipc_c, \"Calling " + call.name + "\");\n\n")
-
-        write_msg_struct(f, call, '\t')
-        write_reply_struct(f, call, '\t')
-
-        f.write("""
-\t// Other threads must not read/write the fd while we wait for reply
-\tos_mutex_lock(&ipc_c->mutex);
-""")
-        cleanup = "os_mutex_unlock(&ipc_c->mutex);"
-
-        # Prepare initial sending
-        write_msg_send(f, 'xrt_result_t ret', indent="\t")
-        write_result_handler(f, 'ret', cleanup, indent="\t")
-
-        if call.in_handles:
-            f.write("\n\t// Send our handles separately\n")
-            f.write("\n\t// Wait for server sync")
-            # Must sync with the server so it's expecting the next message.
-            write_invocation(
-                f,
-                'ret',
-                'ipc_receive',
-                (
-                    '&ipc_c->imc',
-                    '&_sync',
-                    'sizeof(_sync)'
-                    ),
-                indent="\t"
-            )
-            f.write(';')
-            write_result_handler(f, 'ret', cleanup, indent="\t")
-
-            # Must send these in a second message
-            # since the server doesn't know how many to expect.
-            f.write("\n\t// We need this message data as filler only\n")
-            f.write("\tstruct ipc_command_msg _handle_msg = {\n")
-            f.write("\t    .cmd = " + str(call.id) + ",\n")
-            f.write("\t};\n")
-            write_invocation(
-                f,
-                'ret',
-                'ipc_send_handles_' + call.in_handles.stem,
-                (
-                    '&ipc_c->imc',
-                    "&_handle_msg",
-                    "sizeof(_handle_msg)",
-                    call.in_handles.arg_name,
-                    call.in_handles.count_arg_name
-                ),
-                indent="\t"
-            )
-            f.write(';')
-            write_result_handler(f, 'ret', cleanup, indent="\t")
-
-        f.write("\n\t// Await the reply")
-        func = 'ipc_receive'
-        args = ['&ipc_c->imc', '&_reply', 'sizeof(_reply)']
-        if call.out_handles:
-            func += '_handles_' + call.out_handles.stem
-            args.extend(call.out_handles.arg_names)
-        write_invocation(f, 'ret', func, args, indent="\t")
-        f.write(';')
-        write_result_handler(f, 'ret', cleanup, indent="\t")
-
-        for arg in call.out_args:
-            f.write("\t*out_" + arg.name + " = _reply." + arg.name + ";\n")
-        f.write("\n\t" + cleanup)
-        f.write("\n\treturn _reply.result;\n}\n")
     f.close()
 
 
@@ -203,7 +247,12 @@ def generate_client_h(file, p):
     f.write("\n")
 
     for call in p.calls:
-        call.write_call_decl(f)
+        if call.varlen:
+            call.write_send_decl(f)
+            f.write(";\n")
+            call.write_receive_decl(f)
+        else:
+            call.write_call_decl(f)
         f.write(";\n")
 
     write_cpp_header_guard_end(f)
@@ -244,10 +293,14 @@ ipc_dispatch(volatile struct ipc_client_state *ics, ipc_command_t *ipc_command)
             f.write(
                 "\t\tstruct ipc_{}_msg *msg = ".format(call.name))
             f.write("(struct ipc_{}_msg *)ipc_command;\n".format(call.name))
-        if call.out_args:
+
+        if call.varlen:
+            f.write("\t\t// No return arguments")
+        elif call.out_args:
             f.write("\t\tstruct ipc_%s_reply reply = {0};\n" % call.name)
         else:
             f.write("\t\tstruct ipc_result_reply reply = {0};\n")
+
         if call.in_handles:
             # We need to fetch these handles separately
             f.write("\t\tstruct ipc_result_reply _sync = {XRT_SUCCESS};\n")
@@ -305,11 +358,17 @@ ipc_dispatch(volatile struct ipc_client_state *ics, ipc_command_t *ipc_command)
 
         # Write call to ipc_handle_CALLNAME
         args = ["ics"]
+
+        # Always provide in arguments.
         for arg in call.in_args:
             args.append(("&msg->" + arg.name)
                         if arg.is_aggregate
                         else ("msg->" + arg.name))
-        args.extend("&reply." + arg.name for arg in call.out_args)
+
+        # No reply arguments on varlen.
+        if not call.varlen:
+            args.extend("&reply." + arg.name for arg in call.out_args)
+
         if call.out_handles:
             args.extend(("XRT_MAX_IPC_HANDLES",
                          call.out_handles.arg_name,
@@ -318,23 +377,31 @@ ipc_dispatch(volatile struct ipc_client_state *ics, ipc_command_t *ipc_command)
         if call.in_handles:
             args.extend(("&in_%s[0]" % call.in_handles.arg_name,
                          "msg->"+call.in_handles.count_arg_name))
-        write_invocation(f, 'reply.result', 'ipc_handle_' +
+
+        # Should we put the return in the reply or return it?
+        return_target = 'reply.result'
+        if call.varlen:
+            return_target = 'xrt_result_t xret'
+
+        write_invocation(f, return_target, 'ipc_handle_' +
                          call.name, args, indent="\t\t")
         f.write(";\n")
 
         # TODO do we check reply.result and
         # error out before replying if it's not success?
 
-        func = 'ipc_send'
-        args = ["(struct ipc_message_channel *)&ics->imc",
-                "&reply",
-                "sizeof(reply)"]
-        if call.out_handles:
-            func += '_handles_' + call.out_handles.stem
-            args.extend(call.out_handles.arg_names)
-        write_invocation(f, 'xrt_result_t ret', func, args, indent="\t\t")
-        f.write(";")
-        f.write("\n\t\treturn ret;\n")
+        if not call.varlen:
+            func = 'ipc_send'
+            args = ["(struct ipc_message_channel *)&ics->imc",
+                    "&reply",
+                    "sizeof(reply)"]
+            if call.out_handles:
+                func += '_handles_' + call.out_handles.stem
+                args.extend(call.out_handles.arg_names)
+            write_invocation(f, 'xrt_result_t xret', func, args, indent="\t\t")
+            f.write(";")
+
+        f.write("\n\t\treturn xret;\n")
         f.write("\t}\n")
     f.write('''\tdefault:
 \t\tU_LOG_E("UNHANDLED IPC MESSAGE! %d", *ipc_command);
