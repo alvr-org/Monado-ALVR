@@ -222,9 +222,6 @@ struct ipc_shared_memory
 	struct
 	{
 		int32_t head;
-		int32_t left;
-		int32_t right;
-		int32_t gamepad;
 		int32_t eyes;
 
 		struct
