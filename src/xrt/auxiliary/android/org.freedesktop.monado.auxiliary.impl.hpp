@@ -45,6 +45,24 @@ namespace org::freedesktop::monado::auxiliary {
 		return Meta::data().clazz().call<float>(Meta::data().getDisplayRefreshRate, context.object());
 	}
 
+	inline int32_t
+	MonadoView::getDisplayModeIdWidth(const android::content::Context &displayContext,
+	                                  int32_t displayId,
+	                                  int32_t displayModeId)
+	{
+		return Meta::data().clazz().call<int32_t>(Meta::data().getDisplayModeIdWidth, displayContext.object(),
+		                                          displayId, displayModeId);
+	}
+
+	inline int32_t
+	MonadoView::getDisplayModeIdHeight(const android::content::Context &displayContext,
+	                                   int32_t displayId,
+	                                   int32_t displayModeId)
+	{
+		return Meta::data().clazz().call<int32_t>(Meta::data().getDisplayModeIdHeight, displayContext.object(),
+		                                          displayId, displayModeId);
+	}
+
 	inline void *
 	MonadoView::getNativePointer()
 	{

@@ -108,6 +108,36 @@ namespace org::freedesktop::monado::auxiliary {
 		getDisplayRefreshRate(android::content::Context const &context);
 
 		/*!
+		 * Wrapper for the getDisplayModeIdWidth static method
+		 *
+		 * Java prototype:
+		 * `public static int getDisplayModeIdWidth(@NonNull final Context context, int display,
+		 * int displayModeId);`
+		 *
+		 * JNI signature: (Landroid/content/Context;II)I;
+		 *
+		 */
+		static int32_t
+		getDisplayModeIdWidth(android::content::Context const &context,
+		                      int32_t displayId,
+		                      int32_t displayModeId);
+
+		/*!
+		 * Wrapper for the getDisplayModeIdHeight static method
+		 *
+		 * Java prototype:
+		 * `public static int getDisplayModeIdHeight(@NonNull final Context context, int display,
+		 *  int displayModeId);`
+		 *
+		 * JNI signature: (Landroid/content/Context;II)I;
+		 *
+		 */
+		static int32_t
+		getDisplayModeIdHeight(android::content::Context const &context,
+		                       int32_t displayId,
+		                       int32_t displayModeId);
+
+		/*!
 		 * Wrapper for the getNativePointer method
 		 *
 		 * Java prototype:
@@ -165,6 +195,8 @@ namespace org::freedesktop::monado::auxiliary {
 			jni::method_t getNativePointer;
 			jni::method_t markAsDiscardedByNative;
 			jni::method_t waitGetSurfaceHolder;
+			jni::method_t getDisplayModeIdWidth;
+			jni::method_t getDisplayModeIdHeight;
 
 			/*!
 			 * Singleton accessor

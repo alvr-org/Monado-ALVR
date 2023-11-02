@@ -19,11 +19,13 @@
 #include "wrap/android.hardware.display.h"
 #include "wrap/android.provider.h"
 #include "wrap/android.view.h"
+#include "wrap/android.graphics.h"
 #include "org.freedesktop.monado.auxiliary.hpp"
 
 #include <android/native_window_jni.h>
 
 using wrap::android::content::Context;
+using wrap::android::graphics::PixelFormat;
 using wrap::android::hardware::display::DisplayManager;
 using wrap::android::provider::Settings;
 using wrap::android::view::Display;
@@ -59,7 +61,8 @@ android_custom_surface::~android_custom_surface()
 }
 
 struct android_custom_surface *
-android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t display_id, const char *surface_title)
+android_custom_surface_async_start(
+    struct _JavaVM *vm, void *context, int32_t display_id, const char *surface_title, int32_t preferred_display_mode_id)
 {
 	jni::init(vm);
 	try {
@@ -107,13 +110,41 @@ android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t di
 			type = WindowManager_LayoutParams::TYPE_APPLICATION_OVERLAY();
 		}
 
-		WindowManager_LayoutParams lp = WindowManager_LayoutParams::construct(type, flags);
+		int32_t width = 0;
+		int32_t height = 0;
+		if (preferred_display_mode_id < 0) {
+			preferred_display_mode_id = 0;
+		} else if (preferred_display_mode_id > 0) {
+			// Preferred display mode ID of 0 is used to indicate no preference in the layout params.
+			// Display mode id is either 0-based or 1-based depending on the API
+			width = MonadoView::getDisplayModeIdWidth(displayContext, display_id,
+			                                          preferred_display_mode_id - 1);
+			height = MonadoView::getDisplayModeIdHeight(displayContext, display_id,
+			                                            preferred_display_mode_id - 1);
+			if ((width == 0) || (height == 0)) {
+				U_LOG_W("Invalid preferred display mode id %d. Use default", preferred_display_mode_id);
+				preferred_display_mode_id = 0;
+			} else {
+				U_LOG_D("Setting mode id %d, width=%d, height=%d", preferred_display_mode_id, width,
+				        height);
+			}
+		}
+
+		auto lp = [&] {
+			if (preferred_display_mode_id > 0) {
+				// When specifying a preferred mode id, need to explicitly set the width/height as well
+				return WindowManager_LayoutParams::construct(width, height, type, flags,
+				                                             PixelFormat::OPAQUE());
+			} else {
+				return WindowManager_LayoutParams::construct(type, flags);
+			}
+		}();
 		lp.setTitle(surface_title);
 		ret->monadoView = MonadoView::attachToWindow(displayContext, ret.get(), lp);
+		lp.object().set("preferredDisplayModeId", preferred_display_mode_id);
 
 		return ret.release();
 	} catch (std::exception const &e) {
-
 		U_LOG_E(
 		    "Could not start attaching our custom surface to activity: "
 		    "%s",

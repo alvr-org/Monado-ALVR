@@ -17,5 +17,10 @@ inline int32_t Point::getY() const {
     return get(Meta::data().y, object());
 }
 
+inline int32_t PixelFormat::OPAQUE() {
+    auto &data = Meta::data();
+    auto ret = get(data.OPAQUE, data.clazz());
+    return ret;
+}
 } // namespace android::graphics
 } // namespace wrap

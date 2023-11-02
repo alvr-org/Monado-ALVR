@@ -11,5 +11,11 @@ Point::Meta::Meta()
       y(classRef(), "y") {
     MetaBaseDroppable::dropClassRef();
 }
+
+PixelFormat::Meta::Meta()
+    : MetaBaseDroppable(PixelFormat::getTypeName()),
+      OPAQUE(classRef(), "OPAQUE") {
+    MetaBaseDroppable::dropClassRef();
+}
 } // namespace android::graphics
 } // namespace wrap

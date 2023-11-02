@@ -53,8 +53,13 @@ struct android_custom_surface;
  *
  * @param vm Java VM pointer
  * @param context An android.content.Context jobject, cast to `void *`.
- * @param display_id Id of the display that the surface is attached to.
+ * @param display_id ID of the display that the surface is attached to.
  * @param surface_title Title of the surface.
+ * @param preferred_display_mode_id The preferred display mode ID.
+ *        A value of 0 indicates no preference.
+ *        Non-zero values map to the corresponding display mode
+ *        ID that are returned from the getSupportedModes() method for
+ *        the given Android display. (the 1-indexed IDs.)
  *
  * @return An opaque handle for monitoring this operation and referencing the
  * surface, or NULL if there was an error.
@@ -62,7 +67,11 @@ struct android_custom_surface;
  * @public @memberof android_custom_surface
  */
 struct android_custom_surface *
-android_custom_surface_async_start(struct _JavaVM *vm, void *context, int32_t display_id, const char *surface_title);
+android_custom_surface_async_start(struct _JavaVM *vm,
+                                   void *context,
+                                   int32_t display_id,
+                                   const char *surface_title,
+                                   int32_t preferred_display_mode_id);
 
 /*!
  * Destroy the native handle for the custom surface.

@@ -60,6 +60,33 @@ class Point : public ObjectWrapperBase {
     };
 };
 
+class PixelFormat : public ObjectWrapperBase {
+public:
+  using ObjectWrapperBase::ObjectWrapperBase;
+  static constexpr const char *getTypeName() noexcept {
+      return "android/graphics/PixelFormat";
+  }
+
+  static int32_t OPAQUE();
+
+  /*!
+   * Class metadata
+   */
+  struct Meta : public MetaBaseDroppable {
+      impl::StaticFieldId<int32_t> OPAQUE;
+
+      /*!
+       * Singleton accessor
+       */
+      static Meta &data() {
+          static Meta instance{};
+          return instance;
+      }
+
+    private:
+        Meta();
+    };
+};
 } // namespace android::graphics
 } // namespace wrap
 #include "android.graphics.impl.h"

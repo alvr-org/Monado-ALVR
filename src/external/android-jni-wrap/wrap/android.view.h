@@ -349,6 +349,17 @@ class WindowManager_LayoutParams : public ObjectWrapperBase {
     static WindowManager_LayoutParams construct(int32_t type, int32_t flags);
 
     /*!
+    * Wrapper for a constructor
+    *
+    * Java prototype:
+    * `public android.view.WindowManager$LayoutParams(int, int, int, int, int);`
+    *
+    * JNI signature: (IIIII)V
+    *
+    */
+    static WindowManager_LayoutParams construct(int32_t w, int32_t h, int32_t type, int32_t flags, int32_t format);
+
+    /*!
      * Wrapper for the setTitle method
      *
      * Java prototype:
@@ -371,6 +382,7 @@ class WindowManager_LayoutParams : public ObjectWrapperBase {
         jni::method_t init;
         jni::method_t init1;
         jni::method_t init2;
+        jni::method_t init4;
         jni::method_t setTitle;
 
         /*!

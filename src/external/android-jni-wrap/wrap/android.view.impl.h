@@ -104,6 +104,14 @@ inline void WindowManager_LayoutParams::setTitle(std::string const &title) {
     return object().call<void>(Meta::data().setTitle, title);
 }
 
+
+inline WindowManager_LayoutParams WindowManager_LayoutParams::construct(int32_t w, int32_t h, int32_t type,
+                                                                        int32_t flags, int32_t format) {
+    return WindowManager_LayoutParams(
+            Meta::data().clazz().newInstance(Meta::data().init4, w, h, type, flags, format));
+}
+
+
 inline int Display_Mode::getModeId() {
     assert(!isNull());
     return object().call<int>(Meta::data().getModeId);

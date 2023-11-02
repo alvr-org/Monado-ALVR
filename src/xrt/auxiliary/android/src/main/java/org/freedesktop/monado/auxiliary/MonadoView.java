@@ -11,11 +11,13 @@ package org.freedesktop.monado.auxiliary;
 
 import android.app.Activity;
 import android.content.Context;
+import android.hardware.display.DisplayManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.WindowManager;
@@ -145,6 +147,54 @@ public class MonadoView extends SurfaceView
         return wm.getDefaultDisplay().getRefreshRate();
     }
 
+    /**
+     * Get the width of the specified display mode on the specified display ID
+     *
+     * <p>If the specified mode ID is not in the list of supported mode IDs for the specified
+     * display ID, then a value of 0 is returned.
+     *
+     * @param context Display context used for looking for target window.
+     * @param display The display ID for which the mode is to be queried.
+     * @param displayModeId The display mode ID for which the width is returned. This is a
+     *     zero-indexed mode ID.
+     * @return The width in pixels for the specified mode ID on the specified display.
+     */
+    @Keep
+    public static int getDisplayModeIdWidth(
+            @NonNull final Context context, int display, int displayModeId) {
+        DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+        Display dp = dm.getDisplay(display);
+        Display.Mode[] modes = dp.getSupportedModes();
+        if (modes.length > displayModeId) {
+            return modes[displayModeId].getPhysicalWidth();
+        }
+        return 0;
+    }
+
+    /**
+     * Get the height of the specified display mode on the specified display ID
+     *
+     * <p>If the specified mode ID is not in the list of supported mode IDs for the specified
+     * display ID, then a value of 0 is returned.
+     *
+     * @param context Display context used for looking for target window.
+     * @param display The display ID for which the mode is to be queried.
+     * @param displayModeId The display mode ID for which the height is returned. This is a
+     *     zero-indexed mode ID.
+     * @return The height in pixels for the specified mode ID on the specified display.
+     */
+    @Keep
+    public static int getDisplayModeIdHeight(
+            @NonNull final Context context, int display, int displayModeId) {
+        DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+        Display dp = dm.getDisplay(display);
+        Display.Mode[] modes = dp.getSupportedModes();
+        if (modes.length > displayModeId) {
+            return modes[displayModeId].getPhysicalHeight();
+        }
+        return 0;
+    }
+
     @Keep
     public long getNativePointer() {
         if (nativeCounterpart == null) {
@@ -219,7 +269,14 @@ public class MonadoView extends SurfaceView
             this.height = height;
             currentSurfaceHolderSync.notifyAll();
         }
-        Log.i(TAG, "surfaceChanged");
+        Log.i(
+                TAG,
+                "surfaceChanged, w = "
+                        + this.width
+                        + " h = "
+                        + this.height
+                        + " holder "
+                        + currentSurfaceHolder.toString());
     }
 
     @Override

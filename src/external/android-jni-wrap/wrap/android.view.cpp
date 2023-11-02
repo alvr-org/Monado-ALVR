@@ -49,6 +49,7 @@ WindowManager_LayoutParams::Meta::Meta()
       init(classRef().getMethod("<init>", "()V")),
       init1(classRef().getMethod("<init>", "(I)V")),
       init2(classRef().getMethod("<init>", "(II)V")),
+      init4(classRef().getMethod("<init>", "(IIIII)V")),
       setTitle(
           classRef().getMethod("setTitle", "(Ljava/lang/CharSequence;)V")) {}
 Display_Mode::Meta::Meta() : MetaBaseDroppable(Display_Mode::getTypeName()),

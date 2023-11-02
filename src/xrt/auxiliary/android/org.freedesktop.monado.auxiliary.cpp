@@ -26,7 +26,11 @@ namespace org::freedesktop::monado::auxiliary {
 	          classRef().getStaticMethod("getDisplayRefreshRate", "(Landroid/content/Context;)F")),
 	      getNativePointer(classRef().getMethod("getNativePointer", "()J")),
 	      markAsDiscardedByNative(classRef().getMethod("markAsDiscardedByNative", "()V")),
-	      waitGetSurfaceHolder(classRef().getMethod("waitGetSurfaceHolder", "(I)Landroid/view/SurfaceHolder;"))
+	      waitGetSurfaceHolder(classRef().getMethod("waitGetSurfaceHolder", "(I)Landroid/view/SurfaceHolder;")),
+	      getDisplayModeIdWidth(
+	          classRef().getStaticMethod("getDisplayModeIdWidth", "(Landroid/content/Context;II)I")),
+	      getDisplayModeIdHeight(
+	          classRef().getStaticMethod("getDisplayModeIdHeight", "(Landroid/content/Context;II)I"))
 	{}
 } // namespace org::freedesktop::monado::auxiliary
 } // namespace wrap
