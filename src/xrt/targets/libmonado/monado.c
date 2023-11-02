@@ -48,6 +48,17 @@ struct mnd_root
  *
  */
 
+enum role_enum
+{
+	ROLE_HEAD,
+	ROLE_EYES,
+	ROLE_LEFT,
+	ROLE_RIGHT,
+	ROLE_GAMEPAD,
+	ROLE_HAND_LEFT,
+	ROLE_HAND_RIGHT,
+};
+
 #define CHECK_NOT_NULL(ARG)                                                                                            \
 	do {                                                                                                           \
 		if (ARG == NULL) {                                                                                     \
@@ -309,28 +320,48 @@ mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *
 	CHECK_NOT_NULL(role_name);
 	CHECK_NOT_NULL(out_device_id);
 
-#ifndef MND_PP_DEV_ID_FROM_ROLE
-#define MND_PP_DEV_ID_FROM_ROLE(role)                                                                                  \
-	if (strcmp(role_name, #role) == 0) {                                                                           \
-		*out_device_id = (int32_t)root->ipc_c.ism->roles.role;                                                 \
-		return MND_SUCCESS;                                                                                    \
+	enum role_enum role;
+
+#define TO_ENUM(STRING, ENUM)                                                                                          \
+	if (strcmp(role_name, STRING) == 0) {                                                                          \
+		role = ENUM;                                                                                           \
+	} else
+
+	TO_ENUM("head", ROLE_HEAD)
+	TO_ENUM("eyes", ROLE_EYES)
+	TO_ENUM("left", ROLE_LEFT)
+	TO_ENUM("right", ROLE_RIGHT)
+	TO_ENUM("gamepad", ROLE_GAMEPAD)
+	TO_ENUM("hand-tracking-left", ROLE_HAND_LEFT)
+	TO_ENUM("hand-tracking-right", ROLE_HAND_RIGHT)
+	{
+		PE("Invalid role name (%s)", role_name);
+		return MND_ERROR_INVALID_VALUE;
 	}
-#endif
-	MND_PP_DEV_ID_FROM_ROLE(head)
-	MND_PP_DEV_ID_FROM_ROLE(left)
-	MND_PP_DEV_ID_FROM_ROLE(right)
-	MND_PP_DEV_ID_FROM_ROLE(gamepad)
-	MND_PP_DEV_ID_FROM_ROLE(eyes)
-#undef MND_PP_DEV_ID_FROM_ROLE
-	if (strcmp(role_name, "hand-tracking-left") == 0) {
-		*out_device_id = root->ipc_c.ism->roles.hand_tracking.left;
-		return MND_SUCCESS;
-	}
-	if (strcmp(role_name, "hand-tracking-right") == 0) {
-		*out_device_id = root->ipc_c.ism->roles.hand_tracking.right;
-		return MND_SUCCESS;
+#undef TO_ENUM
+
+	switch (role) {
+	case ROLE_HEAD: *out_device_id = root->ipc_c.ism->roles.head; return MND_SUCCESS;
+	case ROLE_EYES: *out_device_id = root->ipc_c.ism->roles.eyes; return MND_SUCCESS;
+	case ROLE_HAND_LEFT: *out_device_id = root->ipc_c.ism->roles.hand_tracking.left; return MND_SUCCESS;
+	case ROLE_HAND_RIGHT: *out_device_id = root->ipc_c.ism->roles.hand_tracking.right; return MND_SUCCESS;
+	case ROLE_LEFT:
+	case ROLE_RIGHT:
+	case ROLE_GAMEPAD: break;
 	}
 
-	PE("Invalid role name (%s)", role_name);
-	return MND_ERROR_INVALID_VALUE;
+	struct xrt_system_roles roles;
+	xrt_result_t xret = ipc_call_system_devices_get_roles(&root->ipc_c, &roles);
+	if (xret != XRT_SUCCESS) {
+		PE("Failed to get dynamic roles");
+		return MND_ERROR_OPERATION_FAILED;
+	}
+
+	// Assumes roles index match device id.
+	switch (role) {
+	case ROLE_LEFT: *out_device_id = roles.left; return MND_SUCCESS;
+	case ROLE_RIGHT: *out_device_id = roles.right; return MND_SUCCESS;
+	case ROLE_GAMEPAD: *out_device_id = roles.gamepad; return MND_SUCCESS;
+	default: PE("Internal error, shouldn't get here"); return MND_ERROR_OPERATION_FAILED;
+	}
 }
