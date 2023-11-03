@@ -630,20 +630,55 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
  *
  * @ingroup aux_vk
  */
-#define VK_NAME_OBJECT(VK, TYPE, OBJ, NAME)                                                                            \
+#define VK_NAME_OBJ(VK, TYPE, SUFFIX, OBJ, NAME)                                                                       \
 	do {                                                                                                           \
 		if ((VK)->has_EXT_debug_utils) {                                                                       \
-			vk_name_object(VK, VK_OBJECT_TYPE_##TYPE, (uint64_t)OBJ, NAME);                                \
+			TYPE _thing = OBJ;                                                                             \
+			vk_name_object(VK, VK_OBJECT_TYPE_##SUFFIX, (uint64_t)_thing, NAME);                           \
 		}                                                                                                      \
 	} while (false)
 
+
 #else
 
-#define VK_NAME_OBJECT(vk, TYPE, obj name)                                                                             \
+#define VK_NAME_OBJ(VK, TYPE, SUFFIX, OBJ, NAME)                                                                       \
 	do {                                                                                                           \
+		XRT_MAYBE_UNUSED TYPE _thing = OBJ;                                                                    \
 	} while (false)
 
 #endif
+
+// clang-format off
+#define VK_NAME_INSTANCE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkInstance, INSTANCE, OBJ, NAME)
+#define VK_NAME_PHYSICAL_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPhysicalDevice, PHYSICAL_DEVICE, OBJ, NAME)
+#define VK_NAME_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDevice, DEVICE, OBJ, NAME)
+#define VK_NAME_QUEUE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkQueue, QUEUE, OBJ, NAME)
+#define VK_NAME_SEMAPHORE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSemaphore, SEMAPHORE, OBJ, NAME)
+#define VK_NAME_COMMAND_BUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkCommandBuffer, COMMAND_BUFFER, OBJ, NAME)
+#define VK_NAME_FENCE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkFence, FENCE, OBJ, NAME)
+#define VK_NAME_DEVICE_MEMORY(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDeviceMemory, DEVICE_MEMORY, OBJ, NAME)
+#define VK_NAME_BUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkBuffer, BUFFER, OBJ, NAME)
+#define VK_NAME_IMAGE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkImage, IMAGE, OBJ, NAME)
+#define VK_NAME_EVENT(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkEvent, EVENT, OBJ, NAME)
+#define VK_NAME_QUERY_POOL(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkQueryPool, QUERY_POOL, OBJ, NAME)
+#define VK_NAME_BUFFER_VIEW(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkBufferView, BUFFER_VIEW, OBJ, NAME)
+#define VK_NAME_IMAGE_VIEW(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkImageView, IMAGE_VIEW, OBJ, NAME)
+#define VK_NAME_SHADER_MODULE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkShaderModule, SHADER_MODULE, OBJ, NAME)
+#define VK_NAME_PIPELINE_CACHE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPipelineCache, PIPELINE_CACHE, OBJ, NAME)
+#define VK_NAME_PIPELINE_LAYOUT(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPipelineLayout, PIPELINE_LAYOUT, OBJ, NAME)
+#define VK_NAME_RENDER_PASS(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkRenderPass, RENDER_PASS, OBJ, NAME)
+#define VK_NAME_PIPELINE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPipeline, PIPELINE, OBJ, NAME)
+#define VK_NAME_DESCRIPTOR_SET_LAYOUT(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT, OBJ, NAME)
+#define VK_NAME_SAMPLER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSampler, SAMPLER, OBJ, NAME)
+#define VK_NAME_DESCRIPTOR_POOL(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDescriptorPool, DESCRIPTOR_POOL, OBJ, NAME)
+#define VK_NAME_DESCRIPTOR_SET(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDescriptorSet, DESCRIPTOR_SET, OBJ, NAME)
+#define VK_NAME_FRAMEBUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkFramebuffer, FRAMEBUFFER, OBJ, NAME)
+#define VK_NAME_COMMAND_POOL(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkCommandPool, COMMAND_POOL, OBJ, NAME)
+
+#define VK_NAME_SURFACE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSurfaceKHR, SURFACE_KHR, OBJ, NAME)
+#define VK_NAME_SWAPCHAIN(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSwapchainKHR, SWAPCHAIN_KHR, OBJ, NAME)
+// clang-format on
+
 
 /*
  *

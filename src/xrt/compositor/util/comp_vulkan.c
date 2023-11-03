@@ -232,7 +232,7 @@ create_instance(struct vk_bundle *vk, const struct comp_vulkan_arguments *vk_arg
 		return ret;
 	}
 
-	VK_NAME_OBJECT(vk, INSTANCE, vk->instance, "monado vulkan instance");
+	VK_NAME_INSTANCE(vk, vk->instance, "monado vulkan instance");
 
 	/*
 	 * Post creation setup of Vulkan bundle.

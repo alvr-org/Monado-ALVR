@@ -220,7 +220,7 @@ do_cylinder_layer(struct render_gfx *rr,
 	    &descriptor_set);                            // out_descriptor_set
 	VK_CHK_AND_RET(ret, "render_gfx_layer_quad_alloc_and_write");
 
-	VK_NAME_OBJECT(vk, DESCRIPTOR_SET, descriptor_set, "render_gfx layer quad descriptor set");
+	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "render_gfx layer quad descriptor set");
 
 	add_layer(state, layer_data, descriptor_set);
 
@@ -284,7 +284,7 @@ do_equirect2_layer(struct render_gfx *rr,
 	    &descriptor_set);                             // out_descriptor_set
 	VK_CHK_AND_RET(ret, "render_gfx_layer_quad_alloc_and_write");
 
-	VK_NAME_OBJECT(vk, DESCRIPTOR_SET, descriptor_set, "render_gfx layer quad descriptor set");
+	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "render_gfx layer quad descriptor set");
 
 	add_layer(state, layer_data, descriptor_set);
 
@@ -346,7 +346,7 @@ do_projection_layer(struct render_gfx *rr,
 	    &descriptor_set);                              // out_descriptor_set
 	VK_CHK_AND_RET(ret, "render_gfx_layer_projection_alloc_and_write");
 
-	VK_NAME_OBJECT(vk, DESCRIPTOR_SET, descriptor_set, "render_gfx layer quad descriptor set");
+	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "render_gfx layer quad descriptor set");
 
 	add_layer(state, layer_data, descriptor_set);
 
@@ -397,7 +397,7 @@ do_quad_layer(struct render_gfx *rr,
 	    &descriptor_set);                        // out_descriptor_set
 	VK_CHK_AND_RET(ret, "render_gfx_layer_quad_alloc_and_write");
 
-	VK_NAME_OBJECT(vk, DESCRIPTOR_SET, descriptor_set, "render_gfx layer quad descriptor set");
+	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "render_gfx layer quad descriptor set");
 
 	add_layer(state, layer_data, descriptor_set);
 
@@ -638,7 +638,7 @@ do_mesh(struct render_gfx *rr,
 		    &descriptor_sets[i]);              //
 		VK_CHK_WITH_GOTO(ret, "render_gfx_mesh_alloc", err_no_memory);
 
-		VK_NAME_OBJECT(vk, DESCRIPTOR_SET, descriptor_sets[i], "render_gfx mesh descriptor sets");
+		VK_NAME_DESCRIPTOR_SET(vk, descriptor_sets[i], "render_gfx mesh descriptor sets");
 	}
 
 

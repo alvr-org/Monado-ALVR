@@ -1239,7 +1239,7 @@ vk_create_device(struct vk_bundle *vk,
 	vk->vkGetDeviceQueue(vk->device, vk->queue_family_index, 0, &vk->queue);
 
 	// Need to do this after functions have been gotten.
-	VK_NAME_OBJECT(vk, DEVICE, vk->device, "vk_bundle device");
+	VK_NAME_DEVICE(vk, vk->device, "vk_bundle device");
 
 	return ret;
 

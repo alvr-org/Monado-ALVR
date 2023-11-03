@@ -152,7 +152,7 @@ comp_window_peek_create(struct comp_compositor *c)
 		goto err_free;
 	}
 
-	VK_NAME_OBJECT(vk, COMMAND_POOL, w->pool.pool, "comp_window_peek command pool");
+	VK_NAME_COMMAND_POOL(vk, w->pool.pool, "comp_window_peek command pool");
 
 	ret = vk_cmd_pool_create_cmd_buffer(vk, &w->pool, &w->cmd);
 	if (ret != VK_SUCCESS) {
@@ -160,7 +160,7 @@ comp_window_peek_create(struct comp_compositor *c)
 		goto err_pool;
 	}
 
-	VK_NAME_OBJECT(vk, COMMAND_BUFFER, w->cmd, "comp_window_peek command buffer");
+	VK_NAME_COMMAND_BUFFER(vk, w->cmd, "comp_window_peek command buffer");
 
 
 	/*

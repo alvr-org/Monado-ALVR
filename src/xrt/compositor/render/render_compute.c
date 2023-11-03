@@ -328,8 +328,7 @@ render_compute_init(struct render_compute *crc, struct render_resources *r)
 		    &crc->layer_descriptor_sets[i]);        // descriptor_set
 		VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
-		VK_NAME_OBJECT(vk, DESCRIPTOR_SET, crc->layer_descriptor_sets[i],
-		               "render_compute layer descriptor set");
+		VK_NAME_DESCRIPTOR_SET(vk, crc->layer_descriptor_sets[i], "render_compute layer descriptor set");
 	}
 
 	ret = vk_create_descriptor_set(                  //
@@ -339,7 +338,7 @@ render_compute_init(struct render_compute *crc, struct render_resources *r)
 	    &crc->shared_descriptor_set);                // descriptor_set
 	VK_CHK_WITH_RET(ret, "vk_create_descriptor_set", false);
 
-	VK_NAME_OBJECT(vk, DESCRIPTOR_SET, crc->shared_descriptor_set, "render_compute shared descriptor set");
+	VK_NAME_DESCRIPTOR_SET(vk, crc->shared_descriptor_set, "render_compute shared descriptor set");
 
 	return true;
 }

@@ -118,7 +118,7 @@ vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk, VkComman
 	}
 
 	// Shortlived, but name for debugging.
-	VK_NAME_OBJECT(vk, FENCE, fence, "VK Submit And Wait");
+	VK_NAME_FENCE(vk, fence, "VK Submit And Wait");
 
 	// Do the submit.
 	VkSubmitInfo submitInfo = {

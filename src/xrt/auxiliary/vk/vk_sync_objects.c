@@ -135,7 +135,7 @@ vk_create_and_submit_fence_native(struct vk_bundle *vk, xrt_graphics_sync_handle
 	}
 
 	// Won't be returned, but name for debbuging.
-	VK_NAME_OBJECT(vk, FENCE, fence, "VK Create Submit Sync");
+	VK_NAME_FENCE(vk, fence, "VK Create Submit Sync");
 
 
 	/*
@@ -352,7 +352,7 @@ vk_create_fence_sync_from_native(struct vk_bundle *vk, xrt_graphics_sync_handle_
 	}
 
 	// Should be overwritten by caller, but name here for debugging.
-	VK_NAME_OBJECT(vk, FENCE, fence, "VK Import");
+	VK_NAME_FENCE(vk, fence, "VK Import");
 
 
 #ifdef XRT_GRAPHICS_SYNC_HANDLE_IS_FD

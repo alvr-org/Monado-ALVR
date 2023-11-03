@@ -70,7 +70,7 @@
 			render_shaders_close(s, vk);                                                                   \
 			return false;                                                                                  \
 		}                                                                                                      \
-		VK_NAME_OBJECT(vk, SHADER_MODULE, s->SHADER, #SHADER);                                                 \
+		VK_NAME_SHADER_MODULE(vk, s->SHADER, #SHADER);                                                         \
 	} while (false)
 
 

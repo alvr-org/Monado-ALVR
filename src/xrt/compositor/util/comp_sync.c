@@ -109,7 +109,7 @@ comp_fence_import(struct vk_bundle *vk, xrt_graphics_sync_handle_t handle, struc
 	}
 
 	// Name for debugging.
-	VK_NAME_OBJECT(vk, FENCE, fence, "Comp Sync");
+	VK_NAME_FENCE(vk, fence, "Comp Sync");
 
 	struct fence *f = U_TYPED_CALLOC(struct fence);
 	f->base.wait = fence_wait;

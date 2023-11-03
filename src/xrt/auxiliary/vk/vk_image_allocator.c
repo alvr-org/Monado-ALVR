@@ -308,8 +308,8 @@ vk_ic_allocate(struct vk_bundle *vk,
 			break;
 		}
 
-		VK_NAME_OBJECT(vk, IMAGE, out_vkic->images[i].handle, "vk_image_collection image");
-		VK_NAME_OBJECT(vk, DEVICE_MEMORY, out_vkic->images[i].memory, "vk_image_collection device_memory");
+		VK_NAME_IMAGE(vk, out_vkic->images[i].handle, "vk_image_collection image");
+		VK_NAME_DEVICE_MEMORY(vk, out_vkic->images[i].memory, "vk_image_collection device_memory");
 	}
 
 	// Set the fields.
@@ -375,8 +375,8 @@ vk_ic_from_natives(struct vk_bundle *vk,
 			break;
 		}
 
-		VK_NAME_OBJECT(vk, IMAGE, out_vkic->images[i].handle, "vk_image_collection image");
-		VK_NAME_OBJECT(vk, DEVICE_MEMORY, out_vkic->images[i].memory, "vk_image_collection device_memory");
+		VK_NAME_IMAGE(vk, out_vkic->images[i].handle, "vk_image_collection image");
+		VK_NAME_DEVICE_MEMORY(vk, out_vkic->images[i].memory, "vk_image_collection device_memory");
 
 		native_images[i].handle = buf;
 	}

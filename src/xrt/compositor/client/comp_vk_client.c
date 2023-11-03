@@ -119,7 +119,7 @@ setup_semaphore(struct client_vk_compositor *c)
 		return XRT_ERROR_VULKAN;
 	}
 
-	VK_NAME_OBJECT(vk, SEMAPHORE, semaphore, "timeline semaphore");
+	VK_NAME_SEMAPHORE(vk, semaphore, "timeline semaphore");
 
 	c->sync.semaphore = semaphore;
 	c->sync.xcsem = xcsem; // No need to reference.
@@ -672,8 +672,8 @@ client_vk_swapchain_create(struct xrt_compositor *xc,
 			return XRT_ERROR_VULKAN;
 		}
 
-		VK_NAME_OBJECT(vk, IMAGE, sc->base.images[i], "vk_image_collection image");
-		VK_NAME_OBJECT(vk, DEVICE_MEMORY, sc->mems[i], "vk_image_collection device_memory");
+		VK_NAME_IMAGE(vk, sc->base.images[i], "vk_image_collection image");
+		VK_NAME_DEVICE_MEMORY(vk, sc->mems[i], "vk_image_collection device_memory");
 	}
 
 	vk_cmd_pool_lock(&c->pool);
@@ -686,13 +686,13 @@ client_vk_swapchain_create(struct xrt_compositor *xc,
 			vk_cmd_pool_unlock(&c->pool);
 			return XRT_ERROR_VULKAN;
 		}
-		VK_NAME_OBJECT(vk, COMMAND_BUFFER, sc->acquire[i], "client_vk_swapchain acquire command buffer");
+		VK_NAME_COMMAND_BUFFER(vk, sc->acquire[i], "client_vk_swapchain acquire command buffer");
 		ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, &c->pool, flags, &sc->release[i]);
 		if (ret != VK_SUCCESS) {
 			vk_cmd_pool_unlock(&c->pool);
 			return XRT_ERROR_VULKAN;
 		}
-		VK_NAME_OBJECT(vk, COMMAND_BUFFER, sc->release[i], "client_vk_swapchain release command buffer");
+		VK_NAME_COMMAND_BUFFER(vk, sc->release[i], "client_vk_swapchain release command buffer");
 
 		VkImageSubresourceRange subresource_range = {
 		    .aspectMask = barrier_aspect_mask,
@@ -846,7 +846,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 		goto err_mutex;
 	}
 
-	VK_NAME_OBJECT(&c->vk, COMMAND_POOL, c->pool.pool, "client_vk_compositor command pool");
+	VK_NAME_COMMAND_POOL(&c->vk, c->pool.pool, "client_vk_compositor command pool");
 
 #ifdef VK_KHR_timeline_semaphore
 	if (vk_can_import_and_export_timeline_semaphore(&c->vk)) {

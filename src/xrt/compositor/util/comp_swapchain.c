@@ -292,8 +292,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 			    subresource_range,                  // subresource_range
 			    &sc->images[i].views.alpha[layer]); // out_view
 
-			VK_NAME_OBJECT(vk, IMAGE_VIEW, sc->images[i].views.alpha[layer],
-			               "comp_swapchain views alpha layer");
+			VK_NAME_IMAGE_VIEW(vk, sc->images[i].views.alpha[layer], "comp_swapchain views alpha layer");
 
 			vk_create_view_swizzle(                    //
 			    vk,                                    // vk
@@ -304,8 +303,8 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 			    components,                            // components
 			    &sc->images[i].views.no_alpha[layer]); // out_view
 
-			VK_NAME_OBJECT(vk, IMAGE_VIEW, sc->images[i].views.no_alpha[layer],
-			               "comp_swapchain views no alpha layer");
+			VK_NAME_IMAGE_VIEW(vk, sc->images[i].views.no_alpha[layer],
+			                   "comp_swapchain views no alpha layer");
 		}
 	}
 
@@ -335,7 +334,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 		return;
 	}
 
-	VK_NAME_OBJECT(vk, COMMAND_BUFFER, cmd_buffer, "comp_swapchain command buffer");
+	VK_NAME_COMMAND_BUFFER(vk, cmd_buffer, "comp_swapchain command buffer");
 
 	VkImageAspectFlagBits image_barrier_aspect = vk_csci_get_barrier_aspect_mask(image_view_format);
 

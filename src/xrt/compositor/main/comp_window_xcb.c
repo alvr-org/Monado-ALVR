@@ -423,7 +423,7 @@ comp_window_xcb_create_surface(struct comp_window_xcb *w, VkSurfaceKHR *out_surf
 		return ret;
 	}
 
-	VK_NAME_OBJECT(vk, SURFACE_KHR, surface, "comp_window_xcb surface");
+	VK_NAME_SURFACE(vk, surface, "comp_window_xcb surface");
 	*out_surface = surface;
 
 	return VK_SUCCESS;

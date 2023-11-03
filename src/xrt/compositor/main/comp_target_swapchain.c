@@ -131,7 +131,7 @@ create_image_views(struct comp_target_swapchain *cts)
 		    &cts->base.images[i].view); // out_view
 
 
-		VK_NAME_OBJECT(vk, IMAGE_VIEW, cts->base.images[i].view, "comp_target_swapchain image view");
+		VK_NAME_IMAGE_VIEW(vk, cts->base.images[i].view, "comp_target_swapchain image view");
 	}
 
 	free(images);
@@ -452,7 +452,7 @@ vblank_event_func(struct comp_target *ct, uint64_t *out_timestamp_ns)
 	}
 
 	// Name for debugging.
-	VK_NAME_OBJECT(vk, FENCE, vblank_event_fence, "Comp VBlank");
+	VK_NAME_FENCE(vk, vblank_event_fence, "Comp VBlank");
 
 	// Not scoped to not effect timing.
 	COMP_TRACE_IDENT(vblank);
@@ -604,8 +604,8 @@ target_init_semaphores(struct comp_target_swapchain *cts)
 		COMP_ERROR(cts->base.c, "vkCreateSemaphore: %s", vk_result_string(ret));
 	}
 
-	VK_NAME_OBJECT(vk, SEMAPHORE, cts->base.semaphores.present_complete,
-	               "comp_target_swapchain semaphore present complete");
+	VK_NAME_SEMAPHORE(vk, cts->base.semaphores.present_complete,
+	                  "comp_target_swapchain semaphore present complete");
 
 	cts->base.semaphores.render_complete_is_timeline = false;
 	ret = vk->vkCreateSemaphore(vk->device, &info, NULL, &cts->base.semaphores.render_complete);
@@ -613,8 +613,7 @@ target_init_semaphores(struct comp_target_swapchain *cts)
 		COMP_ERROR(cts->base.c, "vkCreateSemaphore: %s", vk_result_string(ret));
 	}
 
-	VK_NAME_OBJECT(vk, SEMAPHORE, cts->base.semaphores.render_complete,
-	               "comp_target_swapchain semaphore render complete");
+	VK_NAME_SEMAPHORE(vk, cts->base.semaphores.render_complete, "comp_target_swapchain semaphore render complete");
 }
 
 
@@ -791,7 +790,7 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 		return;
 	}
 
-	VK_NAME_OBJECT(vk, SWAPCHAIN_KHR, cts->swapchain.handle, "comp_target_swapchain swapchain");
+	VK_NAME_SWAPCHAIN(vk, cts->swapchain.handle, "comp_target_swapchain swapchain");
 
 	/*
 	 * Set target info.
