@@ -134,7 +134,14 @@ vk_get_instance_functions(struct vk_bundle *vk)
 
 #if defined(VK_EXT_display_surface_counter)
 	vk->vkGetPhysicalDeviceSurfaceCapabilities2EXT        = GET_INS_PROC(vk, vkGetPhysicalDeviceSurfaceCapabilities2EXT);
+
 #endif // defined(VK_EXT_display_surface_counter)
+
+#if defined(VK_EXT_debug_utils)
+	vk->vkCreateDebugUtilsMessengerEXT                    = GET_INS_PROC(vk, vkCreateDebugUtilsMessengerEXT);
+	vk->vkSubmitDebugUtilsMessageEXT                      = GET_INS_PROC(vk, vkSubmitDebugUtilsMessageEXT);
+	vk->vkDestroyDebugUtilsMessengerEXT                   = GET_INS_PROC(vk, vkDestroyDebugUtilsMessengerEXT);
+#endif // defined(VK_EXT_debug_utils)
 
 	// end of GENERATED instance loader code - do not modify - used by scripts
 
@@ -309,6 +316,18 @@ vk_get_device_functions(struct vk_bundle *vk)
 	vk->vkGetImageDrmFormatModifierPropertiesEXT    = GET_DEV_PROC(vk, vkGetImageDrmFormatModifierPropertiesEXT);
 
 #endif // defined(VK_EXT_image_drm_format_modifier)
+
+#if defined(VK_EXT_debug_utils)
+	vk->vkCmdBeginDebugUtilsLabelEXT                = GET_DEV_PROC(vk, vkCmdBeginDebugUtilsLabelEXT);
+	vk->vkCmdEndDebugUtilsLabelEXT                  = GET_DEV_PROC(vk, vkCmdEndDebugUtilsLabelEXT);
+	vk->vkCmdInsertDebugUtilsLabelEXT               = GET_DEV_PROC(vk, vkCmdInsertDebugUtilsLabelEXT);
+	vk->vkQueueBeginDebugUtilsLabelEXT              = GET_DEV_PROC(vk, vkQueueBeginDebugUtilsLabelEXT);
+	vk->vkQueueEndDebugUtilsLabelEXT                = GET_DEV_PROC(vk, vkQueueEndDebugUtilsLabelEXT);
+	vk->vkQueueInsertDebugUtilsLabelEXT             = GET_DEV_PROC(vk, vkQueueInsertDebugUtilsLabelEXT);
+	vk->vkSetDebugUtilsObjectNameEXT                = GET_DEV_PROC(vk, vkSetDebugUtilsObjectNameEXT);
+	vk->vkSetDebugUtilsObjectTagEXT                 = GET_DEV_PROC(vk, vkSetDebugUtilsObjectTagEXT);
+
+#endif // defined(VK_EXT_debug_utils)
 
 #if defined(VK_EXT_debug_marker)
 	vk->vkCmdDebugMarkerBeginEXT                    = GET_DEV_PROC(vk, vkCmdDebugMarkerBeginEXT);

@@ -189,6 +189,7 @@ vk_fill_in_has_instance_extensions(struct vk_bundle *vk, struct u_string_list *e
 	// Reset before filling out.
 	vk->has_EXT_display_surface_counter = false;
 	vk->has_EXT_swapchain_colorspace = false;
+	vk->has_EXT_debug_utils = false;
 
 	const char *const *exts = u_string_list_get_data(ext_list);
 	uint32_t ext_count = u_string_list_get_size(ext_list);
@@ -209,6 +210,13 @@ vk_fill_in_has_instance_extensions(struct vk_bundle *vk, struct u_string_list *e
 			continue;
 		}
 #endif // defined(VK_EXT_swapchain_colorspace)
+
+#if defined(VK_EXT_debug_utils)
+		if (strcmp(ext, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
+			vk->has_EXT_debug_utils = true;
+			continue;
+		}
+#endif // defined(VK_EXT_debug_utils)
 	}
 	// end of GENERATED instance extension code - do not modify - used by scripts
 }

@@ -116,6 +116,7 @@ struct vk_bundle
 	// beginning of GENERATED instance extension code - do not modify - used by scripts
 	bool has_EXT_display_surface_counter;
 	bool has_EXT_swapchain_colorspace;
+	bool has_EXT_debug_utils;
 	// end of GENERATED instance extension code - do not modify - used by scripts
 
 	// beginning of GENERATED device extension code - do not modify - used by scripts
@@ -250,7 +251,14 @@ struct vk_bundle
 
 #if defined(VK_EXT_display_surface_counter)
 	PFN_vkGetPhysicalDeviceSurfaceCapabilities2EXT vkGetPhysicalDeviceSurfaceCapabilities2EXT;
+
 #endif // defined(VK_EXT_display_surface_counter)
+
+#if defined(VK_EXT_debug_utils)
+	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT;
+	PFN_vkSubmitDebugUtilsMessageEXT vkSubmitDebugUtilsMessageEXT;
+	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
+#endif // defined(VK_EXT_debug_utils)
 
 	// end of GENERATED instance loader code - do not modify - used by scripts
 
@@ -416,6 +424,18 @@ struct vk_bundle
 	PFN_vkGetImageDrmFormatModifierPropertiesEXT vkGetImageDrmFormatModifierPropertiesEXT;
 
 #endif // defined(VK_EXT_image_drm_format_modifier)
+
+#if defined(VK_EXT_debug_utils)
+	PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT;
+	PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT;
+	PFN_vkCmdInsertDebugUtilsLabelEXT vkCmdInsertDebugUtilsLabelEXT;
+	PFN_vkQueueBeginDebugUtilsLabelEXT vkQueueBeginDebugUtilsLabelEXT;
+	PFN_vkQueueEndDebugUtilsLabelEXT vkQueueEndDebugUtilsLabelEXT;
+	PFN_vkQueueInsertDebugUtilsLabelEXT vkQueueInsertDebugUtilsLabelEXT;
+	PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT;
+	PFN_vkSetDebugUtilsObjectTagEXT vkSetDebugUtilsObjectTagEXT;
+
+#endif // defined(VK_EXT_debug_utils)
 
 #if defined(VK_EXT_debug_marker)
 	PFN_vkCmdDebugMarkerBeginEXT vkCmdDebugMarkerBeginEXT;
