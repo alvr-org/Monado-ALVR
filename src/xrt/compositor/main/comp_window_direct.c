@@ -257,7 +257,20 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 	vk_print_display_surface_create_info(vk, &surface_info, U_LOGGING_INFO);
 
 	// Everything decided and logged, do the creation.
-	return vk->vkCreateDisplayPlaneSurfaceKHR(vk->instance, &surface_info, NULL, &cts->surface.handle);
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	ret = vk->vkCreateDisplayPlaneSurfaceKHR( //
+	    vk->instance,                         //
+	    &surface_info,                        //
+	    NULL,                                 //
+	    &surface);                            //
+	if (ret != VK_SUCCESS) {
+		COMP_ERROR(cts->base.c, "vkCreateDisplayPlaneSurfaceKHR: %s", vk_result_string(ret));
+		return ret;
+	}
+
+	cts->surface.handle = surface;
+
+	return VK_SUCCESS;
 }
 
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT

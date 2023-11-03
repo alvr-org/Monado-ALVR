@@ -145,21 +145,29 @@ comp_window_mswin_fullscreen(struct comp_window_mswin *w)
 }
 
 static VkResult
-comp_window_mswin_create_surface(struct comp_window_mswin *w, VkSurfaceKHR *vk_surface)
+comp_window_mswin_create_surface(struct comp_window_mswin *w, VkSurfaceKHR *out_surface)
 {
 	struct vk_bundle *vk = get_vk(w);
 	VkResult ret;
+
 	VkWin32SurfaceCreateInfoKHR surface_info = {
 	    .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
 	    .hinstance = w->instance,
 	    .hwnd = w->window,
 	};
 
-	ret = vk->vkCreateWin32SurfaceKHR(vk->instance, &surface_info, NULL, vk_surface);
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	ret = vk->vkCreateWin32SurfaceKHR( //
+	    vk->instance,                  //
+	    &surface_info,                 //
+	    NULL,                          //
+	    &surface);                     //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(w->base.base.c, "vkCreateWin32SurfaceKHR: %s", vk_result_string(ret));
 		return ret;
 	}
+
+	*out_surface = surface;
 
 	return VK_SUCCESS;
 }

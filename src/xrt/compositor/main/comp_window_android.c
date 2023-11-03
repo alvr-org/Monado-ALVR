@@ -103,7 +103,7 @@ _create_android_window(struct comp_window_android *cwa)
 static VkResult
 comp_window_android_create_surface(struct comp_window_android *cwa,
                                    struct ANativeWindow *window,
-                                   VkSurfaceKHR *vk_surface)
+                                   VkSurfaceKHR *out_surface)
 {
 	struct vk_bundle *vk = get_vk(cwa);
 	VkResult ret;
@@ -114,15 +114,18 @@ comp_window_android_create_surface(struct comp_window_android *cwa,
 	    .window = window,
 	};
 
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
 	ret = vk->vkCreateAndroidSurfaceKHR( //
 	    vk->instance,                    //
 	    &surface_info,                   //
 	    NULL,                            //
-	    vk_surface);                     //
+	    &surface);                       //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(cwa->base.base.c, "vkCreateAndroidSurfaceKHR: %s", vk_result_string(ret));
 		return ret;
 	}
+
+	*out_surface = surface;
 
 	return VK_SUCCESS;
 }

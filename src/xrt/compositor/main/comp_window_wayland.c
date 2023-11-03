@@ -76,7 +76,7 @@ static bool
 comp_window_wayland_init_swapchain(struct comp_target *ct, uint32_t width, uint32_t height);
 
 static VkResult
-comp_window_wayland_create_surface(struct comp_window_wayland *w, VkSurfaceKHR *vk_surface);
+comp_window_wayland_create_surface(struct comp_window_wayland *w, VkSurfaceKHR *out_surface);
 
 static void
 comp_window_wayland_flush(struct comp_target *ct);
@@ -216,7 +216,7 @@ comp_window_wayland_init_swapchain(struct comp_target *ct, uint32_t width, uint3
 }
 
 static VkResult
-comp_window_wayland_create_surface(struct comp_window_wayland *w, VkSurfaceKHR *vk_surface)
+comp_window_wayland_create_surface(struct comp_window_wayland *w, VkSurfaceKHR *out_surface)
 {
 	struct vk_bundle *vk = get_vk(w);
 	VkResult ret;
@@ -227,11 +227,18 @@ comp_window_wayland_create_surface(struct comp_window_wayland *w, VkSurfaceKHR *
 	    .surface = w->surface,
 	};
 
-	ret = vk->vkCreateWaylandSurfaceKHR(vk->instance, &surface_info, NULL, vk_surface);
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	ret = vk->vkCreateWaylandSurfaceKHR( //
+	    vk->instance,                    //
+	    &surface_info,                   //
+	    NULL,                            //
+	    &surface);                       //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(w->base.base.c, "vkCreateWaylandSurfaceKHR: %s", vk_result_string(ret));
 		return ret;
 	}
+
+	*out_surface = surface;
 
 	return VK_SUCCESS;
 }

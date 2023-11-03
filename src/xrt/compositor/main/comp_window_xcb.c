@@ -105,7 +105,7 @@ static xcb_atom_t
 comp_window_xcb_get_atom(struct comp_window_xcb *w, const char *name);
 
 static VkResult
-comp_window_xcb_create_surface(struct comp_window_xcb *w, VkSurfaceKHR *surface);
+comp_window_xcb_create_surface(struct comp_window_xcb *w, VkSurfaceKHR *out_surface);
 
 static void
 comp_window_xcb_update_window_title(struct comp_target *ct, const char *title);
@@ -401,7 +401,7 @@ comp_window_xcb_get_atom(struct comp_window_xcb *w, const char *name)
 }
 
 static VkResult
-comp_window_xcb_create_surface(struct comp_window_xcb *w, VkSurfaceKHR *surface)
+comp_window_xcb_create_surface(struct comp_window_xcb *w, VkSurfaceKHR *out_surface)
 {
 	struct vk_bundle *vk = get_vk(w);
 	VkResult ret;
@@ -412,11 +412,18 @@ comp_window_xcb_create_surface(struct comp_window_xcb *w, VkSurfaceKHR *surface)
 	    .window = w->window,
 	};
 
-	ret = vk->vkCreateXcbSurfaceKHR(vk->instance, &surface_info, NULL, surface);
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	ret = vk->vkCreateXcbSurfaceKHR( //
+	    vk->instance,                //
+	    &surface_info,               //
+	    NULL,                        //
+	    &surface);                   //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(w->base.base.c, "vkCreateXcbSurfaceKHR: %s", vk_result_string(ret));
 		return ret;
 	}
+
+	*out_surface = surface;
 
 	return VK_SUCCESS;
 }
