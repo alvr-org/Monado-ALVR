@@ -69,6 +69,9 @@ vk_xf_readback_pool_try_create_new_frame(struct vk_bundle *vk, struct vk_image_r
 	    &memory,                             //
 	    &image);                             //
 
+	VK_NAME_OBJECT(vk, DEVICE_MEMORY, memory, "vk_image_readback_to_xf_pool device memory");
+	VK_NAME_OBJECT(vk, IMAGE, image, "vk_image_readback_to_xf_pool image");
+
 	(void)res;
 
 	// Get layout of the image (including row pitch)

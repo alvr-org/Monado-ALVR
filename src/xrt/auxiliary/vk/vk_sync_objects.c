@@ -241,7 +241,6 @@ create_semaphore_and_native(struct vk_bundle *vk,
 		return ret;
 	}
 
-
 #if defined(XRT_GRAPHICS_SYNC_HANDLE_IS_FD)
 	VkSemaphoreGetFdInfoKHR get_fd_info = {
 	    .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
