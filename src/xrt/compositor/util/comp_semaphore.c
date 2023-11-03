@@ -97,6 +97,7 @@ comp_semaphore_create(struct vk_bundle *vk,
 		return XRT_ERROR_VULKAN;
 	}
 
+	VK_NAME_OBJECT(vk, SEMAPHORE, semaphore, "comp_semaphore timeline");
 
 	struct comp_semaphore *csem = U_TYPED_CALLOC(struct comp_semaphore);
 
