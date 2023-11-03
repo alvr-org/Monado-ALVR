@@ -47,6 +47,9 @@ create_distortion_image_and_view(struct vk_bundle *vk,
 	    &image);                                                      // out_image
 	VK_CHK_AND_RET(ret, "vk_create_image_simple");
 
+	VK_NAME_OBJECT(vk, DEVICE_MEMORY, image, "distortion device_memory");
+	VK_NAME_OBJECT(vk, IMAGE, image, "distortion image");
+
 	VkImageSubresourceRange subresource_range = {
 	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 	    .baseMipLevel = 0,
@@ -63,6 +66,8 @@ create_distortion_image_and_view(struct vk_bundle *vk,
 	    subresource_range, // subresource_range
 	    &image_view);      // out_image_view
 	VK_CHK_WITH_GOTO(ret, "vk_create_view", err_free);
+
+	VK_NAME_OBJECT(vk, IMAGE_VIEW, image, "distortion image view");
 
 	*out_device_memory = device_memory;
 	*out_image = image;
@@ -216,10 +221,13 @@ create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
 
 	ret = render_buffer_init(vk, r_buffer, usage_flags, properties, size);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
+	VK_NAME_OBJECT(vk, BUFFER, r_buffer->buffer, "distortion r_buffer");
 	ret = render_buffer_init(vk, g_buffer, usage_flags, properties, size);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
+	VK_NAME_OBJECT(vk, BUFFER, g_buffer->buffer, "distortion g_buffer");
 	ret = render_buffer_init(vk, b_buffer, usage_flags, properties, size);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
+	VK_NAME_OBJECT(vk, BUFFER, b_buffer->buffer, "distortion b_buffer");
 
 	ret = render_buffer_map(vk, r_buffer);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
@@ -316,6 +324,7 @@ render_distortion_buffer_init(struct render_resources *r,
 
 	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &upload_buffer);
 	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", err_unlock);
+	VK_NAME_OBJECT(vk, COMMAND_BUFFER, upload_buffer, "render_resources distortion command buffer");
 
 	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
 		ret = create_and_queue_upload_locked( //

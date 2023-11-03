@@ -30,8 +30,7 @@ vk_from_rtr(struct render_gfx_target_resources *rtr)
 	return rtr->r->vk;
 }
 
-/*!
- * Get the @ref vk_bundle from @ref render_gfx.
+/*gfx_target_resources framebuffer@ref render_gfx.
  */
 static inline struct vk_bundle *
 vk_from_rr(struct render_gfx *rr)
@@ -715,6 +714,7 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    final_layout,                  // final_layout
 	    &rgrp->render_pass);           // out_render_pass
 	VK_CHK_WITH_RET(ret, "create_implicit_render_pass", false);
+	VK_NAME_OBJECT(vk, RENDER_PASS, rgrp->render_pass, "render_gfx_render_pass render pass");
 
 	struct mesh_params simple_params = {
 	    .do_timewarp = false,
@@ -733,6 +733,7 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->mesh_frag,     // mesh_frag
 	    &rgrp->mesh.pipeline);     // out_mesh_pipeline
 	VK_CHK_WITH_RET(ret, "create_mesh_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->mesh.pipeline, "render_gfx_render_pass mesh pipeline");
 
 	struct mesh_params timewarp_params = {
 	    .do_timewarp = true,
@@ -751,6 +752,7 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->mesh_frag,          // mesh_frag
 	    &rgrp->mesh.pipeline_timewarp); // out_mesh_pipeline
 	VK_CHK_WITH_RET(ret, "create_mesh_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->mesh.pipeline_timewarp, "render_gfx_render_pass mesh pipeline timewarp");
 
 	const VkBlendFactor blend_factor_premultiplied_alpha = VK_BLEND_FACTOR_ONE;
 	const VkBlendFactor blend_factor_unpremultiplied_alpha = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -766,6 +768,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_cylinder_frag,            // module_frag
 	    &rgrp->layer.cylinder_premultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.cylinder_premultiplied_alpha,
+	               "render_gfx_render_pass cylinder premultiplied alpha");
 
 	ret = create_layer_pipeline(                      //
 	    vk,                                           // vk
@@ -777,6 +781,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_cylinder_frag,              // module_frag
 	    &rgrp->layer.cylinder_unpremultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.cylinder_unpremultiplied_alpha,
+	               "render_gfx_render_pass cylinder unpremultiplied alpha");
 
 	// Equirect2
 	ret = create_layer_pipeline(                     //
@@ -789,6 +795,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_equirect2_frag,            // module_frag
 	    &rgrp->layer.equirect2_premultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.equirect2_premultiplied_alpha,
+	               "render_gfx_render_pass equirect2 premultiplied alpha");
 
 	ret = create_layer_pipeline(                       //
 	    vk,                                            // vk
@@ -800,6 +808,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_equirect2_frag,              // module_frag
 	    &rgrp->layer.equirect2_unpremultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.equirect2_unpremultiplied_alpha,
+	               "render_gfx_render_pass equirect2 unpremultiplied alpha");
 
 	// Projection.
 	ret = create_layer_pipeline(                //
@@ -812,6 +822,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_shared_frag,          // module_frag
 	    &rgrp->layer.proj_premultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.proj_premultiplied_alpha,
+	               "render_gfx_render_pass projection premultiplied alpha");
 
 	ret = create_layer_pipeline(                  //
 	    vk,                                       // vk
@@ -823,6 +835,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_shared_frag,            // module_frag
 	    &rgrp->layer.proj_unpremultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.proj_unpremultiplied_alpha,
+	               "render_gfx_render_pass projection unpremultiplied alpha");
 
 	// Quad
 	ret = create_layer_pipeline(                //
@@ -835,6 +849,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_shared_frag,          // module_frag
 	    &rgrp->layer.quad_premultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.quad_premultiplied_alpha,
+	               "render_gfx_render_pass quad premultiplied alpha");
 
 	ret = create_layer_pipeline(                  //
 	    vk,                                       // vk
@@ -846,6 +862,8 @@ render_gfx_render_pass_init(struct render_gfx_render_pass *rgrp,
 	    r->shaders->layer_shared_frag,            // module_frag
 	    &rgrp->layer.quad_unpremultiplied_alpha); // out_pipeline
 	VK_CHK_WITH_RET(ret, "create_layer_pipeline", false);
+	VK_NAME_OBJECT(vk, PIPELINE, rgrp->layer.quad_unpremultiplied_alpha,
+	               "render_gfx_render_pass quad unpremultiplied alpha");
 
 	// Set fields.
 	rgrp->r = r;
@@ -904,6 +922,7 @@ render_gfx_target_resources_init(struct render_gfx_target_resources *rtr,
 	    extent.height,        // height,
 	    &rtr->framebuffer);   // out_external_framebuffer
 	VK_CHK_WITH_RET(ret, "create_framebuffer", false);
+	VK_NAME_OBJECT(vk, FRAMEBUFFER, rtr->framebuffer, "render_gfx_target_resources framebuffer");
 
 	// Set fields.
 	rtr->rgrp = rgrp;
