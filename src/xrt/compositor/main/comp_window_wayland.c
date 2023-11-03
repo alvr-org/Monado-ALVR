@@ -238,6 +238,7 @@ comp_window_wayland_create_surface(struct comp_window_wayland *w, VkSurfaceKHR *
 		return ret;
 	}
 
+	VK_NAME_OBJECT(vk, SURFACE_KHR, surface, "comp_window_wayland surface");
 	*out_surface = surface;
 
 	return VK_SUCCESS;

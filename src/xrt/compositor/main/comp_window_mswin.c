@@ -167,6 +167,7 @@ comp_window_mswin_create_surface(struct comp_window_mswin *w, VkSurfaceKHR *out_
 		return ret;
 	}
 
+	VK_NAME_OBJECT(vk, SURFACE_KHR, surface, "comp_window_mswin surface");
 	*out_surface = surface;
 
 	return VK_SUCCESS;

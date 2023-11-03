@@ -125,6 +125,7 @@ comp_window_android_create_surface(struct comp_window_android *cwa,
 		return ret;
 	}
 
+	VK_NAME_OBJECT(vk, SURFACE_KHR, surface, "comp_window_android surface");
 	*out_surface = surface;
 
 	return VK_SUCCESS;

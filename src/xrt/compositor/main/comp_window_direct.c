@@ -268,6 +268,7 @@ comp_window_direct_create_surface(struct comp_target_swapchain *cts,
 		return ret;
 	}
 
+	VK_NAME_OBJECT(get_vk(cts), SURFACE_KHR, surface, "comp_target_swapchain direct surface");
 	cts->surface.handle = surface;
 
 	return VK_SUCCESS;
