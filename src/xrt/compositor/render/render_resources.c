@@ -161,7 +161,7 @@ init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct 
 	                         memory_property_flags, //
 	                         ubo_size);             // size
 	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
-	VK_NAME_OBJECT(vk, BUFFER, l_ubo, "mesh l_ubo");
+	VK_NAME_OBJECT(vk, BUFFER, l_ubo->buffer, "mesh l_ubo");
 
 	ret = render_buffer_map(vk, l_ubo);
 	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
@@ -172,7 +172,7 @@ init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct 
 	                         memory_property_flags, //
 	                         ubo_size);             // size
 	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
-	VK_NAME_OBJECT(vk, BUFFER, l_ubo, "mesh r_ubo");
+	VK_NAME_OBJECT(vk, BUFFER, r_ubo->buffer, "mesh r_ubo");
 
 	ret = render_buffer_map(vk, r_ubo);
 	VK_CHK_WITH_RET(ret, "render_buffer_map", false);

@@ -47,7 +47,7 @@ create_distortion_image_and_view(struct vk_bundle *vk,
 	    &image);                                                      // out_image
 	VK_CHK_AND_RET(ret, "vk_create_image_simple");
 
-	VK_NAME_OBJECT(vk, DEVICE_MEMORY, image, "distortion device_memory");
+	VK_NAME_OBJECT(vk, DEVICE_MEMORY, device_memory, "distortion device_memory");
 	VK_NAME_OBJECT(vk, IMAGE, image, "distortion image");
 
 	VkImageSubresourceRange subresource_range = {
@@ -67,7 +67,7 @@ create_distortion_image_and_view(struct vk_bundle *vk,
 	    &image_view);      // out_image_view
 	VK_CHK_WITH_GOTO(ret, "vk_create_view", err_free);
 
-	VK_NAME_OBJECT(vk, IMAGE_VIEW, image, "distortion image view");
+	VK_NAME_OBJECT(vk, IMAGE_VIEW, image_view, "distortion image view");
 
 	*out_device_memory = device_memory;
 	*out_image = image;
