@@ -651,6 +651,10 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
  *
  * 1. Both Mesa and the Vulkan loader didn't support setting names on the
  *    VkInstance, loader got support in 1.3.261 and Mesa hasn't as of writing.
+ * 2. For Mesa drivers we can not name VkSurfaceKHR objects on some systems as
+ *    it causes memory corruption, asserts, crashes or functions failing. This
+ *    is as of writing broken on the 23.2.1 release, fixed in main and scheduled
+ *    for the 23.2.2 release.
  *
  * @ingroup aux_vk
  */
@@ -687,7 +691,7 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
 #define VK_NAME_FRAMEBUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkFramebuffer, FRAMEBUFFER, OBJ, NAME)
 #define VK_NAME_COMMAND_POOL(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkCommandPool, COMMAND_POOL, OBJ, NAME)
 
-#define VK_NAME_SURFACE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSurfaceKHR, SURFACE_KHR, OBJ, NAME)
+#define VK_NAME_SURFACE(VK, OBJ, NAME) VK_NAME_OBJ_DISABLED(VK, VkSurfaceKHR, OBJ)
 #define VK_NAME_SWAPCHAIN(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSwapchainKHR, SWAPCHAIN_KHR, OBJ, NAME)
 // clang-format on
 
