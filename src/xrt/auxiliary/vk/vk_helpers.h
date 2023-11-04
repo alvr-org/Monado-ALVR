@@ -641,12 +641,21 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
 
 #else
 
-#define VK_NAME_OBJ(VK, TYPE, SUFFIX, OBJ, NAME)                                                                       \
+#define VK_NAME_OBJ(VK, TYPE, SUFFIX, OBJ, NAME) VK_NAME_OBJ_DISABLED(VK, TYPE, OBJ)
+
+#endif
+
+/*!
+ * Some combinations of Vulkan implementation and types are broken, we still
+ * want type safety so we have this define. Examples of broken combinations:
+ *
+ * @ingroup aux_vk
+ */
+#define VK_NAME_OBJ_DISABLED(VK, TYPE, OBJ)                                                                            \
 	do {                                                                                                           \
 		XRT_MAYBE_UNUSED TYPE _thing = OBJ;                                                                    \
 	} while (false)
 
-#endif
 
 // clang-format off
 #define VK_NAME_INSTANCE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkInstance, INSTANCE, OBJ, NAME)
