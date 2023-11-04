@@ -655,6 +655,8 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
  *    it causes memory corruption, asserts, crashes or functions failing. This
  *    is as of writing broken on the 23.2.1 release, fixed in main and scheduled
  *    for the 23.2.2 release.
+ * 3. Mesa RADV leaks the name strings for VkDescriptorSet objects for pools
+ *    that we use the reset function.
  *
  * @ingroup aux_vk
  */
@@ -687,7 +689,7 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
 #define VK_NAME_DESCRIPTOR_SET_LAYOUT(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT, OBJ, NAME)
 #define VK_NAME_SAMPLER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSampler, SAMPLER, OBJ, NAME)
 #define VK_NAME_DESCRIPTOR_POOL(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDescriptorPool, DESCRIPTOR_POOL, OBJ, NAME)
-#define VK_NAME_DESCRIPTOR_SET(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDescriptorSet, DESCRIPTOR_SET, OBJ, NAME)
+#define VK_NAME_DESCRIPTOR_SET(VK, OBJ, NAME) VK_NAME_OBJ_DISABLED(VK, VkDescriptorSet, OBJ)
 #define VK_NAME_FRAMEBUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkFramebuffer, FRAMEBUFFER, OBJ, NAME)
 #define VK_NAME_COMMAND_POOL(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkCommandPool, COMMAND_POOL, OBJ, NAME)
 
