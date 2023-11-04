@@ -649,6 +649,9 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
  * Some combinations of Vulkan implementation and types are broken, we still
  * want type safety so we have this define. Examples of broken combinations:
  *
+ * 1. Both Mesa and the Vulkan loader didn't support setting names on the
+ *    VkInstance, loader got support in 1.3.261 and Mesa hasn't as of writing.
+ *
  * @ingroup aux_vk
  */
 #define VK_NAME_OBJ_DISABLED(VK, TYPE, OBJ)                                                                            \
@@ -658,7 +661,7 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
 
 
 // clang-format off
-#define VK_NAME_INSTANCE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkInstance, INSTANCE, OBJ, NAME)
+#define VK_NAME_INSTANCE(VK, OBJ, NAME) VK_NAME_OBJ_DISABLED(VK, VkInstance, OBJ)
 #define VK_NAME_PHYSICAL_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPhysicalDevice, PHYSICAL_DEVICE, OBJ, NAME)
 #define VK_NAME_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDevice, DEVICE, OBJ, NAME)
 #define VK_NAME_QUEUE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkQueue, QUEUE, OBJ, NAME)
