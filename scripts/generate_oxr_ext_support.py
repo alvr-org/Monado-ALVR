@@ -58,6 +58,7 @@ EXTENSIONS = (
     ['XR_EXT_hand_interaction'],
     ['XR_EXT_hand_tracking'],
     ['XR_EXT_hp_mixed_reality_controller'],
+    ['XR_EXT_local_floor', 'XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR'],
     ['XR_EXT_palm_pose', 'ALWAYS_DISABLED'],
     ['XR_EXT_samsung_odyssey_controller'],
     ['XR_FB_display_refresh_rate'],

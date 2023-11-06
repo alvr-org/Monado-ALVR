@@ -303,6 +303,17 @@
 
 
 /*
+ * XR_EXT_local_floor
+ */
+#if defined(XR_EXT_local_floor) && defined(XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR)
+#define OXR_HAVE_EXT_local_floor
+#define OXR_EXTENSION_SUPPORT_EXT_local_floor(_) _(EXT_local_floor, EXT_LOCAL_FLOOR)
+#else
+#define OXR_EXTENSION_SUPPORT_EXT_local_floor(_)
+#endif
+
+
+/*
  * XR_EXT_palm_pose
  */
 #if defined(XR_EXT_palm_pose) && defined(ALWAYS_DISABLED)
@@ -520,6 +531,7 @@
     OXR_EXTENSION_SUPPORT_EXT_hand_interaction(_) \
     OXR_EXTENSION_SUPPORT_EXT_hand_tracking(_) \
     OXR_EXTENSION_SUPPORT_EXT_hp_mixed_reality_controller(_) \
+    OXR_EXTENSION_SUPPORT_EXT_local_floor(_) \
     OXR_EXTENSION_SUPPORT_EXT_palm_pose(_) \
     OXR_EXTENSION_SUPPORT_EXT_samsung_odyssey_controller(_) \
     OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) \
