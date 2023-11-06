@@ -130,7 +130,7 @@ private:
 	bool startup_complete = false;
 
 	//! Timeout duration in seconds
-	static constexpr std::chrono::seconds START_TIMEOUT_SECONDS = 20s;
+	static constexpr std::chrono::seconds START_TIMEOUT_SECONDS = 40s;
 };
 } // namespace
 
