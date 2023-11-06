@@ -194,7 +194,7 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 	 * Reference space support.
 	 */
 
-	static_assert(4 <= ARRAY_SIZE(sys->reference_spaces), "Not enough space in array");
+	static_assert(5 <= ARRAY_SIZE(sys->reference_spaces), "Not enough space in array");
 
 	if (sys->xso->semantic.view != NULL) {
 		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_VIEW;
@@ -219,6 +219,12 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 	if (sys->xso->semantic.stage != NULL) {
 		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_STAGE;
 	}
+
+#ifdef OXR_HAVE_MSFT_unbounded_reference_space
+	if (sys->inst->extensions.MSFT_unbounded_reference_space && sys->xso->semantic.unbounded != NULL) {
+		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT;
+	}
+#endif
 
 
 	/*

@@ -54,6 +54,16 @@ is_reference_space_type_valid(struct oxr_logger *log,
 		    log, XR_ERROR_VALIDATION_FAILURE,
 		    "(%s == XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT) is only valid if XR_EXT_local_floor is enabled",
 		    field_name);
+	case XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT:
+#ifdef OXR_HAVE_MSFT_unbounded_reference_space
+		if (sys->inst->extensions.MSFT_unbounded_reference_space) {
+			return XR_SUCCESS;
+		}
+#endif
+		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+		                 "(%s == XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT) is only valid if "
+		                 "XR_MSFT_unbounded_reference_space is enabled",
+		                 field_name);
 	default: break;
 	}
 
