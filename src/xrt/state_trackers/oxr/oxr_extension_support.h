@@ -202,6 +202,17 @@
 
 
 /*
+ * XR_KHR_visibility_mask
+ */
+#if defined(XR_KHR_visibility_mask)
+#define OXR_HAVE_KHR_visibility_mask
+#define OXR_EXTENSION_SUPPORT_KHR_visibility_mask(_) _(KHR_visibility_mask, KHR_VISIBILITY_MASK)
+#else
+#define OXR_EXTENSION_SUPPORT_KHR_visibility_mask(_)
+#endif
+
+
+/*
  * XR_KHR_vulkan_enable
  */
 #if defined(XR_KHR_vulkan_enable) && defined(XR_USE_GRAPHICS_API_VULKAN)
@@ -534,6 +545,7 @@
     OXR_EXTENSION_SUPPORT_KHR_opengl_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_opengl_es_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_swapchain_usage_input_attachment_bit(_) \
+    OXR_EXTENSION_SUPPORT_KHR_visibility_mask(_) \
     OXR_EXTENSION_SUPPORT_KHR_vulkan_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_vulkan_enable2(_) \
     OXR_EXTENSION_SUPPORT_KHR_win32_convert_performance_counter_time(_) \

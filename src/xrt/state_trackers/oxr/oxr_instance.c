@@ -68,6 +68,10 @@ oxr_instance_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 	u_hashset_destroy(&inst->action_sets.name_store);
 	u_hashset_destroy(&inst->action_sets.loc_store);
 
+	// Free the mask here, no system destroy yet.
+	free(inst->system.visibility_mask);
+	inst->system.visibility_mask = NULL;
+
 	xrt_space_overseer_destroy(&inst->system.xso);
 	os_mutex_destroy(&inst->system.sync_actions_mutex);
 	xrt_system_devices_destroy(&inst->system.xsysd);

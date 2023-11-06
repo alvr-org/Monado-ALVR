@@ -264,6 +264,10 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrGetOpenGLESGraphicsRequirementsKHR, KHR_opengl_es_enable);
 #endif // OXR_HAVE_KHR_opengl_es_enable
 
+#ifdef OXR_HAVE_KHR_visibility_mask
+	ENTRY_IF_EXT(xrGetVisibilityMaskKHR, KHR_visibility_mask);
+#endif // OXR_HAVE_KHR_visibility_mask
+
 #ifdef OXR_HAVE_KHR_vulkan_enable
 	ENTRY_IF_EXT(xrGetVulkanInstanceExtensionsKHR, KHR_vulkan_enable);
 	ENTRY_IF_EXT(xrGetVulkanDeviceExtensionsKHR, KHR_vulkan_enable);

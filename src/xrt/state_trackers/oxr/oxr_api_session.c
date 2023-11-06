@@ -258,7 +258,6 @@ oxr_xrLocateViews(XrSession session,
  */
 
 #ifdef XR_KHR_visibility_mask
-
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrGetVisibilityMaskKHR(XrSession session,
                            XrViewConfigurationType viewConfigurationType,
@@ -268,16 +267,45 @@ oxr_xrGetVisibilityMaskKHR(XrSession session,
 {
 	OXR_TRACE_MARKER();
 
-	struct oxr_session *sess;
+	struct oxr_session *sess = NULL;
 	struct oxr_logger log;
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrGetVisibilityMaskKHR");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 
-	return oxr_error(&log, XR_ERROR_HANDLE_INVALID, "Not implemented");
+	OXR_VERIFY_EXTENSION(&log, sess->sys->inst, KHR_visibility_mask);
+
+	visibilityMask->vertexCountOutput = 0;
+	visibilityMask->indexCountOutput = 0;
+
+	OXR_VERIFY_VIEW_CONFIG_TYPE(&log, sess->sys->inst, viewConfigurationType);
+	if (viewConfigurationType != sess->sys->view_config_type) {
+		return oxr_error(&log, XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED,
+		                 "(viewConfigurationType == 0x%08x) unsupported view configuration type",
+		                 viewConfigurationType);
+	}
+
+	OXR_VERIFY_VIEW_INDEX(&log, viewIndex);
+
+	if (visibilityMaskType != XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR &&
+	    visibilityMaskType != XR_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH_KHR &&
+	    visibilityMaskType != XR_VISIBILITY_MASK_TYPE_LINE_LOOP_KHR) {
+		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "(visibilityMaskType == %d) is invalid",
+		                 visibilityMaskType);
+	}
+
+	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, visibilityMask, XR_TYPE_VISIBILITY_MASK_KHR);
+
+	if (visibilityMask->vertexCapacityInput != 0) {
+		OXR_VERIFY_ARG_NOT_NULL(&log, visibilityMask->vertices);
+	}
+
+	if (visibilityMask->indexCapacityInput != 0) {
+		OXR_VERIFY_ARG_NOT_NULL(&log, visibilityMask->indices);
+	}
+
+	return oxr_session_get_visibility_mask(&log, sess, visibilityMaskType, visibilityMask);
 }
-
-#endif
-
+#endif // OXR_HAVE_KHR_visibility_mask
 
 /*
  *

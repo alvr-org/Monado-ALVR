@@ -49,6 +49,7 @@ EXTENSIONS = (
     ['XR_KHR_opengl_enable', 'XR_USE_GRAPHICS_API_OPENGL'],
     ['XR_KHR_opengl_es_enable', 'XR_USE_GRAPHICS_API_OPENGL_ES'],
     ['XR_KHR_swapchain_usage_input_attachment_bit'],
+    ['XR_KHR_visibility_mask'],
     ['XR_KHR_vulkan_enable', 'XR_USE_GRAPHICS_API_VULKAN'],
     ['XR_KHR_vulkan_enable2', 'XR_USE_GRAPHICS_API_VULKAN'],
     ['XR_KHR_win32_convert_performance_counter_time', 'XR_USE_PLATFORM_WIN32'],

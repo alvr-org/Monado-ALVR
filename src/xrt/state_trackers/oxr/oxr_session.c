@@ -1159,3 +1159,61 @@ oxr_session_android_thread_settings(struct oxr_logger *log,
 	return XR_SUCCESS;
 }
 #endif // OXR_HAVE_KHR_android_thread_settings
+
+#ifdef OXR_HAVE_KHR_visibility_mask
+
+static enum xrt_visibility_mask_type
+convert_mask_type(XrVisibilityMaskTypeKHR type)
+{
+	switch (type) {
+	case XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR: return XRT_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH;
+	case XR_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH_KHR: return XRT_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH;
+	case XR_VISIBILITY_MASK_TYPE_LINE_LOOP_KHR: return XRT_VISIBILITY_MASK_TYPE_LINE_LOOP;
+	default: return (enum xrt_visibility_mask_type)0;
+	}
+}
+
+XrResult
+oxr_session_get_visibility_mask(struct oxr_logger *log,
+                                struct oxr_session *sess,
+                                XrVisibilityMaskTypeKHR visibilityMaskType,
+                                XrVisibilityMaskKHR *visibilityMask)
+{
+	struct oxr_system *sys = sess->sys;
+	struct xrt_device *xdev = GET_XDEV_BY_ROLE(sess->sys, head);
+	enum xrt_visibility_mask_type type = convert_mask_type(visibilityMaskType);
+
+	if (sys->visibility_mask && sys->visibility_mask->type != type) {
+		free(sys->visibility_mask);
+		sys->visibility_mask = NULL;
+	}
+
+	if (sys->visibility_mask == NULL) {
+		xdev->get_visibility_mask(xdev, type, &sys->visibility_mask);
+	}
+
+	struct xrt_visibility_mask *mask = sys->visibility_mask;
+
+	visibilityMask->vertexCountOutput = mask->vertex_count;
+	visibilityMask->indexCountOutput = mask->index_count;
+
+	if (visibilityMask->vertexCapacityInput == 0 || visibilityMask->indexCapacityInput == 0) {
+		return XR_SUCCESS;
+	}
+
+	if (visibilityMask->vertexCapacityInput < mask->vertex_count) {
+		return oxr_error(log, XR_ERROR_SIZE_INSUFFICIENT, "vertexCapacityInput is %u, need %u",
+		                 visibilityMask->vertexCapacityInput, mask->vertex_count);
+	} else if (visibilityMask->indexCapacityInput < mask->index_count) {
+		return oxr_error(log, XR_ERROR_SIZE_INSUFFICIENT, "indexCapacityInput is %u, need %u",
+		                 visibilityMask->indexCapacityInput, mask->index_count);
+	}
+
+	memcpy(visibilityMask->vertices, xrt_visibility_mask_get_vertices(mask),
+	       sizeof(struct xrt_vec2) * mask->vertex_count);
+	memcpy(visibilityMask->indices, xrt_visibility_mask_get_indices(mask), sizeof(uint32_t) * mask->index_count);
+
+	return XR_SUCCESS;
+}
+
+#endif // OXR_HAVE_KHR_visibility_mask
