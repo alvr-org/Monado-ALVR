@@ -1285,6 +1285,7 @@ vk_init_from_given(struct vk_bundle *vk,
                    bool external_fence_fd_enabled,
                    bool external_semaphore_fd_enabled,
                    bool timeline_semaphore_enabled,
+                   bool debug_utils_enabled,
                    enum u_logging_level log_level)
 {
 	VkResult ret;
@@ -1332,6 +1333,12 @@ vk_init_from_given(struct vk_bundle *vk,
 	if (timeline_semaphore_enabled) {
 		vk->has_KHR_timeline_semaphore = true;
 		vk->features.timeline_semaphore = true;
+	}
+#endif
+
+#ifdef VK_EXT_debug_utils
+	if (debug_utils_enabled) {
+		vk->has_EXT_debug_utils = true;
 	}
 #endif
 

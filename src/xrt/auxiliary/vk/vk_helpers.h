@@ -980,6 +980,7 @@ vk_init_from_given(struct vk_bundle *vk,
                    bool external_fence_fd_enabled,
                    bool external_semaphore_fd_enabled,
                    bool timeline_semaphore_enabled,
+                   bool debug_utils_enabled,
                    enum u_logging_level log_level);
 
 

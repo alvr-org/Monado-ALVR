@@ -831,6 +831,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	    external_fence_fd_enabled,     // external_fence_fd_enabled
 	    external_semaphore_fd_enabled, // external_semaphore_fd_enabled
 	    timeline_semaphore_enabled,    // timeline_semaphore_enabled
+	    false,                         // debug_utils_enabled,
 	    log_level);                    // log_level
 	if (ret != VK_SUCCESS) {
 		goto err_free;
