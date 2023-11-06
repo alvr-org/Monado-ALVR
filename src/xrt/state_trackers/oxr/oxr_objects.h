@@ -1276,6 +1276,9 @@ struct oxr_system
 	uint32_t blend_mode_count;
 	XrEnvironmentBlendMode blend_modes[3];
 
+	XrReferenceSpaceType reference_spaces[3];
+	uint32_t reference_space_count;
+
 	//! Cache of the last known system roles, see @xrt_system_roles::generation_id
 	struct xrt_system_roles dynamic_roles_cache;
 	struct os_mutex sync_actions_mutex;

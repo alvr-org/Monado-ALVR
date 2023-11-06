@@ -175,6 +175,11 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 	sys->views[1].maxSwapchainSampleCount         = info->views[1].max.sample_count;
 	// clang-format on
 
+
+	/*
+	 * Blend mode support.
+	 */
+
 	assert(info->supported_blend_mode_count <= ARRAY_SIZE(sys->blend_modes));
 	assert(info->supported_blend_mode_count != 0);
 
@@ -183,6 +188,30 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 		sys->blend_modes[i] = (XrEnvironmentBlendMode)info->supported_blend_modes[i];
 	}
 	sys->blend_mode_count = (uint32_t)info->supported_blend_mode_count;
+
+
+	/*
+	 * Reference space support.
+	 */
+
+	static_assert(3 <= ARRAY_SIZE(sys->reference_spaces), "Not enough space in array");
+
+	if (sys->xso->semantic.view != NULL) {
+		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_VIEW;
+	}
+
+	if (sys->xso->semantic.local != NULL) {
+		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_LOCAL;
+	}
+
+	if (sys->xso->semantic.stage != NULL) {
+		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_STAGE;
+	}
+
+
+	/*
+	 * Done.
+	 */
 
 	return XR_SUCCESS;
 }

@@ -27,6 +27,35 @@
 #include <inttypes.h>
 
 
+/*
+ *
+ * Helpers.
+ *
+ */
+
+static XrResult
+is_reference_space_type_supported(struct oxr_logger *log,
+                                  struct oxr_system *sys,
+                                  const char *field_name,
+                                  XrReferenceSpaceType referenceSpaceType)
+{
+	for (uint32_t i = 0; i < sys->reference_space_count; i++) {
+		if (sys->reference_spaces[i] == referenceSpaceType) {
+			return XR_SUCCESS;
+		}
+	}
+
+	return oxr_error(log, XR_ERROR_REFERENCE_SPACE_UNSUPPORTED,
+	                 "(%s == 0x%08x) is not a supported XrReferenceSpaceType", field_name, referenceSpaceType);
+}
+
+
+/*
+ *
+ * API functions.
+ *
+ */
+
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrCreateActionSpace(XrSession session, const XrActionSpaceCreateInfo *createInfo, XrSpace *space)
 {
@@ -52,12 +81,6 @@ oxr_xrCreateActionSpace(XrSession session, const XrActionSpaceCreateInfo *create
 	return oxr_session_success_result(sess);
 }
 
-static const XrReferenceSpaceType session_spaces[] = {
-    XR_REFERENCE_SPACE_TYPE_VIEW,
-    XR_REFERENCE_SPACE_TYPE_LOCAL,
-    XR_REFERENCE_SPACE_TYPE_STAGE,
-};
-
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrEnumerateReferenceSpaces(XrSession session,
                                uint32_t spaceCapacityInput,
@@ -70,8 +93,14 @@ oxr_xrEnumerateReferenceSpaces(XrSession session,
 	struct oxr_logger log;
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrEnumerateReferenceSpaces");
 
-	OXR_TWO_CALL_HELPER(&log, spaceCapacityInput, spaceCountOutput, spaces, ARRAY_SIZE(session_spaces),
-	                    session_spaces, oxr_session_success_result(sess));
+	OXR_TWO_CALL_HELPER(                   //
+	    &log,                              //
+	    spaceCapacityInput,                //
+	    spaceCountOutput,                  //
+	    spaces,                            //
+	    sess->sys->reference_space_count,  //
+	    sess->sys->reference_spaces,       //
+	    oxr_session_success_result(sess)); //
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL
@@ -79,6 +108,7 @@ oxr_xrGetReferenceSpaceBoundsRect(XrSession session, XrReferenceSpaceType refere
 {
 	OXR_TRACE_MARKER();
 
+	XrResult ret;
 	struct oxr_session *sess;
 	struct oxr_logger log;
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrGetReferenceSpaceBoundsRect");
@@ -94,6 +124,11 @@ oxr_xrGetReferenceSpaceBoundsRect(XrSession session, XrReferenceSpaceType refere
 		                 "(referenceSpaceType == 0x%08x) is not a "
 		                 "valid XrReferenceSpaceType",
 		                 referenceSpaceType);
+	}
+
+	ret = is_reference_space_type_supported(&log, sess->sys, "referenceSpaceType", referenceSpaceType);
+	if (ret != XR_SUCCESS) {
+		return ret;
 	}
 
 	bounds->width = 0.0;
@@ -116,6 +151,12 @@ oxr_xrCreateReferenceSpace(XrSession session, const XrReferenceSpaceCreateInfo *
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, createInfo, XR_TYPE_REFERENCE_SPACE_CREATE_INFO);
 	OXR_VERIFY_POSE(&log, createInfo->poseInReferenceSpace);
+
+	ret = is_reference_space_type_supported(&log, sess->sys, "createInfo->referenceSpaceType",
+	                                        createInfo->referenceSpaceType);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
 
 	ret = oxr_space_reference_create(&log, sess, createInfo, &spc);
 	if (ret != XR_SUCCESS) {
