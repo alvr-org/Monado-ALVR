@@ -67,6 +67,7 @@ oxr_session_populate_egl(struct oxr_logger *log,
 	    next->config,                                   //
 	    next->context,                                  //
 	    next->getProcAddress,                           //
+	    false,                                          // renderdoc_enabled
 	    &xcgl);                                         //
 
 	if (xret == XRT_ERROR_EGL_CONFIG_MISSING) {
