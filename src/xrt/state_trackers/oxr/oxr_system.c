@@ -194,7 +194,7 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 	 * Reference space support.
 	 */
 
-	static_assert(3 <= ARRAY_SIZE(sys->reference_spaces), "Not enough space in array");
+	static_assert(4 <= ARRAY_SIZE(sys->reference_spaces), "Not enough space in array");
 
 	if (sys->xso->semantic.view != NULL) {
 		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_VIEW;
@@ -203,6 +203,18 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 	if (sys->xso->semantic.local != NULL) {
 		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_LOCAL;
 	}
+
+#ifdef OXR_HAVE_EXT_local_floor
+	if (sys->inst->extensions.EXT_local_floor) {
+		if (sys->xso->semantic.local_floor != NULL) {
+			sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT;
+		} else {
+			oxr_warn(log,
+			         "XR_EXT_local_floor enabled but system doesn't support local_floor,"
+			         " breaking spec by not exposing the reference space.");
+		}
+	}
+#endif
 
 	if (sys->xso->semantic.stage != NULL) {
 		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_STAGE;

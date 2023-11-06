@@ -44,6 +44,16 @@ is_reference_space_type_valid(struct oxr_logger *log,
 	case XR_REFERENCE_SPACE_TYPE_VIEW:
 	case XR_REFERENCE_SPACE_TYPE_LOCAL:
 	case XR_REFERENCE_SPACE_TYPE_STAGE: return XR_SUCCESS;
+	case XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT:
+#ifdef OXR_HAVE_EXT_local_floor
+		if (sys->inst->extensions.EXT_local_floor) {
+			return XR_SUCCESS;
+		}
+#endif
+		return oxr_error(
+		    log, XR_ERROR_VALIDATION_FAILURE,
+		    "(%s == XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT) is only valid if XR_EXT_local_floor is enabled",
+		    field_name);
 	default: break;
 	}
 
