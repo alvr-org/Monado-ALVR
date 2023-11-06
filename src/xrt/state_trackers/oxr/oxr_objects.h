@@ -1459,6 +1459,12 @@ struct oxr_instance
 		bool disable_vulkan_format_depth_stencil;
 		//! Unreal 4 has a bug calling xrEndSession; the function should just exit
 		bool skip_end_session;
+
+		/*!
+		 * Return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED instead of
+		 * XR_ERROR_VALIDATION_FAILURE in xrCreateReferenceSpace.
+		 */
+		bool no_validation_error_in_create_ref_space;
 	} quirks;
 
 	//! Debug messengers

@@ -84,3 +84,18 @@ xr_ref_space_to_oxr(XrReferenceSpaceType space_type)
 	// wrap around or negative depending on enum data type, invalid value either way.
 	return (enum oxr_space_type) - 1;
 }
+
+static inline const char *
+xr_ref_space_to_string(XrReferenceSpaceType space_type)
+{
+	switch (space_type) {
+	case XR_REFERENCE_SPACE_TYPE_VIEW: return "XR_REFERENCE_SPACE_TYPE_VIEW";
+	case XR_REFERENCE_SPACE_TYPE_LOCAL: return "XR_REFERENCE_SPACE_TYPE_LOCAL";
+	case XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT: return "XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT";
+	case XR_REFERENCE_SPACE_TYPE_STAGE: return "XR_REFERENCE_SPACE_TYPE_STAGE";
+	case XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT: return "XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT";
+	case XR_REFERENCE_SPACE_TYPE_COMBINED_EYE_VARJO: return "XR_REFERENCE_SPACE_TYPE_COMBINED_EYE_VARJO";
+	case XR_REFERENCE_SPACE_TYPE_MAX_ENUM: return "XR_REFERENCE_SPACE_TYPE_MAX_ENUM";
+	default: return "UNKNOWN REFERENCE SPACE";
+	}
+}

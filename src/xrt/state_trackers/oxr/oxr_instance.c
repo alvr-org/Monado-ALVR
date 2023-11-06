@@ -169,14 +169,19 @@ detect_engine(struct oxr_logger *log, struct oxr_instance *inst, const XrInstanc
 static void
 apply_quirks(struct oxr_logger *log, struct oxr_instance *inst)
 {
+	// Reset.
 	inst->quirks.skip_end_session = false;
 	inst->quirks.disable_vulkan_format_depth_stencil = false;
+	inst->quirks.no_validation_error_in_create_ref_space = false;
 
 	if (starts_with("UnrealEngine", inst->appinfo.detected.engine.name) && //
 	    inst->appinfo.detected.engine.major == 4 &&                        //
 	    inst->appinfo.detected.engine.minor <= 27) {
 		inst->quirks.skip_end_session = true;
 	}
+
+	// Currently always true.
+	inst->quirks.no_validation_error_in_create_ref_space = true;
 }
 
 XrResult
@@ -365,16 +370,18 @@ oxr_instance_create(struct oxr_logger *log,
 	        "\tcreateInfo->applicationInfo.engineVersion: %i\n"
 	        "\tappinfo.detected.engine.name: %s\n"
 	        "\tappinfo.detected.engine.version: %i.%i.%i\n"
-	        "\tquirks.disable_vulkan_format_depth_stencil: %s",
-	        createInfo->applicationInfo.applicationName,                          //
-	        createInfo->applicationInfo.applicationVersion,                       //
-	        createInfo->applicationInfo.engineName,                               //
-	        createInfo->applicationInfo.engineVersion,                            //
-	        inst->appinfo.detected.engine.name,                                   //
-	        inst->appinfo.detected.engine.major,                                  //
-	        inst->appinfo.detected.engine.minor,                                  //
-	        inst->appinfo.detected.engine.patch,                                  //
-	        inst->quirks.disable_vulkan_format_depth_stencil ? "true" : "false"); //
+	        "\tquirks.disable_vulkan_format_depth_stencil: %s"
+	        "\tquirks.no_validation_error_in_create_ref_space: %s",
+	        createInfo->applicationInfo.applicationName,                              //
+	        createInfo->applicationInfo.applicationVersion,                           //
+	        createInfo->applicationInfo.engineName,                                   //
+	        createInfo->applicationInfo.engineVersion,                                //
+	        inst->appinfo.detected.engine.name,                                       //
+	        inst->appinfo.detected.engine.major,                                      //
+	        inst->appinfo.detected.engine.minor,                                      //
+	        inst->appinfo.detected.engine.patch,                                      //
+	        inst->quirks.disable_vulkan_format_depth_stencil ? "true" : "false",      //
+	        inst->quirks.no_validation_error_in_create_ref_space ? "true" : "false"); //
 
 	debug_print_devices(log, sys);
 

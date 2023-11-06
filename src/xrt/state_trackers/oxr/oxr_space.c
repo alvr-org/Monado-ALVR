@@ -31,33 +31,6 @@
 
 /*
  *
- * Helper functions.
- *
- */
-
-static XrResult
-check_reference_space_type(struct oxr_logger *log, XrReferenceSpaceType type)
-{
-	switch (type) {
-	case XR_REFERENCE_SPACE_TYPE_VIEW: return XR_SUCCESS;
-	case XR_REFERENCE_SPACE_TYPE_LOCAL: return XR_SUCCESS;
-	case XR_REFERENCE_SPACE_TYPE_STAGE:
-		// For now stage space is always supported.
-		if (true) {
-			return XR_SUCCESS;
-		}
-		return oxr_error(log, XR_ERROR_REFERENCE_SPACE_UNSUPPORTED,
-		                 "(createInfo->referenceSpaceType == XR_REFERENCE_SPACE_TYPE_STAGE)"
-		                 " Stage space is unsupported on this device.");
-	default:
-		return oxr_error(log, XR_ERROR_REFERENCE_SPACE_UNSUPPORTED,
-		                 "(createInfo->referenceSpaceType == 0x%08x)", type);
-	}
-}
-
-
-/*
- *
  * To xrt_space functions.
  *
  */
@@ -187,13 +160,6 @@ oxr_space_reference_create(struct oxr_logger *log,
                            const XrReferenceSpaceCreateInfo *createInfo,
                            struct oxr_space **out_space)
 {
-	XrResult ret;
-
-	ret = check_reference_space_type(log, createInfo->referenceSpaceType);
-	if (ret != XR_SUCCESS) {
-		return ret;
-	}
-
 	if (!math_pose_validate((struct xrt_pose *)&createInfo->poseInReferenceSpace)) {
 		return oxr_error(log, XR_ERROR_POSE_INVALID, "(createInfo->poseInReferenceSpace)");
 	}

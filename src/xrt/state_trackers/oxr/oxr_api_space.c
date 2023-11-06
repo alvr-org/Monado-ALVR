@@ -16,6 +16,7 @@
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
+#include "oxr_conversions.h"
 #include "oxr_two_call.h"
 
 #include "oxr_api_funcs.h"
@@ -34,6 +35,23 @@
  */
 
 static XrResult
+is_reference_space_type_valid(struct oxr_logger *log,
+                              struct oxr_system *sys,
+                              const char *field_name,
+                              XrReferenceSpaceType referenceSpaceType)
+{
+	switch (referenceSpaceType) {
+	case XR_REFERENCE_SPACE_TYPE_VIEW:
+	case XR_REFERENCE_SPACE_TYPE_LOCAL:
+	case XR_REFERENCE_SPACE_TYPE_STAGE: return XR_SUCCESS;
+	default: break;
+	}
+
+	return oxr_error(log, XR_ERROR_VALIDATION_FAILURE, "(%s == 0x%08x) is not a valid XrReferenceSpaceType",
+	                 field_name, referenceSpaceType);
+}
+
+static XrResult
 is_reference_space_type_supported(struct oxr_logger *log,
                                   struct oxr_system *sys,
                                   const char *field_name,
@@ -45,8 +63,13 @@ is_reference_space_type_supported(struct oxr_logger *log,
 		}
 	}
 
+	/*
+	 * This function assumes that the referenceSpaceType has
+	 * been validated with is_reference_space_type_valid first.
+	 */
 	return oxr_error(log, XR_ERROR_REFERENCE_SPACE_UNSUPPORTED,
-	                 "(%s == 0x%08x) is not a supported XrReferenceSpaceType", field_name, referenceSpaceType);
+	                 "(%s == %s) is not a supported XrReferenceSpaceType", field_name,
+	                 xr_ref_space_to_string(referenceSpaceType));
 }
 
 
@@ -114,16 +137,9 @@ oxr_xrGetReferenceSpaceBoundsRect(XrSession session, XrReferenceSpaceType refere
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrGetReferenceSpaceBoundsRect");
 	OXR_VERIFY_ARG_NOT_NULL(&log, bounds);
 
-
-	switch (referenceSpaceType) {
-	case XR_REFERENCE_SPACE_TYPE_VIEW:
-	case XR_REFERENCE_SPACE_TYPE_LOCAL:
-	case XR_REFERENCE_SPACE_TYPE_STAGE: break;
-	default:
-		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE,
-		                 "(referenceSpaceType == 0x%08x) is not a "
-		                 "valid XrReferenceSpaceType",
-		                 referenceSpaceType);
+	ret = is_reference_space_type_valid(&log, sess->sys, "referenceSpaceType", referenceSpaceType);
+	if (ret != XR_SUCCESS) {
+		return ret;
 	}
 
 	ret = is_reference_space_type_supported(&log, sess->sys, "referenceSpaceType", referenceSpaceType);
@@ -151,6 +167,18 @@ oxr_xrCreateReferenceSpace(XrSession session, const XrReferenceSpaceCreateInfo *
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, createInfo, XR_TYPE_REFERENCE_SPACE_CREATE_INFO);
 	OXR_VERIFY_POSE(&log, createInfo->poseInReferenceSpace);
+
+	ret = is_reference_space_type_valid(&log, sess->sys, "createInfo->referenceSpaceType",
+	                                    createInfo->referenceSpaceType);
+	if (ret != XR_SUCCESS) {
+		// The CTS currently requiers us to return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED.
+		if (sess->sys->inst->quirks.no_validation_error_in_create_ref_space &&
+		    ret == XR_ERROR_VALIDATION_FAILURE) {
+			return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED;
+		} else {
+			return ret;
+		}
+	}
 
 	ret = is_reference_space_type_supported(&log, sess->sys, "createInfo->referenceSpaceType",
 	                                        createInfo->referenceSpaceType);
