@@ -143,6 +143,7 @@ TEST_CASE("client_compositor", "[.][needgpu]")
 #else
 #error "Need port for fence sync handles checkers"
 #endif
+	    false,                  // debug_utils_enabled
 	    vk->queue_family_index, //
 	    vk->queue_index);
 	struct xrt_compositor *xc = &xcvk->base;

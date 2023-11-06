@@ -119,6 +119,7 @@ oxr_session_populate_vk(struct oxr_logger *log,
 	    external_fence_fd_enabled,                               //
 	    external_semaphore_fd_enabled,                           //
 	    timeline_semaphore_enabled,                              //
+	    false,                                                   //
 	    next->queueFamilyIndex,                                  //
 	    next->queueIndex);                                       //
 
