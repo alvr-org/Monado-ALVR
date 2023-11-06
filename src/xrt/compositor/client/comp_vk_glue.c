@@ -86,6 +86,7 @@ xrt_gfx_vk_provider_create(struct xrt_compositor_native *xcn,
 	    external_fence_fd_enabled,                                  //
 	    external_semaphore_fd_enabled,                              //
 	    timeline_semaphore_enabled,                                 //
+	    debug_utils_enabled,                                        //
 	    queue_family_index,                                         //
 	    queue_index);                                               //
 
