@@ -394,6 +394,18 @@
 
 
 /*
+ * XR_MSFT_unbounded_reference_space
+ */
+#if defined(XR_MSFT_unbounded_reference_space) && defined(XRT_FEATURE_OPENXR_SPACE_UNBOUNDED)
+#define OXR_HAVE_MSFT_unbounded_reference_space
+#define OXR_EXTENSION_SUPPORT_MSFT_unbounded_reference_space(_)                                                        \
+	_(MSFT_unbounded_reference_space, MSFT_UNBOUNDED_REFERENCE_SPACE)
+#else
+#define OXR_EXTENSION_SUPPORT_MSFT_unbounded_reference_space(_)
+#endif
+
+
+/*
  * XR_OPPO_controller_interaction
  */
 #if defined(XR_OPPO_controller_interaction)
@@ -539,6 +551,7 @@
     OXR_EXTENSION_SUPPORT_MND_headless(_) \
     OXR_EXTENSION_SUPPORT_MND_swapchain_usage_input_attachment_bit(_) \
     OXR_EXTENSION_SUPPORT_MSFT_hand_interaction(_) \
+    OXR_EXTENSION_SUPPORT_MSFT_unbounded_reference_space(_) \
     OXR_EXTENSION_SUPPORT_OPPO_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_EXTX_overlay(_) \
     OXR_EXTENSION_SUPPORT_HTCX_vive_tracker_interaction(_) \

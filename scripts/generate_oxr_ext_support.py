@@ -66,6 +66,7 @@ EXTENSIONS = (
     ['XR_MND_headless'],
     ['XR_MND_swapchain_usage_input_attachment_bit'],
     ['XR_MSFT_hand_interaction', 'ALWAYS_DISABLED'],
+    ['XR_MSFT_unbounded_reference_space', 'XRT_FEATURE_OPENXR_SPACE_UNBOUNDED'],
     ['XR_OPPO_controller_interaction'],
     ['XR_EXTX_overlay'],
     ['XR_HTCX_vive_tracker_interaction', 'ALWAYS_DISABLED'],

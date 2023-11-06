@@ -382,6 +382,9 @@ endif()
 if(NOT DEFINED XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR)
 	set(XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR ON)
 endif()
+if(NOT DEFINED XRT_FEATURE_OPENXR_SPACE_UNBOUNDED)
+	set(XRT_FEATURE_OPENXR_SPACE_UNBOUNDED ON)
+endif()
 
 # You can set this from a superproject to add a driver
 # All drivers must be listed in here to be included in the generated header!
