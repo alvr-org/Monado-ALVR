@@ -95,11 +95,12 @@ struct xrt_space_overseer
 {
 	struct
 	{
-		struct xrt_space *root;      //!< Root space, always available
-		struct xrt_space *view;      //!< View space, may be null (in very rare cases).
-		struct xrt_space *local;     //!< Local space, may be null (in very rare cases).
-		struct xrt_space *stage;     //!< Stage space, may be null.
-		struct xrt_space *unbounded; //!< Unbounded space, only here for slam trackers.
+		struct xrt_space *root;        //!< Root space, always available
+		struct xrt_space *view;        //!< View space, may be null (in very rare cases).
+		struct xrt_space *local;       //!< Local space, may be null (in very rare cases).
+		struct xrt_space *local_floor; //!< Local floor space, may be null.
+		struct xrt_space *stage;       //!< Stage space, may be null.
+		struct xrt_space *unbounded;   //!< Unbounded space, only here for slam trackers.
 
 		/*!
 		 * Semantic spaces to be mapped to OpenXR spaces.
