@@ -488,6 +488,11 @@ r_create_devices(uint16_t port, struct xrt_system_devices **out_xsysd, struct xr
 	struct xrt_pose local_offset = {XRT_QUAT_IDENTITY, {0.0f, 1.6f, 0.0f}};
 	u_space_overseer_create_offset_space(uso, root, &local_offset, &xso->semantic.local);
 
+	// Local floor at the same place as local except at floor height.
+	struct xrt_pose local_floor_offset = local_offset;
+	local_floor_offset.position.y = 0.0f;
+	u_space_overseer_create_offset_space(uso, root, &local_floor_offset, &xso->semantic.local_floor);
+
 	// Make view space be the head pose.
 	u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_HEAD_POSE, &xso->semantic.view);
 
