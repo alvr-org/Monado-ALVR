@@ -273,7 +273,7 @@ ns_compute_depthai_ht_offset(struct xrt_pose *P_imu_to_left_camera_basalt, struc
 #ifdef XRT_BUILD_DRIVER_DEPTHAI
 static xrt_result_t
 ns_setup_depthai_device(struct ns_builder *nsb,
-                        struct u_system_devices *usysd,
+                        struct xrt_frame_context *xfctx,
                         struct xrt_device **out_hand_device,
                         struct xrt_device **out_head_device)
 {
@@ -285,7 +285,7 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	settings.want_cameras = true;
 	settings.want_imu = true;
 
-	struct xrt_fs *the_fs = depthai_fs_slam(&usysd->xfctx, &settings);
+	struct xrt_fs *the_fs = depthai_fs_slam(xfctx, &settings);
 
 	if (the_fs == NULL) {
 		return XRT_ERROR_DEVICE_CREATION_FAILED;
@@ -311,11 +311,12 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	extra_camera_info.views[0].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 	extra_camera_info.views[1].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 
-	int create_status = ht_device_create(&usysd->xfctx,     //
-	                                     calib,             //
-	                                     extra_camera_info, //
-	                                     &hand_sinks,       //
-	                                     out_hand_device);
+	int create_status = ht_device_create( //
+	    xfctx,                            //
+	    calib,                            //
+	    extra_camera_info,                //
+	    &hand_sinks,                      //
+	    out_hand_device);                 //
 	t_stereo_camera_calibration_reference(&calib, NULL);
 	if (create_status != 0) {
 		return XRT_ERROR_DEVICE_CREATION_FAILED;
@@ -323,7 +324,7 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 #endif
 
 	struct xrt_slam_sinks *slam_sinks = NULL;
-	xret = twrap_slam_create_device(&usysd->xfctx, XRT_DEVICE_DEPTHAI, &slam_sinks, out_head_device);
+	xret = twrap_slam_create_device(xfctx, XRT_DEVICE_DEPTHAI, &slam_sinks, out_head_device);
 	if (xret != XRT_SUCCESS) {
 		U_LOG_E("twrap_slam_create_device: %u", xret);
 		return xret;
@@ -338,8 +339,8 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	struct xrt_frame_sink *entry_right_sink = NULL;
 
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
-	u_sink_split_create(&usysd->xfctx, slam_sinks->cams[0], hand_sinks->cams[0], &entry_left_sink);
-	u_sink_split_create(&usysd->xfctx, slam_sinks->cams[1], hand_sinks->cams[1], &entry_right_sink);
+	u_sink_split_create(xfctx, slam_sinks->cams[0], hand_sinks->cams[0], &entry_left_sink);
+	u_sink_split_create(xfctx, slam_sinks->cams[1], hand_sinks->cams[1], &entry_right_sink);
 #else
 	entry_left_sink = slam_sinks->cams[0];
 	entry_right_sink = slam_sinks->cams[1];
@@ -355,8 +356,12 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	struct xrt_slam_sinks dummy_slam_sinks = {0};
 	dummy_slam_sinks.imu = entry_sinks.imu;
 
-	u_sink_force_genlock_create(&usysd->xfctx, entry_sinks.cams[0], entry_sinks.cams[1], &dummy_slam_sinks.cams[0],
-	                            &dummy_slam_sinks.cams[1]);
+	u_sink_force_genlock_create(    //
+	    xfctx,                      //
+	    entry_sinks.cams[0],        //
+	    entry_sinks.cams[1],        //
+	    &dummy_slam_sinks.cams[0],  //
+	    &dummy_slam_sinks.cams[1]); //
 
 	xrt_fs_slam_stream_start(the_fs, &dummy_slam_sinks);
 
@@ -445,6 +450,7 @@ ns_open_system(struct xrt_builder *xb,
 	// Use the static system devices helper, no dynamic roles.
 	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
 	struct xrt_system_devices *xsysd = &usysds->base.base;
+	struct xrt_frame_context *xfctx = &usysds->base.xfctx;
 
 	if (out_xsysd == NULL || *out_xsysd != NULL) {
 		NS_ERROR("Invalid output system pointer");
@@ -501,11 +507,12 @@ ns_open_system(struct xrt_builder *xb,
 	if (nsb->depthai_device.active) {
 #ifdef XRT_BUILD_DRIVER_DEPTHAI
 		NS_INFO("Using DepthAI device!");
-		ns_setup_depthai_device(nsb, usysd, &hand_device, &slam_device);
+		ns_setup_depthai_device(nsb, xfctx, &hand_device, &slam_device);
 		head_offset = nsb->depthai_device.P_middleofeyes_to_imu_oxr;
 		ns_compute_depthai_ht_offset(&nsb->depthai_device.P_imu_to_left_camera_basalt, &hand_offset);
 		// got_head_tracker = true;
 #else
+		(void)xfctx;
 		NS_ERROR("DepthAI head+hand tracker specified in config but DepthAI support was not compiled in!");
 #endif
 
