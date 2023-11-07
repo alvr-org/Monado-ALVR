@@ -1420,6 +1420,85 @@ ipc_handle_device_get_hand_tracking(volatile struct ipc_client_state *ics,
 }
 
 xrt_result_t
+ipc_handle_device_get_view_poses(volatile struct ipc_client_state *ics,
+                                 uint32_t id,
+                                 const struct xrt_vec3 *fallback_eye_relation,
+                                 uint64_t at_timestamp_ns,
+                                 uint32_t view_count)
+{
+	struct ipc_message_channel *imc = (struct ipc_message_channel *)&ics->imc;
+	struct ipc_device_get_view_poses_reply reply = XRT_STRUCT_INIT;
+	struct ipc_server *s = ics->server;
+	xrt_result_t xret;
+
+	// To make the code a bit more readable.
+	uint32_t device_id = id;
+	struct xrt_device *xdev = get_xdev(ics, device_id);
+
+
+	if (view_count == 0 || view_count > IPC_MAX_RAW_VIEWS) {
+		IPC_ERROR(s, "Client asked for zero or too many views! (%u)", view_count);
+
+		reply.result = XRT_ERROR_IPC_FAILURE;
+		// Send the full reply, the client expects it.
+		return ipc_send(imc, &reply, sizeof(reply));
+	}
+
+	// Data to get.
+	struct xrt_fov fovs[IPC_MAX_RAW_VIEWS];
+	struct xrt_pose poses[IPC_MAX_RAW_VIEWS];
+
+	xrt_device_get_view_poses( //
+	    xdev,                  //
+	    fallback_eye_relation, //
+	    at_timestamp_ns,       //
+	    view_count,            //
+	    &reply.head_relation,  //
+	    fovs,                  //
+	    poses);                //
+
+	/*
+	 * Operation ok, head_relation has already been put in the reply
+	 * struct, so we don't need to send that manually.
+	 */
+	reply.result = XRT_SUCCESS;
+
+	/*
+	 * This isn't really needed, but demonstrates the server sending the
+	 * length back in the reply, a common pattern for other functions.
+	 */
+	reply.view_count = view_count;
+
+	/*
+	 * Send the reply first isn't required for functions in general, but it
+	 * will need to match what the client expects. This demonstrates the
+	 * server sending the length back in the reply, a common pattern for
+	 * other functions.
+	 */
+	xret = ipc_send(imc, &reply, sizeof(reply));
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(s, "Failed to send reply!");
+		return xret;
+	}
+
+	// Send the fovs that we got.
+	xret = ipc_send(imc, fovs, sizeof(struct xrt_fov) * view_count);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(s, "Failed to send fovs!");
+		return xret;
+	}
+
+	// And finally the poses.
+	xret = ipc_send(imc, poses, sizeof(struct xrt_pose) * view_count);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(s, "Failed to send poses!");
+		return xret;
+	}
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
 ipc_handle_device_get_view_poses_2(volatile struct ipc_client_state *ics,
                                    uint32_t id,
                                    const struct xrt_vec3 *default_eye_relation,

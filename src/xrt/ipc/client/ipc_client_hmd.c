@@ -21,6 +21,7 @@
 #include "util/u_distortion_mesh.h"
 
 #include "client/ipc_client.h"
+#include "client/ipc_client_connection.h"
 #include "ipc_client_generated.h"
 
 #include <math.h>
@@ -48,7 +49,7 @@ typedef struct ipc_client_xdev ipc_client_hmd_t;
 
 /*
  *
- * Functions
+ * Helpers.
  *
  */
 
@@ -57,6 +58,78 @@ ipc_client_hmd(struct xrt_device *xdev)
 {
 	return (ipc_client_hmd_t *)xdev;
 }
+
+static void
+call_get_view_poses_raw(ipc_client_hmd_t *ich,
+                        const struct xrt_vec3 *default_eye_relation,
+                        uint64_t at_timestamp_ns,
+                        uint32_t view_count,
+                        struct xrt_space_relation *out_head_relation,
+                        struct xrt_fov *out_fovs,
+                        struct xrt_pose *out_poses)
+{
+	struct ipc_connection *ipc_c = ich->ipc_c;
+	xrt_result_t xret = XRT_SUCCESS;
+
+	ipc_client_connection_lock(ipc_c);
+
+	// Using the raw send helper is the only one that is required.
+	xret = ipc_send_device_get_view_poses_locked( //
+	    ipc_c,                                    //
+	    ich->device_id,                           //
+	    default_eye_relation,                     //
+	    at_timestamp_ns,                          //
+	    view_count);                              //
+	if (xret != XRT_SUCCESS) {
+		goto out;
+	}
+
+	// This is the data we get back in the provided reply.
+	uint32_t returned_view_count = 0;
+	struct xrt_space_relation head_relation = XRT_SPACE_RELATION_ZERO;
+
+	// Get the reply, use the raw function helper.
+	xret = ipc_receive_device_get_view_poses_locked( //
+	    ipc_c,                                       //
+	    &head_relation,                              //
+	    &returned_view_count);                       //
+	if (xret != XRT_SUCCESS) {
+		goto out;
+	}
+
+	if (view_count != returned_view_count) {
+		IPC_ERROR(ich->ipc_c, "Wrong view counts (sent: %u != got: %u)", view_count, returned_view_count);
+		assert(false);
+	}
+
+	// We can read directly to the output variables.
+	xret = ipc_receive(&ipc_c->imc, out_fovs, sizeof(struct xrt_fov) * view_count);
+	if (xret != XRT_SUCCESS) {
+		goto out;
+	}
+
+	// We can read directly to the output variables.
+	xret = ipc_receive(&ipc_c->imc, out_poses, sizeof(struct xrt_pose) * view_count);
+	if (xret != XRT_SUCCESS) {
+		goto out;
+	}
+
+	/*
+	 * Finally set the head_relation that we got in the reply, mostly to
+	 * demonstrate that you can use the reply struct in such a way.
+	 */
+	*out_head_relation = head_relation;
+
+out:
+	ipc_client_connection_unlock(ipc_c);
+}
+
+
+/*
+ *
+ * Member functions
+ *
+ */
 
 static void
 ipc_client_hmd_destroy(struct xrt_device *xdev)
@@ -114,6 +187,7 @@ ipc_client_hmd_get_view_poses(struct xrt_device *xdev,
 	struct ipc_info_get_view_poses_2 info = {0};
 
 	if (view_count == 2) {
+		// Fast path.
 		xrt_result_t r = ipc_call_device_get_view_poses_2( //
 		    ich->ipc_c,                                    //
 		    ich->device_id,                                //
@@ -129,9 +203,22 @@ ipc_client_hmd_get_view_poses(struct xrt_device *xdev,
 			out_fovs[i] = info.fovs[i];
 			out_poses[i] = info.poses[i];
 		}
+
+	} else if (view_count <= IPC_MAX_RAW_VIEWS) {
+		// Artificial limit.
+
+		call_get_view_poses_raw(  //
+		    ich,                  //
+		    default_eye_relation, //
+		    at_timestamp_ns,      //
+		    view_count,           //
+		    out_head_relation,    //
+		    out_fovs,             //
+		    out_poses);           //
 	} else {
-		IPC_ERROR(ich->ipc_c, "Cannot handle %u view_count, only 2 supported.", view_count);
-		assert(false && !"Can only handle view_count of 2.");
+		IPC_ERROR(ich->ipc_c, "Cannot handle %u view_count, %u or less supported.", view_count,
+		          (uint32_t)IPC_MAX_RAW_VIEWS);
+		assert(false && !"Too large view_count!");
 	}
 }
 

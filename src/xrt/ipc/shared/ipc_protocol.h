@@ -33,6 +33,7 @@
 #define IPC_MAX_LAYERS 16
 #define IPC_MAX_SLOTS 128
 #define IPC_MAX_CLIENTS 8
+#define IPC_MAX_RAW_VIEWS 32 // Max views that we can get, artificial limit.
 #define IPC_EVENT_QUEUE_SIZE 32
 
 #define IPC_SHARED_MAX_INPUTS 1024
