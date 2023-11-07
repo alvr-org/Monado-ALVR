@@ -594,6 +594,15 @@ client_vk_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_h
 
 	struct client_vk_compositor *c = client_vk_compositor(xc);
 
+	if (c->renderdoc_enabled) {
+		struct vk_bundle *vk = &c->vk;
+		VkResult ret = vk_cmd_pool_submit_cmd_buffer(vk, &c->pool, c->dcb);
+		if (ret != VK_SUCCESS) {
+			VK_ERROR(vk, "vk_cmd_pool_submit_cmd_buffer: %s %u", vk_result_string(ret), ret);
+			return XRT_ERROR_FAILED_TO_SUBMIT_VULKAN_COMMANDS;
+		}
+	}
+
 	xrt_result_t xret = XRT_SUCCESS;
 	if (submit_handle(c, sync_handle, &xret)) {
 		return xret;
@@ -782,6 +791,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
                             bool external_semaphore_fd_enabled,
                             bool timeline_semaphore_enabled,
                             bool debug_utils_enabled,
+                            bool renderdoc_enabled,
                             uint32_t queueFamilyIndex,
                             uint32_t queueIndex)
 {
@@ -817,6 +827,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	}
 
 	c->base.base.info.format_count = xcn->base.info.format_count;
+	c->renderdoc_enabled = renderdoc_enabled;
 
 	// Default to info.
 	enum u_logging_level log_level = debug_get_log_option_vulkan_log();
@@ -865,6 +876,25 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 		VkPhysicalDeviceProperties pdp;
 		vk->vkGetPhysicalDeviceProperties(vk->physical_device, &pdp);
 		c->base.base.info.max_tetxure_size = pdp.limits.maxImageDimension2D;
+	}
+
+	if (!c->renderdoc_enabled) {
+		return c;
+	}
+
+	struct vk_bundle *vk = &c->vk;
+	if (!vk->has_EXT_debug_utils) {
+		c->renderdoc_enabled = false;
+		return c;
+	}
+
+	// Create a dummy VkCommandBuffer and submit it to the VkQueue, just for inserting a debug label into
+	// RenderDoc for triggering the capture.
+	ret = vk_cmd_pool_create_begin_insert_label_and_end_cmd_buffer_locked(
+	    vk, &c->pool, "vr-marker,frame_end,type,application", &c->dcb);
+	if (ret != VK_SUCCESS) {
+		VK_ERROR(vk, "vk_cmd_pool_create_insert_debug_label_and_end_cmd_buffer: %s", vk_result_string(ret));
+		goto err_pool;
 	}
 
 	return c;

@@ -170,6 +170,8 @@ struct client_gl_compositor
 	 * know it is bound to a thread.
 	 */
 	struct os_mutex context_mutex;
+
+	bool renderdoc_enabled;
 };
 
 

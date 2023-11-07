@@ -387,6 +387,11 @@ client_gl_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_h
 
 	struct client_gl_compositor *c = client_gl_compositor(xc);
 
+	if (c->renderdoc_enabled) {
+		glDebugMessageInsert(GL_DEBUG_SOURCE_THIRD_PARTY, GL_DEBUG_TYPE_MARKER, 1,
+		                     GL_DEBUG_SEVERITY_NOTIFICATION, -1, "vr-marker,frame_end,type,application");
+	}
+
 	// We make the sync object, not st/oxr which is our user.
 	assert(!xrt_graphics_sync_handle_is_valid(sync_handle));
 

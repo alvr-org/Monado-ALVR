@@ -78,6 +78,9 @@ struct client_vk_compositor
 	struct vk_bundle vk;
 
 	struct vk_cmd_pool pool;
+
+	bool renderdoc_enabled;
+	VkCommandBuffer dcb;
 };
 
 
@@ -106,6 +109,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
                             bool external_semaphore_fd_enabled,
                             bool timeline_semaphore_enabled,
                             bool debug_utils_enabled,
+                            bool renderdoc_enabled,
                             uint32_t queueFamilyIndex,
                             uint32_t queueIndex);
 

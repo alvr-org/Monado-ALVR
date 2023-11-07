@@ -582,6 +582,7 @@ xrt_gfx_provider_create_gl_egl(struct xrt_compositor_native *xcn,
 	struct client_egl_compositor *ceglc = U_TYPED_CALLOC(struct client_egl_compositor);
 	ceglc->current.dpy = display;
 	ceglc->current.ctx = context;
+	ceglc->base.renderdoc_enabled = renderdoc_enabled;
 
 	bool bret = client_gl_compositor_init( //
 	    &ceglc->base,                      // c
