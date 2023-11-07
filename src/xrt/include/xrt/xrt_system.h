@@ -16,14 +16,27 @@
 struct xrt_system_devices;
 struct xrt_instance;
 
-
+/*!
+ * Maximum number of devices simultaneously usable by an implementation of
+ * @ref xrt_system_devices
+ *
+ * @ingroup xrt_iface
+ */
 #define XRT_SYSTEM_MAX_DEVICES (32)
 
 /*!
- * Roles of the devices, negative index means unpopulated. When the devices
- * change the caller will do the needed actions to handle a device changes, for
- * the OpenXR state tracker this may include switching bound interaction profile
- * and generating the events for such a change.
+ * Data associating a device index (in @ref xrt_system_devices::xdevs) with a
+ * given "role" for dynamic role switching.
+ *
+ * For each of the named roles, a negative value means unpopulated/not available.
+ *
+ * Populated by a call from the @ref xrt_system_devices interface.
+ *
+ * When the caller of @ref xrt_system_devices_get_roles sees a change (based on
+ * comparing @ref generation_id) the caller must do the needed actions to handle
+ * device changes. For example, for the OpenXR state tracker this may include
+ * rebinding, queuing a change to the current interaction profile, and queuing
+ * the events associated with such a change.
  *
  * @see xrt_system_devices
  * @ingroup xrt_iface
@@ -31,22 +44,42 @@ struct xrt_instance;
 struct xrt_system_roles
 {
 	/*!
-	 * Monotonically increasing generation counter, is increased when ever
-	 * the roles is changed. Will always be greater then zero, this is to
+	 * Monotonically increasing generation counter for the association
+	 * between role and index.
+	 *
+	 * Increment whenever the roles are changed.
+	 *
+	 * All valid values are greater then zero; this is to
 	 * make init easier where any cache can start at zero and be guaranteed
 	 * to be replaced with a new @ref xrt_system_roles.
 	 */
 	uint64_t generation_id;
 
+	/*!
+	 * Index in @ref xrt_system_devices::xdevs for the user's left
+	 * controller/hand, or negative if none available.
+	 */
 	int32_t left;
+
+	/*!
+	 * Index in @ref xrt_system_devices::xdevs for the user's right
+	 * controller/hand, or negative if none available.
+	 */
 	int32_t right;
+
+	/*!
+	 * Index in @ref xrt_system_devices::xdevs for the user's gamepad
+	 * device, or negative if none available.
+	 */
 	int32_t gamepad;
 };
 
 /*!
- * Guaranteed invalid content, not using designated initializers due to C++.
+ * Guaranteed invalid constant for @ref xrt_system_roles, not using designated
+ * initializers due to C++.
  *
  * @ingroup xrt_iface
+ * @relates xrt_system_roles
  */
 #define XRT_SYSTEM_ROLES_INIT                                                                                          \
 	{                                                                                                              \
@@ -55,22 +88,72 @@ struct xrt_system_roles
 
 
 /*!
- * A collection of @ref xrt_device, and the roles they have been assigned.
+ * A collection of @ref xrt_device, and an interface for identifying the roles
+ * they have been assigned.
  *
  * @see xrt_device, xrt_instance.
  */
 struct xrt_system_devices
 {
+	/*!
+	 * All devices known in the system.
+	 *
+	 * This is conventionally considered the "owning" reference to the devices.
+	 * Valid entries are contiguous.
+	 */
 	struct xrt_device *xdevs[XRT_SYSTEM_MAX_DEVICES];
+
+	/*!
+	 * The number of elements in @ref xdevs that are valid.
+	 */
 	size_t xdev_count;
 
+	/*!
+	 * Observing pointers for devices in some static (unchangeable) roles.
+	 *
+	 * All pointers in this struct must also exist in @ref xdevs. The
+	 * association between a member of this struct and a given device
+	 * cannot change during runtime.
+	 */
 	struct
 	{
+		/*!
+		 * An observing pointer to the device serving as the "head"
+		 * (and HMD).
+		 *
+		 * Required.
+		 */
 		struct xrt_device *head;
+
+		/*!
+		 * An observing pointer to the device providing eye tracking
+		 * (optional).
+		 */
 		struct xrt_device *eyes;
+
+		/*!
+		 * Devices providing optical (or otherwise more directly
+		 * measured than from controller estimation) hand tracking.
+		 */
 		struct
 		{
+
+			/*!
+			 * An observing pointer to the device providing hand
+			 * tracking for the left hand (optional).
+			 *
+			 * Currently this is used for both optical and
+			 * controller driven hand-tracking.
+			 */
 			struct xrt_device *left;
+
+			/*!
+			 * An observing pointer to the device providing hand
+			 * tracking for the right hand (optional).
+			 *
+			 * Currently this is used for both optical and
+			 * controller driven hand-tracking.
+			 */
 			struct xrt_device *right;
 		} hand_tracking;
 	} static_roles;
@@ -80,15 +163,17 @@ struct xrt_system_devices
 	 * Function to get the dynamic input device roles from this system
 	 * devices, see @ref xrt_system_roles for more information.
 	 *
-	 * @param[in] xsysd Pointer to self
-	 * @param[out] roles Pointer to xrt_system_roles
+	 * @param xsysd Pointer to self
+	 * @param[out] out_roles Pointer to xrt_system_roles
 	 */
 	xrt_result_t (*get_roles)(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles);
 
 	/*!
 	 * Destroy all the devices that are owned by this system devices.
 	 *
-	 * Code consuming this interface should use xrt_system_devices_destroy.
+	 * Code consuming this interface should use @ref xrt_system_devices_destroy.
+	 *
+	 * @param xsysd Pointer to self
 	 */
 	void (*destroy)(struct xrt_system_devices *xsysd);
 };
@@ -111,8 +196,8 @@ xrt_system_devices_get_roles(struct xrt_system_devices *xsysd, struct xrt_system
  *
  * @param[in,out] xsysd_ptr A pointer to the xrt_system_devices struct pointer.
  *
- * Will destroy the system devices if *xsysd_ptr is not NULL. Will then set
- * *xsysd_ptr to NULL.
+ * Will destroy the system devices if `*xsysd_ptr` is not NULL. Will then set
+ * `*xsysd_ptr` to NULL.
  *
  * @public @memberof xrt_system_devices
  */
