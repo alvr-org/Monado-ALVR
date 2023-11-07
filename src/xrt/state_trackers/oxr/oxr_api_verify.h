@@ -196,6 +196,14 @@ extern "C" {
 		}                                                                                                      \
 	} while (false)
 
+#define OXR_VERIFY_VIEW_INDEX(log, index)                                                                              \
+	do {                                                                                                           \
+		if (index > 2) {                                                                                       \
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,                                             \
+			                 "Invalid view index %d, only 2 views supported", index);                      \
+		}                                                                                                      \
+	} while (false)
+
 #define OXR_VERIFY_SWAPCHAIN_USAGE_FLAGS_NOT_MUTUALLY_EXCLUSIVE(log, flags, mutually_exclusive_a,                      \
                                                                 mutually_exclusive_b)                                  \
 	do {                                                                                                           \
