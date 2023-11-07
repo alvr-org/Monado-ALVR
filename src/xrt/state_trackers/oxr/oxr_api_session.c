@@ -150,7 +150,9 @@ oxr_xrBeginFrame(XrSession session, const XrFrameBeginInfo *frameBeginInfo)
 
 #ifdef XRT_FEATURE_RENDERDOC
 	if (sess->sys->inst->rdoc_api) {
+#ifndef XR_USE_PLATFORM_ANDROID
 		sess->sys->inst->rdoc_api->StartFrameCapture(NULL, NULL);
+#endif
 	}
 #endif
 
@@ -171,7 +173,9 @@ oxr_xrEndFrame(XrSession session, const XrFrameEndInfo *frameEndInfo)
 
 #ifdef XRT_FEATURE_RENDERDOC
 	if (sess->sys->inst->rdoc_api) {
+#ifndef XR_USE_PLATFORM_ANDROID
 		sess->sys->inst->rdoc_api->EndFrameCapture(NULL, NULL);
+#endif
 	}
 #endif
 
