@@ -270,6 +270,7 @@ ipc_handle_space_create_semantic_ids(volatile struct ipc_client_state *ics,
                                      uint32_t *out_root_id,
                                      uint32_t *out_view_id,
                                      uint32_t *out_local_id,
+                                     uint32_t *out_local_floor_id,
                                      uint32_t *out_stage_id,
                                      uint32_t *out_unbounded_id)
 {
@@ -294,6 +295,7 @@ ipc_handle_space_create_semantic_ids(volatile struct ipc_client_state *ics,
 	CREATE(root);
 	CREATE(view);
 	CREATE(local);
+	CREATE(local_floor);
 	CREATE(stage);
 	CREATE(unbounded);
 

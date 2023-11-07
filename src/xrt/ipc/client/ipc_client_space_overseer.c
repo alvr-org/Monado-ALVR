@@ -179,6 +179,7 @@ destroy(struct xrt_space_overseer *xso)
 	xrt_space_reference(&icspo->base.semantic.root, NULL);
 	xrt_space_reference(&icspo->base.semantic.view, NULL);
 	xrt_space_reference(&icspo->base.semantic.local, NULL);
+	xrt_space_reference(&icspo->base.semantic.local_floor, NULL);
 	xrt_space_reference(&icspo->base.semantic.stage, NULL);
 	xrt_space_reference(&icspo->base.semantic.unbounded, NULL);
 
@@ -206,10 +207,18 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	uint32_t root_id = UINT32_MAX;
 	uint32_t view_id = UINT32_MAX;
 	uint32_t local_id = UINT32_MAX;
+	uint32_t local_floor_id = UINT32_MAX;
 	uint32_t stage_id = UINT32_MAX;
 	uint32_t unbounded_id = UINT32_MAX;
 
-	ipc_call_space_create_semantic_ids(icspo->ipc_c, &root_id, &view_id, &local_id, &stage_id, &unbounded_id);
+	ipc_call_space_create_semantic_ids( //
+	    icspo->ipc_c,                   //
+	    &root_id,                       //
+	    &view_id,                       //
+	    &local_id,                      //
+	    &local_floor_id,                //
+	    &stage_id,                      //
+	    &unbounded_id);                 //
 
 #define CREATE(NAME)                                                                                                   \
 	do {                                                                                                           \
@@ -222,6 +231,7 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	CREATE(root);
 	CREATE(view);
 	CREATE(local);
+	CREATE(local_floor);
 	CREATE(stage);
 	CREATE(unbounded);
 
