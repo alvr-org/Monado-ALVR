@@ -443,6 +443,7 @@ destroy(struct xrt_space_overseer *xso)
 	xrt_space_reference(&uso->base.semantic.unbounded, NULL);
 	xrt_space_reference(&uso->base.semantic.stage, NULL);
 	xrt_space_reference(&uso->base.semantic.local, NULL);
+	xrt_space_reference(&uso->base.semantic.local_floor, NULL);
 	xrt_space_reference(&uso->base.semantic.view, NULL);
 	xrt_space_reference(&uso->base.semantic.root, NULL);
 
@@ -529,8 +530,22 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	xrt_space_reference(&uso->base.semantic.stage, NULL);
 	xrt_space_reference(&uso->base.semantic.local, NULL);
 
+	// Assume the root space is the center of the stage space.
 	xrt_space_reference(&uso->base.semantic.stage, uso->base.semantic.root);
+
+	// Set local to the local offset.
 	u_space_overseer_create_offset_space(uso, uso->base.semantic.root, local_offset, &uso->base.semantic.local);
+
+	// Set local floor to be under local, but at y == 0 from stage.
+	struct xrt_pose local_floor_offset = {
+	    local_offset->orientation,
+	    {local_offset->position.x, 0.f, local_offset->position.z},
+	};
+
+	u_space_overseer_create_offset_space(uso, uso->base.semantic.root, &local_floor_offset,
+	                                     &uso->base.semantic.local_floor);
+
+	// Setup view space if we have a head.
 	if (head != NULL) {
 		u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_HEAD_POSE, &uso->base.semantic.view);
 	}
