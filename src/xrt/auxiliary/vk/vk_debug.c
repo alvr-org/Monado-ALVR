@@ -41,4 +41,21 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
 	}
 }
 
+void
+vk_cmd_insert_label(struct vk_bundle *vk, VkCommandBuffer cmd_buffer, const char *name)
+{
+	if (!vk->has_EXT_debug_utils) {
+		return;
+	}
+
+	const VkDebugUtilsLabelEXT debug_label = {
+	    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+	    .pNext = NULL,
+	    .pLabelName = name,
+	    .color = {1.0f, 0.0f, 0.0f, 1.0f},
+	};
+
+	vk->vkCmdInsertDebugUtilsLabelEXT(cmd_buffer, &debug_label);
+}
+
 #endif

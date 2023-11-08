@@ -1258,6 +1258,18 @@ vk_cmd_image_barrier_gpu_locked(struct vk_bundle *vk,
                                 VkImageLayout new_layout,
                                 VkImageSubresourceRange subresource_range);
 
+#if defined(VK_EXT_debug_utils) || defined(XRT_DOXYGEN)
+/*!
+ * Uses VK_EXT_debug_utils to insert debug label into a VkCommandBuffer.
+ *
+ * In the vk_debug.c file.
+ *
+ * @ingroup aux_vk
+ */
+void
+vk_cmd_insert_label(struct vk_bundle *vk, VkCommandBuffer cmd_buffer, const char *name);
+#endif
+
 
 /*
  *

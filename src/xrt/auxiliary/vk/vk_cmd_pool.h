@@ -222,6 +222,21 @@ vk_cmd_pool_end_submit_wait_and_free_cmd_buffer(struct vk_bundle *vk,
 	return ret;
 }
 
+#ifdef VK_EXT_debug_utils
+/*!
+ * Small helper function that creates a command buffer and begins it,
+ * ends it after inserting a debug label into it.
+ *
+ * @pre Command pool lock must be held.
+ *
+ * @public @memberof vk_cmd_pool
+ */
+XRT_CHECK_RESULT VkResult
+vk_cmd_pool_create_begin_insert_label_and_end_cmd_buffer_locked(struct vk_bundle *vk,
+                                                                struct vk_cmd_pool *pool,
+                                                                const char *label_name,
+                                                                VkCommandBuffer *out_cmd_buffer);
+#endif
 
 #ifdef __cplusplus
 }

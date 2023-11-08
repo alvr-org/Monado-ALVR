@@ -141,3 +141,37 @@ vk_cmd_pool_submit_cmd_buffer_locked(struct vk_bundle *vk, struct vk_cmd_pool *p
 
 	return ret;
 }
+
+#ifdef VK_EXT_debug_utils
+XRT_CHECK_RESULT VkResult
+vk_cmd_pool_create_begin_insert_label_and_end_cmd_buffer_locked(struct vk_bundle *vk,
+                                                                struct vk_cmd_pool *pool,
+                                                                const char *label_name,
+                                                                VkCommandBuffer *out_cmd_buffer)
+{
+	VkCommandBuffer cmd_buffer;
+	VkResult ret;
+
+	vk_cmd_pool_lock(pool);
+	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &cmd_buffer);
+	if (ret != VK_SUCCESS) {
+		vk_cmd_pool_unlock(pool);
+		VK_ERROR(vk, "vk_cmd_pool_create_and_begin_cmd_buffer_locked: %s", vk_result_string(ret));
+		return ret;
+	}
+
+	vk_cmd_insert_label(vk, cmd_buffer, label_name);
+
+	ret = vk->vkEndCommandBuffer(cmd_buffer);
+	if (ret != VK_SUCCESS) {
+		vk_cmd_pool_unlock(pool);
+		VK_ERROR(vk, "vkEndCommandBuffer: %s", vk_result_string(ret));
+		return ret;
+	}
+	vk_cmd_pool_unlock(pool);
+
+	*out_cmd_buffer = cmd_buffer;
+
+	return VK_SUCCESS;
+}
+#endif
