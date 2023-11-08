@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -21,8 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/u_misc.h"
 #include "util/u_debug.h"
+#include "util/u_handles.h"
+#include "util/u_misc.h"
 
 #include "vk/vk_helpers.h"
 
@@ -1193,8 +1194,15 @@ vk_create_image_from_native(struct vk_bundle *vk,
 	    out_mem,                          // out_mem
 	    NULL);                            // out_size
 
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_CONSUMED_BY_VULKAN_IMPORT)
 	// We have consumed this fd now, make sure it's not freed again.
 	image_native->handle = XRT_GRAPHICS_BUFFER_HANDLE_INVALID;
+#elif defined(XRT_GRAPHICS_BUFFER_HANDLE_REFERENCE_ADDED_BY_VULKAN_IMPORT)
+	// Some platforms need an explicit unref (Android)
+	u_graphics_buffer_unref(&image_native->handle);
+#else
+#error "Need port!"
+#endif
 
 	if (ret != VK_SUCCESS) {
 		vk->vkDestroyImage(vk->device, image, NULL);
