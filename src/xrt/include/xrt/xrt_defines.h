@@ -1293,6 +1293,18 @@ enum xrt_form_factor
 	XRT_FORM_FACTOR_HANDHELD, //!< Handheld display.
 };
 
+/*!
+ * Visibility mask, mirror of XrVisibilityMaskKHR
+ *
+ * @ingroup xrt_iface
+ */
+enum xrt_visibility_mask_type
+{
+	XRT_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH = 1,
+	XRT_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH = 2,
+	XRT_VISIBILITY_MASK_TYPE_LINE_LOOP = 3,
+};
+
 #ifdef __cplusplus
 }
 #endif

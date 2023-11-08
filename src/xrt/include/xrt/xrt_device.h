@@ -11,6 +11,7 @@
 #pragma once
 
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_visibility_mask.h"
 
 
 #ifdef __cplusplus
@@ -395,6 +396,13 @@ struct xrt_device
 	 */
 	bool (*compute_distortion)(
 	    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result);
+
+	/*!
+	 * Get the visibility mask for this device.
+	 */
+	void (*get_visibility_mask)(struct xrt_device *xdev,
+	                            enum xrt_visibility_mask_type type,
+	                            struct xrt_visibility_mask **out_mask);
 
 	/*!
 	 * Destroy device.
