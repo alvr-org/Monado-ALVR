@@ -35,6 +35,7 @@ enum wmr_headset_type
 	WMR_HEADSET_SAMSUNG_800ZAA,
 	WMR_HEADSET_LENOVO_EXPLORER,
 	WMR_HEADSET_MEDION_ERAZER_X1000,
+	WMR_HEADSET_DELL_VISOR,
 };
 
 /*!
@@ -61,6 +62,9 @@ enum wmr_headset_type
 
 #define LENOVO_VID 0x17ef
 #define EXPLORER_PID 0xb801
+
+#define DELL_VID 0x413c
+#define VISOR_PID 0xb0d5
 
 #define SAMSUNG_VID 0x04e8
 #define ODYSSEY_PID 0x7310
