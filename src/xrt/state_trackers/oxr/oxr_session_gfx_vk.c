@@ -81,6 +81,7 @@ oxr_session_populate_vk(struct oxr_logger *log,
 	bool timeline_semaphore_enabled = sess->sys->vk.timeline_semaphore_enabled;
 	bool external_fence_fd_enabled = sess->sys->vk.external_fence_fd_enabled;
 	bool external_semaphore_fd_enabled = sess->sys->vk.external_semaphore_fd_enabled;
+	bool debug_utils_enabled = false;
 	bool renderdoc_enabled = false;
 
 
@@ -110,6 +111,14 @@ oxr_session_populate_vk(struct oxr_logger *log,
 		timeline_semaphore_enabled = true;
 	}
 
+#if defined(VK_EXT_debug_utils)
+	if (sys->inst->extensions.KHR_vulkan_enable2) {
+		debug_utils_enabled = sess->sys->vk.debug_utils_enabled;
+	} else if (sys->inst->extensions.KHR_vulkan_enable) {
+		debug_utils_enabled = true;
+	}
+#endif
+
 #if defined(XRT_FEATURE_RENDERDOC) && defined(XR_USE_PLATFORM_ANDROID)
 	if (sess->sys->inst->rdoc_api) {
 		renderdoc_enabled = true;
@@ -126,7 +135,7 @@ oxr_session_populate_vk(struct oxr_logger *log,
 	    external_fence_fd_enabled,                               //
 	    external_semaphore_fd_enabled,                           //
 	    timeline_semaphore_enabled,                              //
-	    sess->sys->vk.debug_utils_enabled,                       //
+	    debug_utils_enabled,                                     //
 	    renderdoc_enabled,                                       //
 	    next->queueFamilyIndex,                                  //
 	    next->queueIndex);                                       //
