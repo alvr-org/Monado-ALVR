@@ -11,6 +11,9 @@
 
 #include "xrt/xrt_config_os.h"
 
+#include "util/u_logging.h"
+#include "util/u_pretty_print.h"
+
 #include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
 
@@ -25,7 +28,6 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "util/u_logging.h"
 
 /*
  *
@@ -40,6 +42,25 @@
 #define IPC_ERROR(d, ...) U_LOG_IFL_E(d->log_level, __VA_ARGS__)
 
 #if !defined(XRT_OS_WINDOWS)
+
+/*
+ *
+ * Structs and defines.
+ *
+ */
+
+union imcontrol_buf {
+	uint8_t buf[512];
+	struct cmsghdr align;
+};
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
+
 void
 ipc_message_channel_close(struct ipc_message_channel *imc)
 {
@@ -68,8 +89,7 @@ ipc_send(struct ipc_message_channel *imc, const void *data, size_t size)
 	ssize_t ret = sendmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
 	if (ret < 0) {
 		int code = errno;
-		IPC_ERROR(imc, "ERROR: Sending plain message on socket %d failed with error: '%i' '%s'!",
-		          (int)imc->ipc_handle, code, strerror(code));
+		IPC_ERROR(imc, "sendmsg(%i) failed: '%i' '%s'!", imc->ipc_handle, code, strerror(code));
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
@@ -79,7 +99,6 @@ ipc_send(struct ipc_message_channel *imc, const void *data, size_t size)
 xrt_result_t
 ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size)
 {
-
 	// wait for the response
 	struct iovec iov = {0};
 	struct msghdr msg = {0};
@@ -97,23 +116,18 @@ ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size)
 
 	if (len < 0) {
 		int code = errno;
-		IPC_ERROR(imc, "ERROR: Receiving plain message on socket '%d' failed with error: '%i' '%s'!",
-		          (int)imc->ipc_handle, code, strerror(code));
+		IPC_ERROR(imc, "recvmsg(%i) failed: '%i' '%s'!", (int)imc->ipc_handle, code, strerror(code));
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
 	if ((size_t)len != size) {
-		IPC_ERROR(imc, "recvmsg failed with error: wrong size '%i', expected '%i'!", (int)len, (int)size);
+		IPC_ERROR(imc, "recvmsg(%i) failed: wrong size '%i', expected '%i'!", (int)imc->ipc_handle, (int)len,
+		          (int)size);
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
 	return XRT_SUCCESS;
 }
-
-union imcontrol_buf {
-	uint8_t buf[512];
-	struct cmsghdr align;
-};
 
 xrt_result_t
 ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, int *out_handles, uint32_t handle_count)
@@ -123,6 +137,7 @@ ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, in
 	assert(size != 0);
 	assert(out_handles != NULL);
 	assert(handle_count != 0);
+
 	union imcontrol_buf u;
 	const size_t fds_size = sizeof(int) * handle_count;
 	const size_t cmsg_size = CMSG_SPACE(fds_size);
@@ -140,14 +155,15 @@ ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, in
 
 	ssize_t len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
 	if (len < 0) {
-		IPC_ERROR(imc, "recvmsg failed with error: '%s'!", strerror(errno));
+		IPC_ERROR(imc, "recvmsg(%i) failed: '%s'!", imc->ipc_handle, strerror(errno));
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
 	if (len == 0) {
-		IPC_ERROR(imc, "recvmsg failed with error: no data!");
+		IPC_ERROR(imc, "recvmsg(%i) failed: no data!", imc->ipc_handle);
 		return XRT_ERROR_IPC_FAILURE;
 	}
+
 	// Did the other side actually send file descriptors.
 	struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
 	if (cmsg == NULL) {
@@ -155,6 +171,7 @@ ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, in
 	}
 
 	memcpy(out_handles, (int *)CMSG_DATA(cmsg), fds_size);
+
 	return XRT_SUCCESS;
 }
 
@@ -166,8 +183,10 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
 	assert(size != 0);
 	assert(handles != NULL);
 
+	const size_t fds_size = sizeof(int) * handle_count;
+
 	union imcontrol_buf u = {0};
-	size_t cmsg_size = CMSG_SPACE(sizeof(int) * handle_count);
+	size_t cmsg_size = CMSG_SPACE(fds_size);
 
 	struct iovec iov = {0};
 	iov.iov_base = (void *)data;
@@ -182,7 +201,6 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
 	msg.msg_control = u.buf;
 	msg.msg_controllen = cmsg_size;
 
-	const size_t fds_size = sizeof(int) * handle_count;
 	struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
@@ -191,15 +209,27 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
 	memcpy(CMSG_DATA(cmsg), handles, fds_size);
 
 	ssize_t ret = sendmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
-	if (ret < 0) {
-		IPC_ERROR(imc, "ERROR: sending %d FDs on socket %d failed with error: '%i' '%s'!", (int)handle_count,
-		          imc->ipc_handle, errno, strerror(errno));
-		for (uint32_t i = 0; i < handle_count; i++) {
-			IPC_ERROR(imc, "\tfd #%i: %i", i, handles[i]);
-		}
-		return XRT_ERROR_IPC_FAILURE;
+	if (ret >= 0) {
+		return XRT_SUCCESS;
 	}
-	return XRT_SUCCESS;
+
+	/*
+	 * Error path.
+	 */
+
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	u_pp(dg, "sendmsg(%i) failed: count: %u, error: '%i' '%s'!", imc->ipc_handle, handle_count, errno,
+	     strerror(errno));
+
+	for (uint32_t i = 0; i < handle_count; i++) {
+		u_pp(dg, "\n\tfd #%i: %i", i, handles[i]);
+	}
+
+	IPC_ERROR(imc, "%s", sink.buffer);
+
+	return XRT_ERROR_IPC_FAILURE;
 }
 
 #endif
