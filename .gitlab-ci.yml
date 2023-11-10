@@ -131,11 +131,11 @@ win:container_prep:
     FDO_DISTRIBUTION_VERSION: "bullseye"
     FDO_DISTRIBUTION_TAG: "2023-04-07"
 
-# Variables for build and usage of Debian bullseye-ndk image
-.monado.variables.debian:bullseye-ndk:
+# Variables for build and usage of Debian bookworm-ndk image
+.monado.variables.debian:bookworm-ndk:
   variables:
-    FDO_DISTRIBUTION_VERSION: "bullseye"
-    FDO_DISTRIBUTION_TAG: "2023-10-28.0"
+    FDO_DISTRIBUTION_VERSION: "bookworm"
+    FDO_DISTRIBUTION_TAG: "2023-11-15.1"
     FDO_REPO_SUFFIX: ndk
 
 # Variables for build and usage of Ubuntu focal image
@@ -170,16 +170,16 @@ debian:bullseye:container_prep:
     FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates clang-format cmake codespell curl debhelper devscripts doxygen dput-ng gettext-base git glslang-tools graphviz libavcodec-dev libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 python3-click python3-pip unzip wget'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/i386_and_proclamation_container_prep.sh'
 
-# Make Debian bullseye-ndk image
-debian:bullseye-ndk:container_prep:
+# Make Debian bookworm-ndk image
+debian:bookworm-ndk:container_prep:
   stage: container_prep
   extends:
     - .container-rules
-    - .monado.variables.debian:bullseye-ndk
+    - .monado.variables.debian:bookworm-ndk
     - .fdo.container-build@debian # from ci-templates
 
   variables:
-    FDO_DISTRIBUTION_PACKAGES: 'ca-certificates cmake git glslang-tools libeigen3-dev meson ninja-build openjdk-17-jdk-headless pkg-config python3 unzip wget'
+    FDO_DISTRIBUTION_PACKAGES: 'ca-certificates cmake default-jdk-headless git glslang-tools libeigen3-dev meson ninja-build pkg-config python3 unzip wget'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/android_container_prep.sh'
 
 # Make Ubuntu focal image
@@ -228,10 +228,10 @@ arch:container_prep:
     - .build-rules
 
 
-# Base for using Debian bullseye-ndk image
-.monado.image.debian:bullseye-ndk:
+# Base for using Debian bookworm-ndk image
+.monado.image.debian:bookworm-ndk:
   extends:
-    - .monado.variables.debian:bullseye-ndk
+    - .monado.variables.debian:bookworm-ndk
     - .fdo.suffixed-image@debian # from ci-templates
     - .build-rules
 
@@ -349,7 +349,7 @@ debian:cmake:32bit:
 ndk:armeabi-v7a:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -358,7 +358,7 @@ ndk:armeabi-v7a:
 ndk:arm64-v8a:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -367,7 +367,7 @@ ndk:arm64-v8a:
 android:spotlessCheck:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -387,7 +387,7 @@ android:spotlessCheck:
 android:outOfProcessDebug:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -410,7 +410,7 @@ android:outOfProcessDebug:
 android:inProcessDebug:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -433,7 +433,7 @@ android:inProcessDebug:
 android:outOfProcessRelease:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -456,7 +456,7 @@ android:outOfProcessRelease:
 android:inProcessRelease:
   stage: build
   extends:
-    - .monado.image.debian:bullseye-ndk
+    - .monado.image.debian:bookworm-ndk
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome

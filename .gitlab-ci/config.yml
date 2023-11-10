@@ -114,11 +114,11 @@ distributions:
 
       # This one is pretty minimal, compared to the others.
       # Though, we now install the android SDK in it...
-      - codename: bullseye-ndk
-        distro_version: bullseye
+      - codename: bookworm-ndk
+        distro_version: bookworm
         repo_suffix: ndk
         script: android_container_prep.sh
-        tag: "2023-04-10.1"
+        tag: "2023-11-15.1"
         # This must match ext.sharedCompileSdk in build.gradle
         android_compile_sdk: 32
         # This must match buildscript.ext.buildToolsVersion in build.gradle
@@ -138,7 +138,7 @@ distributions:
           pkg-config:
           ca-certificates:
           glslang-tools:
-          openjdk-17-jdk-headless:
+          default-jdk-headless:
         build_jobs:
           - name: "ndk:armeabi-v7a"
             cmake_defines:
