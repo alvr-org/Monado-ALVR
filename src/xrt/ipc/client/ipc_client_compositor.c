@@ -144,12 +144,6 @@ ipc_client_compositor_semaphore(struct xrt_compositor_semaphore *xcsem)
  *
  */
 
-void
-compositor_disconnect(struct ipc_connection *ipc_c)
-{
-	ipc_message_channel_close(&ipc_c->imc);
-}
-
 #define IPC_CALL_CHK(call)                                                                                             \
 	xrt_result_t res = (call);                                                                                     \
 	if (res != XRT_SUCCESS) {                                                                                      \
