@@ -139,6 +139,14 @@ ipc_client_device_set_output(struct xrt_device *xdev, enum xrt_output_name name,
 	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_set_output");
 }
 
+static void
+ipc_client_device_get_visibility_mask(struct xrt_device *xdev,
+                                      enum xrt_visibility_mask_type type,
+                                      struct xrt_visibility_mask **out_mask)
+{
+	assert(false);
+}
+
 /*!
  * @public @memberof ipc_client_device
  */
@@ -158,6 +166,7 @@ ipc_client_device_create(struct ipc_connection *ipc_c, struct xrt_tracking_origi
 	icd->base.get_hand_tracking = ipc_client_device_get_hand_tracking;
 	icd->base.get_view_poses = ipc_client_device_get_view_poses;
 	icd->base.set_output = ipc_client_device_set_output;
+	icd->base.get_visibility_mask = ipc_client_device_get_visibility_mask;
 	icd->base.destroy = ipc_client_device_destroy;
 
 	// Start copying the information from the isdev.

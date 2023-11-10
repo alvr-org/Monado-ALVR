@@ -252,6 +252,45 @@ ipc_client_hmd_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_f
 	return available;
 }
 
+static void
+ipc_client_hmd_get_visibility_mask(struct xrt_device *xdev,
+                                   enum xrt_visibility_mask_type type,
+                                   struct xrt_visibility_mask **out_mask)
+{
+	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
+	struct ipc_connection *ipc_c = ich->ipc_c;
+	struct xrt_visibility_mask *mask = NULL;
+	xrt_result_t xret;
+
+	ipc_client_connection_lock(ipc_c);
+
+	xret = ipc_send_device_get_visibility_mask_locked(ipc_c, ich->device_id, type);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_send_device_get_visibility_mask_locked", err_mask_unlock);
+
+	uint32_t mask_size;
+	xret = ipc_receive_device_get_visibility_mask_locked(ipc_c, &mask_size);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_receive_device_get_visibility_mask_locked", err_mask_unlock);
+
+	mask = U_CALLOC_WITH_CAST(struct xrt_visibility_mask, mask_size);
+	if (mask == NULL) {
+		IPC_ERROR(ich->ipc_c, "failed to allocate xrt_visibility_mask");
+		goto err_mask_unlock;
+	}
+
+	xret = ipc_receive(&ipc_c->imc, mask, mask_size);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_receive", err_mask_free);
+
+	*out_mask = mask;
+	ipc_client_connection_unlock(ipc_c);
+
+	return;
+
+err_mask_free:
+	free(mask);
+err_mask_unlock:
+	ipc_client_connection_unlock(ipc_c);
+}
+
 /*!
  * @public @memberof ipc_client_hmd
  */
@@ -273,6 +312,7 @@ ipc_client_hmd_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *
 	ich->base.compute_distortion = ipc_client_hmd_compute_distortion;
 	ich->base.destroy = ipc_client_hmd_destroy;
 	ich->base.is_form_factor_available = ipc_client_hmd_is_form_factor_available;
+	ich->base.get_visibility_mask = ipc_client_hmd_get_visibility_mask;
 
 	// Start copying the information from the isdev.
 	ich->base.tracking_origin = xtrack;

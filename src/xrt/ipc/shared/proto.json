@@ -354,6 +354,17 @@
 		]
 	},
 
+	"device_get_visibility_mask": {
+		"varlen": true,
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "type", "type": "enum xrt_visibility_mask_type"}
+		],
+		"out": [
+			{"name": "mask_size", "type": "uint32_t"}
+		]
+	},
+
 	"device_is_form_factor_available": {
 		"in": [
 			{"name": "id", "type": "uint32_t"},

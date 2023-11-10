@@ -11,6 +11,7 @@
 
 #include "util/u_misc.h"
 #include "util/u_handles.h"
+#include "util/u_visibility_mask.h"
 #include "util/u_trace_marker.h"
 
 #include "server/ipc_server.h"
@@ -1554,6 +1555,47 @@ ipc_handle_device_set_output(volatile struct ipc_client_state *ics,
 
 	// Set the output.
 	xrt_device_set_output(xdev, name, value);
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
+ipc_handle_device_get_visibility_mask(volatile struct ipc_client_state *ics,
+                                      uint32_t device_id,
+                                      enum xrt_visibility_mask_type type)
+{
+	struct ipc_message_channel *imc = (struct ipc_message_channel *)&ics->imc;
+	struct ipc_device_get_visibility_mask_reply reply = XRT_STRUCT_INIT;
+	struct ipc_server *s = ics->server;
+	xrt_result_t xret;
+
+	// @todo verify
+	struct xrt_device *xdev = get_xdev(ics, device_id);
+	struct xrt_visibility_mask *mask = NULL;
+	if (xdev->get_visibility_mask) {
+		xdev->get_visibility_mask(xdev, type, &mask);
+	} else {
+		u_visibility_mask_get_default(type, &mask);
+	}
+
+	if (mask == NULL) {
+		IPC_ERROR(s, "Failed to get visibility mask");
+		reply.mask_size = 0;
+	} else {
+		reply.mask_size = xrt_visibility_mask_get_size(mask);
+	}
+
+	xret = ipc_send(imc, &reply, sizeof(reply));
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(s, "Failed to send reply");
+		return xret;
+	}
+
+	xret = ipc_send(imc, mask, reply.mask_size);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(s, "Failed to send mask");
+		return xret;
+	}
 
 	return XRT_SUCCESS;
 }
