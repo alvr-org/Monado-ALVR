@@ -96,6 +96,8 @@ add_library(
 	u_config_json.c
 	u_config_json.h
 	u_verify.h
+	u_visibility_mask.c
+	u_visibility_mask.h
 	u_win32_com_guard.cpp
 	u_win32_com_guard.hpp
 	u_worker.c
