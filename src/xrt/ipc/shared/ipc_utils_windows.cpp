@@ -39,6 +39,56 @@
 #define IPC_WARN(d, ...) U_LOG_IFL_W(d->log_level, __VA_ARGS__)
 #define IPC_ERROR(d, ...) U_LOG_IFL_E(d->log_level, __VA_ARGS__)
 
+
+/*
+ *
+ * Helpers.
+ *
+ */
+
+static HANDLE
+open_target_process_dup_handle(struct ipc_message_channel *imc)
+{
+	DWORD flags;
+	if (!GetNamedPipeInfo(imc->ipc_handle, &flags, NULL, NULL, NULL)) {
+		DWORD err = GetLastError();
+		IPC_ERROR(imc, "GetNamedPipeInfo(%p) failed: %d %s", imc->ipc_handle, err, ipc_winerror(err));
+		return NULL;
+	}
+
+	ULONG pid;
+	if (flags & PIPE_SERVER_END) {
+		if (!GetNamedPipeClientProcessId(imc->ipc_handle, &pid)) {
+			DWORD err = GetLastError();
+			IPC_ERROR(imc, "GetNamedPipeClientProcessId(%p) failed: %d %s", imc->ipc_handle, err,
+			          ipc_winerror(err));
+			return NULL;
+		}
+	} else {
+		if (!GetNamedPipeServerProcessId(imc->ipc_handle, &pid)) {
+			DWORD err = GetLastError();
+			IPC_ERROR(imc, "GetNamedPipeServerProcessId(%p) failed: %d %s", imc->ipc_handle, err,
+			          ipc_winerror(err));
+			return NULL;
+		}
+	}
+
+	HANDLE h = OpenProcess(PROCESS_DUP_HANDLE, false, pid);
+	if (!h) {
+		DWORD err = GetLastError();
+		IPC_ERROR(imc, "OpenProcess(PROCESS_DUP_HANDLE, pid %d) failed: %d %s", pid, err, ipc_winerror(err));
+	}
+
+	return h;
+}
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
+
 const char *
 ipc_winerror(DWORD err)
 {
@@ -90,50 +140,19 @@ ipc_receive_fds(
 	return ipc_receive(imc, out_handles, handle_count * sizeof(*out_handles));
 }
 
-HANDLE
-open_target_process_dup_handle(struct ipc_message_channel *imc)
-{
-	DWORD flags;
-	if (!GetNamedPipeInfo(imc->ipc_handle, &flags, NULL, NULL, NULL)) {
-		DWORD err = GetLastError();
-		IPC_ERROR(imc, "GetNamedPipeInfo(%p) failed: %d %s", imc->ipc_handle, err, ipc_winerror(err));
-		return NULL;
-	}
-	ULONG pid;
-	if (flags & PIPE_SERVER_END) {
-		if (!GetNamedPipeClientProcessId(imc->ipc_handle, &pid)) {
-			DWORD err = GetLastError();
-			IPC_ERROR(imc, "GetNamedPipeClientProcessId(%p) failed: %d %s", imc->ipc_handle, err,
-			          ipc_winerror(err));
-			return NULL;
-		}
-	} else {
-		if (!GetNamedPipeServerProcessId(imc->ipc_handle, &pid)) {
-			DWORD err = GetLastError();
-			IPC_ERROR(imc, "GetNamedPipeServerProcessId(%p) failed: %d %s", imc->ipc_handle, err,
-			          ipc_winerror(err));
-			return NULL;
-		}
-	}
-	HANDLE h = OpenProcess(PROCESS_DUP_HANDLE, false, pid);
-	if (!h) {
-		DWORD err = GetLastError();
-		IPC_ERROR(imc, "OpenProcess(PROCESS_DUP_HANDLE, pid %d) failed: %d %s", pid, err, ipc_winerror(err));
-	}
-	return h;
-}
-
 xrt_result_t
 ipc_send_fds(
     struct ipc_message_channel *imc, const void *data, size_t size, const HANDLE *handles, uint32_t handle_count)
 {
-	auto rc = ipc_send(imc, data, size);
-	if (rc != XRT_SUCCESS) {
-		return rc;
+	xrt_result_t xret = ipc_send(imc, data, size);
+	if (xret != XRT_SUCCESS) {
+		return xret;
 	}
+
 	if (!handle_count) {
 		return ipc_send(imc, nullptr, 0);
 	}
+
 	HANDLE target_process = open_target_process_dup_handle(imc);
 	if (!target_process) {
 		DWORD err = GetLastError();
