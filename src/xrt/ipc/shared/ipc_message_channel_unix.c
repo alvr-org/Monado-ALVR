@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  IPC util helpers, for internal use only
+ * @brief  IPC message channel functions for UNIX platforms.
  * @author Ryan Pavlik <ryan.pavlik@collabora.com>
  * @author Pete Black <pblack@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
@@ -18,8 +18,8 @@
 #include "util/u_logging.h"
 #include "util/u_pretty_print.h"
 
-#include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
+#include "shared/ipc_message_channel.h"
 
 #include <errno.h>
 #include <sys/socket.h>

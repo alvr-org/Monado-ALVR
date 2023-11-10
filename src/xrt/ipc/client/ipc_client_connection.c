@@ -26,6 +26,7 @@
 #include "util/u_git_tag.h"
 #include "util/u_system_helpers.h"
 
+#include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
 #include "client/ipc_client_connection.h"
 

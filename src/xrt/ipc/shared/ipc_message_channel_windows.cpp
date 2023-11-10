@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  IPC util helpers on Windows, for internal use only
+ * @brief  IPC message channel functions for Windows.
  * @author Julian Petrov <jpetrov@magicleap.com>
  * @author Ryan Pavlik <ryan.pavlik@collabora.com>
  * @author Pete Black <pblack@collabora.com>
@@ -22,6 +22,7 @@
 
 #include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
+#include "shared/ipc_message_channel.h"
 
 #include <stdio.h>
 #include <string.h>

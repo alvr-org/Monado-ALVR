@@ -28,6 +28,7 @@
 #include "util/u_file.h"
 #include "util/u_windows.h"
 
+#include "shared/ipc_utils.h"
 #include "shared/ipc_shmem.h"
 #include "server/ipc_server.h"
 

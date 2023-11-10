@@ -15,14 +15,15 @@
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_space.h"
 
-#include "util/u_logging.h"
-
 #include "os/os_threading.h"
 
+#include "util/u_logging.h"
+
 #include "shared/ipc_protocol.h"
-#include "shared/ipc_utils.h"
+#include "shared/ipc_message_channel.h"
 
 #include <stdio.h>
+
 
 #ifdef __cplusplus
 extern "C" {

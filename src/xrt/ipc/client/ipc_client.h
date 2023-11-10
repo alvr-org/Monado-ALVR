@@ -18,7 +18,7 @@
 #include "util/u_logging.h"
 
 #include "shared/ipc_protocol.h"
-#include "shared/ipc_utils.h"
+#include "shared/ipc_message_channel.h"
 
 #include <stdio.h>
 
