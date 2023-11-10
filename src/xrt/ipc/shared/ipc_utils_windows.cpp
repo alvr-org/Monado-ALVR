@@ -93,13 +93,6 @@ open_target_process_dup_handle(struct ipc_message_channel *imc)
  *
  */
 
-const char *
-ipc_winerror(DWORD err)
-{
-	static char s_buf[4096]; // N.B. Not thread-safe. If needed, use a thread var
-	return u_winerror(s_buf, sizeof(s_buf), err, false);
-}
-
 void
 ipc_message_channel_close(struct ipc_message_channel *imc)
 {

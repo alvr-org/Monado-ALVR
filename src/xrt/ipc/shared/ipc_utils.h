@@ -22,6 +22,34 @@
 extern "C" {
 #endif
 
+
+/*
+ *
+ * Misc utils.
+ *
+ */
+
+#if defined(XRT_OS_WINDOWS) || defined(XRT_DOXYGEN)
+/*!
+ * Helper to convert windows error codes to human readable strings for logging.
+ * N.B. This routine is not thread safe.
+ *
+ * @param err windows error code
+ * @return human readable string corresponding to the error code.
+ *
+ * @ingroup ipc_shared
+ */
+const char *
+ipc_winerror(DWORD err);
+#endif
+
+
+/*
+ *
+ * Channel functions.
+ *
+ */
+
 /*!
  * Wrapper for a socket and flags.
  */
@@ -154,18 +182,6 @@ ipc_receive_handles(
 xrt_result_t
 ipc_send_handles(
     struct ipc_message_channel *imc, const void *data, size_t size, const HANDLE *handles, uint32_t handle_count);
-
-/*!
- * Helper to convert windows error codes to human readable strings for logging
- * N.B. This routine is not thread safe
- *
- * @param err windows error code
- * @return human readable string corresponding to the error code
- *
- * @public @memberof ipc_message_channel
- */
-const char *
-ipc_winerror(DWORD err);
 
 #endif // XRT_OS_UNIX
 /*!

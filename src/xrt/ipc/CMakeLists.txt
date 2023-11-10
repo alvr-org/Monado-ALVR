@@ -31,6 +31,7 @@ set(IPC_COMMON_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/ipc_protocol_generated.h
     shared/ipc_shmem.c
     shared/ipc_shmem.h
+    shared/ipc_utils.c
     shared/ipc_utils.h
 	)
 
