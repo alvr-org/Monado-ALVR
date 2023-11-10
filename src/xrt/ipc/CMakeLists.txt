@@ -31,7 +31,6 @@ set(IPC_COMMON_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/ipc_protocol_generated.h
     shared/ipc_shmem.c
     shared/ipc_shmem.h
-    shared/ipc_utils.c
     shared/ipc_utils.h
 	)
 
@@ -42,6 +41,8 @@ target_include_directories(
 
 if(WIN32)
 	target_sources(ipc_shared PRIVATE shared/ipc_utils_windows.cpp)
+else()
+	target_sources(ipc_shared PRIVATE shared/ipc_utils_unix.c)
 endif()
 
 target_link_libraries(ipc_shared PRIVATE aux_util)

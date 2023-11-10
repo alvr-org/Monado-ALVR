@@ -1,5 +1,5 @@
 // Copyright 2022, Magic Leap, Inc.
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,6 +12,10 @@
  */
 
 #include "xrt/xrt_config_os.h"
+
+#ifndef XRT_OS_WINDOWS
+#error "This file is only for Windows"
+#endif
 
 #include "util/u_windows.h"
 #include "util/u_logging.h"
@@ -129,8 +133,15 @@ ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size)
 	return XRT_SUCCESS;
 }
 
+
+/*
+ *
+ * Handle sending functions.
+ *
+ */
+
 xrt_result_t
-ipc_receive_fds(
+ipc_receive_handles(
     struct ipc_message_channel *imc, void *out_data, size_t size, HANDLE *out_handles, uint32_t handle_count)
 {
 	auto rc = ipc_receive(imc, out_data, size);
@@ -141,7 +152,7 @@ ipc_receive_fds(
 }
 
 xrt_result_t
-ipc_send_fds(
+ipc_send_handles(
     struct ipc_message_channel *imc, const void *data, size_t size, const HANDLE *handles, uint32_t handle_count)
 {
 	xrt_result_t xret = ipc_send(imc, data, size);
@@ -181,6 +192,33 @@ ipc_send_fds(
 	return ipc_send(imc, v.data(), v.size() * sizeof(*v.data()));
 }
 
+
+/*
+ *
+ * Typed handle functions.
+ *
+ */
+
+xrt_result_t
+ipc_receive_handles_shmem(struct ipc_message_channel *imc,
+                          void *out_data,
+                          size_t size,
+                          xrt_shmem_handle_t *out_handles,
+                          uint32_t handle_count)
+{
+	return ipc_receive_handles(imc, out_data, size, out_handles, handle_count);
+}
+
+xrt_result_t
+ipc_send_handles_shmem(struct ipc_message_channel *imc,
+                       const void *data,
+                       size_t size,
+                       const xrt_shmem_handle_t *handles,
+                       uint32_t handle_count)
+{
+	return ipc_send_handles(imc, data, size, handles, handle_count);
+}
+
 xrt_result_t
 ipc_receive_handles_graphics_sync(struct ipc_message_channel *imc,
                                   void *out_data,
@@ -188,7 +226,7 @@ ipc_receive_handles_graphics_sync(struct ipc_message_channel *imc,
                                   xrt_graphics_sync_handle_t *out_handles,
                                   uint32_t handle_count)
 {
-	return ipc_receive_fds(imc, out_data, size, out_handles, handle_count);
+	return ipc_receive_handles(imc, out_data, size, out_handles, handle_count);
 }
 
 xrt_result_t
@@ -198,7 +236,7 @@ ipc_send_handles_graphics_sync(struct ipc_message_channel *imc,
                                const xrt_graphics_sync_handle_t *handles,
                                uint32_t handle_count)
 {
-	return ipc_send_fds(imc, data, size, handles, handle_count);
+	return ipc_send_handles(imc, data, size, handles, handle_count);
 }
 
 xrt_result_t
@@ -208,7 +246,7 @@ ipc_receive_handles_graphics_buffer(struct ipc_message_channel *imc,
                                     xrt_graphics_buffer_handle_t *out_handles,
                                     uint32_t handle_count)
 {
-	return ipc_receive_fds(imc, out_data, size, out_handles, handle_count);
+	return ipc_receive_handles(imc, out_data, size, out_handles, handle_count);
 }
 
 xrt_result_t
@@ -218,5 +256,5 @@ ipc_send_handles_graphics_buffer(struct ipc_message_channel *imc,
                                  const xrt_graphics_buffer_handle_t *handles,
                                  uint32_t handle_count)
 {
-	return ipc_send_fds(imc, data, size, handles, handle_count);
+	return ipc_send_handles(imc, data, size, handles, handle_count);
 }

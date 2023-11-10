@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,6 +11,10 @@
 
 #include "xrt/xrt_config_os.h"
 
+#ifdef XRT_OS_WINDOWS
+#error "This file shouldn't be compiled on Windows!"
+#endif
+
 #include "util/u_logging.h"
 #include "util/u_pretty_print.h"
 
@@ -18,11 +22,8 @@
 #include "shared/ipc_protocol.h"
 
 #include <errno.h>
-#if !defined(XRT_OS_WINDOWS)
 #include <sys/socket.h>
 #include <unistd.h>
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -41,7 +42,6 @@
 #define IPC_WARN(d, ...) U_LOG_IFL_W(d->log_level, __VA_ARGS__)
 #define IPC_ERROR(d, ...) U_LOG_IFL_E(d->log_level, __VA_ARGS__)
 
-#if !defined(XRT_OS_WINDOWS)
 
 /*
  *
@@ -232,8 +232,6 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
 	return XRT_ERROR_IPC_FAILURE;
 }
 
-#endif
-
 xrt_result_t
 ipc_receive_handles_shmem(struct ipc_message_channel *imc,
                           void *out_data,
@@ -338,7 +336,6 @@ ipc_send_handles_graphics_buffer(struct ipc_message_channel *imc,
 	return ipc_send_fds(imc, data, size, handles, handle_count);
 }
 
-#elif defined(XRT_OS_WINDOWS)
 #else
 #error "Need port to transport these graphics buffers"
 #endif
@@ -380,7 +377,6 @@ ipc_send_handles_graphics_sync(struct ipc_message_channel *imc,
 	return ipc_send_fds(imc, data, size, handles, handle_count);
 }
 
-#elif defined(XRT_OS_WINDOWS)
 #else
 #error "Need port to transport these graphics buffers"
 #endif

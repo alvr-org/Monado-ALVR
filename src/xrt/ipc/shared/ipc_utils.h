@@ -33,6 +33,8 @@ struct ipc_message_channel
 
 /*!
  * Close an IPC message channel
+ *
+ * @public @memberof ipc_message_channel
  */
 void
 ipc_message_channel_close(struct ipc_message_channel *imc);
@@ -70,48 +72,51 @@ xrt_result_t
 ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size);
 
 /*!
- * @name File Descriptor utilities
+ * @name File Descriptor or HANDLE utilities
  * @brief These are typically called from within the send/receive_handles
  * functions.
  * @{
  */
 #ifdef XRT_OS_UNIX
+
 /*!
  * Receive a message along with a known number of file descriptors over the IPC
  * channel.
  *
- * @param imc Message channel to use
+ * @param imc           Message channel to use
  * @param[out] out_data Pointer to the buffer to fill with data. Must not be
- * null.
- * @param[in] size Maximum size to read, must be greater than 0
- * @param[out] out_handles Array of file descriptors to populate.  Must not be
- * null.
- * @param[in] handle_count Number of elements to receive into @p out_handles,
- * must be greater than 0 and must match the value provided at the other end.
+ *                      null.
+ * @param[in] size      Maximum size to read, must be greater than 0
+ * @param[out] out_fds  Array of file descriptors to populate. Must not be null.
+ * @param[in] fd_count  Number of elements to receive into @p out_fds, must be
+ *                      greater than 0 and must match the value provided at the
+ *                      other end.
  *
  * @public @memberof ipc_message_channel
  */
 xrt_result_t
-ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, int *out_handles, uint32_t handle_count);
+ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, int *out_fds, uint32_t fd_count);
 
 /*!
  * Send a message along with file descriptors over the IPC channel.
  *
- * @param imc Message channel to use
- * @param[in] data Pointer to the data buffer to send. Must not be
- * null: use a filler message if necessary.
- * @param[in] size Size of data pointed-to by @p data, must be greater than 0
- * @param[out] handles Array of file descriptors to send.  Must not be
- * null.
- * @param[in] handle_count Number of elements in @p handles, must be greater
- * than 0. If this is variable, it must also be separately transmitted ahead of
- * time, because the receiver must have the same value in its receive call.
+ * @param imc          Message channel to use
+ * @param[in] data     Pointer to the data buffer to send. Must not be
+ *                     null: use a filler message if necessary.
+ * @param[in] size     Size of data pointed-to by @p data, must be greater than 0.
+ * @param[out] fds     Array of file descriptors to send. Must not benull.
+ * @param[in] fd_count Number of elements in @p fds, must be greater than 0. If
+ *                     this is variable, it must also be separately transmitted
+ *                     ahead of time, because the receiver must have the same
+ *                     value in its receive call.
  *
  * @public @memberof ipc_message_channel
  */
 xrt_result_t
-ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, const int *handles, uint32_t handle_count);
+ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, const int *fds, uint32_t fd_count);
+
 #elif defined(XRT_OS_WINDOWS)
+
 /*!
  * Receive a message along with a known number of file HANDLEs over the IPC
  * channel.
@@ -128,7 +133,7 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
  * @public @memberof ipc_message_channel
  */
 xrt_result_t
-ipc_receive_fds(
+ipc_receive_handles(
     struct ipc_message_channel *imc, void *out_data, size_t size, HANDLE *out_handles, uint32_t handle_count);
 
 /*!
@@ -147,7 +152,7 @@ ipc_receive_fds(
  * @public @memberof ipc_message_channel
  */
 xrt_result_t
-ipc_send_fds(
+ipc_send_handles(
     struct ipc_message_channel *imc, const void *data, size_t size, const HANDLE *handles, uint32_t handle_count);
 
 /*!
