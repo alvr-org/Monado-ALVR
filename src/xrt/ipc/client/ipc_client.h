@@ -29,11 +29,11 @@
  *
  */
 
-#define IPC_TRACE(d, ...) U_LOG_IFL_T(d->log_level, __VA_ARGS__)
-#define IPC_DEBUG(d, ...) U_LOG_IFL_D(d->log_level, __VA_ARGS__)
-#define IPC_INFO(d, ...) U_LOG_IFL_I(d->log_level, __VA_ARGS__)
-#define IPC_WARN(d, ...) U_LOG_IFL_W(d->log_level, __VA_ARGS__)
-#define IPC_ERROR(d, ...) U_LOG_IFL_E(d->log_level, __VA_ARGS__)
+#define IPC_TRACE(IPC_C, ...) U_LOG_IFL_T((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_DEBUG(IPC_C, ...) U_LOG_IFL_D((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_INFO(IPC_C, ...) U_LOG_IFL_I((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_WARN(IPC_C, ...) U_LOG_IFL_W((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_ERROR(IPC_C, ...) U_LOG_IFL_E((IPC_C)->imc.log_level, __VA_ARGS__)
 
 /*
  *
@@ -59,8 +59,6 @@ struct ipc_connection
 #ifdef XRT_OS_ANDROID
 	struct ipc_client_android *ica;
 #endif // XRT_OS_ANDROID
-
-	enum u_logging_level log_level;
 };
 
 /*!

@@ -82,8 +82,8 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 		return false;
 	}
 
+	// Set socket.
 	ipc_c->imc.ipc_handle = socket;
-	ipc_c->imc.log_level = ipc_c->log_level;
 
 	return true;
 }
@@ -196,8 +196,9 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 		return false;
 	}
 
+	// Set socket.
 	ipc_c->imc.ipc_handle = pipe_inst;
-	ipc_c->imc.log_level = ipc_c->log_level;
+
 	return true;
 }
 
@@ -239,8 +240,8 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 		return false;
 	}
 
+	// Set socket.
 	ipc_c->imc.ipc_handle = socket;
-	ipc_c->imc.log_level = ipc_c->log_level;
 
 	return true;
 }
@@ -344,8 +345,8 @@ ipc_client_connection_init(struct ipc_connection *ipc_c,
 
 	U_ZERO(ipc_c);
 	ipc_c->imc.ipc_handle = XRT_IPC_HANDLE_INVALID;
+	ipc_c->imc.log_level = log_level;
 	ipc_c->ism_handle = XRT_SHMEM_HANDLE_INVALID;
-	ipc_c->log_level = log_level;
 
 	// Must be done first.
 	int ret = os_mutex_init(&ipc_c->mutex);
@@ -393,6 +394,7 @@ ipc_client_connection_init(struct ipc_connection *ipc_c,
 
 err_fini:
 	ipc_client_connection_fini(ipc_c);
+
 	return xret;
 }
 
