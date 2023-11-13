@@ -73,6 +73,38 @@ xrt_space_reference(struct xrt_space **dst, struct xrt_space *src)
 }
 
 /*!
+ * Type of a OpenXR mapped reference space, maps to the semantic spaces on the
+ * @ref xrt_space_overseer struct. This is used to refer to indirectly for
+ * instance when letting the overseer know that an application is using a
+ * particular reference space.
+ *
+ * @ingroup xrt_iface
+ */
+enum xrt_reference_space_type
+{
+	XRT_SPACE_REFERENCE_TYPE_VIEW,
+	XRT_SPACE_REFERENCE_TYPE_LOCAL,
+	XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR,
+	XRT_SPACE_REFERENCE_TYPE_STAGE,
+	XRT_SPACE_REFERENCE_TYPE_UNBOUNDED,
+};
+
+/*!
+ * The number of enumerations in @ref xrt_reference_space_type.
+ *
+ * @ingroup xrt_iface
+ */
+#define XRT_SPACE_REFERENCE_TYPE_COUNT (XRT_SPACE_REFERENCE_TYPE_UNBOUNDED + 1)
+
+/*!
+ * An invalid @ref xrt_reference_space_type, since it's invalid it's not listed
+ * in the enum.
+ *
+ * @ingroup xrt_iface
+ */
+#define XRT_SPACE_REFERENCE_TYPE_INVALID ((enum xrt_reference_space_type)(-1))
+
+/*!
  * Object that oversees and manages spaces, one created for each XR system.
  *
  * The space overseer is used by the state tracker to query the poses of spaces
@@ -183,6 +215,27 @@ struct xrt_space_overseer
 	                              struct xrt_space_relation *out_relation);
 
 	/*!
+	 * Increment the usage count of a reference space (aka semantic space).
+	 * This lets the overseer know when different spaces are being used,
+	 * allowing it to triggering a recenter if the local space is used for
+	 * the first time, or stopping calculating where the stage space is if
+	 * it is not used by the current application.
+	 *
+	 * @param[in] xso   Owning space overseer.
+	 * @param[in] type  Which reference space is being referenced.
+	 */
+	xrt_result_t (*ref_space_inc)(struct xrt_space_overseer *xso, enum xrt_reference_space_type type);
+
+	/*!
+	 * Decrement the usage count of a reference space (aka semantic space).
+	 * See @ref xrt_space_overseer::ref_space_inc.
+	 *
+	 * @param[in] xso   Owning space overseer.
+	 * @param[in] type  Which reference space is being referenced.
+	 */
+	xrt_result_t (*ref_space_dec)(struct xrt_space_overseer *xso, enum xrt_reference_space_type type);
+
+	/*!
 	 * Destroy function.
 	 *
 	 * @param xso The space overseer.
@@ -257,6 +310,32 @@ xrt_space_overseer_locate_device(struct xrt_space_overseer *xso,
                                  struct xrt_space_relation *out_relation)
 {
 	return xso->locate_device(xso, base_space, base_offset, at_timestamp_ns, xdev, out_relation);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::ref_space_inc
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_ref_space_inc(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
+{
+	return xso->ref_space_inc(xso, type);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::ref_space_dec
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
+{
+	return xso->ref_space_dec(xso, type);
 }
 
 /*!
