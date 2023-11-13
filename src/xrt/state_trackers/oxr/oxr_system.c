@@ -305,6 +305,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 		hand_tracking_props->supportsHandTracking = oxr_system_get_hand_tracking_support(log, sys->inst);
 	}
 
+#ifdef OXR_HAVE_EXT_eye_gaze_interaction
 	XrSystemEyeGazeInteractionPropertiesEXT *eye_gaze_props = NULL;
 	if (sys->inst->extensions.EXT_eye_gaze_interaction) {
 		eye_gaze_props =
@@ -315,6 +316,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	if (eye_gaze_props) {
 		eye_gaze_props->supportsEyeGazeInteraction = oxr_system_get_eye_gaze_support(log, sys->inst);
 	}
+#endif
 
 	XrSystemForceFeedbackCurlPropertiesMNDX *force_feedback_props = NULL;
 	if (sys->inst->extensions.MNDX_force_feedback_curl) {

@@ -380,18 +380,30 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 #ifdef OXR_HAVE_EXT_hand_interaction
 	    .EXT_hand_interaction = inst->extensions.EXT_hand_interaction,
 #endif
+#ifdef OXR_HAVE_EXT_hp_mixed_reality_controller
 	    .EXT_hp_mixed_reality_controller = inst->extensions.EXT_hp_mixed_reality_controller,
+#endif
+#ifdef OXR_HAVE_EXT_samsung_odyssey_controller
 	    .EXT_samsung_odyssey_controller = inst->extensions.EXT_samsung_odyssey_controller,
+#endif
+#ifdef OXR_HAVE_ML_ml2_controller_interaction
 	    .ML_ml2_controller_interaction = inst->extensions.ML_ml2_controller_interaction,
+#endif
 #ifdef OXR_HAVE_MSFT_hand_interaction
 	    .MSFT_hand_interaction = inst->extensions.MSFT_hand_interaction,
 #endif
+#ifdef OXR_HAVE_MNDX_ball_on_a_stick_controller
 	    .MNDX_ball_on_a_stick_controller = inst->extensions.MNDX_ball_on_a_stick_controller,
+#endif
+#ifdef OXR_HAVE_MNDX_hydra
 	    .MNDX_hydra = inst->extensions.MNDX_hydra,
+#endif
 #ifdef OXR_HAVE_MNDX_system_buttons
 	    .MNDX_system_buttons = inst->extensions.MNDX_system_buttons,
 #endif
+#ifdef OXR_HAVE_EXT_eye_gaze_interaction
 	    .EXT_eye_gaze_interaction = inst->extensions.EXT_eye_gaze_interaction,
+#endif
 #ifdef OXR_HAVE_HTCX_vive_tracker_interaction
 	    .HTCX_vive_tracker_interaction = inst->extensions.HTCX_vive_tracker_interaction,
 #endif

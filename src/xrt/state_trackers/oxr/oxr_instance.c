@@ -278,8 +278,12 @@ oxr_instance_create(struct oxr_logger *log,
 
 	struct xrt_instance_info i_info = {
 	    .ext_hand_tracking_enabled = extensions->EXT_hand_tracking,
+#ifdef OXR_HAVE_EXT_eye_gaze_interaction
 	    .ext_eye_gaze_interaction_enabled = extensions->EXT_eye_gaze_interaction,
+#endif
+#ifdef OXR_HAVE_EXT_hand_interaction
 	    .ext_hand_interaction_enabled = extensions->EXT_hand_interaction,
+#endif
 	};
 	snprintf(i_info.application_name, sizeof(inst->xinst->instance_info.application_name), "%s",
 	         createInfo->applicationInfo.applicationName);
