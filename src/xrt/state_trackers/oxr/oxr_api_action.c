@@ -230,6 +230,24 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 	path_verify_fn_t dpad_emulator_fn = NULL;
 	bool has_dpad = inst->extensions.EXT_dpad_binding;
 
+#define EXT_NOT_SUPPORTED(EXT)                                                                                         \
+	do {                                                                                                           \
+		return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,                                                      \
+		                 "(suggestedBindings->interactionProfile == \"%s\") used but XR_" #EXT                 \
+		                 " not supported by runtime",                                                          \
+		                 ip_str);                                                                              \
+	} while (false)
+
+#define EXT_CHK_ENABLED(EXT)                                                                                           \
+	do {                                                                                                           \
+		if (!inst->extensions.EXT) {                                                                           \
+			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,                                              \
+			                 "(suggestedBindings->interactionProfile == \"%s\") used but XR_" #EXT         \
+			                 " not enabled",                                                               \
+			                 ip_str);                                                                      \
+		}                                                                                                      \
+	} while (false)
+
 	if (ip == inst->path_cache.khr_simple_controller) {
 		subpath_fn = oxr_verify_khr_simple_controller_subpath;
 		dpad_path_fn = oxr_verify_khr_simple_controller_dpad_path;
@@ -267,74 +285,80 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 		dpad_path_fn = oxr_verify_valve_index_controller_dpad_path;
 		dpad_emulator_fn = oxr_verify_valve_index_controller_dpad_emulator;
 	} else if (ip == inst->path_cache.hp_mixed_reality_controller) {
-		if (!inst->extensions.EXT_hp_mixed_reality_controller) {
-			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,
-			                 "(suggestedBindings->interactionProfile == \"%s\") used but "
-			                 "XR_EXT_hp_mixed_reality_controller not enabled",
-			                 ip_str);
-		}
+#ifdef OXR_HAVE_EXT_hp_mixed_reality_controller
+		EXT_CHK_ENABLED(EXT_hp_mixed_reality_controller);
+#else
+		EXT_NOT_SUPPORTED(EXT_hp_mixed_reality_controller);
+#endif
 
 		subpath_fn = oxr_verify_hp_mixed_reality_controller_subpath;
 		dpad_path_fn = oxr_verify_hp_mixed_reality_controller_dpad_path;
 		dpad_emulator_fn = oxr_verify_hp_mixed_reality_controller_dpad_emulator;
 	} else if (ip == inst->path_cache.samsung_odyssey_controller) {
-		if (!inst->extensions.EXT_samsung_odyssey_controller) {
-			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,
-			                 "(suggestedBindings->interactionProfile == \"%s\") used but "
-			                 "XR_EXT_samsung_odyssey_controller not enabled",
-			                 ip_str);
-		}
+#ifdef OXR_HAVE_EXT_samsung_odyssey_controller
+		EXT_CHK_ENABLED(EXT_samsung_odyssey_controller);
+#else
+		EXT_NOT_SUPPORTED(EXT_samsung_odyssey_controller);
+#endif
 
 		subpath_fn = oxr_verify_samsung_odyssey_controller_subpath;
 		dpad_path_fn = oxr_verify_samsung_odyssey_controller_dpad_path;
 		dpad_emulator_fn = oxr_verify_samsung_odyssey_controller_dpad_emulator;
 	} else if (ip == inst->path_cache.ml_ml2_controller) {
-		if (!inst->extensions.ML_ml2_controller_interaction) {
-			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,
-			                 "(suggestedBindings->interactionProfile == \"%s\") used but "
-			                 "XR_ML_ml2_controller not enabled",
-			                 ip_str);
-		}
+#ifdef OXR_HAVE_ML_ml2_controller_interaction
+		EXT_CHK_ENABLED(ML_ml2_controller_interaction);
+#else
+		EXT_NOT_SUPPORTED(EL_ml2_controller_interaction);
+#endif
 
 		subpath_fn = oxr_verify_ml_ml2_controller_subpath;
 		dpad_path_fn = oxr_verify_ml_ml2_controller_dpad_path;
 		dpad_emulator_fn = oxr_verify_ml_ml2_controller_dpad_emulator;
 	} else if (ip == inst->path_cache.mndx_ball_on_a_stick_controller) {
+#ifdef OXR_HAVE_MNDX_ball_on_a_stick_controller
+		EXT_CHK_ENABLED(MNDX_ball_on_a_stick_controller);
+#else
+		EXT_NOT_SUPPORTED(MNDX_ball_on_a_stick_controller);
+#endif
+
 		subpath_fn = oxr_verify_mndx_ball_on_a_stick_controller_subpath;
 		dpad_path_fn = oxr_verify_mndx_ball_on_a_stick_controller_dpad_path;
 		dpad_emulator_fn = oxr_verify_mndx_ball_on_a_stick_controller_dpad_emulator;
 	} else if (ip == inst->path_cache.msft_hand_interaction) {
+#ifdef OXR_HAVE_MSFT_hand_interaction
+		EXT_CHK_ENABLED(MSFT_hand_interaction);
+#else
+		EXT_NOT_SUPPORTED(MSFT_hand_interaction);
+#endif
+
 		subpath_fn = oxr_verify_microsoft_hand_interaction_subpath;
 		dpad_path_fn = oxr_verify_microsoft_hand_interaction_dpad_path;
 		dpad_emulator_fn = oxr_verify_microsoft_hand_interaction_dpad_emulator;
 	} else if (ip == inst->path_cache.ext_eye_gaze_interaction) {
-		if (!inst->extensions.EXT_eye_gaze_interaction) {
-			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,
-			                 "(suggestedBindings->interactionProfile == \"%s\") used but "
-			                 "EXT_eye_gaze_interaction not enabled",
-			                 ip_str);
-		}
+#ifdef OXR_HAVE_EXT_eye_gaze_interaction
+		EXT_CHK_ENABLED(EXT_eye_gaze_interaction);
+#else
+		EXT_NOT_SUPPORTED(EXT_eye_gaze_interaction);
+#endif
 
 		subpath_fn = oxr_verify_ext_eye_gaze_interaction_subpath;
 		dpad_path_fn = oxr_verify_ext_eye_gaze_interaction_dpad_path;
 		dpad_emulator_fn = oxr_verify_ext_eye_gaze_interaction_dpad_emulator;
 	} else if (ip == inst->path_cache.ext_hand_interaction) {
-		if (!inst->extensions.EXT_hand_interaction) {
-			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,
-			                 "(suggestedBindings->interactionProfile == \"%s\") used but "
-			                 "XR_EXT_hand_interaction not enabled",
-			                 ip_str);
-		}
+#ifdef OXR_HAVE_EXT_hand_interaction
+		EXT_CHK_ENABLED(EXT_hand_interaction);
+#else
+		EXT_NOT_SUPPORTED(EXT_hand_interaction);
+#endif
 		subpath_fn = oxr_verify_ext_hand_interaction_ext_subpath;
 		dpad_path_fn = oxr_verify_ext_hand_interaction_ext_dpad_path;
 		dpad_emulator_fn = oxr_verify_ext_hand_interaction_ext_dpad_emulator;
 	} else if (ip == inst->path_cache.oppo_mr_controller) {
-		if (!inst->extensions.OPPO_controller_interaction) {
-			return oxr_error(&log, XR_ERROR_PATH_UNSUPPORTED,
-			                 "(suggestedBindings->interactionProfile == \"%s\") used but "
-			                 "XR_OPPO_controller_interaction not enabled",
-			                 ip_str);
-		}
+#ifdef OXR_HAVE_OPPO_controller_interaction
+		EXT_CHK_ENABLED(OPPO_controller_interaction);
+#else
+		EXT_NOT_SUPPORTED(EPPO_controller_interaction);
+#endif
 
 		subpath_fn = oxr_verify_oppo_mr_controller_oppo_subpath;
 		dpad_path_fn = oxr_verify_oppo_mr_controller_oppo_dpad_path;
