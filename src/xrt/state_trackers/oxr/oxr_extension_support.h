@@ -271,7 +271,7 @@
 /*
  * XR_EXT_eye_gaze_interaction
  */
-#if defined(XR_EXT_eye_gaze_interaction)
+#if defined(XR_EXT_eye_gaze_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE)
 #define OXR_HAVE_EXT_eye_gaze_interaction
 #define OXR_EXTENSION_SUPPORT_EXT_eye_gaze_interaction(_) _(EXT_eye_gaze_interaction, EXT_EYE_GAZE_INTERACTION)
 #else
@@ -282,7 +282,7 @@
 /*
  * XR_EXT_hand_interaction
  */
-#if defined(XR_EXT_hand_interaction)
+#if defined(XR_EXT_hand_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_EXT_HAND)
 #define OXR_HAVE_EXT_hand_interaction
 #define OXR_EXTENSION_SUPPORT_EXT_hand_interaction(_) _(EXT_hand_interaction, EXT_HAND_INTERACTION)
 #else
@@ -304,7 +304,7 @@
 /*
  * XR_EXT_hp_mixed_reality_controller
  */
-#if defined(XR_EXT_hp_mixed_reality_controller)
+#if defined(XR_EXT_hp_mixed_reality_controller) && defined(XRT_FEATURE_OPENXR_INTERACTION_WINMR)
 #define OXR_HAVE_EXT_hp_mixed_reality_controller
 #define OXR_EXTENSION_SUPPORT_EXT_hp_mixed_reality_controller(_)                                                       \
 	_(EXT_hp_mixed_reality_controller, EXT_HP_MIXED_REALITY_CONTROLLER)
@@ -327,7 +327,7 @@
 /*
  * XR_EXT_palm_pose
  */
-#if defined(XR_EXT_palm_pose) && defined(ALWAYS_DISABLED)
+#if defined(XR_EXT_palm_pose) && defined(XRT_FEATURE_OPENXR_INTERACTION_EXT_PALM_POSE)
 #define OXR_HAVE_EXT_palm_pose
 #define OXR_EXTENSION_SUPPORT_EXT_palm_pose(_) _(EXT_palm_pose, EXT_PALM_POSE)
 #else
@@ -338,7 +338,7 @@
 /*
  * XR_EXT_samsung_odyssey_controller
  */
-#if defined(XR_EXT_samsung_odyssey_controller)
+#if defined(XR_EXT_samsung_odyssey_controller) && defined(XRT_FEATURE_OPENXR_INTERACTION_WINMR)
 #define OXR_HAVE_EXT_samsung_odyssey_controller
 #define OXR_EXTENSION_SUPPORT_EXT_samsung_odyssey_controller(_)                                                        \
 	_(EXT_samsung_odyssey_controller, EXT_SAMSUNG_ODYSSEY_CONTROLLER)
@@ -361,7 +361,7 @@
 /*
  * XR_ML_ml2_controller_interaction
  */
-#if defined(XR_ML_ml2_controller_interaction)
+#if defined(XR_ML_ml2_controller_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_ML2)
 #define OXR_HAVE_ML_ml2_controller_interaction
 #define OXR_EXTENSION_SUPPORT_ML_ml2_controller_interaction(_)                                                         \
 	_(ML_ml2_controller_interaction, ML_ML2_CONTROLLER_INTERACTION)
@@ -396,7 +396,7 @@
 /*
  * XR_MSFT_hand_interaction
  */
-#if defined(XR_MSFT_hand_interaction) && defined(ALWAYS_DISABLED)
+#if defined(XR_MSFT_hand_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_MSFT_HAND)
 #define OXR_HAVE_MSFT_hand_interaction
 #define OXR_EXTENSION_SUPPORT_MSFT_hand_interaction(_) _(MSFT_hand_interaction, MSFT_HAND_INTERACTION)
 #else
@@ -419,7 +419,7 @@
 /*
  * XR_OPPO_controller_interaction
  */
-#if defined(XR_OPPO_controller_interaction)
+#if defined(XR_OPPO_controller_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_OPPO)
 #define OXR_HAVE_OPPO_controller_interaction
 #define OXR_EXTENSION_SUPPORT_OPPO_controller_interaction(_) _(OPPO_controller_interaction, OPPO_CONTROLLER_INTERACTION)
 #else
@@ -453,7 +453,7 @@
 /*
  * XR_MNDX_ball_on_a_stick_controller
  */
-#if defined(XR_MNDX_ball_on_a_stick_controller)
+#if defined(XR_MNDX_ball_on_a_stick_controller) && defined(XRT_FEATURE_OPENXR_INTERACTION_MNDX)
 #define OXR_HAVE_MNDX_ball_on_a_stick_controller
 #define OXR_EXTENSION_SUPPORT_MNDX_ball_on_a_stick_controller(_)                                                       \
 	_(MNDX_ball_on_a_stick_controller, MNDX_BALL_ON_A_STICK_CONTROLLER)
@@ -487,7 +487,7 @@
 /*
  * XR_MNDX_hydra
  */
-#if defined(XR_MNDX_hydra)
+#if defined(XR_MNDX_hydra) && defined(XRT_FEATURE_OPENXR_INTERACTION_MNDX)
 #define OXR_HAVE_MNDX_hydra
 #define OXR_EXTENSION_SUPPORT_MNDX_hydra(_) _(MNDX_hydra, MNDX_HYDRA)
 #else
@@ -498,7 +498,7 @@
 /*
  * XR_MNDX_system_buttons
  */
-#if defined(XR_MNDX_system_buttons)
+#if defined(XR_MNDX_system_buttons) && defined(XRT_FEATURE_OPENXR_INTERACTION_MNDX)
 #define OXR_HAVE_MNDX_system_buttons
 #define OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_) _(MNDX_system_buttons, MNDX_SYSTEM_BUTTONS)
 #else
