@@ -149,7 +149,8 @@ oxr_xrSyncActions(XrSession session, const XrActionsSyncInfo *syncInfo)
 	}
 
 	if (syncInfo->countActiveActionSets == 0) {
-		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "(syncInfo->countActiveActionSets == 0)");
+		// nothing to do
+		return XR_SUCCESS;
 	}
 
 	for (uint32_t i = 0; i < syncInfo->countActiveActionSets; i++) {
