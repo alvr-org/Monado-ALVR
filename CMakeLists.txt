@@ -520,6 +520,7 @@ endif()
 ###
 # Keep these lists sorted
 ###
+# cmake-format: off
 message(STATUS "#####----- Config -----#####")
 message(STATUS "#    GIT_DESC:        ${GIT_DESC}")
 message(STATUS "#")
@@ -615,6 +616,7 @@ message(STATUS "#    DRIVER_VIVE:                 ${XRT_BUILD_DRIVER_VIVE}")
 message(STATUS "#    DRIVER_WMR:                  ${XRT_BUILD_DRIVER_WMR}")
 message(STATUS "#    DRIVER_STEAMVR_LIGHTHOUSE:   ${XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE}")
 message(STATUS "#####----- Config -----#####")
+# cmake-format: on
 
 if(XRT_FEATURE_SERVICE AND NOT XRT_FEATURE_OPENXR)
 	message(FATAL_ERROR "XRT_FEATURE_SERVICE requires XRT_FEATURE_OPENXR to be enabled")
