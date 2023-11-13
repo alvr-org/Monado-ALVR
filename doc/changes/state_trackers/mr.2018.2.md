@@ -1,6 +1,7 @@
 ---
 - mr.2018
 - mr.2033
+- mr.2027
 ---
 
 OpenXR: Export local_floor if extension enabled and space is supported, since
