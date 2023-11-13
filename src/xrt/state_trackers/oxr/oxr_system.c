@@ -318,6 +318,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	}
 #endif
 
+#ifdef OXR_HAVE_MNDX_force_feedback_curl
 	XrSystemForceFeedbackCurlPropertiesMNDX *force_feedback_props = NULL;
 	if (sys->inst->extensions.MNDX_force_feedback_curl) {
 		force_feedback_props =
@@ -328,6 +329,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	if (force_feedback_props) {
 		force_feedback_props->supportsForceFeedbackCurl = oxr_system_get_force_feedback_support(log, sys->inst);
 	}
+#endif
 
 	return XR_SUCCESS;
 }

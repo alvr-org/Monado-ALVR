@@ -928,12 +928,14 @@ oxr_session_create_impl(struct oxr_logger *log,
 	 * function added.
 	 */
 
+#ifdef OXR_HAVE_MND_headless
 	if (sys->inst->extensions.MND_headless) {
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
 		(*out_session)->compositor = NULL;
 		(*out_session)->create_swapchain = NULL;
 		return XR_SUCCESS;
 	}
+#endif
 	return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
 	                 "(createInfo->next->type) doesn't contain a valid "
 	                 "graphics binding structs");

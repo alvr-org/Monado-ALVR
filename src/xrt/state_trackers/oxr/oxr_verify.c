@@ -539,9 +539,11 @@ oxr_verify_XrSessionCreateInfo(struct oxr_logger *log,
 	/* We didn't recognize any graphics binding structs in the chain - our
 	 * last hope is headless. */
 
+#ifdef OXR_HAVE_MND_headless
 	if (inst->extensions.MND_headless) {
 		return XR_SUCCESS;
 	}
+#endif // OXR_HAVE_MND_headless
 
 	return oxr_error(log, XR_ERROR_GRAPHICS_DEVICE_INVALID,
 	                 "(createInfo->next) Argument chain does not contain "

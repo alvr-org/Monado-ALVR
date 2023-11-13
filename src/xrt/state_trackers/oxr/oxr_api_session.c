@@ -257,7 +257,7 @@ oxr_xrLocateViews(XrSession session,
  *
  */
 
-#ifdef XR_KHR_visibility_mask
+#ifdef OXR_HAVE_KHR_visibility_mask
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrGetVisibilityMaskKHR(XrSession session,
                            XrViewConfigurationType viewConfigurationType,
