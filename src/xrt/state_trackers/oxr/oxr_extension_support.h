@@ -204,7 +204,7 @@
 /*
  * XR_KHR_visibility_mask
  */
-#if defined(XR_KHR_visibility_mask)
+#if defined(XR_KHR_visibility_mask) && defined(XRT_FEATURE_OPENXR_VISIBILITY_MASK)
 #define OXR_HAVE_KHR_visibility_mask
 #define OXR_EXTENSION_SUPPORT_KHR_visibility_mask(_) _(KHR_visibility_mask, KHR_VISIBILITY_MASK)
 #else
@@ -350,7 +350,7 @@
 /*
  * XR_FB_display_refresh_rate
  */
-#if defined(XR_FB_display_refresh_rate)
+#if defined(XR_FB_display_refresh_rate) && defined(XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE)
 #define OXR_HAVE_FB_display_refresh_rate
 #define OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) _(FB_display_refresh_rate, FB_DISPLAY_REFRESH_RATE)
 #else
@@ -373,7 +373,7 @@
 /*
  * XR_MND_headless
  */
-#if defined(XR_MND_headless)
+#if defined(XR_MND_headless) && defined(XRT_FEATURE_OPENXR_HEADLESS)
 #define OXR_HAVE_MND_headless
 #define OXR_EXTENSION_SUPPORT_MND_headless(_) _(MND_headless, MND_HEADLESS)
 #else
@@ -430,7 +430,7 @@
 /*
  * XR_EXTX_overlay
  */
-#if defined(XR_EXTX_overlay)
+#if defined(XR_EXTX_overlay) && defined(XRT_FEATURE_OPENXR_OVERLAY)
 #define OXR_HAVE_EXTX_overlay
 #define OXR_EXTENSION_SUPPORT_EXTX_overlay(_) _(EXTX_overlay, EXTX_OVERLAY)
 #else
@@ -476,7 +476,7 @@
 /*
  * XR_MNDX_force_feedback_curl
  */
-#if defined(XR_MNDX_force_feedback_curl)
+#if defined(XR_MNDX_force_feedback_curl) && defined(XRT_FEATURE_OPENXR_FORCE_FEEDBACK_CURL)
 #define OXR_HAVE_MNDX_force_feedback_curl
 #define OXR_EXTENSION_SUPPORT_MNDX_force_feedback_curl(_) _(MNDX_force_feedback_curl, MNDX_FORCE_FEEDBACK_CURL)
 #else
