@@ -804,6 +804,44 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 		    layers,               // layers
 		    layer_count);         // layer_count
 
+
+		VkImageSubresourceRange first_color_level_subresource_range = {
+		    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		    .baseMipLevel = 0,
+		    .levelCount = 1,
+		    .baseArrayLayer = 0,
+		    .layerCount = 1,
+		};
+
+		VkImageLayout transition_from = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkImageLayout transition_to = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		vk_cmd_image_barrier_locked(                       //
+		    rr->r->vk,                                     //
+		    rr->r->cmd,                                    //
+		    rsi->color[0].image,                           //
+		    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          //
+		    VK_ACCESS_SHADER_READ_BIT,                     //
+		    transition_from,                               //
+		    transition_to,                                 //
+		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, //
+		    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,         //
+		    first_color_level_subresource_range);          //
+
+		if (rsi->color[0].image != rsi->color[1].image) {
+			vk_cmd_image_barrier_locked(                       //
+			    rr->r->vk,                                     //
+			    rr->r->cmd,                                    //
+			    rsi->color[1].image,                           //
+			    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          //
+			    VK_ACCESS_SHADER_READ_BIT,                     //
+			    transition_from,                               //
+			    transition_to,                                 //
+			    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, //
+			    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,         //
+			    first_color_level_subresource_range);          //
+		}
+
 		VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
 		VkSampler src_samplers[2] = {
 		    clamp_to_border_black,

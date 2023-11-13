@@ -501,7 +501,7 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 	    &r->c->nr,                                 // r
 	    VK_FORMAT_R8G8B8A8_SRGB,                   // format
 	    VK_ATTACHMENT_LOAD_OP_CLEAR,               // load_op
-	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); // final_layout
+	    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); // final_layout
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch_targets); i++) {
 		render_gfx_target_resources_init(  //

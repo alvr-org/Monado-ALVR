@@ -31,7 +31,7 @@ struct comp_layer;
  * which set the layout.
  *
  * The render passes of @p rsi_rtrs must be created with a final_layout of
- * VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL or there will be validation errors.
+ * VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL or there will be validation errors.
  *
  * Expected layouts:
  * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
