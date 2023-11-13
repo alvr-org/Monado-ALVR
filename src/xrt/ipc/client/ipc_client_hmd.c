@@ -69,7 +69,7 @@ call_get_view_poses_raw(ipc_client_hmd_t *ich,
                         struct xrt_pose *out_poses)
 {
 	struct ipc_connection *ipc_c = ich->ipc_c;
-	xrt_result_t xret = XRT_SUCCESS;
+	xrt_result_t xret;
 
 	ipc_client_connection_lock(ipc_c);
 
@@ -80,9 +80,7 @@ call_get_view_poses_raw(ipc_client_hmd_t *ich,
 	    default_eye_relation,                     //
 	    at_timestamp_ns,                          //
 	    view_count);                              //
-	if (xret != XRT_SUCCESS) {
-		goto out;
-	}
+	IPC_CHK_WITH_GOTO(ich->ipc_c, xret, "ipc_send_device_get_view_poses_locked", out);
 
 	// This is the data we get back in the provided reply.
 	uint32_t returned_view_count = 0;
@@ -93,9 +91,7 @@ call_get_view_poses_raw(ipc_client_hmd_t *ich,
 	    ipc_c,                                       //
 	    &head_relation,                              //
 	    &returned_view_count);                       //
-	if (xret != XRT_SUCCESS) {
-		goto out;
-	}
+	IPC_CHK_WITH_GOTO(ich->ipc_c, xret, "ipc_receive_device_get_view_poses_locked", out);
 
 	if (view_count != returned_view_count) {
 		IPC_ERROR(ich->ipc_c, "Wrong view counts (sent: %u != got: %u)", view_count, returned_view_count);
@@ -104,15 +100,11 @@ call_get_view_poses_raw(ipc_client_hmd_t *ich,
 
 	// We can read directly to the output variables.
 	xret = ipc_receive(&ipc_c->imc, out_fovs, sizeof(struct xrt_fov) * view_count);
-	if (xret != XRT_SUCCESS) {
-		goto out;
-	}
+	IPC_CHK_WITH_GOTO(ich->ipc_c, xret, "ipc_receive(1)", out);
 
 	// We can read directly to the output variables.
 	xret = ipc_receive(&ipc_c->imc, out_poses, sizeof(struct xrt_pose) * view_count);
-	if (xret != XRT_SUCCESS) {
-		goto out;
-	}
+	IPC_CHK_WITH_GOTO(ich->ipc_c, xret, "ipc_receive(2)", out);
 
 	/*
 	 * Finally set the head_relation that we got in the reply, mostly to
@@ -152,10 +144,8 @@ ipc_client_hmd_update_inputs(struct xrt_device *xdev)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
 
-	xrt_result_t r = ipc_call_device_update_input(ich->ipc_c, ich->device_id);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(ich->ipc_c, "Error calling input update!");
-	}
+	xrt_result_t xret = ipc_call_device_update_input(ich->ipc_c, ich->device_id);
+	IPC_CHK_ONLY_PRINT(ich->ipc_c, xret, "ipc_call_device_update_input");
 }
 
 static void
@@ -165,12 +155,15 @@ ipc_client_hmd_get_tracked_pose(struct xrt_device *xdev,
                                 struct xrt_space_relation *out_relation)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
+	xrt_result_t xret;
 
-	xrt_result_t r =
-	    ipc_call_device_get_tracked_pose(ich->ipc_c, ich->device_id, name, at_timestamp_ns, out_relation);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(ich->ipc_c, "Error calling tracked pose!");
-	}
+	xret = ipc_call_device_get_tracked_pose( //
+	    ich->ipc_c,                          //
+	    ich->device_id,                      //
+	    name,                                //
+	    at_timestamp_ns,                     //
+	    out_relation);                       //
+	IPC_CHK_ONLY_PRINT(ich->ipc_c, xret, "ipc_call_device_get_tracked_pose");
 }
 
 static void
@@ -183,20 +176,19 @@ ipc_client_hmd_get_view_poses(struct xrt_device *xdev,
                               struct xrt_pose *out_poses)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
+	xrt_result_t xret;
 
 	struct ipc_info_get_view_poses_2 info = {0};
 
 	if (view_count == 2) {
 		// Fast path.
-		xrt_result_t r = ipc_call_device_get_view_poses_2( //
-		    ich->ipc_c,                                    //
-		    ich->device_id,                                //
-		    default_eye_relation,                          //
-		    at_timestamp_ns,                               //
-		    &info);                                        //
-		if (r != XRT_SUCCESS) {
-			IPC_ERROR(ich->ipc_c, "Error calling view poses!");
-		}
+		xret = ipc_call_device_get_view_poses_2( //
+		    ich->ipc_c,                          //
+		    ich->device_id,                      //
+		    default_eye_relation,                //
+		    at_timestamp_ns,                     //
+		    &info);                              //
+		IPC_CHK_ONLY_PRINT(ich->ipc_c, xret, "ipc_call_device_get_view_poses_2");
 
 		*out_head_relation = info.head_relation;
 		for (int i = 0; i < 2; i++) {
@@ -227,20 +219,18 @@ ipc_client_hmd_compute_distortion(
     struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
+	xrt_result_t xret;
 
 	bool ret;
-	xrt_result_t xret = ipc_call_device_compute_distortion( //
-	    ich->ipc_c,                                         //
-	    ich->device_id,                                     //
-	    view,                                               //
-	    u,                                                  //
-	    v,                                                  //
-	    &ret,                                               //
-	    out_result);                                        //
-	if (xret != XRT_SUCCESS) {
-		IPC_ERROR(ich->ipc_c, "Error calling compute distortion!");
-		return false;
-	}
+	xret = ipc_call_device_compute_distortion( //
+	    ich->ipc_c,                            //
+	    ich->device_id,                        //
+	    view,                                  //
+	    u,                                     //
+	    v,                                     //
+	    &ret,                                  //
+	    out_result);                           //
+	IPC_CHK_WITH_RET(ich->ipc_c, xret, "ipc_call_device_compute_distortion", false);
 
 	return ret;
 }
@@ -249,11 +239,16 @@ static bool
 ipc_client_hmd_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
+	xrt_result_t xret;
+
 	bool available = false;
-	xrt_result_t r = ipc_call_device_is_form_factor_available(ich->ipc_c, ich->device_id, form_factor, &available);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(ich->ipc_c, "Error calling is available!");
-	}
+	xret = ipc_call_device_is_form_factor_available( //
+	    ich->ipc_c,                                  //
+	    ich->device_id,                              //
+	    form_factor,                                 //
+	    &available);                                 //
+	IPC_CHK_ONLY_PRINT(ich->ipc_c, xret, "ipc_call_device_is_form_factor_available");
+
 	return available;
 }
 

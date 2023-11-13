@@ -77,10 +77,8 @@ ipc_client_device_update_inputs(struct xrt_device *xdev)
 {
 	ipc_client_device_t *icd = ipc_client_device(xdev);
 
-	xrt_result_t r = ipc_call_device_update_input(icd->ipc_c, icd->device_id);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(icd->ipc_c, "Error sending input update!");
-	}
+	xrt_result_t xret = ipc_call_device_update_input(icd->ipc_c, icd->device_id);
+	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_update_input");
 }
 
 static void
@@ -91,14 +89,16 @@ ipc_client_device_get_tracked_pose(struct xrt_device *xdev,
 {
 	ipc_client_device_t *icd = ipc_client_device(xdev);
 
-	xrt_result_t r =
-	    ipc_call_device_get_tracked_pose(icd->ipc_c, icd->device_id, name, at_timestamp_ns, out_relation);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(icd->ipc_c, "Error sending input update!");
-	}
+	xrt_result_t xret = ipc_call_device_get_tracked_pose( //
+	    icd->ipc_c,                                       //
+	    icd->device_id,                                   //
+	    name,                                             //
+	    at_timestamp_ns,                                  //
+	    out_relation);                                    //
+	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_get_tracked_pose");
 }
 
-void
+static void
 ipc_client_device_get_hand_tracking(struct xrt_device *xdev,
                                     enum xrt_input_name name,
                                     uint64_t at_timestamp_ns,
@@ -107,11 +107,14 @@ ipc_client_device_get_hand_tracking(struct xrt_device *xdev,
 {
 	ipc_client_device_t *icd = ipc_client_device(xdev);
 
-	xrt_result_t r = ipc_call_device_get_hand_tracking(icd->ipc_c, icd->device_id, name, at_timestamp_ns, out_value,
-	                                                   out_timestamp_ns);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(icd->ipc_c, "Error sending input update!");
-	}
+	xrt_result_t xret = ipc_call_device_get_hand_tracking( //
+	    icd->ipc_c,                                        //
+	    icd->device_id,                                    //
+	    name,                                              //
+	    at_timestamp_ns,                                   //
+	    out_value,                                         //
+	    out_timestamp_ns);                                 //
+	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_get_hand_tracking");
 }
 
 static void
@@ -132,10 +135,8 @@ ipc_client_device_set_output(struct xrt_device *xdev, enum xrt_output_name name,
 {
 	ipc_client_device_t *icd = ipc_client_device(xdev);
 
-	xrt_result_t r = ipc_call_device_set_output(icd->ipc_c, icd->device_id, name, value);
-	if (r != XRT_SUCCESS) {
-		IPC_ERROR(icd->ipc_c, "Error sending set output!");
-	}
+	xrt_result_t xret = ipc_call_device_set_output(icd->ipc_c, icd->device_id, name, value);
+	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_set_output");
 }
 
 /*!

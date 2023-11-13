@@ -95,9 +95,7 @@ create_offset_space(struct xrt_space_overseer *xso,
 	uint32_t id = 0;
 
 	xret = ipc_call_space_create_offset(icspo->ipc_c, parent_id, offset, &id);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	IPC_CHK_AND_RET(icspo->ipc_c, xret, "ipc_call_space_create_offset");
 
 	alloc_space_with_id(icspo, id, out_space);
 
@@ -116,9 +114,7 @@ create_pose_space(struct xrt_space_overseer *xso,
 	uint32_t id = 0;
 
 	xret = ipc_call_space_create_pose(icspo->ipc_c, xdev_id, name, &id);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	IPC_CHK_AND_RET(icspo->ipc_c, xret, "ipc_call_space_create_pose");
 
 	alloc_space_with_id(icspo, id, out_space);
 
@@ -135,11 +131,12 @@ locate_space(struct xrt_space_overseer *xso,
              struct xrt_space_relation *out_relation)
 {
 	struct ipc_client_space_overseer *icspo = ipc_client_space_overseer(xso);
+	xrt_result_t xret;
 
 	struct ipc_client_space *icsp_base_space = ipc_client_space(base_space);
 	struct ipc_client_space *icsp_space = ipc_client_space(space);
 
-	return ipc_call_space_locate_space( //
+	xret = ipc_call_space_locate_space( //
 	    icspo->ipc_c,                   //
 	    icsp_base_space->id,            //
 	    base_offset,                    //
@@ -147,6 +144,7 @@ locate_space(struct xrt_space_overseer *xso,
 	    icsp_space->id,                 //
 	    offset,                         //
 	    out_relation);                  //
+	IPC_CHK_ALWAYS_RET(icspo->ipc_c, xret, "ipc_call_space_locate_space");
 }
 
 static xrt_result_t
@@ -158,17 +156,19 @@ locate_device(struct xrt_space_overseer *xso,
               struct xrt_space_relation *out_relation)
 {
 	struct ipc_client_space_overseer *icspo = ipc_client_space_overseer(xso);
+	xrt_result_t xret;
 
 	struct ipc_client_space *icsp_base_space = ipc_client_space(base_space);
 	uint32_t xdev_id = ipc_client_xdev(xdev)->device_id;
 
-	return ipc_call_space_locate_device( //
+	xret = ipc_call_space_locate_device( //
 	    icspo->ipc_c,                    //
 	    icsp_base_space->id,             //
 	    base_offset,                     //
 	    at_timestamp_ns,                 //
 	    xdev_id,                         //
 	    out_relation);                   //
+	IPC_CHK_ALWAYS_RET(icspo->ipc_c, xret, "ipc_call_space_locate_device");
 }
 
 static void
