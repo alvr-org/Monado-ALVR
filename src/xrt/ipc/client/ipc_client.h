@@ -17,6 +17,7 @@
 #include "util/u_threading.h"
 #include "util/u_logging.h"
 
+#include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
 #include "shared/ipc_message_channel.h"
 
@@ -34,6 +35,110 @@
 #define IPC_INFO(IPC_C, ...) U_LOG_IFL_I((IPC_C)->imc.log_level, __VA_ARGS__)
 #define IPC_WARN(IPC_C, ...) U_LOG_IFL_W((IPC_C)->imc.log_level, __VA_ARGS__)
 #define IPC_ERROR(IPC_C, ...) U_LOG_IFL_E((IPC_C)->imc.log_level, __VA_ARGS__)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then returns @p XRET. The argument @p IPC_C
+ * will be used to look up the @p cond_level for the @ref ipc_print_result call.
+ *
+ * @param IPC_C    Client connection, used to look up @p cond_level.
+ * @param XRET     The @p xrt_result_t to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ *
+ * @ingroup ipc_client
+ */
+#define IPC_CHK_AND_RET(IPC_C, XRET, FUNC_STR)                                                                         \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
+			return _ret;                                                                                   \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then gotos @p GOTO. The argument @p IPC_C
+ * will be used to look up the @p cond_level for the @ref ipc_print_result call.
+ *
+ * @param IPC_C    Client connection, used to look up @p cond_level.
+ * @param XRET     The @p xrt_result_t to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ * @param GOTO     Goto label to jump to on error.
+ *
+ * @ingroup ipc_client
+ */
+#define IPC_CHK_WITH_GOTO(IPC_C, XRET, FUNC_STR, GOTO)                                                                 \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
+			goto GOTO;                                                                                     \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then returns @p RET. The argument @p IPC_C
+ * will be used to look up the @p cond_level for the @ref ipc_print_result call.
+ *
+ * @param IPC_C    Client connection, used to look up @p cond_level.
+ * @param XRET     The @p xrt_result_t to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ * @param RET      The value that is returned on error.
+ *
+ * @ingroup ipc_client
+ */
+#define IPC_CHK_WITH_RET(IPC_C, XRET, FUNC_STR, RET)                                                                   \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
+			return RET;                                                                                    \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, it only prints and does nothing else. The
+ * argument @p IPC_C will be used to look up the @p cond_level for the
+ * @ref ipc_print_result call.
+ *
+ * @param IPC_C    Client connection, used to look up @p cond_level.
+ * @param XRET     The @p xrt_result_t to check.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ *
+ * @ingroup ipc_client
+ */
+#define IPC_CHK_ONLY_PRINT(IPC_C, XRET, FUNC_STR)                                                                      \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then it will always return the value. The
+ * argument @p IPC_C will be used to look up the @p cond_level for the
+ * @ref ipc_print_result call.
+ *
+ * @param IPC_C    Client connection, used to look up @p cond_level.
+ * @param XRET     The @p xrt_result_t to check and always return.
+ * @param FUNC_STR String literal with the function name, used for logging.
+ *
+ * @ingroup ipc_client
+ */
+#define IPC_CHK_ALWAYS_RET(IPC_C, XRET, FUNC_STR)                                                                      \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
+		}                                                                                                      \
+		return _ret;                                                                                           \
+	} while (false)
+
 
 /*
  *
