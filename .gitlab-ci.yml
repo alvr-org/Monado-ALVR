@@ -6,8 +6,6 @@
 # see .gitlab-ci/ci.template, etc instead
 ###############################################
 
-# Detached MR pipelines, needed due to https://gitlab.freedesktop.org/freedesktop/freedesktop/-/issues/438
-
 # workflow:
 #   rules:
 #     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
@@ -24,6 +22,9 @@ include:
       - "/templates/ubuntu.yml"
       - "/templates/arch.yml"
   # - local: .gitlab-ci/containers/ci-container-prep.yml
+
+  # This include is for compatibility with the fdo CI restrictions/checks
+  # needed due to https://gitlab.freedesktop.org/freedesktop/freedesktop/-/issues/438
   - local: .gitlab-ci/ci-rules.yml
 
 stages:
@@ -149,11 +150,10 @@ win:container_prep:
     FDO_DISTRIBUTION_VERSION: "22.04"
     FDO_DISTRIBUTION_TAG: "2022-09-20.0"
 
-# Variables for build and usage of Arch rolling image
-.monado.variables.arch:rolling:
+# Variables for build and usage of Arch image
+.monado.variables.arch:
   variables:
-    FDO_DISTRIBUTION_VERSION: "rolling"
-    FDO_DISTRIBUTION_TAG: "2023-05-22.0"
+    FDO_DISTRIBUTION_TAG: "2023-11-14.0"
 
 
 ###
@@ -204,12 +204,12 @@ ubuntu:jammy:container_prep:
   variables:
     FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libavcodec-dev libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 reprepro unzip wget'
 
-# Make Arch rolling image
-arch:rolling:container_prep:
+# Make Arch image
+arch:container_prep:
   stage: container_prep
   extends:
     - .container-rules
-    - .monado.variables.arch:rolling
+    - .monado.variables.arch
     - .fdo.container-build@arch # from ci-templates
 
   variables:
@@ -252,10 +252,10 @@ arch:rolling:container_prep:
     - .build-rules
 
 
-# Base for using Arch rolling image
-.monado.image.arch:rolling:
+# Base for using Arch image
+.monado.image.arch:
   extends:
-    - .monado.variables.arch:rolling
+    - .monado.variables.arch
     - .fdo.distribution-image@arch # from ci-templates
     - .build-rules
 
@@ -499,7 +499,7 @@ ubuntu:jammy:cmake:
 arch:cmake:
   stage: build
   extends:
-    - .monado.image.arch:rolling
+    - .monado.image.arch
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -509,7 +509,7 @@ arch:cmake:
 arch:cmake:clang:
   stage: build
   extends:
-    - .monado.image.arch:rolling
+    - .monado.image.arch
   script:
 
     - .gitlab-ci/prebuild.sh

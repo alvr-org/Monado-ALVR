@@ -22,8 +22,6 @@ The following will update all files from templates:
 make -f .gitlab-ci/ci-scripts.mk
 #}
 
-# Detached MR pipelines, needed due to https://gitlab.freedesktop.org/freedesktop/freedesktop/-/issues/438
-
 # workflow:
 #   rules:
 #     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
@@ -40,6 +38,9 @@ include:
       - "/templates/{{distro.name}}.yml"
 {% endfor %}
   # - local: .gitlab-ci/containers/ci-container-prep.yml
+
+  # This include is for compatibility with the fdo CI restrictions/checks
+  # needed due to https://gitlab.freedesktop.org/freedesktop/freedesktop/-/issues/438
   - local: .gitlab-ci/ci-rules.yml
 
 stages:
@@ -65,7 +66,7 @@ stages:
 {% include 'ci-containers-variables.yml.jinja' %}
 {% include 'ci-containers.yml.jinja' %}
 
-{% from 'functions.jinja' import base_job_to_use_image_containing, base_job_to_use_image with context %}
+{% from 'functions.jinja' import image_name, base_job_to_use_image_containing, base_job_to_use_image with context %}
 
 # Style check job
 format-and-spellcheck:
@@ -176,7 +177,7 @@ windows:
       - build/Testing/Temporary
 
 {% macro packaging_job_name(distro, image) -%}
-{{distro.name}}:{{image.codename}}:package
+{{ image_name(distro, image) }}:package
 {%- endmacro %}
 
 {% for distro in distributions -%} {%- for image in distro.images if "deb_version_suffix" in image %}

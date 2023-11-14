@@ -10,5 +10,18 @@
 {% endfor -%} {%- endfor %}
 {% endmacro -%}
 
+{# Macro to compute a part of a job name, etc. for a distro and image #}
+{% macro image_name(distro, image) -%}
+{{ distro.name }}
+{%- if "codename" in image %}:{{ image.codename }}{%- endif -%}
+{%- endmacro -%}
+
 {# Macro to compute job name to extend to use image given distro and image objects#}
-{% macro base_job_to_use_image(distro, image) %}.monado.image.{{distro.name}}:{{image.codename}}{% endmacro -%}
+{% macro base_job_to_use_image(distro, image) %}.monado.image.{{ image_name(distro, image) }}{% endmacro -%}
+
+
+{# Macro to compute a part of a comment describing a distro and image #}
+{% macro image_name_for_comment(distro, image) %}
+{{ distro.name | capitalize }}
+{%- if "codename" in image %} {{ image.codename }}{%- endif -%}
+{%- endmacro -%}

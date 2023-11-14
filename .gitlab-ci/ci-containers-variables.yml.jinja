@@ -3,12 +3,16 @@
 # SPDX-FileCopyrightText: 2018-2023 Collabora, Ltd. and the Monado contributors
 #}
 
+{% from 'functions.jinja' import image_name, image_name_for_comment with context %}
+
 {% for distro in distributions -%} {%- for image in distro.images %}
 
-# Variables for build and usage of {{ distro.name|capitalize }} {{image.codename}} image
-.monado.variables.{{distro.name}}:{{image.codename}}:
+# Variables for build and usage of {{ image_name_for_comment(distro, image) }} image
+.monado.variables.{{ image_name(distro, image) }}:
   variables:
+{% if "codename" in image or "distro_version" in image %}
     FDO_DISTRIBUTION_VERSION: "{{ image["distro_version"] | default(image.codename) }}"
+{% endif %}
     FDO_DISTRIBUTION_TAG: "{{image["tag"]}}"
 {% if "repo_suffix" in image %}
     FDO_REPO_SUFFIX: {{image["repo_suffix"]}}

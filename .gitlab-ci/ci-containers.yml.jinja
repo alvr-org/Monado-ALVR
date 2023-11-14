@@ -3,17 +3,19 @@
 # SPDX-FileCopyrightText: 2018-2023 Collabora, Ltd. and the Monado contributors
 #}
 
+{% from 'functions.jinja' import image_name, image_name_for_comment with context %}
+
 ###
 # Container prep jobs
 
 {%- for distro in distributions -%} {%- for image in distro.images %}
 
-# Make {{ distro.name|capitalize }} {{image.codename}} image
-{{distro.name}}:{{image.codename}}:container_prep:
+# Make {{ image_name_for_comment(distro, image) }} image
+{{ image_name(distro, image) }}:container_prep:
   stage: container_prep
   extends:
     - .container-rules
-    - .monado.variables.{{distro.name}}:{{image.codename}}
+    - .monado.variables.{{ image_name(distro, image) }}
     - .fdo.container-build@{{distro.name}} # from ci-templates
 
   variables:
@@ -31,10 +33,10 @@
 # Container usage base jobs
 {% for distro in distributions -%} {%- for image in distro.images %}
 
-# Base for using {{ distro.name|capitalize }} {{image.codename}} image
-{{base_job_to_use_image(distro, image)}}:
+# Base for using {{ image_name_for_comment(distro, image) }} image
+{{ base_job_to_use_image(distro, image) }}:
   extends:
-    - .monado.variables.{{distro.name}}:{{image.codename}}
+    - .monado.variables.{{ image_name(distro, image) }}
     - .fdo.{{ "suffixed" if "repo_suffix" in image else "distribution" }}-image@{{distro.name}} # from ci-templates
     - .build-rules
 
