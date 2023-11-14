@@ -141,7 +141,12 @@ def generate_h(file, p):
     f.write('''
 #pragma once
 
+#include "xrt/xrt_compiler.h"
 
+''')
+
+    write_cpp_header_guard_start(f)
+    f.write('''
 
 struct ipc_connection;
 ''')
@@ -203,6 +208,7 @@ ipc_cmd_to_str(ipc_command_t id)
 
     f.write("#pragma pack (pop)\n")
 
+    write_cpp_header_guard_end(f)
     f.close()
 
 
@@ -256,7 +262,6 @@ def generate_client_h(file, p):
         f.write(";\n")
 
     write_cpp_header_guard_end(f)
-
     f.close()
 
 
