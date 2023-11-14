@@ -303,7 +303,7 @@ oxr_xrGetVisibilityMaskKHR(XrSession session,
 		OXR_VERIFY_ARG_NOT_NULL(&log, visibilityMask->indices);
 	}
 
-	return oxr_session_get_visibility_mask(&log, sess, visibilityMaskType, visibilityMask);
+	return oxr_session_get_visibility_mask(&log, sess, visibilityMaskType, viewIndex, visibilityMask);
 }
 #endif // OXR_HAVE_KHR_visibility_mask
 

@@ -1177,22 +1177,29 @@ XrResult
 oxr_session_get_visibility_mask(struct oxr_logger *log,
                                 struct oxr_session *sess,
                                 XrVisibilityMaskTypeKHR visibilityMaskType,
+                                uint32_t viewIndex,
                                 XrVisibilityMaskKHR *visibilityMask)
 {
 	struct oxr_system *sys = sess->sys;
 	struct xrt_device *xdev = GET_XDEV_BY_ROLE(sess->sys, head);
 	enum xrt_visibility_mask_type type = convert_mask_type(visibilityMaskType);
 
-	if (sys->visibility_mask && sys->visibility_mask->type != type) {
-		free(sys->visibility_mask);
-		sys->visibility_mask = NULL;
+	assert(viewIndex < ARRAY_SIZE(sys->visibility_mask));
+
+	struct xrt_visibility_mask *mask = sys->visibility_mask[viewIndex];
+
+	// Do we need to free the mask.
+	if (mask != NULL && mask->type != type) {
+		free(mask);
+		mask = NULL;
+		sys->visibility_mask[viewIndex] = NULL;
 	}
 
-	if (sys->visibility_mask == NULL) {
-		xrt_device_get_visibility_mask(xdev, type, 0, &sys->visibility_mask);
+	// If we didn't have any cached mask get it.
+	if (mask == NULL) {
+		xrt_device_get_visibility_mask(xdev, type, viewIndex, &mask);
+		sys->visibility_mask[viewIndex] = mask;
 	}
-
-	struct xrt_visibility_mask *mask = sys->visibility_mask;
 
 	visibilityMask->vertexCountOutput = mask->vertex_count;
 	visibilityMask->indexCountOutput = mask->index_count;

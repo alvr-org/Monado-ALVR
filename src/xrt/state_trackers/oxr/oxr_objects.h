@@ -766,6 +766,7 @@ XrResult
 oxr_session_get_visibility_mask(struct oxr_logger *log,
                                 struct oxr_session *session,
                                 XrVisibilityMaskTypeKHR visibilityMaskType,
+                                uint32_t viewIndex,
                                 XrVisibilityMaskKHR *visibilityMask);
 #endif // OXR_HAVE_KHR_visibility_mask
 
@@ -1291,7 +1292,7 @@ struct oxr_system
 	struct xrt_system_roles dynamic_roles_cache;
 	struct os_mutex sync_actions_mutex;
 
-	struct xrt_visibility_mask *visibility_mask;
+	struct xrt_visibility_mask *visibility_mask[2];
 
 #ifdef XR_USE_GRAPHICS_API_VULKAN
 	//! The instance/device we create when vulkan_enable2 is used
