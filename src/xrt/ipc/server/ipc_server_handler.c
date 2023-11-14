@@ -1588,16 +1588,18 @@ ipc_handle_device_get_visibility_mask(volatile struct ipc_client_state *ics,
 	xret = ipc_send(imc, &reply, sizeof(reply));
 	if (xret != XRT_SUCCESS) {
 		IPC_ERROR(s, "Failed to send reply");
-		return xret;
+		goto out_free;
 	}
 
 	xret = ipc_send(imc, mask, reply.mask_size);
 	if (xret != XRT_SUCCESS) {
 		IPC_ERROR(s, "Failed to send mask");
-		return xret;
+		goto out_free;
 	}
 
-	return XRT_SUCCESS;
+out_free:
+	free(mask);
+	return xret;
 }
 
 xrt_result_t
