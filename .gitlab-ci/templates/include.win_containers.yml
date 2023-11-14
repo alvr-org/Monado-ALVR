@@ -1,6 +1,6 @@
-# {# included by ci.template #}
-# {# SPDX-License-Identifier: CC0-1.0 #}
-# {# SPDX-FileCopyrightText: 2018-2022 Collabora, Ltd. and the Monado contributors #}
+# {#- included by .gitlab-ci.yml.jinja #}
+# {#- SPDX-License-Identifier: CC0-1.0 #}
+# {#- SPDX-FileCopyrightText: 2018-2022 Collabora, Ltd. and the Monado contributors #}
 
 ###
 # Windows container-related jobs (prep and usage)

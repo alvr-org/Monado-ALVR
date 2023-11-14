@@ -62,11 +62,11 @@ stages:
     - when: never
 
 
-{% include 'win_containers.yml' %}
-{% include 'ci-containers-variables.yml.jinja' %}
-{% include 'ci-containers.yml.jinja' %}
+{% include 'include.win_containers.yml' %}
+{% include 'include.ci-containers-variables.yml.jinja' %}
+{% include 'include.ci-containers.yml.jinja' %}
 
-{% from 'functions.jinja' import image_name, base_job_to_use_image_containing, base_job_to_use_image with context %}
+{% from 'include.functions.jinja' import image_name, base_job_to_use_image_containing, base_job_to_use_image with context %}
 
 # Style check job
 format-and-spellcheck:

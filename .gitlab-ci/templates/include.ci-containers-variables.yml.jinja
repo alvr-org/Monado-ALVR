@@ -1,9 +1,11 @@
 {#
 # SPDX-License-Identifier: CC0-1.0
 # SPDX-FileCopyrightText: 2018-2023 Collabora, Ltd. and the Monado contributors
+#
+# This file is not used directly to generate its own output: it is included by .gitlab-ci.yml.jinja
 #}
 
-{% from 'functions.jinja' import image_name, image_name_for_comment with context %}
+{% from 'include.functions.jinja' import image_name, image_name_for_comment with context %}
 
 {% for distro in distributions -%} {%- for image in distro.images %}
 
@@ -13,7 +15,7 @@
 {% if "codename" in image or "distro_version" in image %}
     FDO_DISTRIBUTION_VERSION: "{{ image["distro_version"] | default(image.codename) }}"
 {% endif %}
-    FDO_DISTRIBUTION_TAG: "{{image["tag"]}}"
+    FDO_DISTRIBUTION_TAG: "{{ image.tag }}"
 {% if "repo_suffix" in image %}
     FDO_REPO_SUFFIX: {{image["repo_suffix"]}}
 {% endif %}
