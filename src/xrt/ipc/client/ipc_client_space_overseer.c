@@ -7,6 +7,7 @@
  * @ingroup ipc_client
  */
 
+#include "xrt/xrt_defines.h"
 #include "xrt/xrt_space.h"
 
 #include "ipc_client_generated.h"
@@ -26,6 +27,8 @@ struct ipc_client_space_overseer
 	struct xrt_space_overseer base;
 
 	struct ipc_connection *ipc_c;
+
+	struct xrt_reference ref_space_use[XRT_SPACE_REFERENCE_TYPE_COUNT];
 };
 
 
@@ -171,6 +174,42 @@ locate_device(struct xrt_space_overseer *xso,
 	IPC_CHK_ALWAYS_RET(icspo->ipc_c, xret, "ipc_call_space_locate_device");
 }
 
+static xrt_result_t
+ref_space_inc(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
+{
+	struct ipc_client_space_overseer *icspo = ipc_client_space_overseer(xso);
+	xrt_result_t xret;
+
+	// No more checking then this.
+	assert(type < XRT_SPACE_REFERENCE_TYPE_COUNT);
+
+	// If it wasn't zero nothing to do.
+	if (!xrt_reference_inc_and_was_zero(&icspo->ref_space_use[type])) {
+		return XRT_SUCCESS;
+	}
+
+	xret = ipc_call_space_mark_ref_space_in_use(icspo->ipc_c, type);
+	IPC_CHK_ALWAYS_RET(icspo->ipc_c, xret, "ipc_call_space_mark_ref_space_in_use");
+}
+
+static xrt_result_t
+ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
+{
+	struct ipc_client_space_overseer *icspo = ipc_client_space_overseer(xso);
+	xrt_result_t xret;
+
+	// No more checking then this.
+	assert(type < XRT_SPACE_REFERENCE_TYPE_COUNT);
+
+	// If it is not zero we are done.
+	if (!xrt_reference_dec_and_is_zero(&icspo->ref_space_use[type])) {
+		return XRT_SUCCESS;
+	}
+
+	xret = ipc_call_space_unmark_ref_space_in_use(icspo->ipc_c, type);
+	IPC_CHK_ALWAYS_RET(icspo->ipc_c, xret, "ipc_call_space_unmark_ref_space_in_use");
+}
+
 static void
 destroy(struct xrt_space_overseer *xso)
 {
@@ -219,6 +258,8 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	icspo->base.create_pose_space = create_pose_space;
 	icspo->base.locate_space = locate_space;
 	icspo->base.locate_device = locate_device;
+	icspo->base.ref_space_inc = ref_space_inc;
+	icspo->base.ref_space_dec = ref_space_dec;
 	icspo->base.destroy = destroy;
 	icspo->ipc_c = ipc_c;
 

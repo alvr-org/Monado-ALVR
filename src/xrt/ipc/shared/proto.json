@@ -136,6 +136,18 @@
 		]
 	},
 
+	"space_mark_ref_space_in_use": {
+		"in": [
+			{"name": "type", "type": "enum xrt_reference_space_type"}
+		]
+	},
+
+	"space_unmark_ref_space_in_use": {
+		"in": [
+			{"name": "type", "type": "enum xrt_reference_space_type"}
+		]
+	},
+
 	"compositor_get_info": {
 		"out": [
 			{"name": "info", "type": "struct xrt_compositor_info"}

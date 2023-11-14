@@ -117,6 +117,9 @@ struct ipc_client_state
 	//! Ptrs to the spaces.
 	struct xtr_space *xspcs[IPC_MAX_CLIENT_SPACES];
 
+	//! Which of the references spaces is the client using.
+	bool ref_space_used[XRT_SPACE_REFERENCE_TYPE_COUNT];
+
 	//! Socket fd used for client comms
 	struct ipc_message_channel imc;
 

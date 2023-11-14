@@ -19,6 +19,7 @@
 #include "xrt/xrt_instance.h"
 #include "xrt/xrt_compositor.h"
 #include "xrt/xrt_device.h"
+#include "xrt/xrt_space.h"
 #include "xrt/xrt_tracking.h"
 #include "xrt/xrt_config_build.h"
 

@@ -83,6 +83,17 @@ set_swapchain_info(volatile struct ipc_client_state *ics,
 }
 
 static xrt_result_t
+validate_reference_space_type(volatile struct ipc_client_state *ics, enum xrt_reference_space_type type)
+{
+	if ((uint32_t)type >= XRT_SPACE_REFERENCE_TYPE_COUNT) {
+		IPC_ERROR(ics->server, "Invalid reference space type %u", type);
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
 validate_space_id(volatile struct ipc_client_state *ics, int64_t space_id, struct xrt_space **out_xspc)
 {
 	if (space_id < 0) {
@@ -473,6 +484,63 @@ ipc_handle_space_destroy(volatile struct ipc_client_state *ics, uint32_t space_i
 	// Remove volatile
 	struct xrt_space **xs_ptr = (struct xrt_space **)&ics->xspcs[space_id];
 	xrt_space_reference(xs_ptr, NULL);
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
+ipc_handle_space_mark_ref_space_in_use(volatile struct ipc_client_state *ics, enum xrt_reference_space_type type)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+	xrt_result_t xret;
+
+	xret = validate_reference_space_type(ics, type);
+	if (xret != XRT_SUCCESS) {
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	// Is this space already used?
+	if (ics->ref_space_used[type]) {
+		IPC_ERROR(ics->server, "Space '%u' already used!", type);
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	xret = xrt_space_overseer_ref_space_inc(xso, type);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "xrt_space_overseer_ref_space_inc failed");
+		return xret;
+	}
+
+	// Can now mark it as used.
+	ics->ref_space_used[type] = true;
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
+ipc_handle_space_unmark_ref_space_in_use(volatile struct ipc_client_state *ics, enum xrt_reference_space_type type)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+	xrt_result_t xret;
+
+	xret = validate_reference_space_type(ics, type);
+	if (xret != XRT_SUCCESS) {
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	if (!ics->ref_space_used[type]) {
+		IPC_ERROR(ics->server, "Space '%u' not used!", type);
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	xret = xrt_space_overseer_ref_space_dec(xso, type);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "xrt_space_overseer_ref_space_dec failed");
+		return xret;
+	}
+
+	// Now we can mark it as not used.
+	ics->ref_space_used[type] = false;
 
 	return XRT_SUCCESS;
 }

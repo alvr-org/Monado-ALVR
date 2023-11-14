@@ -67,6 +67,17 @@ common_shutdown(volatile struct ipc_client_state *ics)
 		xrt_space_reference((struct xrt_space **)&ics->xspcs[i], NULL);
 	}
 
+	// Mark an still in use reference spaces as no longer used.
+	for (uint32_t i = 0; i < ARRAY_SIZE(ics->ref_space_used); i++) {
+		bool used = ics->ref_space_used[i];
+		if (!used) {
+			continue;
+		}
+
+		xrt_space_overseer_ref_space_dec(ics->server->xso, i);
+		ics->ref_space_used[i] = false;
+	}
+
 	// Should we stop the server when a client disconnects?
 	if (ics->server->exit_on_disconnect) {
 		ics->server->running = false;
