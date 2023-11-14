@@ -1575,7 +1575,8 @@ ipc_handle_device_get_visibility_mask(volatile struct ipc_client_state *ics,
 	if (xdev->get_visibility_mask) {
 		xdev->get_visibility_mask(xdev, type, &mask);
 	} else {
-		u_visibility_mask_get_default(type, &mask);
+		struct xrt_fov fov = xdev->hmd->distortion.fov[0];
+		u_visibility_mask_get_default(type, &fov, &mask);
 	}
 
 	if (mask == NULL) {

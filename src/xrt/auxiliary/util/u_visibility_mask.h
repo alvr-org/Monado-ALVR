@@ -17,12 +17,17 @@ extern "C" {
 
 
 /*!
- * Default visibility mask. The caller must take care of de-allocating the mask once done with it.
+ * Default visibility mask, only returns a very simple mask with four small
+ * triangles in each corner, scaled to the given FoV so it matches the OpenXR
+ * conventions. The caller must take care of de-allocating the mask once done
+ * with it.
  *
  * @ingroup aux_util
  */
 void
-u_visibility_mask_get_default(enum xrt_visibility_mask_type type, struct xrt_visibility_mask **out_mask);
+u_visibility_mask_get_default(enum xrt_visibility_mask_type type,
+                              const struct xrt_fov *fov,
+                              struct xrt_visibility_mask **out_mask);
 
 
 #ifdef __cplusplus

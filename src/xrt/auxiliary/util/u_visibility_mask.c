@@ -7,9 +7,12 @@
  * @ingroup aux_util
  */
 
+#include "math/m_mathinclude.h"
+
 #include "u_misc.h"
 #include "u_visibility_mask.h"
 #include "u_logging.h"
+
 
 #include <string.h>
 
@@ -36,7 +39,9 @@ static const struct xrt_vec2 vertices_line[] = {
 static const uint32_t indices_line[] = {0, 1, 2, 3, 4, 5, 6, 7};
 
 void
-u_visibility_mask_get_default(enum xrt_visibility_mask_type type, struct xrt_visibility_mask **out_mask)
+u_visibility_mask_get_default(enum xrt_visibility_mask_type type,
+                              const struct xrt_fov *fov,
+                              struct xrt_visibility_mask **out_mask)
 {
 	struct xrt_visibility_mask *mask = NULL;
 	uint32_t nvertices, nindices;
@@ -87,7 +92,32 @@ u_visibility_mask_get_default(enum xrt_visibility_mask_type type, struct xrt_vis
 	}
 
 	memcpy(xrt_visibility_mask_get_indices(mask), indices, sizeof(uint32_t) * nindices);
-	memcpy(xrt_visibility_mask_get_vertices(mask), vertices, sizeof(struct xrt_vec2) * nvertices);
+
+
+	const struct xrt_fov copy = *fov;
+
+	const double tan_left = tan(copy.angle_left);
+	const double tan_right = tan(copy.angle_right);
+
+	const double tan_down = tan(copy.angle_down);
+	const double tan_up = tan(copy.angle_up);
+
+	const double tan_half_width = (tan_right - tan_left);
+	const double tan_half_height = (tan_up - tan_down);
+
+	const double tan_offset_x = ((tan_right + tan_left) - tan_half_width) / 2;
+	const double tan_offset_y = (-(tan_up + tan_down) - tan_half_height) / 2;
+
+	struct xrt_vec2 *dst = xrt_visibility_mask_get_vertices(mask);
+	for (uint32_t i = 0; i < nvertices; i++) {
+		struct xrt_vec2 v = vertices[i];
+
+		// Yes this is really the simplest form, WolframAlpha agrees.
+		v.x = (v.x * 0.5 + 0.5) * tan_half_width + tan_offset_x;
+		v.y = (v.y * 0.5 + 0.5) * tan_half_height + tan_offset_y;
+
+		dst[i] = v;
+	}
 
 out:
 	*out_mask = mask; // Always NULL or allocated data.
