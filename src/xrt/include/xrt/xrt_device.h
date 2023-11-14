@@ -399,9 +399,15 @@ struct xrt_device
 
 	/*!
 	 * Get the visibility mask for this device.
+	 *
+	 * @param[in] xdev       The device.
+	 * @param[in] type       The type of visibility mask.
+	 * @param[in] view_index The index of the view to get the mask for.
+	 * @param[out] out_mask  Output mask, caller must free.
 	 */
 	void (*get_visibility_mask)(struct xrt_device *xdev,
 	                            enum xrt_visibility_mask_type type,
+	                            uint32_t view_index,
 	                            struct xrt_visibility_mask **out_mask);
 
 	/*!
@@ -512,6 +518,22 @@ xrt_device_compute_distortion(
     struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
 {
 	return xdev->compute_distortion(xdev, view, u, v, out_result);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_visibility_mask.
+ *
+ * @copydoc xrt_device::get_visibility_mask
+ *
+ * @public @memberof xrt_device
+ */
+static inline void
+xrt_device_get_visibility_mask(struct xrt_device *xdev,
+                               enum xrt_visibility_mask_type type,
+                               uint32_t view_index,
+                               struct xrt_visibility_mask **out_mask)
+{
+	xdev->get_visibility_mask(xdev, type, view_index, out_mask);
 }
 
 /*!

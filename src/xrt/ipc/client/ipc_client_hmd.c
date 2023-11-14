@@ -255,6 +255,7 @@ ipc_client_hmd_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_f
 static void
 ipc_client_hmd_get_visibility_mask(struct xrt_device *xdev,
                                    enum xrt_visibility_mask_type type,
+                                   uint32_t view_index,
                                    struct xrt_visibility_mask **out_mask)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
@@ -264,7 +265,7 @@ ipc_client_hmd_get_visibility_mask(struct xrt_device *xdev,
 
 	ipc_client_connection_lock(ipc_c);
 
-	xret = ipc_send_device_get_visibility_mask_locked(ipc_c, ich->device_id, type);
+	xret = ipc_send_device_get_visibility_mask_locked(ipc_c, ich->device_id, type, view_index);
 	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_send_device_get_visibility_mask_locked", err_mask_unlock);
 
 	uint32_t mask_size;

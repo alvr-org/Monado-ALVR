@@ -1189,7 +1189,7 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
 	}
 
 	if (sys->visibility_mask == NULL) {
-		xdev->get_visibility_mask(xdev, type, &sys->visibility_mask);
+		xrt_device_get_visibility_mask(xdev, type, 0, &sys->visibility_mask);
 	}
 
 	struct xrt_visibility_mask *mask = sys->visibility_mask;

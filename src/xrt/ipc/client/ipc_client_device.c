@@ -142,6 +142,7 @@ ipc_client_device_set_output(struct xrt_device *xdev, enum xrt_output_name name,
 static void
 ipc_client_device_get_visibility_mask(struct xrt_device *xdev,
                                       enum xrt_visibility_mask_type type,
+                                      uint32_t view_index,
                                       struct xrt_visibility_mask **out_mask)
 {
 	assert(false);

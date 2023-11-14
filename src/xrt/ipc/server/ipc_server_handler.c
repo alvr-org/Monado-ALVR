@@ -1562,7 +1562,8 @@ ipc_handle_device_set_output(volatile struct ipc_client_state *ics,
 xrt_result_t
 ipc_handle_device_get_visibility_mask(volatile struct ipc_client_state *ics,
                                       uint32_t device_id,
-                                      enum xrt_visibility_mask_type type)
+                                      enum xrt_visibility_mask_type type,
+                                      uint32_t view_index)
 {
 	struct ipc_message_channel *imc = (struct ipc_message_channel *)&ics->imc;
 	struct ipc_device_get_visibility_mask_reply reply = XRT_STRUCT_INIT;
@@ -1573,9 +1574,9 @@ ipc_handle_device_get_visibility_mask(volatile struct ipc_client_state *ics,
 	struct xrt_device *xdev = get_xdev(ics, device_id);
 	struct xrt_visibility_mask *mask = NULL;
 	if (xdev->get_visibility_mask) {
-		xdev->get_visibility_mask(xdev, type, &mask);
+		xrt_device_get_visibility_mask(xdev, type, view_index, &mask);
 	} else {
-		struct xrt_fov fov = xdev->hmd->distortion.fov[0];
+		struct xrt_fov fov = xdev->hmd->distortion.fov[view_index];
 		u_visibility_mask_get_default(type, &fov, &mask);
 	}
 
