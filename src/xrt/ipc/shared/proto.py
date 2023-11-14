@@ -151,10 +151,9 @@ def generate_h(file, p):
 struct ipc_connection;
 ''')
 
-    f.write('''
-typedef enum ipc_command
-{
-\tIPC_ERR = 0,''')
+    f.write('\ntypedef enum ipc_command')
+    f.write('\n{')
+    f.write('\n\tIPC_ERR = 0,')
     for call in p.calls:
         f.write("\n\t" + call.id + ",")
     f.write("\n} ipc_command_t;\n")
@@ -172,41 +171,40 @@ struct ipc_result_reply
 
 ''')
 
-    f.write('''
-static inline const char *
-ipc_cmd_to_str(ipc_command_t id)
-{
-\tswitch (id) {
-\tcase IPC_ERR: return "IPC_ERR";''')
+    write_decl(f, return_type='static inline const char *',
+        function_name='ipc_cmd_to_str', args=['ipc_command_t id'])
+    f.write('\n{')
+    f.write('\n\tswitch (id) {')
+    f.write('\n\tcase IPC_ERR: return "IPC_ERR";')
     for call in p.calls:
-        f.write("\n\tcase " + call.id + ": return \"" + call.id + "\";")
-    f.write("\n\tdefault: return \"IPC_UNKNOWN\";")
-    f.write("\n\t}\n}\n")
+        f.write('\n\tcase ' + call.id + ': return "' + call.id + '";')
+    f.write('\n\tdefault: return "IPC_UNKNOWN";')
+    f.write('\n\t}\n}\n')
 
-    f.write("#pragma pack (push, 1)")
+    f.write('#pragma pack (push, 1)')
 
     for call in p.calls:
         # Should we emit a msg struct.
         if call.needs_msg_struct:
-            f.write("\nstruct ipc_" + call.name + "_msg\n")
-            f.write("{\n")
-            f.write("\tenum ipc_command cmd;\n")
+            f.write('\nstruct ipc_' + call.name + '_msg\n')
+            f.write('{\n')
+            f.write('\tenum ipc_command cmd;\n')
             for arg in call.in_args:
-                f.write("\t" + arg.get_struct_field() + ";\n")
+                f.write('\t' + arg.get_struct_field() + ';\n')
             if call.in_handles:
-                f.write("\t%s %s;\n" % (call.in_handles.count_arg_type,
+                f.write('\t%s %s;\n' % (call.in_handles.count_arg_type,
                                         call.in_handles.count_arg_name))
-            f.write("};\n")
+            f.write('};\n')
         # Should we emit a reply struct.
         if call.out_args:
-            f.write("\nstruct ipc_" + call.name + "_reply\n")
-            f.write("{\n")
-            f.write("\txrt_result_t result;\n")
+            f.write('\nstruct ipc_' + call.name + '_reply\n')
+            f.write('{\n')
+            f.write('\txrt_result_t result;\n')
             for arg in call.out_args:
-                f.write("\t" + arg.get_struct_field() + ";\n")
-            f.write("};\n")
+                f.write('\t' + arg.get_struct_field() + ';\n')
+            f.write('};\n')
 
-    f.write("#pragma pack (pop)\n")
+    f.write('#pragma pack (pop)\n')
 
     write_cpp_header_guard_end(f)
     f.close()
