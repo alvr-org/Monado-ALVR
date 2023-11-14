@@ -252,6 +252,34 @@ distributions:
               CMAKE_C_COMPILER: /usr/bin/clang
               CMAKE_CXX_COMPILER: /usr/bin/clang++
 
+  - name: alpine
+    images:
+      - tag: "2023-11-14.3"
+        packages:
+          - "cmake"
+          - "cmd:glslangValidator"
+          - "cmd:wayland-scanner"
+          - "build-base"
+          - "doxygen"
+          - "eigen-dev"
+          - "eudev-dev"
+          - "graphviz"
+          - "libjpeg-turbo-dev"
+          - "libsurvive-dev"
+          - "libxrandr-dev"
+          - "mesa-dev"
+          - "opencv-dev"
+          - "openhmd-dev"
+          - "samurai"
+          - "sdl2-dev"
+          - "v4l-utils-dev"
+          - "vulkan-loader-dev"
+          - "wayland-dev"
+          - "wayland-protocols"
+          - "zlib-dev"
+        build_jobs:
+          - name: "alpine:cmake"
+
 android:
   platform: 26
 

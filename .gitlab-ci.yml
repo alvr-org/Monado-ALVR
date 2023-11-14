@@ -21,6 +21,7 @@ include:
       - "/templates/debian.yml"
       - "/templates/ubuntu.yml"
       - "/templates/arch.yml"
+      - "/templates/alpine.yml"
   # - local: .gitlab-ci/containers/ci-container-prep.yml
 
   # This include is for compatibility with the fdo CI restrictions/checks
@@ -155,6 +156,11 @@ win:container_prep:
   variables:
     FDO_DISTRIBUTION_TAG: "2023-11-14.0"
 
+# Variables for build and usage of Alpine image
+.monado.variables.alpine:
+  variables:
+    FDO_DISTRIBUTION_TAG: "2023-11-14.3"
+
 
 ###
 # Container prep jobs
@@ -216,6 +222,17 @@ arch:container_prep:
     FDO_DISTRIBUTION_PACKAGES: 'base-devel bc bluez-libs boost check clang cmake diffutils doxygen eigen ffmpeg fmt gcc git glew glfw-x11 glslang glu graphviz gtest gtk3 hidapi libbsd libusb libxrandr mesa meson ninja opencv patch pipewire-jack pkgconfig python-attrs python-setuptools python3 qt6-base v4l-utils vulkan-headers vulkan-icd-loader wayland wget wireplumber'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/install-arch-additional-deps.sh'
 
+# Make Alpine image
+alpine:container_prep:
+  stage: container_prep
+  extends:
+    - .container-rules
+    - .monado.variables.alpine
+    - .fdo.container-build@alpine # from ci-templates
+
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: 'build-base cmake cmd:glslangValidator cmd:wayland-scanner doxygen eigen-dev eudev-dev graphviz libjpeg-turbo-dev libsurvive-dev libxrandr-dev mesa-dev opencv-dev openhmd-dev samurai sdl2-dev v4l-utils-dev vulkan-loader-dev wayland-dev wayland-protocols zlib-dev'
+
 
 ###
 # Container usage base jobs
@@ -257,6 +274,14 @@ arch:container_prep:
   extends:
     - .monado.variables.arch
     - .fdo.distribution-image@arch # from ci-templates
+    - .build-rules
+
+
+# Base for using Alpine image
+.monado.image.alpine:
+  extends:
+    - .monado.variables.alpine
+    - .fdo.distribution-image@alpine # from ci-templates
     - .build-rules
 
 
@@ -514,6 +539,16 @@ arch:cmake:clang:
 
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+    - cd build && ctest --output-on-failure
+
+alpine:cmake:
+  stage: build
+  extends:
+    - .monado.image.alpine
+  script:
+
+    - .gitlab-ci/prebuild.sh
+    - .gitlab-ci/ci-cmake-build.sh
     - cd build && ctest --output-on-failure
 
 # Windows build
