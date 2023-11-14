@@ -196,6 +196,24 @@ destroy(struct xrt_space_overseer *xso)
 struct xrt_space_overseer *
 ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 {
+	uint32_t root_id = UINT32_MAX;
+	uint32_t view_id = UINT32_MAX;
+	uint32_t local_id = UINT32_MAX;
+	uint32_t local_floor_id = UINT32_MAX;
+	uint32_t stage_id = UINT32_MAX;
+	uint32_t unbounded_id = UINT32_MAX;
+	xrt_result_t xret;
+
+	xret = ipc_call_space_create_semantic_ids( //
+	    ipc_c,                                 //
+	    &root_id,                              //
+	    &view_id,                              //
+	    &local_id,                             //
+	    &local_floor_id,                       //
+	    &stage_id,                             //
+	    &unbounded_id);                        //
+	IPC_CHK_WITH_RET(ipc_c, xret, "ipc_call_space_create_semantic_ids", NULL);
+
 	struct ipc_client_space_overseer *icspo = U_TYPED_CALLOC(struct ipc_client_space_overseer);
 	icspo->base.create_offset_space = create_offset_space;
 	icspo->base.create_pose_space = create_pose_space;
@@ -203,22 +221,6 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	icspo->base.locate_device = locate_device;
 	icspo->base.destroy = destroy;
 	icspo->ipc_c = ipc_c;
-
-	uint32_t root_id = UINT32_MAX;
-	uint32_t view_id = UINT32_MAX;
-	uint32_t local_id = UINT32_MAX;
-	uint32_t local_floor_id = UINT32_MAX;
-	uint32_t stage_id = UINT32_MAX;
-	uint32_t unbounded_id = UINT32_MAX;
-
-	ipc_call_space_create_semantic_ids( //
-	    icspo->ipc_c,                   //
-	    &root_id,                       //
-	    &view_id,                       //
-	    &local_id,                      //
-	    &local_floor_id,                //
-	    &stage_id,                      //
-	    &unbounded_id);                 //
 
 #define CREATE(NAME)                                                                                                   \
 	do {                                                                                                           \
