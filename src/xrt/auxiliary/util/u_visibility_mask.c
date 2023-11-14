@@ -38,6 +38,7 @@ static const uint32_t indices_line[] = {0, 1, 2, 3, 4, 5, 6, 7};
 void
 u_visibility_mask_get_default(enum xrt_visibility_mask_type type, struct xrt_visibility_mask **out_mask)
 {
+	struct xrt_visibility_mask *mask = NULL;
 	uint32_t nvertices, nindices;
 
 	switch (type) {
@@ -57,13 +58,12 @@ u_visibility_mask_get_default(enum xrt_visibility_mask_type type, struct xrt_vis
 
 	const size_t size =
 	    sizeof(struct xrt_visibility_mask) + sizeof(uint32_t) * nindices + sizeof(struct xrt_vec2) * nvertices;
-	*out_mask = U_CALLOC_WITH_CAST(struct xrt_visibility_mask, size);
-	if (*out_mask == NULL) {
+	mask = U_CALLOC_WITH_CAST(struct xrt_visibility_mask, size);
+	if (mask == NULL) {
 		U_LOG_E("failed to allocate out xrt_visibility_mask");
-		return;
+		goto out;
 	}
 
-	struct xrt_visibility_mask *mask = *out_mask;
 
 	mask->index_count = nindices;
 	mask->vertex_count = nvertices;
@@ -88,4 +88,7 @@ u_visibility_mask_get_default(enum xrt_visibility_mask_type type, struct xrt_vis
 
 	memcpy(xrt_visibility_mask_get_indices(mask), indices, sizeof(uint32_t) * nindices);
 	memcpy(xrt_visibility_mask_get_vertices(mask), vertices, sizeof(struct xrt_vec2) * nvertices);
+
+out:
+	*out_mask = mask; // Always NULL or allocated data.
 }
