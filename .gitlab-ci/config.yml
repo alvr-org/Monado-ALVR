@@ -91,6 +91,8 @@ distributions:
               - proclamation build --overwrite vNEXT
               - popd
             artifact_path: build/doc/html/
+            cmake_defines:
+              BUILD_DOC: "ON"
 
           - name: "debian:cmake-no-opencv"
             cmake_defines:

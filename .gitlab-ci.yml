@@ -295,8 +295,9 @@ debian:cmake:
     - popd
 
   script:
+
     - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh -DBUILD_DOC=on
+    - .gitlab-ci/ci-cmake-build.sh -DBUILD_DOC=ON
     - cd build && ctest --output-on-failure
   artifacts:
     paths:
