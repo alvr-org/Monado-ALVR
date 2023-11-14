@@ -16,7 +16,7 @@ You can install it with:
 
 <!-- do not break the following line, it is used in CI setup too, to make sure it works -->
 ```sh
-python3 -m pip install git+https://gitlab.freedesktop.org/freedesktop/ci-templates@9f0eb526291fe74651fe1430cbd2397f4c0a819b
+python3 -m pip install git+https://gitlab.freedesktop.org/freedesktop/ci-templates@185ede0e9b9b1924b92306ab8b882a6294e92613
 ```
 
 On Windows you will also need to have GNU make and busybox installed, such as with:

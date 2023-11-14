@@ -4,7 +4,7 @@
 # Please run the following from the repo root after modifying this file:
 #   make -f .gitlab-ci/ci-scripts.mk
 
-fdo_ci_templates_sha: 7811ba9814a3bad379377241c6c6b62d78b20eac
+fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
 
 # These are a mapping, instead of a list/array, so we can merge.
 .default_debian_packages:

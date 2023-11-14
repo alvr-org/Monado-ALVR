@@ -18,7 +18,7 @@ variables:
 
 include:
   - project: "freedesktop/ci-templates"
-    ref: 7811ba9814a3bad379377241c6c6b62d78b20eac
+    ref: 185ede0e9b9b1924b92306ab8b882a6294e92613
     file:
       - "/templates/debian.yml"
       - "/templates/ubuntu.yml"
@@ -45,7 +45,7 @@ stages:
     - when: never
 
 
-# # #
+# # # 
 ###
 # Windows container-related jobs (prep and usage)
 
@@ -122,6 +122,8 @@ win:container_prep:
     - .build-rules
   image: $MONADO_IMAGE
 
+
+
 # Variables for build and usage of Debian bullseye image
 .monado.variables.debian:bullseye:
   variables:
@@ -152,6 +154,7 @@ win:container_prep:
   variables:
     FDO_DISTRIBUTION_VERSION: "rolling"
     FDO_DISTRIBUTION_TAG: "2023-05-22.0"
+
 
 ###
 # Container prep jobs
