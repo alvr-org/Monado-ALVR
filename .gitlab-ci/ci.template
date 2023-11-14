@@ -92,7 +92,7 @@ reuse:
     - reuse lint
 
 {% macro make_cmake_args(cmake_defines) %}
-{% if cmake_defines is defined %}
+{% if cmake_defines is defined and cmake_defines %}
 {%- for k, v in cmake_defines |dictsort %} -D{{ k }}={{ v }}{% endfor %}
 {%- endif %}
 {%- endmacro -%}
