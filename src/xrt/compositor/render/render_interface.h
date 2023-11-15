@@ -325,7 +325,7 @@ render_sub_alloc_ubo_alloc_and_get_ptr(struct vk_bundle *vk,
                                        struct render_sub_alloc *out_rsa);
 
 /*!
- * Allocate enough memory (with constraints of UBOs) to hold the memory in @ptr
+ * Allocate enough memory (with constraints of UBOs) to hold the memory in @p ptr
  * and copy that memory to the buffer using the CPU.
  */
 XRT_CHECK_RESULT VkResult
@@ -1101,7 +1101,7 @@ struct render_compute
 	/*!
 	 * Shared descriptor set, used for the clear and distortion shaders. It
 	 * is used in the functions @ref render_compute_projection_timewarp,
-	 * @ref render_compute_projection and @ref render_compute_clear.
+	 * @ref render_compute_projection, and @ref render_compute_clear.
 	 */
 	VkDescriptorSet shared_descriptor_set;
 };
