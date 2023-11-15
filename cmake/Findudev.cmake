@@ -14,8 +14,8 @@
 #  FindPackageHandleStandardArgs (known included with CMake >=2.6.2)
 #
 # Original Authors:
-# 2014 Kevin M. Godby <kevin@godby.org>
-# 2021 Ryan Pavlik <ryan.pavlik@collabora.com>
+# 2014, Kevin M. Godby <kevin@godby.org>
+# 2021, Ryan Pavlik <ryan.pavlik@collabora.com> <abiryan@ryand.net>
 #
 # Copyright 2014, Kevin M. Godby <kevin@godby.org>
 # Copyright 2021, Collabora, Ltd.

@@ -1,4 +1,5 @@
 # Copyright 2019, Collabora, Ltd.
+#
 # SPDX-License-Identifier: BSL-1.0
 
 find_program(GLSLANGVALIDATOR_COMMAND

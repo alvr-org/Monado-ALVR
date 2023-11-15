@@ -1,5 +1,5 @@
 # Copyright 2022, Collabora, Ltd.
-# Copyright 2000-2022 Kitware, Inc., Insight Software Consortium
+# Copyright 2000-2022, Kitware, Inc., Insight Software Consortium
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #

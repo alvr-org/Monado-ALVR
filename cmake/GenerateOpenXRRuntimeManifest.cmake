@@ -1,5 +1,10 @@
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2023, Collabora, Ltd.
+#
 # SPDX-License-Identifier: BSL-1.0
+#
+# Maintained by:
+# 2019-2023 Ryan Pavlik <ryan.pavlik@collabora.com> <ryan.pavlik@gmail.com>
+
 #[[.rst:
 GenerateOpenXRRuntimeManifest
 ---------------
@@ -30,6 +35,7 @@ The following functions are provided by this module:
         RUNTIME_TARGET <target>            # Name of your runtime target
         DESTINATION <dest>                 # The install-prefix-relative path to install the manifest to.
         RELATIVE_RUNTIME_DIR <dir>         # The install-prefix-relative path that the runtime library is installed to.
+        [COMPONENT <comp>]                 # If present, the component to place the manifest in.
         [ABSOLUTE_RUNTIME_PATH|            # If present, path in generated manifest is absolute
          RUNTIME_DIR_RELATIVE_TO_MANIFEST <dir>]
                                            # If present (and ABSOLUTE_RUNTIME_PATH not present), specifies the
@@ -38,63 +44,63 @@ The following functions are provided by this module:
         [MANIFEST_TEMPLATE <template>]     # Optional: Specify an alternate template to use
         )
 #]]
-get_filename_component(_OXR_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-set(_OXR_MANIFEST_SCRIPT
-    "${_OXR_CMAKE_DIR}/GenerateOpenXRRuntimeManifestInstall.cmake.in"
-    CACHE INTERNAL "" FORCE)
+
+# This module is mostly just argument parsing, the guts are in GenerateKhrManifest
+
+get_filename_component(_OXR_MANIFEST_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}"
+                       PATH)
+include("${_OXR_MANIFEST_CMAKE_DIR}/GenerateKhrManifest.cmake")
 
 set(_OXR_MANIFEST_TEMPLATE
-    "${_OXR_CMAKE_DIR}/openxr_monado.in.json"
+    "${_OXR_MANIFEST_CMAKE_DIR}/openxr_manifest.in.json"
     CACHE INTERNAL "" FORCE)
 
 function(generate_openxr_runtime_manifest_buildtree)
     set(options)
-    set(oneValueArgs RUNTIME_TARGET OUT_FILE MANIFEST_TEMPLATE)
+    set(oneValueArgs MANIFEST_TEMPLATE RUNTIME_TARGET OUT_FILE)
     set(multiValueArgs)
     cmake_parse_arguments(_genmanifest "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN})
 
+    if(NOT _genmanifest_MANIFEST_TEMPLATE)
+        set(_genmanifest_MANIFEST_TEMPLATE "${_OXR_MANIFEST_TEMPLATE}")
+    endif()
     if(NOT _genmanifest_RUNTIME_TARGET)
         message(FATAL_ERROR "Need RUNTIME_TARGET specified!")
     endif()
     if(NOT _genmanifest_OUT_FILE)
         message(FATAL_ERROR "Need OUT_FILE specified!")
     endif()
-    if(NOT _genmanifest_MANIFEST_TEMPLATE)
-        set(_genmanifest_MANIFEST_TEMPLATE "${_OXR_MANIFEST_TEMPLATE}")
-    endif()
 
-    # Set template values
-    set(_genmanifest_INTERMEDIATE_MANIFEST
-        ${CMAKE_CURRENT_BINARY_DIR}/intermediate_manifest_buildtree_${_genmanifest_RUNTIME_TARGET}.json
-    )
-    set(_genmanifest_IS_INSTALL OFF)
+    generate_khr_manifest_buildtree(
+        MANIFEST_DESCRIPTION
+        "OpenXR runtime manifest"
+        MANIFEST_TEMPLATE
+        "${_genmanifest_MANIFEST_TEMPLATE}"
+        TARGET
+        "${_genmanifest_RUNTIME_TARGET}"
+        OUT_FILE
+        "${_genmanifest_OUT_FILE}")
 
-    set(_script
-        ${CMAKE_CURRENT_BINARY_DIR}/make_build_manifest_${_genmanifest_RUNTIME_TARGET}.cmake
-    )
-    configure_file("${_OXR_MANIFEST_SCRIPT}" "${_script}" @ONLY)
-    add_custom_command(
-        TARGET ${_genmanifest_RUNTIME_TARGET}
-        POST_BUILD
-        BYPRODUCTS "${_genmanifest_OUT_FILE}"
-        # "${_genmanifest_INTERMEDIATE_MANIFEST}"
-        COMMAND
-            "${CMAKE_COMMAND}"
-            "-DOUT_FILE=${_genmanifest_OUT_FILE}"
-            "-DRUNTIME_PATH=$<TARGET_FILE:${_genmanifest_RUNTIME_TARGET}>" -P
-            "${_script}" DEPENDS "${_script}")
 endfunction()
 
 function(generate_openxr_runtime_manifest_at_install)
     set(options ABSOLUTE_RUNTIME_PATH)
     set(oneValueArgs
-        RUNTIME_TARGET DESTINATION OUT_FILENAME
-        RUNTIME_DIR_RELATIVE_TO_MANIFEST RELATIVE_RUNTIME_DIR MANIFEST_TEMPLATE)
+        MANIFEST_TEMPLATE
+        DESTINATION
+        OUT_FILENAME
+        COMPONENT
+        RUNTIME_TARGET
+        RUNTIME_DIR_RELATIVE_TO_MANIFEST
+        RELATIVE_RUNTIME_DIR)
     set(multiValueArgs)
     cmake_parse_arguments(_genmanifest "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN})
 
+    if(NOT _genmanifest_MANIFEST_TEMPLATE)
+        set(_genmanifest_MANIFEST_TEMPLATE "${_OXR_MANIFEST_TEMPLATE}")
+    endif()
     if(NOT _genmanifest_RUNTIME_TARGET)
         message(FATAL_ERROR "Need RUNTIME_TARGET specified!")
     endif()
@@ -107,20 +113,33 @@ function(generate_openxr_runtime_manifest_at_install)
     if(NOT _genmanifest_OUT_FILENAME)
         set(_genmanifest_OUT_FILENAME "${_genmanifest_RUNTIME_TARGET}.json")
     endif()
-    if(NOT _genmanifest_MANIFEST_TEMPLATE)
-        set(_genmanifest_MANIFEST_TEMPLATE "${_OXR_MANIFEST_TEMPLATE}")
-    endif()
-    set(_genmanifest_INTERMEDIATE_MANIFEST
-        "${CMAKE_CURRENT_BINARY_DIR}/${_genmanifest_OUT_FILENAME}")
-    set(_genmanifest_IS_INSTALL ON)
-    # Template value
-    set(RUNTIME_FILENAME
-        ${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_RUNTIME_TARGET}${CMAKE_SHARED_MODULE_SUFFIX}
-    )
 
-    set(_script
-        ${CMAKE_CURRENT_BINARY_DIR}/make_manifest_${_genmanifest_RUNTIME_TARGET}.cmake
-    )
-    configure_file("${_OXR_MANIFEST_SCRIPT}" "${_script}" @ONLY)
-    install(SCRIPT "${_script}")
+    set(_genmanifest_fwdargs)
+
+    if(_genmanifest_ABSOLUTE_RUNTIME_PATH)
+        list(APPEND _genmanifest_fwdargs ABSOLUTE_TARGET_PATH)
+    endif()
+
+    if(_genmanifest_RUNTIME_DIR_RELATIVE_TO_MANIFEST)
+        list(APPEND _genmanifest_fwdargs TARGET_DIR_RELATIVE_TO_MANIFEST
+             "${_genmanifest_RUNTIME_DIR_RELATIVE_TO_MANIFEST}")
+    endif()
+    if(_genmanifest_COMPONENT)
+        list(APPEND _genmanifest_fwdargs COMPONENT "${_genmanifest_COMPONENT}")
+    endif()
+
+    generate_khr_manifest_at_install(
+        ${_genmanifest_fwdargs}
+        MANIFEST_DESCRIPTION
+        "OpenXR runtime manifest"
+        MANIFEST_TEMPLATE
+        "${_genmanifest_MANIFEST_TEMPLATE}"
+        TARGET
+        "${_genmanifest_RUNTIME_TARGET}"
+        DESTINATION
+        "${_genmanifest_DESTINATION}"
+        RELATIVE_TARGET_DIR
+        "${_genmanifest_RELATIVE_RUNTIME_DIR}"
+        OUT_FILENAME
+        "${_genmanifest_OUT_FILENAME}")
 endfunction()

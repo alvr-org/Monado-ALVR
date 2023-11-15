@@ -40,12 +40,14 @@
 # ``HIDAPI_LIBRARIES``
 #
 # Original Author:
-# 2009-2010, 2019, 2021 Ryan Pavlik <ryan.pavlik@collabora.com> <abiryan@ryand.net>
+# 2009-2021 Ryan Pavlik <ryan.pavlik@collabora.com> <abiryan@ryand.net>
 # http://academic.cleardefinition.com
 #
-# Copyright Iowa State University 2009-2010.
-# Copyright Collabora, Ltd. 2019, 2021.
+# Copyright 2009-2010, Iowa State University
+# Copyright 2019-2021, Collabora, Ltd.
+#
 # SPDX-License-Identifier: BSL-1.0
+#
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at
 # http://www.boost.org/LICENSE_1_0.txt)

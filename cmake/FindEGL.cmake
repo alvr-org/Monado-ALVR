@@ -33,6 +33,10 @@
 # Since pre-1.0.0.
 
 # SPDX-License-Identifier: BSD-3-Clause
+#
+# Note: This module is originally from the KDE "Extra CMake Modules" repo,
+# adapted to work standalone. Original source:
+# https://github.com/KDE/extra-cmake-modules/blob/3b0bf71a72789eb2b79310b4f67602115e347f56/find-modules/FindEGL.cmake
 #=============================================================================
 # Copyright 2014 Alex Merry <alex.merry@kde.org>
 # Copyright 2014 Martin Gräßlin <mgraesslin@kde.org>
