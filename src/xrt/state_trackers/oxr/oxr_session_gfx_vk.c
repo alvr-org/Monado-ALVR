@@ -28,6 +28,7 @@
 
 
 DEBUG_GET_ONCE_BOOL_OPTION(force_timeline_semaphores, "OXR_DEBUG_FORCE_TIMELINE_SEMAPHORES", false)
+DEBUG_GET_ONCE_BOOL_OPTION(force_debug_utils, "OXR_DEBUG_FORCE_VK_DEBUG_UTILS", false)
 
 
 static bool
@@ -111,11 +112,21 @@ oxr_session_populate_vk(struct oxr_logger *log,
 		timeline_semaphore_enabled = true;
 	}
 
-#if defined(VK_EXT_debug_utils)
+#ifdef OXR_HAVE_KHR_vulkan_enable2
 	if (sys->inst->extensions.KHR_vulkan_enable2) {
 		debug_utils_enabled = sess->sys->vk.debug_utils_enabled;
-	} else if (sys->inst->extensions.KHR_vulkan_enable) {
+	}
+#endif
+
+	if (!debug_utils_enabled && debug_get_bool_option_force_debug_utils()) {
+		oxr_log(log, "Forcing VK_EXT_debug_utils on, your app better have enabled them!");
 		debug_utils_enabled = true;
+	}
+
+#ifndef VK_EXT_debug_utils
+	if (debug_utils_enabled) {
+		oxr_log(log, "VK_EXT_debug_utils detected or forced, but not built with it!");
+		debug_utils_enabled = false;
 	}
 #endif
 
