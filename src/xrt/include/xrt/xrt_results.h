@@ -174,4 +174,11 @@ typedef enum xrt_result
 	 * which is needed for the given command.
 	 */
 	XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED = -28,
+
+	/*!
+	 * The function called on the device was not implemented, it is not
+	 * meant to query the availability of the function or feature, only a
+	 * error condition on bad code.
+	 */
+	XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED = -29,
 } xrt_result_t;
