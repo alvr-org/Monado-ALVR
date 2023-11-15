@@ -40,7 +40,6 @@
 #include "vk/vk_helpers.h"
 #include "vk/vk_cmd.h"
 #include "vk/vk_image_readback_to_xf_pool.h"
-#include "vk/vk_cmd.h"
 
 #include <string.h>
 #include <stdlib.h>
