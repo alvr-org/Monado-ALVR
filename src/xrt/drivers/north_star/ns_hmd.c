@@ -397,8 +397,14 @@ ns_hmd_get_view_poses(struct xrt_device *xdev,
 	NS_DEBUG(ns, "Called!");
 
 	// Use this to take care of most stuff, then fix up below.
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
+	u_device_get_view_poses(  //
+	    xdev,                 //
+	    default_eye_relation, //
+	    at_timestamp_ns,      //
+	    view_count,           //
+	    out_head_relation,    //
+	    out_fovs,             //
+	    out_poses);           //
 
 	// Fix fix.
 	for (uint32_t i = 0; i < view_count && i < ARRAY_SIZE(ns->config.head_pose_to_eye); i++) {

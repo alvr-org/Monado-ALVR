@@ -528,8 +528,14 @@ survive_device_get_view_poses(struct xrt_device *xdev,
 		eye_relation.x = survive->hmd.ipd;
 	}
 
-	u_device_get_view_poses(xdev, &eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
+	u_device_get_view_poses( //
+	    xdev,                //
+	    &eye_relation,       //
+	    at_timestamp_ns,     //
+	    view_count,          //
+	    out_head_relation,   //
+	    out_fovs,            //
+	    out_poses);          //
 
 	// This is for the Index' canted displays, on the Vive [Pro] they are identity.
 	for (uint32_t i = 0; i < view_count && i < ARRAY_SIZE(survive->hmd.config.display.rot); i++) {

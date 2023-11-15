@@ -1071,19 +1071,6 @@ na_hmd_get_tracked_pose(struct xrt_device *xdev,
 }
 
 static void
-na_hmd_get_view_poses(struct xrt_device *xdev,
-                      const struct xrt_vec3 *default_eye_relation,
-                      uint64_t at_timestamp_ns,
-                      uint32_t view_count,
-                      struct xrt_space_relation *out_head_relation,
-                      struct xrt_fov *out_fovs,
-                      struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
-static void
 na_hmd_destroy(struct xrt_device *xdev)
 {
 	struct na_hmd *hmd = na_hmd(xdev);
@@ -1117,7 +1104,7 @@ na_hmd_create_device(struct os_hid_device *sensor_device,
 	hmd->log_level = log_level;
 	hmd->base.update_inputs = na_hmd_update_inputs;
 	hmd->base.get_tracked_pose = na_hmd_get_tracked_pose;
-	hmd->base.get_view_poses = na_hmd_get_view_poses;
+	hmd->base.get_view_poses = u_device_get_view_poses;
 	hmd->base.compute_distortion = na_hmd_compute_distortion;
 	hmd->base.destroy = na_hmd_destroy;
 	hmd->base.name = XRT_DEVICE_GENERIC_HMD;

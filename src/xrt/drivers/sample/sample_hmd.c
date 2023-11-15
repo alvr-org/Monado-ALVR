@@ -110,8 +110,18 @@ sample_hmd_get_view_poses(struct xrt_device *xdev,
                           struct xrt_fov *out_fovs,
                           struct xrt_pose *out_poses)
 {
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
+	/*
+	 * For HMDs you can call this function or directly set
+	 * the `get_view_poses` function on the device to it.
+	 */
+	u_device_get_view_poses(  //
+	    xdev,                 //
+	    default_eye_relation, //
+	    at_timestamp_ns,      //
+	    view_count,           //
+	    out_head_relation,    //
+	    out_fovs,             //
+	    out_poses);           //
 }
 
 bool

@@ -40,25 +40,6 @@ sdl_hmd_get_tracked_pose(struct xrt_device *xdev,
 }
 
 static void
-sdl_hmd_get_view_poses(struct xrt_device *xdev,
-                       const struct xrt_vec3 *default_eye_relation,
-                       uint64_t at_timestamp_ns,
-                       uint32_t view_count,
-                       struct xrt_space_relation *out_head_relation,
-                       struct xrt_fov *out_fovs,
-                       struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(  //
-	    xdev,                 //
-	    default_eye_relation, //
-	    at_timestamp_ns,      //
-	    view_count,           //
-	    out_head_relation,    //
-	    out_fovs,             //
-	    out_poses);           //
-}
-
-static void
 sdl_hmd_destroy(struct xrt_device *xdev)
 {
 	struct sdl_program *sp = from_xdev(xdev);
@@ -109,7 +90,7 @@ sdl_device_init(struct sdl_program *sp)
 	// Function pointers.
 	xdev->update_inputs = u_device_noop_update_inputs;
 	xdev->get_tracked_pose = sdl_hmd_get_tracked_pose;
-	xdev->get_view_poses = sdl_hmd_get_view_poses;
+	xdev->get_view_poses = u_device_get_view_poses;
 	xdev->destroy = sdl_hmd_destroy;
 
 	// Minimum needed stuff.

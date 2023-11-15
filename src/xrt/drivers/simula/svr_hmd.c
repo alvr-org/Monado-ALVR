@@ -108,10 +108,14 @@ svr_hmd_get_view_poses(struct xrt_device *xdev,
 	//!@todo: default_eye_relation inherits from the env var OXR_DEBUG_IPD_MM / oxr_session.c
 	// probably needs a lot more attention
 
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-
-
+	u_device_get_view_poses(  //
+	    xdev,                 //
+	    default_eye_relation, //
+	    at_timestamp_ns,      //
+	    view_count,           //
+	    out_head_relation,    //
+	    out_fovs,             //
+	    out_poses);           //
 
 	//!@todo you may need to invert this - I can't test locally
 	float turn_vals[2] = {5.0, -5.0};

@@ -447,19 +447,6 @@ rokid_hmd_get_tracked_pose(struct xrt_device *xdev,
 	os_mutex_unlock(&rokid->fusion.mutex);
 }
 
-static void
-rokid_hmd_get_view_poses(struct xrt_device *xdev,
-                         const struct xrt_vec3 *default_eye_relation,
-                         uint64_t at_timestamp_ns,
-                         uint32_t view_count,
-                         struct xrt_space_relation *out_head_relation,
-                         struct xrt_fov *out_fovs,
-                         struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
 static struct xrt_device *
 rokid_hmd_create(struct xrt_prober_device *prober_device)
 {
@@ -494,7 +481,7 @@ rokid_hmd_create(struct xrt_prober_device *prober_device)
 
 	rokid->base.update_inputs = u_device_noop_update_inputs;
 	rokid->base.get_tracked_pose = rokid_hmd_get_tracked_pose;
-	rokid->base.get_view_poses = rokid_hmd_get_view_poses;
+	rokid->base.get_view_poses = u_device_get_view_poses;
 	rokid->base.destroy = rokid_hmd_destroy;
 
 	// Setup input.

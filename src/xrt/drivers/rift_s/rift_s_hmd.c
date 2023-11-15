@@ -62,19 +62,6 @@ rift_s_get_tracked_pose(struct xrt_device *xdev,
 	rift_s_tracker_get_tracked_pose(hmd->tracker, RIFT_S_TRACKER_POSE_DEVICE, at_timestamp_ns, out_relation);
 }
 
-static void
-rift_s_get_view_poses(struct xrt_device *xdev,
-                      const struct xrt_vec3 *default_eye_relation,
-                      uint64_t at_timestamp_ns,
-                      uint32_t view_count,
-                      struct xrt_space_relation *out_head_relation,
-                      struct xrt_fov *out_fovs,
-                      struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
 void
 rift_s_hmd_handle_report(struct rift_s_hmd *hmd, timepoint_ns local_ts, rift_s_hmd_report_t *report)
 {
@@ -227,7 +214,7 @@ rift_s_hmd_create(struct rift_s_system *sys, const unsigned char *hmd_serial_no,
 
 	hmd->base.update_inputs = u_device_noop_update_inputs;
 	hmd->base.get_tracked_pose = rift_s_get_tracked_pose;
-	hmd->base.get_view_poses = rift_s_get_view_poses;
+	hmd->base.get_view_poses = u_device_get_view_poses;
 	hmd->base.destroy = rift_s_hmd_destroy;
 	hmd->base.name = XRT_DEVICE_GENERIC_HMD;
 	hmd->base.device_type = XRT_DEVICE_TYPE_HMD;

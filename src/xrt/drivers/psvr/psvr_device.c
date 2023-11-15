@@ -994,19 +994,6 @@ psvr_device_get_tracked_pose(struct xrt_device *xdev,
 }
 
 static void
-psvr_device_get_view_poses(struct xrt_device *xdev,
-                           const struct xrt_vec3 *default_eye_relation,
-                           uint64_t at_timestamp_ns,
-                           uint32_t view_count,
-                           struct xrt_space_relation *out_head_relation,
-                           struct xrt_fov *out_fovs,
-                           struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
-static void
 psvr_device_destroy(struct xrt_device *xdev)
 {
 	struct psvr_device *psvr = psvr_device(xdev);
@@ -1044,7 +1031,7 @@ psvr_device_create_auto_prober(struct hid_device_info *sensor_hid_info,
 	psvr->log_level = log_level;
 	psvr->base.update_inputs = psvr_device_update_inputs;
 	psvr->base.get_tracked_pose = psvr_device_get_tracked_pose;
-	psvr->base.get_view_poses = psvr_device_get_view_poses;
+	psvr->base.get_view_poses = u_device_get_view_poses;
 	psvr->base.compute_distortion = psvr_compute_distortion;
 	psvr->base.destroy = psvr_device_destroy;
 	psvr->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;

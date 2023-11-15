@@ -143,19 +143,6 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
 	                                                               XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT);
 }
 
-static void
-simulated_hmd_get_view_poses(struct xrt_device *xdev,
-                             const struct xrt_vec3 *default_eye_relation,
-                             uint64_t at_timestamp_ns,
-                             uint32_t view_count,
-                             struct xrt_space_relation *out_head_relation,
-                             struct xrt_fov *out_fovs,
-                             struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
 static xrt_result_t
 simulated_ref_space_usage(struct xrt_device *xdev,
                           enum xrt_reference_space_type type,
@@ -205,7 +192,7 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	struct simulated_hmd *dh = U_DEVICE_ALLOCATE(struct simulated_hmd, flags, 1, 0);
 	dh->base.update_inputs = u_device_noop_update_inputs;
 	dh->base.get_tracked_pose = simulated_hmd_get_tracked_pose;
-	dh->base.get_view_poses = simulated_hmd_get_view_poses;
+	dh->base.get_view_poses = u_device_get_view_poses;
 	dh->base.ref_space_usage = simulated_ref_space_usage;
 	dh->base.destroy = simulated_hmd_destroy;
 	dh->base.name = XRT_DEVICE_GENERIC_HMD;

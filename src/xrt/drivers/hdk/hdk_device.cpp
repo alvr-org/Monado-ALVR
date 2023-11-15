@@ -250,19 +250,6 @@ hdk_device_get_tracked_pose(struct xrt_device *xdev,
 	          hd->quat.w, hd->ang_vel_quat.x, hd->ang_vel_quat.y, hd->ang_vel_quat.z);
 }
 
-static void
-hdk_device_get_view_poses(struct xrt_device *xdev,
-                          const struct xrt_vec3 *default_eye_relation,
-                          uint64_t at_timestamp_ns,
-                          uint32_t view_count,
-                          struct xrt_space_relation *out_head_relation,
-                          struct xrt_fov *out_fovs,
-                          struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
 static void *
 hdk_device_run_thread(void *ptr)
 {
@@ -305,7 +292,7 @@ hdk_device_create(struct os_hid_device *dev, enum HDK_VARIANT variant)
 
 	hd->base.update_inputs = u_device_noop_update_inputs;
 	hd->base.get_tracked_pose = hdk_device_get_tracked_pose;
-	hd->base.get_view_poses = hdk_device_get_view_poses;
+	hd->base.get_view_poses = u_device_get_view_poses;
 	hd->base.destroy = hdk_device_destroy;
 	hd->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 	hd->base.name = XRT_DEVICE_GENERIC_HMD;

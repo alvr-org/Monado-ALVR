@@ -574,19 +574,6 @@ rift_s_controller_get_tracked_pose(struct xrt_device *xdev,
 }
 
 static void
-rift_s_controller_get_view_poses(struct xrt_device *xdev,
-                                 const struct xrt_vec3 *default_eye_relation,
-                                 uint64_t at_timestamp_ns,
-                                 uint32_t view_count,
-                                 struct xrt_space_relation *out_head_relation,
-                                 struct xrt_fov *out_fovs,
-                                 struct xrt_pose *out_poses)
-{
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
-}
-
-static void
 rift_s_controller_destroy(struct xrt_device *xdev)
 {
 	struct rift_s_controller *ctrl = (struct rift_s_controller *)(xdev);
@@ -626,7 +613,7 @@ rift_s_controller_create(struct rift_s_system *sys, enum xrt_device_type device_
 	ctrl->base.update_inputs = rift_s_controller_update_inputs;
 	ctrl->base.set_output = rift_s_controller_set_output;
 	ctrl->base.get_tracked_pose = rift_s_controller_get_tracked_pose;
-	ctrl->base.get_view_poses = rift_s_controller_get_view_poses;
+	ctrl->base.get_view_poses = u_device_get_view_poses;
 	ctrl->base.destroy = rift_s_controller_destroy;
 	ctrl->base.name = XRT_DEVICE_TOUCH_CONTROLLER;
 	ctrl->base.device_type = device_type;

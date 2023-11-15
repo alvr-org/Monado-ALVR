@@ -521,8 +521,14 @@ HmdDevice::get_view_poses(const xrt_vec3 *default_eye_relation,
 	struct xrt_vec3 eye_relation = *default_eye_relation;
 	eye_relation.x = ipd;
 
-	u_device_get_view_poses(this, &eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
+	u_device_get_view_poses( //
+	    this,                //
+	    &eye_relation,       //
+	    at_timestamp_ns,     //
+	    view_count,          //
+	    out_head_relation,   //
+	    out_fovs,            //
+	    out_poses);          //
 
 	out_poses[0].orientation = this->eye[0].orientation;
 	out_poses[0].position.z = this->eye[0].position.z;

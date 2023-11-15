@@ -205,8 +205,14 @@ vive_device_get_view_poses(struct xrt_device *xdev,
 	// Only supports two views.
 	assert(view_count <= 2);
 
-	u_device_get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                        out_poses);
+	u_device_get_view_poses(  //
+	    xdev,                 //
+	    default_eye_relation, //
+	    at_timestamp_ns,      //
+	    view_count,           //
+	    out_head_relation,    //
+	    out_fovs,             //
+	    out_poses);           //
 
 	// This is for the Index' canted displays, on the Vive [Pro] they are identity.
 	struct vive_device *d = vive_device(xdev);
