@@ -376,7 +376,7 @@ oxr_instance_create(struct oxr_logger *log,
 	        "\tcreateInfo->applicationInfo.engineVersion: %i\n"
 	        "\tappinfo.detected.engine.name: %s\n"
 	        "\tappinfo.detected.engine.version: %i.%i.%i\n"
-	        "\tquirks.disable_vulkan_format_depth_stencil: %s"
+	        "\tquirks.disable_vulkan_format_depth_stencil: %s\n"
 	        "\tquirks.no_validation_error_in_create_ref_space: %s",
 	        createInfo->applicationInfo.applicationName,                              //
 	        createInfo->applicationInfo.applicationVersion,                           //
