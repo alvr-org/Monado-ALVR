@@ -9,4 +9,4 @@
 
 #pragma once
 
-#include "glad/egl.h"
+#include "glad/egl.h" // IWYU pragma: export

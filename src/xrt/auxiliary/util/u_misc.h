@@ -10,7 +10,7 @@
 #pragma once
 
 #include <stdlib.h> // for calloc
-#include <string.h> // for memset
+#include <string.h> // for memset // IWYU pragma: keep
 
 #ifdef __cplusplus
 extern "C" {

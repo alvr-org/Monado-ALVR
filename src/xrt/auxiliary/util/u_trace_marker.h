@@ -12,7 +12,7 @@
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_config_os.h"
 #include "xrt/xrt_config_have.h"
-#include "xrt/xrt_config_build.h"
+#include "xrt/xrt_config_build.h" // IWYU pragma: keep
 
 #include <stdio.h>
 

@@ -7,6 +7,7 @@
  * @author Ryan Pavlik <ryan.pavlik@collabora.com>
  * @ingroup aux_tracking
  */
+// IWYU pragma: no_include "src/Core/MatrixBase.h"
 
 #include "tracking/t_imu.h"
 #include "tracking/t_imu_fusion.hpp"

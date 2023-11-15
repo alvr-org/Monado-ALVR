@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "xrt/xrt_defines.h"
+#include "xrt/xrt_defines.h" // IWYU pragma: keep
 
 #ifdef __cplusplus
 extern "C" {

@@ -10,15 +10,17 @@
  */
 
 #include "xrt/xrt_device.h"
-#include "xrt/xrt_config_build.h"
-#include "xrt/xrt_config_have.h"
+#include "xrt/xrt_config_build.h" // IWYU pragma: keep
+#include "xrt/xrt_config_have.h"  // IWYU pragma: keep
 
 #ifdef XR_USE_PLATFORM_XLIB
-#include "xrt/xrt_gfx_xlib.h"
+#include "xrt/xrt_gfx_xlib.h" // IWYU pragma: keep
+
 #endif // XR_USE_PLATFORM_XLIB
 
 #ifdef XRT_HAVE_VULKAN
-#include "xrt/xrt_gfx_vk.h"
+#include "xrt/xrt_gfx_vk.h" // IWYU pragma: keep
+
 #endif // XRT_HAVE_VULKAN
 
 #include "os/os_time.h"

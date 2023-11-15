@@ -18,7 +18,7 @@
 #include "xrt/xrt_windows.h"
 
 #define VK_NO_PROTOTYPES
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.h> // IWYU pragma: export
 
 // Dealing with underscore compat.
 #ifndef VK_KHR_MAINTENANCE_1_EXTENSION_NAME

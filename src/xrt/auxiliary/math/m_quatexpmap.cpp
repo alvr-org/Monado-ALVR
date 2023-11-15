@@ -9,6 +9,7 @@
  *
  * Based in part on inc/osvr/Util/EigenQuatExponentialMap.h in OSVR-Core
  */
+// IWYU pragma: no_include "src/Core/MatrixBase.h"
 
 #include "math/m_api.h"
 #include "math/m_eigen_interop.hpp"
@@ -22,6 +23,7 @@
 // anonymous namespace for internal types
 namespace {
 template <typename Scalar> struct FourthRootMachineEps;
+
 template <> struct FourthRootMachineEps<double>
 {
 	/// machine epsilon is 1e-53, so fourth root is roughly 1e-13

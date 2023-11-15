@@ -7,6 +7,8 @@
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
  * @ingroup drv_vive
  */
+// IWYU pragma: no_include <asm/int-ll64.h>
+// IWYU pragma: no_include <linux/byteorder/little_endian.h>
 
 #include <asm/byteorder.h>
 #include <stdint.h>

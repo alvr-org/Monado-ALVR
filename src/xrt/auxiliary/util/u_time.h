@@ -20,7 +20,7 @@
 #include "xrt/xrt_compiler.h"
 
 #include <stdint.h>
-#include <time.h>
+#include <time.h> // IWYU pragma: keep
 
 #if defined(XRT_ENV_MINGW)
 // That define is needed before to include windows.h, to avoid a collision

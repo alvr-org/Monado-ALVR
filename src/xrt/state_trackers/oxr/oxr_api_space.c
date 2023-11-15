@@ -12,7 +12,7 @@
 #include "util/u_debug.h"
 #include "util/u_trace_marker.h"
 
-#include "math/m_api.h"
+#include "math/m_api.h" // IWYU pragma: keep
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"

@@ -13,7 +13,7 @@
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
 
-#include "cjson/cJSON.h"
+#include <cjson/cJSON.h> // IWYU pragma: export
 
 
 #ifdef __cplusplus

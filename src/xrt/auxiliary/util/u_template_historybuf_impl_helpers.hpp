@@ -12,6 +12,8 @@
 
 #pragma once
 
+// IWYU pragma: private, include "util/u_template_historybuf.hpp"
+
 #include <algorithm>
 #include <assert.h>
 #include <stdlib.h>

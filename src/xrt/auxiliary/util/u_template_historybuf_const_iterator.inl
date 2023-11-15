@@ -7,6 +7,9 @@
  * @author Ryan Pavlik <ryan.pavlik@collabora.com>
  * @ingroup aux_util
  */
+#pragma once
+
+// IWYU pragma: private, include "util/u_template_historybuf.hpp"
 
 #include <stddef.h>
 #include <type_traits>

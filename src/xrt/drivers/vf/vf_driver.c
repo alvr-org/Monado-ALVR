@@ -9,6 +9,8 @@
  * @ingroup drv_vf
  */
 
+#include "vf_interface.h" // IWYU pragma: associated
+
 #include "os/os_time.h"
 #include "os/os_threading.h"
 
@@ -21,7 +23,6 @@
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
 
-#include "vf_interface.h"
 
 #include <stdio.h>
 #include <assert.h>

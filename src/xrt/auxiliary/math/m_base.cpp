@@ -9,8 +9,11 @@
  * @author Nis Madsen <nima_zero_one@protonmail.com>
  * @ingroup aux_math
  */
+// IWYU pragma: no_include "src/Core/DenseBase.h"
+// IWYU pragma: no_include "src/Core/MatrixBase.h"
 
-#include "math/m_api.h"
+#include "math/m_api.h" // IWYU pragma: associated
+
 #include "math/m_eigen_interop.hpp"
 #include "math/m_vec3.h"
 

@@ -11,7 +11,7 @@
 #include "util/u_logging.h"
 
 #include "ogl_helpers.h"
-#include "ogl_api.h"
+#include "ogl_api.h" // IWYU pragma: keep
 
 #include <inttypes.h>
 
