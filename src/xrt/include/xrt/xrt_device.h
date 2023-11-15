@@ -264,6 +264,13 @@ struct xrt_device
 	bool force_feedback_supported;
 	bool form_factor_check_supported;
 
+
+	/*
+	 *
+	 * Functions.
+	 *
+	 */
+
 	/*!
 	 * Update any attached inputs.
 	 *
@@ -411,11 +418,6 @@ struct xrt_device
 	                                    struct xrt_visibility_mask **out_mask);
 
 	/*!
-	 * Destroy device.
-	 */
-	void (*destroy)(struct xrt_device *xdev);
-
-	/*!
 	 * @brief Check if given form factor is available or not.
 	 *
 	 * This should only be used in HMD device, if the device driver supports form factor check.
@@ -426,6 +428,13 @@ struct xrt_device
 	 * @return true if given form factor is available; otherwise false.
 	 */
 	bool (*is_form_factor_available)(struct xrt_device *xdev, enum xrt_form_factor form_factor);
+
+	/*!
+	 * Destroy device.
+	 */
+	void (*destroy)(struct xrt_device *xdev);
+
+	// Add new functions above destroy.
 };
 
 /*!
@@ -537,6 +546,19 @@ xrt_device_get_visibility_mask(struct xrt_device *xdev,
 }
 
 /*!
+ * Helper function for @ref xrt_device::is_form_factor_available.
+ *
+ * @copydoc xrt_device::is_form_factor_available
+ *
+ * @public @memberof xrt_device
+ */
+static inline bool
+xrt_device_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
+{
+	return xdev->is_form_factor_available(xdev, form_factor);
+}
+
+/*!
  * Helper function for @ref xrt_device::destroy.
  *
  * Handles nulls, sets your pointer to null.
@@ -555,18 +577,6 @@ xrt_device_destroy(struct xrt_device **xdev_ptr)
 	*xdev_ptr = NULL;
 }
 
-/*!
- * Helper function for @ref xrt_device::is_form_factor_available.
- *
- * @copydoc xrt_device::is_form_factor_available
- *
- * @public @memberof xrt_device
- */
-static inline bool
-xrt_device_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
-{
-	return xdev->is_form_factor_available(xdev, form_factor);
-}
 
 #ifdef __cplusplus
 } // extern "C"
