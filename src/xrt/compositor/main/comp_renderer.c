@@ -14,6 +14,7 @@
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_frame.h"
 #include "xrt/xrt_compositor.h"
+#include "xrt/xrt_results.h"
 
 #include "os/os_time.h"
 
@@ -547,7 +548,7 @@ renderer_wait_for_last_fence(struct comp_renderer *r)
 	r->fenced_buffer = -1;
 }
 
-static void
+static XRT_CHECK_RESULT VkResult
 renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineStageFlags pipeline_stage_flag)
 {
 	COMP_TRACE_MARKER();
@@ -568,6 +569,7 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	ret = vk->vkResetFences(vk->device, 1, &r->fences[r->acquired_buffer]);
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(r->c, "vkResetFences: %s", vk_result_string(ret));
+		return ret;
 	}
 
 
@@ -634,10 +636,12 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	ret = vk_cmd_submit_locked(vk, 1, &comp_submit_info, r->fences[r->acquired_buffer]);
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(r->c, "vkQueueSubmit: %s", vk_result_string(ret));
+		return ret;
 	}
 
 	// This buffer now have a pending fence.
 	r->fenced_buffer = r->acquired_buffer;
+	return ret;
 }
 
 static void
@@ -753,7 +757,7 @@ renderer_fini(struct comp_renderer *r)
 /*!
  * @pre render_gfx_init(rr, &c->nr)
  */
-static void
+static XRT_CHECK_RESULT VkResult
 dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 {
 	COMP_TRACE_MARKER();
@@ -792,6 +796,8 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	render_gfx_begin(rr);
 
 
+	VkResult ret = VK_SUCCESS;
+
 	comp_render_gfx_dispatch(     //
 	    rr,                       // rr
 	    &r->scratch,              // rsi
@@ -812,10 +818,12 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	render_gfx_end(rr);
 
 	// Everything is ready, submit to the queue.
-	renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	ret = renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 	// We mark afterwards to not include CPU time spent.
 	comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
+
+	return ret;
 }
 
 
@@ -828,7 +836,7 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 /*!
  * @pre render_compute_init(crc, &c->nr)
  */
-static void
+static XRT_CHECK_RESULT VkResult
 dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 {
 	COMP_TRACE_MARKER();
@@ -876,7 +884,7 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 
 	comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
 
-	renderer_submit_queue(r, crc->r->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	return renderer_submit_queue(r, crc->r->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 }
 
 
@@ -886,7 +894,7 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
  *
  */
 
-void
+XRT_CHECK_RESULT xrt_result_t
 comp_renderer_draw(struct comp_renderer *r)
 {
 	COMP_TRACE_MARKER();
@@ -912,7 +920,7 @@ comp_renderer_draw(struct comp_renderer *r)
 
 		// Clear the rendering frame.
 		comp_frame_clear_locked(&c->frame.rendering);
-		return;
+		return XRT_SUCCESS;
 	}
 
 	comp_target_flush(ct);
@@ -929,12 +937,17 @@ comp_renderer_draw(struct comp_renderer *r)
 	bool use_compute = r->settings->use_compute;
 	struct render_gfx rr = {0};
 	struct render_compute crc = {0};
+
+	VkResult res = VK_SUCCESS;
 	if (use_compute) {
 		render_compute_init(&crc, &c->nr);
-		dispatch_compute(r, &crc);
+		res = dispatch_compute(r, &crc);
 	} else {
 		render_gfx_init(&rr, &c->nr);
-		dispatch_graphics(r, &rr);
+		res = dispatch_graphics(r, &rr);
+	}
+	if (res != VK_SUCCESS) {
+		return XRT_ERROR_VULKAN;
 	}
 
 #ifdef XRT_FEATURE_WINDOW_PEEK
@@ -974,6 +987,7 @@ comp_renderer_draw(struct comp_renderer *r)
 	// Clear the rendered frame.
 	comp_frame_clear_locked(&c->frame.rendering);
 
+	xrt_result_t xret = XRT_SUCCESS;
 	comp_mirror_fixup_ui_state(&r->mirror_to_debug_gui, c);
 	if (comp_mirror_is_ready_and_active(&r->mirror_to_debug_gui, c, predicted_display_time_ns)) {
 
@@ -983,7 +997,7 @@ comp_renderer_draw(struct comp_renderer *r)
 		// Covers the whole view.
 		struct xrt_normalized_rect rect = {0, 0, 1.0f, 1.0f};
 
-		comp_mirror_do_blit(               //
+		xret = comp_mirror_do_blit(        //
 		    &r->mirror_to_debug_gui,       //
 		    &c->base.vk,                   //
 		    frame_id,                      //
@@ -1004,15 +1018,16 @@ comp_renderer_draw(struct comp_renderer *r)
 	 */
 	renderer_wait_queue_idle(r);
 
+	if (xret == XRT_SUCCESS) {
+		/*
+		 * Get timestamps of GPU work (if available).
+		 */
 
-	/*
-	 * Get timestamps of GPU work (if available).
-	 */
-
-	uint64_t gpu_start_ns, gpu_end_ns;
-	if (render_resources_get_timestamps(&c->nr, &gpu_start_ns, &gpu_end_ns)) {
-		uint64_t now_ns = os_monotonic_get_ns();
-		comp_target_info_gpu(ct, frame_id, gpu_start_ns, gpu_end_ns, now_ns);
+		uint64_t gpu_start_ns, gpu_end_ns;
+		if (render_resources_get_timestamps(&c->nr, &gpu_start_ns, &gpu_end_ns)) {
+			uint64_t now_ns = os_monotonic_get_ns();
+			comp_target_info_gpu(ct, frame_id, gpu_start_ns, gpu_end_ns, now_ns);
+		}
 	}
 
 
@@ -1057,6 +1072,8 @@ comp_renderer_draw(struct comp_renderer *r)
 	}
 
 	comp_target_update_timings(ct);
+
+	return xret;
 }
 
 struct comp_renderer *

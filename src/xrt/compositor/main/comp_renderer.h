@@ -57,7 +57,7 @@ comp_renderer_destroy(struct comp_renderer **ptr_r);
  * @public @memberof comp_renderer
  * @ingroup comp_main
  */
-void
+XRT_CHECK_RESULT xrt_result_t
 comp_renderer_draw(struct comp_renderer *r);
 
 void

@@ -8,6 +8,7 @@
  * @ingroup comp_main
  */
 
+#include "xrt/xrt_results.h"
 #include "math/m_mathinclude.h"
 #include "main/comp_mirror_to_debug_gui.h"
 
@@ -410,7 +411,7 @@ comp_mirror_is_ready_and_active(struct comp_mirror_to_debug_gui *m,
 	return true;
 }
 
-void
+XRT_CHECK_RESULT xrt_result_t
 comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
                     struct vk_bundle *vk,
                     uint64_t frame_id,
@@ -428,11 +429,11 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 	struct vk_image_readback_to_xf *wrap = NULL;
 
 	if (!vk_image_readback_to_xf_pool_get_unused_frame(vk, m->pool, &wrap)) {
-		return;
+		return XRT_ERROR_VULKAN;
 	}
 
 	if (!ensure_scratch(m, vk)) {
-		return;
+		return XRT_ERROR_VULKAN;
 	}
 
 	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
@@ -443,7 +444,7 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 	    &descriptor_set);              // descriptor_set
 	if (ret != VK_SUCCESS) {
 		VK_ERROR(vk, "vk_create_descriptor_set: %s", vk_result_string(ret));
-		return;
+		return XRT_ERROR_VULKAN;
 	}
 
 	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "comp_mirror_to_debug_ui blit descriptor set");
@@ -458,7 +459,7 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 	if (ret != VK_SUCCESS) {
 		vk->vkResetDescriptorPool(vk->device, m->blit.descriptor_pool, 0);
 		vk_cmd_pool_unlock(pool);
-		return;
+		return XRT_ERROR_VULKAN;
 	}
 
 	VK_NAME_COMMAND_BUFFER(vk, cmd, "comp_mirror_to_debug_ui command buffer");
@@ -637,6 +638,7 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 	if (ret != VK_SUCCESS) {
 		//! @todo Better handling of error?
 		VK_ERROR(vk, "vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked: %s", vk_result_string(ret));
+		return XRT_ERROR_VULKAN;
 	}
 
 	wrap->base_frame.source_timestamp = wrap->base_frame.timestamp = predicted_display_time_ns;
@@ -653,6 +655,7 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 
 	// Tidies the descriptor we created.
 	vk->vkResetDescriptorPool(vk->device, m->blit.descriptor_pool, 0);
+	return XRT_ERROR_VULKAN;
 }
 
 void

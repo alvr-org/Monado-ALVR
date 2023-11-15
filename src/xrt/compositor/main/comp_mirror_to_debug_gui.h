@@ -9,8 +9,11 @@
  */
 #pragma once
 
+#include "xrt/xrt_compiler.h"
+#include "xrt/xrt_results.h"
 #include "util/u_sink.h"
 #include "vk/vk_image_readback_to_xf_pool.h"
+
 #include "main/comp_compositor.h"
 
 
@@ -115,7 +118,7 @@ comp_mirror_is_ready_and_active(struct comp_mirror_to_debug_gui *m,
  *
  * @public @memberof comp_mirror_to_debug_gui
  */
-void
+XRT_CHECK_RESULT xrt_result_t
 comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
                     struct vk_bundle *vk,
                     uint64_t frame_id,
