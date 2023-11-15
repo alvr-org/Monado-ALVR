@@ -245,9 +245,11 @@ set_common_fields(struct comp_swapchain *sc,
 }
 
 static void
-image_view_array_cleanup(struct vk_bundle *vk, size_t array_size, VkImageView **views_ptr)
+image_view_array_cleanup(struct vk_bundle *vk, size_t *array_size_ptr, VkImageView **views_ptr)
 {
+	size_t array_size = *array_size_ptr;
 	VkImageView *views = *views_ptr;
+
 	if (views == NULL) {
 		return;
 	}
@@ -261,8 +263,8 @@ image_view_array_cleanup(struct vk_bundle *vk, size_t array_size, VkImageView **
 	}
 
 	free(views);
-	array_size = 0;
 
+	*array_size_ptr = 0;
 	*views_ptr = NULL;
 }
 
@@ -283,8 +285,8 @@ image_cleanup(struct vk_bundle *vk, struct comp_swapchain_image *image)
 	vk->vkDeviceWaitIdle(vk->device);
 	os_mutex_unlock(&vk->queue_mutex);
 
-	image_view_array_cleanup(vk, image->array_size, &image->views.alpha);
-	image_view_array_cleanup(vk, image->array_size, &image->views.no_alpha);
+	image_view_array_cleanup(vk, &image->array_size, &image->views.alpha);
+	image_view_array_cleanup(vk, &image->array_size, &image->views.no_alpha);
 }
 
 static void
