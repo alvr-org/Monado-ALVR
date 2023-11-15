@@ -141,7 +141,7 @@ struct client_d3d11_compositor
 	/*!
 	 * A timeline semaphore made by the native compositor and imported by us.
 	 *
-	 * When this is valid, we should use xrt_compositor::layer_commit_with_sync:
+	 * When this is valid, we should use xrt_compositor::layer_commit_with_semaphone:
 	 * it means the native compositor knows about timeline semaphores, and we can import its semaphores, so we can
 	 * pass @ref timeline_semaphore instead of blocking locally.
 	 */
