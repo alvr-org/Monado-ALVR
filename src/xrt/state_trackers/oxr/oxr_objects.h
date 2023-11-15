@@ -552,11 +552,11 @@ oxr_hand_tracker_create(struct oxr_logger *log,
  * Find the best matching profile for the given @ref xrt_device.
  *
  * @param      log   Logger.
- * @param      inst  Instance.
+ * @param      sess  Session.
  * @param      xdev  Can be null.
  * @param[out] out_p Returned interaction profile.
  *
- * @public @memberof oxr_instance
+ * @public @memberof oxr_session
  */
 void
 oxr_find_profile_for_device(struct oxr_logger *log,
@@ -1288,7 +1288,7 @@ struct oxr_system
 	XrReferenceSpaceType reference_spaces[5];
 	uint32_t reference_space_count;
 
-	//! Cache of the last known system roles, see @xrt_system_roles::generation_id
+	//! Cache of the last known system roles, see @ref xrt_system_roles::generation_id
 	struct xrt_system_roles dynamic_roles_cache;
 	struct os_mutex sync_actions_mutex;
 
@@ -1574,13 +1574,13 @@ struct oxr_session
 	 *
 	 * If non-null, this means action sets have been attached to this
 	 * session, since this map points to @p oxr_action_attachment members of
-	 * oxr_session::act_set_attachments elements.
+	 * @ref oxr_session::act_set_attachments elements.
 	 */
 	struct u_hashmap_int *act_attachments_by_key;
 
 	/*!
 	 * Clone of all suggested binding profiles at the point of action set/session attachment.
-	 * ref to @oxr_session_attach_action_sets
+	 * @ref oxr_session_attach_action_sets
 	 */
 	size_t profiles_on_attachment_size;
 	struct oxr_interaction_profile **profiles_on_attachment;
