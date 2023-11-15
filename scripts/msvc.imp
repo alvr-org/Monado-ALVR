@@ -1,0 +1,28 @@
+# Copyright 2022, Collabora, Ltd.
+# SPDX-License-Identifier: BSL-1.0
+#
+# GENERATED - edit generate_iwyu_mapping_msvc.py instead of this file
+[
+{ include: ["<xutility>", "private", "<utility>", "public"] },
+{ include: ["<xstring>", "private", "<string>", "public"] },
+{ include: ["<xatomic.h>", "private", "<atomic>", "public"] },
+{ include: ["<xtr1common>", "private", "<type_traits>", "public"] },
+{ include: ["<corecrt_math.h>", "private", "<math.h>", "public"] },
+{ include: ["<corecrt_math.h>", "private", "<cmath>", "public"] },
+{ include: ["<vcruntime_exceptions.h>", "private", "<exception>", "public"] },
+{ include: ["<xmemory>", "private", "<deque>", "public"] },
+{ include: ["<xmemory>", "private", "<filesystem>", "public"] },
+{ include: ["<xmemory>", "private", "<forward_list>", "public"] },
+{ include: ["<xmemory>", "private", "<functional>", "public"] },
+{ include: ["<xmemory>", "private", "<future>", "public"] },
+{ include: ["<xmemory>", "private", "<hash_map>", "public"] },
+{ include: ["<xmemory>", "private", "<hash_set>", "public"] },
+{ include: ["<xmemory>", "private", "<list>", "public"] },
+{ include: ["<xmemory>", "private", "<map>", "public"] },
+{ include: ["<xmemory>", "private", "<memory>", "public"] },
+{ include: ["<xmemory>", "private", "<set>", "public"] },
+{ include: ["<xmemory>", "private", "<string>", "public"] },
+{ include: ["<xmemory>", "private", "<unordered_map>", "public"] },
+{ include: ["<xmemory>", "private", "<unordered_set>", "public"] },
+{ include: ["<xmemory>", "private", "<vector>", "public"] },
+]

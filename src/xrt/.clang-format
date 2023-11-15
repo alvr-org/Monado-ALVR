@@ -1,12 +1,28 @@
 ---
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileCopyrightText: 2020, Collabora, Ltd.
+# SPDX-FileCopyrightText: 2020-2022, Collabora, Ltd.
 Language:             Cpp
 BasedOnStyle:         LLVM
 Standard:             Auto
 
 # Includes
-SortIncludes:         false
+SortIncludes: false
+# SortIncludes: true
+# IncludeBlocks: Regroup
+# # IncludeBlocks: Preserve
+# IncludeCategories:
+#   # xrt includes first, they set up defines, clean up after messy headers, etc.
+#   - Regex: "^[<\"](xrt)/"
+#     Priority: 2
+#   # Then, any other internal library
+#   - Regex: "^[<\"](util|vk|os|math|render|multi)/"
+#     Priority: 3
+#   # system includes
+#   - Regex: "<([[:alnum:].]+|type_traits)>"
+#     Priority: 5
+#   # Everything else (local includes)
+#   - Regex: ".*"
+#     Priority: 2
 
 # Spacing and Blank Lines
 DerivePointerAlignment: false

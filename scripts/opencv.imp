@@ -1,0 +1,9 @@
+# Copyright 2022-2023, Collabora, Ltd.
+#
+# SPDX-License-Identifier: BSL-1.0
+#
+# GENERATED - edit generate_iwyu_mapping.py instead of this file
+[
+{ include: ["@<opencv2/core/.*.inl.hpp>", "private", "<opencv2/core.hpp>", "public"] },
+{ include: ["@<opencv2/core/hal/.*", "private", "<opencv2/core.hpp>", "public"] },
+]

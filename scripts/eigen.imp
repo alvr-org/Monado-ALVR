@@ -1,0 +1,20 @@
+# Copyright 2022-2023, Collabora, Ltd.
+#
+# SPDX-License-Identifier: BSL-1.0
+#
+# GENERATED - edit generate_iwyu_mapping.py instead of this file
+[
+{ include: ["@[<\"]src/Core/ArrayBase.h[>\"]", "private", "<Eigen/Core>", "public"] },
+{ include: ["@[<\"]src/Core/MatrixBase.h[>\"]", "private", "<Eigen/Core>", "public"] },
+{ include: ["@[<\"]src/Core/DenseBase.h[>\"]", "private", "<Eigen/Core>", "public"] },
+{ include: ["@[<\"]Eigen/src/Core/.*", "private", "<Eigen/Core>", "public"] },
+{ include: ["@[<\"]src/Core/.*", "private", "<Eigen/Core>", "public"] },
+{ include: ["@[<\"]Eigen/src/Geometry/.*", "private", "<Eigen/Geometry>", "public"] },
+{ include: ["@[<\"]src/Geometry/.*", "private", "<Eigen/Geometry>", "public"] },
+{ include: ["@[<\"]Eigen/src/LU/.*", "private", "<Eigen/LU>", "public"] },
+{ include: ["@[<\"]src/LU/.*", "private", "<Eigen/LU>", "public"] },
+{ include: ["@[<\"]Eigen/src/SparseCore/.*", "private", "<Eigen/SparseCore>", "public"] },
+{ include: ["@[<\"]src/SparseCore/.*", "private", "<Eigen/SparseCore>", "public"] },
+{ include: ["@[<\"]Eigen/src/Sparse/.*", "private", "<Eigen/Sparse>", "public"] },
+{ include: ["@[<\"]src/Sparse/.*", "private", "<Eigen/Sparse>", "public"] },
+]
