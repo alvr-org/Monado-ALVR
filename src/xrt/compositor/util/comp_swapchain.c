@@ -434,7 +434,7 @@ image_cleanup(struct vk_bundle *vk, struct comp_swapchain_image *image)
 /*!
  * Swapchain destruct is delayed until it is safe to destroy them, this function
  * does the actual destruction and is called from @ref
- * comp_swapchain_garbage_collect.
+ * comp_swapchain_shared_garbage_collect.
  *
  * @ingroup comp_util
  */
