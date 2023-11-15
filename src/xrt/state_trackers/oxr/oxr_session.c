@@ -1183,6 +1183,7 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
 	struct oxr_system *sys = sess->sys;
 	struct xrt_device *xdev = GET_XDEV_BY_ROLE(sess->sys, head);
 	enum xrt_visibility_mask_type type = convert_mask_type(visibilityMaskType);
+	xrt_result_t xret;
 
 	assert(viewIndex < ARRAY_SIZE(sys->visibility_mask));
 
@@ -1197,7 +1198,8 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
 
 	// If we didn't have any cached mask get it.
 	if (mask == NULL) {
-		xrt_device_get_visibility_mask(xdev, type, viewIndex, &mask);
+		xret = xrt_device_get_visibility_mask(xdev, type, viewIndex, &mask);
+		OXR_CHECK_XRET(log, sess, xret, get_visibility_mask);
 		sys->visibility_mask[viewIndex] = mask;
 	}
 

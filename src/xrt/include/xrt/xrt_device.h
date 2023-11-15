@@ -405,10 +405,10 @@ struct xrt_device
 	 * @param[in] view_index The index of the view to get the mask for.
 	 * @param[out] out_mask  Output mask, caller must free.
 	 */
-	void (*get_visibility_mask)(struct xrt_device *xdev,
-	                            enum xrt_visibility_mask_type type,
-	                            uint32_t view_index,
-	                            struct xrt_visibility_mask **out_mask);
+	xrt_result_t (*get_visibility_mask)(struct xrt_device *xdev,
+	                                    enum xrt_visibility_mask_type type,
+	                                    uint32_t view_index,
+	                                    struct xrt_visibility_mask **out_mask);
 
 	/*!
 	 * Destroy device.
@@ -527,13 +527,13 @@ xrt_device_compute_distortion(
  *
  * @public @memberof xrt_device
  */
-static inline void
+static inline xrt_result_t
 xrt_device_get_visibility_mask(struct xrt_device *xdev,
                                enum xrt_visibility_mask_type type,
                                uint32_t view_index,
                                struct xrt_visibility_mask **out_mask)
 {
-	xdev->get_visibility_mask(xdev, type, view_index, out_mask);
+	return xdev->get_visibility_mask(xdev, type, view_index, out_mask);
 }
 
 /*!

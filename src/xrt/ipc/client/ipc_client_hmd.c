@@ -252,7 +252,7 @@ ipc_client_hmd_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_f
 	return available;
 }
 
-static void
+static xrt_result_t
 ipc_client_hmd_get_visibility_mask(struct xrt_device *xdev,
                                    enum xrt_visibility_mask_type type,
                                    uint32_t view_index,
@@ -284,12 +284,13 @@ ipc_client_hmd_get_visibility_mask(struct xrt_device *xdev,
 	*out_mask = mask;
 	ipc_client_connection_unlock(ipc_c);
 
-	return;
+	return XRT_SUCCESS;
 
 err_mask_free:
 	free(mask);
 err_mask_unlock:
 	ipc_client_connection_unlock(ipc_c);
+	return XRT_ERROR_IPC_FAILURE;
 }
 
 /*!

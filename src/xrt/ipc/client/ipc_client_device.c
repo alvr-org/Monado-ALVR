@@ -139,13 +139,14 @@ ipc_client_device_set_output(struct xrt_device *xdev, enum xrt_output_name name,
 	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_set_output");
 }
 
-static void
+static xrt_result_t
 ipc_client_device_get_visibility_mask(struct xrt_device *xdev,
                                       enum xrt_visibility_mask_type type,
                                       uint32_t view_index,
                                       struct xrt_visibility_mask **out_mask)
 {
 	assert(false);
+	return XRT_ERROR_IPC_FAILURE;
 }
 
 /*!
