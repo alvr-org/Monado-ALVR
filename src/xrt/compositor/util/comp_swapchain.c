@@ -7,16 +7,21 @@
  * @ingroup comp_util
  */
 
+#include "xrt/xrt_compiler.h"
 #include "xrt/xrt_handles.h"
 #include "xrt/xrt_config_os.h"
+#include "xrt/xrt_results.h"
 
 #include "util/u_misc.h"
 #include "util/u_handles.h"
 #include "util/u_trace_marker.h"
 #include "util/u_limited_unique_id.h"
 
+#include "vk/vk_helpers.h"
 #include "vk/vk_cmd_pool.h"
 #include "vk/vk_mini_helpers.h"
+
+#include "util/comp_swapchain.h"
 
 #include "util/comp_swapchain.h"
 
@@ -290,10 +295,22 @@ image_cleanup(struct vk_bundle *vk, struct comp_swapchain_image *image)
 }
 
 static void
+cleanup_post_create_vulkan_setup(struct vk_bundle *vk, struct comp_swapchain *sc)
+{
+
+	uint32_t image_count = sc->vkic.image_count;
+
+	for (uint32_t i = 0; i < image_count; i++) {
+		image_cleanup(vk, &(sc->images[i]));
+	}
+}
+
+static XRT_CHECK_RESULT xrt_result_t
 do_post_create_vulkan_setup(struct vk_bundle *vk,
                             const struct xrt_swapchain_create_info *info,
                             struct comp_swapchain *sc)
 {
+	xrt_result_t xret = XRT_SUCCESS;
 	uint32_t image_count = sc->vkic.image_count;
 	VkCommandBuffer cmd_buffer;
 	VkResult ret;
@@ -314,6 +331,11 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 	for (uint32_t i = 0; i < image_count; i++) {
 		sc->images[i].views.alpha = U_TYPED_ARRAY_CALLOC(VkImageView, info->array_size);
 		sc->images[i].views.no_alpha = U_TYPED_ARRAY_CALLOC(VkImageView, info->array_size);
+		if (!sc->images[i].views.alpha || !sc->images[i].views.no_alpha) {
+			cleanup_post_create_vulkan_setup(vk, sc);
+			//! @todo actually out of memory
+			return XRT_ERROR_VULKAN;
+		}
 		sc->images[i].array_size = info->array_size;
 
 		for (uint32_t layer = 0; layer < info->array_size; ++layer) {
@@ -325,7 +347,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 			    .layerCount = info->face_count,
 			};
 
-			vk_create_view(                         //
+			ret = vk_create_view(                   //
 			    vk,                                 // vk
 			    sc->vkic.images[i].handle,          // image
 			    image_view_type,                    // type
@@ -333,9 +355,11 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 			    subresource_range,                  // subresource_range
 			    &sc->images[i].views.alpha[layer]); // out_view
 
+			VK_CHK_WITH_GOTO(ret, "vk_create_view", error);
+
 			VK_NAME_IMAGE_VIEW(vk, sc->images[i].views.alpha[layer], "comp_swapchain views alpha layer");
 
-			vk_create_view_swizzle(                    //
+			ret = vk_create_view_swizzle(              //
 			    vk,                                    // vk
 			    sc->vkic.images[i].handle,             // image
 			    image_view_type,                       // type
@@ -343,6 +367,8 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 			    subresource_range,                     // subresource_range
 			    components,                            // components
 			    &sc->images[i].views.no_alpha[layer]); // out_view
+
+			VK_CHK_WITH_GOTO(ret, "vk_create_view_swizzle", error);
 
 			VK_NAME_IMAGE_VIEW(vk, sc->images[i].views.no_alpha[layer],
 			                   "comp_swapchain views no alpha layer");
@@ -370,9 +396,10 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 	// Now lets create the command buffer.
 	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &cmd_buffer);
 	if (ret != VK_SUCCESS) {
-		vk_cmd_pool_unlock(pool);
 		VK_ERROR(vk, "Failed to barrier images");
-		return;
+		vk_cmd_pool_unlock(pool);
+		cleanup_post_create_vulkan_setup(vk, sc);
+		return XRT_ERROR_VULKAN;
 	}
 
 	VK_NAME_COMMAND_BUFFER(vk, cmd_buffer, "comp_swapchain command buffer");
@@ -407,8 +434,9 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 
 	// Check results from submit.
 	if (ret != VK_SUCCESS) {
-		//! @todo Propegate error
 		VK_ERROR(vk, "Failed to barrier images");
+		cleanup_post_create_vulkan_setup(vk, sc);
+		return XRT_ERROR_VULKAN;
 	}
 
 	for (uint32_t i = 0; i < image_count; i++) {
@@ -416,17 +444,25 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 		ret = pthread_cond_init(&sc->images[i].use_cond, NULL);
 		if (ret) {
 			VK_ERROR(sc->vk, "Failed to init image use cond: %d", ret);
+			xret = XRT_ERROR_THREADING_INIT_FAILURE;
 			continue;
 		}
 
 		ret = os_mutex_init(&sc->images[i].use_mutex);
 		if (ret) {
 			VK_ERROR(sc->vk, "Failed to init image use mutex: %d", ret);
+			xret = XRT_ERROR_THREADING_INIT_FAILURE;
 			continue;
 		}
 
 		sc->images[i].use_count = 0;
 	}
+
+	return xret;
+
+error:
+	cleanup_post_create_vulkan_setup(vk, sc);
+	return XRT_ERROR_VULKAN;
 }
 
 /*!
@@ -490,14 +526,25 @@ comp_swapchain_create_init(struct comp_swapchain *sc,
 
 	xrt_graphics_buffer_handle_t handles[ARRAY_SIZE(sc->vkic.images)];
 
-	vk_ic_get_handles(vk, &sc->vkic, ARRAY_SIZE(handles), handles);
+	ret = vk_ic_get_handles(vk, &sc->vkic, ARRAY_SIZE(handles), handles);
+	if (ret != VK_SUCCESS) {
+		VK_ERROR(vk, "Failed to get native handles for images.");
+		vk_ic_destroy(vk, &sc->vkic);
+		free(sc);
+		return XRT_ERROR_VULKAN;
+	}
 	for (uint32_t i = 0; i < sc->vkic.image_count; i++) {
 		sc->base.images[i].handle = handles[i];
 		sc->base.images[i].size = sc->vkic.images[i].size;
 		sc->base.images[i].use_dedicated_allocation = sc->vkic.images[i].use_dedicated_allocation;
 	}
 
-	do_post_create_vulkan_setup(vk, info, sc);
+	xrt_result_t res = do_post_create_vulkan_setup(vk, info, sc);
+	if (res != XRT_SUCCESS) {
+		vk_ic_destroy(vk, &sc->vkic);
+		free(sc);
+		return res;
+	}
 
 	return XRT_SUCCESS;
 }
@@ -526,7 +573,12 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 		return XRT_ERROR_VULKAN;
 	}
 
-	do_post_create_vulkan_setup(vk, info, sc);
+	xrt_result_t res = do_post_create_vulkan_setup(vk, info, sc);
+	if (res != XRT_SUCCESS) {
+		vk_ic_destroy(vk, &sc->vkic);
+		free(sc);
+		return res;
+	}
 
 	return XRT_SUCCESS;
 }
