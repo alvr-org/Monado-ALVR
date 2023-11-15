@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -9,8 +9,11 @@
 
 #pragma once
 
-#include "math/m_api.h"
 #include "xrt/xrt_device.h"
+#include "math/m_api.h"
+
+#include "openhmd.h"
+
 
 #ifdef __cplusplus
 extern "C" {

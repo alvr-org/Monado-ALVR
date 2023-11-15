@@ -7,10 +7,6 @@
  * @ingroup drv_ohmd
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "openhmd.h"
 #include "xrt/xrt_prober.h"
 
 #include "util/u_misc.h"
@@ -18,6 +14,11 @@
 
 #include "oh_interface.h"
 #include "oh_device.h"
+
+#include "openhmd.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 
 /*!

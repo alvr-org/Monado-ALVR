@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -7,23 +7,16 @@
  * @ingroup drv_ohmd
  */
 
-
-#include "math/m_mathinclude.h"
 #include "xrt/xrt_config_os.h"
+#include "xrt/xrt_device.h"
 #include "xrt/xrt_prober.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
 
 #include "os/os_time.h"
 
-#include "openhmd.h"
-
+#include "math/m_mathinclude.h"
 #include "math/m_api.h"
 #include "math/m_vec2.h"
-#include "xrt/xrt_device.h"
+
 #include "util/u_var.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
@@ -33,6 +26,14 @@
 #include "util/u_logging.h"
 
 #include "oh_device.h"
+
+#include "openhmd.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
 
 // Should we permit finite differencing to compute angular velocities when not
 // directly retrieved?
