@@ -458,10 +458,15 @@ struct vk_buffer
  * @p FUNC_STR string has failed, then returns @p RET. The implicit argument
  * @p vk will be used for the @ref vk_print_result call.
  *
+ * Use this macro when your function returns a `VkResult`.
+ *
  * @param RET      The @p VkResult to check.
  * @param FUNC_STR String literal with the function name, used for logging.
  *
  * @ingroup aux_vk
+ *
+ * @see VK_CHK_WITH_RET
+ * @see VK_CHK_WITH_GOTO
  */
 #define VK_CHK_AND_RET(RET, FUNC_STR)                                                                                  \
 	do {                                                                                                           \
@@ -474,14 +479,19 @@ struct vk_buffer
 
 /*!
  * This define will error if @p RET is not @p VK_SUCCESS, printing out that the
- * @p FUNC_STR string has failed, then returns false. The implicit argument
+ * @p FUNC_STR string has failed, then returns @p TO_RET. The implicit argument
  * @p vk will be used for the @ref vk_print_result call.
+ *
+ * Use this macro when your function doesn't return a `VkResult`.
  *
  * @param RET      The @p VkResult to check.
  * @param FUNC_STR String literal with the function name, used for logging.
  * @param TO_RET   Value to return, upon error
  *
  * @ingroup aux_vk
+ *
+ * @see VK_CHK_AND_RET
+ * @see VK_CHK_WITH_GOTO
  */
 #define VK_CHK_WITH_RET(RET, FUNC_STR, TO_RET)                                                                         \
 	do {                                                                                                           \
@@ -497,11 +507,17 @@ struct vk_buffer
  * @p FUNC_STR string has failed, then goto @p GOTO. The implicit argument @p vk
  * will be used for the @ref vk_print_result call.
  *
+ * Use this macro when your function needs to `goto` some cleanup code and
+ * return from there.
+ *
  * @param RET      The @p VkResult to check.
  * @param FUNC_STR String literal with the function name, used for logging.
  * @param GOTO     Label to jump to, upon error
  *
  * @ingroup aux_vk
+ *
+ * @see VK_CHK_AND_RET
+ * @see VK_CHK_WITH_RET
  */
 #define VK_CHK_WITH_GOTO(RET, FUNC_STR, GOTO)                                                                          \
 	do {                                                                                                           \
