@@ -71,7 +71,7 @@ can be seen [here][example1], [here][example2] and [here][example3].
 [example1]: https://gitlab.freedesktop.org/monado/monado/-/commit/5e0f0866a6f74116acbc46c6e2447fdb8c716d02
 [example2]: https://gitlab.freedesktop.org/monado/monado/-/commit/98a5b18e0f90dab9f2ea5c2bbfd4ccd4998121c4
 [example3]: https://gitlab.freedesktop.org/monado/monado/-/commit/785e99f115df87dd4561fe6f88a7988b5834b650
-[proclamation]: https://gitlab.com/ryanpavlik/proclamation
+[proclamation]: https://gitlab.com/proclamation/proclamation
 
 ## APIs
 

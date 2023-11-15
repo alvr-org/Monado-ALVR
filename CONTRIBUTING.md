@@ -56,7 +56,7 @@ Let us know and we'll figure out a way to help you get involved successfully.
   the build system automatically turns on quite a few of them.
   If you can't figure out a warning, mention it in the request so we can figure it out together.
 
-- We use [Proclamation](https://gitlab.com/ryanpavlik/proclamation) to generate release notes.
+- We use [Proclamation](https://gitlab.com/proclamation/proclamation) to generate release notes.
   After creating a merge request for a substantial change, please create one or more changelog
   fragments on the branch describing the changes.  See
   [doc/changes/README.md](doc/changes/README.md) for more info.

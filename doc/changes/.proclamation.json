@@ -1,6 +1,6 @@
 {
-    "$schema": "https://ryanpavlik.gitlab.io/proclamation/proclamation.schema.json",
-    "#": "This is a config file for Proclamation, the changelog combiner: https://gitlab.com/ryanpavlik/proclamation",
+    "$schema": "https://proclamation.gitlab.io/proclamation/proclamation.schema.json",
+    "#": "This is a config file for Proclamation, the changelog combiner: https://gitlab.com/proclamation/proclamation",
     "SPDX-License-Identifier: CC0-1.0": "",
     "SPDX-FileCopyrightText: 2020 Collabora, Ltd. and the Proclamation contributors": "",
     "project_name": "Monado",

@@ -15,7 +15,7 @@ fragment for the changelog describing their change. See below for more details.
   - Config file: default name (`.proclamation.json`)
 - Location of the per-changelog-section directories: `doc/changes`
 
-[Proclamation]: https://gitlab.com/ryanpavlik/proclamation
+[Proclamation]: https://gitlab.com/proclamation/proclamation
 
 ## Table of Contents
 
