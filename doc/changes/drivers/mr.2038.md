@@ -1,0 +1,3 @@
+- wmr: Follow common naming of update_inputs.
+- vive: Follow common naming of update_inputs.
+- ohmd: Fix warnings and tidy.
