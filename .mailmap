@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2023, Monado contributors
+#
+# SPDX-License-Identifier: CC0-1.0
+#
+# See mailmap docs: https://git-scm.com/docs/gitmailmap
+# Test with git shortlog --summary --email
+# Keep sorted for easier editing and smaller diffs
+# Only extend to fix names or unify duplicate entries
+
+0y8w1x <Joseph.Albers@outlook.de>
+0y8w1x <Joseph.Albers@outlook.de> <joseph.albers@outlook.de>
+Antonio Ospite <antonio.ospite@collabora.com>
+Antonio Ospite <antonio.ospite@collabora.com> <aospite_collabora@magicleap.com>
+Bjorn Swenson <bjorn.swenson@collabora.com>
+Bjorn Swenson <bjorn.swenson@collabora.com> <bjorn@collabora.com>
+Christoph Haag <christoph.haag@collabora.com>
+Christoph Haag <christoph.haag@collabora.com> <haagch+gitlab@frickel.club>
+Daniel Willmott <web@dan-w.com>
+Fernando Velazquez Innella <finnella@magicleap.com>
+Jakob Bornecrantz <jakob@collabora.com>
+Jakob Bornecrantz <jakob@collabora.com> <jakob@jakob-zen-elite.cbg.collabora.co.uk>
+Jakob Bornecrantz <jakob@collabora.com> <wallbraker@gmail.com>
+Korcan Hussein <korcan.hussein@collabora.com>
+Korcan Hussein <korcan.hussein@collabora.com> <64199710+korejan@users.noreply.github.com>
+Korcan Hussein <korcan.hussein@collabora.com> <korcan_h@hotmail.com>
+Mateo de Mayo <mateo.demayo@collabora.com>
+Mateo de Mayo <mateo.demayo@collabora.com> <mateodemayo@gmail.com>
+Moshi Turner <mosesturner@protonmail.com>
+Moshi Turner <mosesturner@protonmail.com> <moses@collabora.com>
+Moshi Turner <moshi@arcturus.industries>
+Nima01 <nima_zero_one@protonmail.com>
+Nova King <technobaboo@gmail.com>
+Pete Black <pete.black@collabora.com>
+Simon Zeni <simon.zeni@collabora.com>
+Simon Zeni <simon.zeni@collabora.com> <simon@bl4ckb0ne.ca>
+Weijie Wang <quic_weijiew@quicinc.com>
+Weijie Wang <quic_weijiew@quicinc.com> <weijiew@qti.qualcomm.com>
+Zhibin Wang <quic_zhibinw@quicinc.com>
+Zhibin Wang <quic_zhibinw@quicinc.com> <zhibin@codeaurora.org>
+samuel degrande <samuel.degrande@univ-lille.fr>
