@@ -1047,8 +1047,10 @@ oxr_action_cache_update(struct oxr_logger *log,
 			return;
 		}
 
-		// If the input is not active signal that.
-		if (!is_active) {
+		bool is_focused = sess->state == XR_SESSION_STATE_FOCUSED;
+
+		// If the input is not active signal or the session state is not in focused that.
+		if (!is_focused || !is_active) {
 			// Reset all state.
 			U_ZERO(&cache->current);
 			return;
@@ -2015,14 +2017,16 @@ oxr_action_apply_haptic_feedback(struct oxr_logger *log,
 		stop_ns = now_ns + data->duration;
 	}
 
+	bool is_focused = sess->state == XR_SESSION_STATE_FOCUSED;
+
 #define SET_OUT_VIBRATION(X)                                                                                           \
-	if (act_attached->X.current.active && (subaction_paths.X || subaction_paths.any)) {                            \
+	if (is_focused && act_attached->X.current.active && (subaction_paths.X || subaction_paths.any)) {              \
 		set_action_output_vibration(sess, &act_attached->X, stop_ns, data);                                    \
 	}
 
 	OXR_FOR_EACH_SUBACTION_PATH(SET_OUT_VIBRATION)
 #undef SET_OUT_VIBRATION
-	return oxr_session_success_result(sess);
+	return oxr_session_success_focused_result(sess);
 }
 
 XrResult
@@ -2038,13 +2042,15 @@ oxr_action_stop_haptic_feedback(struct oxr_logger *log,
 		return oxr_error(log, XR_ERROR_ACTIONSET_NOT_ATTACHED, "Action has not been attached to this session");
 	}
 
+	bool is_focused = sess->state == XR_SESSION_STATE_FOCUSED;
+
 #define STOP_VIBRATION(X)                                                                                              \
-	if (act_attached->X.current.active && (subaction_paths.X || subaction_paths.any)) {                            \
+	if (is_focused && act_attached->X.current.active && (subaction_paths.X || subaction_paths.any)) {              \
 		oxr_action_cache_stop_output(log, sess, &act_attached->X);                                             \
 	}
 
 	OXR_FOR_EACH_SUBACTION_PATH(STOP_VIBRATION)
 #undef STOP_VIBRATION
 
-	return oxr_session_success_result(sess);
+	return oxr_session_success_focused_result(sess);
 }
