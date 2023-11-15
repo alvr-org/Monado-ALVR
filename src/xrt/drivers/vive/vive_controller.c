@@ -184,7 +184,7 @@ vive_controller_device_destroy(struct xrt_device *xdev)
 }
 
 static void
-vive_controller_device_update_wand_inputs(struct xrt_device *xdev)
+vive_controller_device_wand_update_inputs(struct xrt_device *xdev)
 {
 	struct vive_controller_device *d = vive_controller_device(xdev);
 
@@ -243,7 +243,7 @@ vive_controller_device_update_wand_inputs(struct xrt_device *xdev)
 }
 
 static void
-vive_controller_device_update_index_inputs(struct xrt_device *xdev)
+vive_controller_device_index_update_inputs(struct xrt_device *xdev)
 {
 	XRT_TRACE_MARKER();
 
@@ -1139,7 +1139,7 @@ vive_controller_create(struct os_hid_device *controller_hid, enum watchman_gen w
 
 		d->base.outputs[0].name = XRT_OUTPUT_NAME_VIVE_HAPTIC;
 
-		d->base.update_inputs = vive_controller_device_update_wand_inputs;
+		d->base.update_inputs = vive_controller_device_wand_update_inputs;
 
 		d->base.binding_profiles = vive_binding_profiles_wand;
 		d->base.binding_profile_count = vive_binding_profiles_wand_count;
@@ -1172,7 +1172,7 @@ vive_controller_create(struct os_hid_device *controller_hid, enum watchman_gen w
 
 		d->base.outputs[0].name = XRT_OUTPUT_NAME_INDEX_HAPTIC;
 
-		d->base.update_inputs = vive_controller_device_update_index_inputs;
+		d->base.update_inputs = vive_controller_device_index_update_inputs;
 
 		d->base.get_hand_tracking = vive_controller_get_hand_tracking;
 
