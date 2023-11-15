@@ -279,7 +279,7 @@ handle_input_packet(struct wmr_controller_base *wcb, uint64_t time_ns, uint8_t *
 }
 
 static void
-wmr_controller_hp_update_xrt_inputs(struct xrt_device *xdev)
+wmr_controller_hp_update_inputs(struct xrt_device *xdev)
 {
 	DRV_TRACE_MARKER();
 
@@ -350,7 +350,7 @@ wmr_controller_hp_create(struct wmr_controller_connection *conn,
 	}
 
 	wcb->base.destroy = wmr_controller_hp_destroy;
-	wcb->base.update_inputs = wmr_controller_hp_update_xrt_inputs;
+	wcb->base.update_inputs = wmr_controller_hp_update_inputs;
 	wcb->base.set_output = wmr_controller_hp_set_output;
 
 	SET_INPUT(wcb, MENU_CLICK, MENU_CLICK);
