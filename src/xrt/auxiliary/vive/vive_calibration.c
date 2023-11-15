@@ -193,7 +193,7 @@ vive_get_slam_cams_calib(const struct vive_config *d,
 		//! @todo: Index factory calibration is weird and doesn't seem to have the
 		//! proper extrinsics. Let's overwrite them with some extrinsics
 		//! I got from doing a calibration on my own headset. These seem to work
-		//! better than native values. (@mateosss)
+		//! better than native values. (mateosss)
 		P_imuxr_cam0slam.orientation.x = 0.999206844251353;
 		P_imuxr_cam0slam.orientation.y = -0.008523559718599975;
 		P_imuxr_cam0slam.orientation.z = -0.038897421992888748;
