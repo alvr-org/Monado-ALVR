@@ -1,12 +1,14 @@
-# Copyright 2020-2022, Collabora, Ltd.
+# Copyright 2020-2023, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 # Catch2
 add_library(xrt-external-catch2 INTERFACE)
-target_include_directories(xrt-external-catch2 INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Catch2)
+target_include_directories(xrt-external-catch2 SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Catch2)
+
+# OpenVR
 add_library(xrt-external-openvr INTERFACE)
 target_include_directories(
-	xrt-external-openvr INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/openvr_includes
+	xrt-external-openvr SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/openvr_includes
 	)
 
 # cJSON
@@ -32,16 +34,22 @@ target_include_directories(
 
 # Glad
 add_library(xrt-external-glad INTERFACE)
-target_include_directories(xrt-external-glad INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/glad/include)
+target_include_directories(
+	xrt-external-glad SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/glad/include
+	)
 
 # Hungarian graph algorithm
 add_library(xrt-external-hungarian INTERFACE)
-target_include_directories(xrt-external-hungarian INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hungarian)
+target_include_directories(
+	xrt-external-hungarian SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/hungarian
+	)
 
 # JNIPP and Android JNI wrappers
 if(ANDROID)
 	add_library(xrt-external-jnipp STATIC jnipp/jnipp.cpp)
-	target_include_directories(xrt-external-jnipp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/jnipp)
+	target_include_directories(
+		xrt-external-jnipp SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/jnipp
+		)
 
 	file(GLOB WRAP_SOURCES android-jni-wrap/wrap/*.cpp)
 	add_library(xrt-external-jni-wrap STATIC ${WRAP_SOURCES})
