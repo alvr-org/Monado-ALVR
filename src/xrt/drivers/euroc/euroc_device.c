@@ -101,10 +101,6 @@ euroc_device(struct xrt_device *xdev)
 	return (struct euroc_device *)xdev;
 }
 
-static void
-euroc_device_update_inputs(struct xrt_device *xdev)
-{}
-
 //! Corrections specific for original euroc datasets and Kimera.
 //! If your datasets comes from a different camera you should probably
 //! use a different pose correction function.
@@ -247,7 +243,7 @@ euroc_device_create(struct xrt_prober *xp)
 		xd->inputs[0].name = XRT_INPUT_SIMPLE_GRIP_POSE;
 	}
 
-	xd->update_inputs = euroc_device_update_inputs;
+	xd->update_inputs = u_device_noop_update_inputs;
 	xd->get_tracked_pose = euroc_device_get_tracked_pose;
 	xd->destroy = euroc_device_destroy;
 	if (is_hmd) {

@@ -1,5 +1,5 @@
 // Copyright 2016 Philipp Zabel
-// Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -358,13 +358,6 @@ vive_controller_device_index_update_inputs(struct xrt_device *xdev)
 	}
 
 	os_mutex_unlock(&d->lock);
-}
-
-
-static void
-_update_tracker_inputs(struct xrt_device *xdev)
-{
-	// Nothing to do here as the device does not send button reports.
 }
 
 static void
@@ -1190,22 +1183,22 @@ vive_controller_create(struct os_hid_device *controller_hid, enum watchman_gen w
 		}
 	} else if (d->config.variant == CONTROLLER_TRACKER_GEN1) {
 		d->base.name = XRT_DEVICE_VIVE_TRACKER_GEN1;
-		d->base.update_inputs = _update_tracker_inputs;
+		d->base.update_inputs = u_device_noop_update_inputs;
 		d->base.device_type = XRT_DEVICE_TYPE_GENERIC_TRACKER;
 		snprintf(d->base.str, XRT_DEVICE_NAME_LEN, "Vive Tracker Gen1 (vive)");
 	} else if (d->config.variant == CONTROLLER_TRACKER_GEN2) {
 		d->base.name = XRT_DEVICE_VIVE_TRACKER_GEN2;
-		d->base.update_inputs = _update_tracker_inputs;
+		d->base.update_inputs = u_device_noop_update_inputs;
 		d->base.device_type = XRT_DEVICE_TYPE_GENERIC_TRACKER;
 		snprintf(d->base.str, XRT_DEVICE_NAME_LEN, "Vive Tracker Gen2 (vive)");
 	} else if (d->config.variant == CONTROLLER_TRACKER_GEN3) {
 		d->base.name = XRT_DEVICE_VIVE_TRACKER_GEN3;
-		d->base.update_inputs = _update_tracker_inputs;
+		d->base.update_inputs = u_device_noop_update_inputs;
 		d->base.device_type = XRT_DEVICE_TYPE_GENERIC_TRACKER;
 		snprintf(d->base.str, XRT_DEVICE_NAME_LEN, "Vive Tracker Gen3 (vive)");
 	} else if (d->config.variant == CONTROLLER_TRACKER_TUNDRA) {
 		d->base.name = XRT_DEVICE_VIVE_TRACKER_TUNDRA;
-		d->base.update_inputs = _update_tracker_inputs;
+		d->base.update_inputs = u_device_noop_update_inputs;
 		d->base.device_type = XRT_DEVICE_TYPE_GENERIC_TRACKER;
 		snprintf(d->base.str, XRT_DEVICE_NAME_LEN, "Tundra Tracker Gen3 (vive)");
 	} else {

@@ -217,12 +217,6 @@ rs_hdev_from_xdev(struct xrt_device *xdev)
 	return rh;
 }
 
-static void
-rs_hdev_update_inputs(struct xrt_device *xdev)
-{
-	return;
-}
-
 //! Specific pose corrections for Kimera and the D455 camera
 XRT_MAYBE_UNUSED static inline struct xrt_pose
 rs_hdev_correct_pose_from_kimera(struct xrt_pose pose)
@@ -1013,7 +1007,7 @@ rs_hdev_create(struct xrt_prober *xp, int device_idx)
 	xd->orientation_tracking_supported = true;
 	xd->position_tracking_supported = true;
 
-	xd->update_inputs = rs_hdev_update_inputs;
+	xd->update_inputs = u_device_noop_update_inputs;
 	xd->get_tracked_pose = rs_hdev_get_tracked_pose;
 	xd->destroy = rs_hdev_destroy;
 

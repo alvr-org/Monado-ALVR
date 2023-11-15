@@ -85,12 +85,6 @@ simulated_hmd_destroy(struct xrt_device *xdev)
 }
 
 static void
-simulated_hmd_update_inputs(struct xrt_device *xdev)
-{
-	// Empty, you should put code to update the attached inputs fields.
-}
-
-static void
 simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
                                enum xrt_input_name name,
                                uint64_t at_timestamp_ns,
@@ -209,7 +203,7 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	enum u_device_alloc_flags flags =
 	    (enum u_device_alloc_flags)(U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE);
 	struct simulated_hmd *dh = U_DEVICE_ALLOCATE(struct simulated_hmd, flags, 1, 0);
-	dh->base.update_inputs = simulated_hmd_update_inputs;
+	dh->base.update_inputs = u_device_noop_update_inputs;
 	dh->base.get_tracked_pose = simulated_hmd_get_tracked_pose;
 	dh->base.get_view_poses = simulated_hmd_get_view_poses;
 	dh->base.ref_space_usage = simulated_ref_space_usage;

@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // Copyright 2020, Nova King.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -390,12 +390,6 @@ load_config(struct rs_ddev *rs)
  */
 
 static void
-rs_ddev_update_inputs(struct xrt_device *xdev)
-{
-	// Empty
-}
-
-static void
 rs_ddev_get_tracked_pose(struct xrt_device *xdev,
                          enum xrt_input_name name,
                          uint64_t at_timestamp_ns,
@@ -466,7 +460,7 @@ rs_ddev_create(int device_idx)
 
 	U_LOG_D("Realsense opts are %i %i %i %i %i\n", rs->enable_mapping, rs->enable_pose_jumping,
 	        rs->enable_relocalization, rs->enable_pose_prediction, rs->enable_pose_filtering);
-	rs->base.update_inputs = rs_ddev_update_inputs;
+	rs->base.update_inputs = u_device_noop_update_inputs;
 	rs->base.get_tracked_pose = rs_ddev_get_tracked_pose;
 	rs->base.get_view_poses = rs_ddev_get_view_poses;
 	rs->base.destroy = rs_ddev_destroy;

@@ -1,4 +1,4 @@
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -13,12 +13,6 @@
 #include "util/u_device.h"
 #include "util/u_distortion_mesh.h"
 
-
-static void
-sdl_hmd_update_inputs(struct xrt_device *xdev)
-{
-	// Empty, you should put code to update the attached inputs fields.
-}
 
 static void
 sdl_hmd_get_tracked_pose(struct xrt_device *xdev,
@@ -113,7 +107,7 @@ sdl_device_init(struct sdl_program *sp)
 	xdev->inputs[0].active = true;
 
 	// Function pointers.
-	xdev->update_inputs = sdl_hmd_update_inputs;
+	xdev->update_inputs = u_device_noop_update_inputs;
 	xdev->get_tracked_pose = sdl_hmd_get_tracked_pose;
 	xdev->get_view_poses = sdl_hmd_get_view_poses;
 	xdev->destroy = sdl_hmd_destroy;

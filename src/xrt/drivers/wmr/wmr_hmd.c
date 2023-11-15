@@ -1068,15 +1068,6 @@ wmr_read_config(struct wmr_hmd *wh)
  */
 
 static void
-wmr_hmd_update_inputs(struct xrt_device *xdev)
-{
-	DRV_TRACE_MARKER();
-
-	struct wmr_hmd *wh = wmr_hmd(xdev);
-	(void)wh;
-}
-
-static void
 wmr_hmd_get_3dof_tracked_pose(struct xrt_device *xdev,
                               enum xrt_input_name name,
                               uint64_t at_timestamp_ns,
@@ -1896,7 +1887,7 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 	}
 
 	// Populate the base members.
-	wh->base.update_inputs = wmr_hmd_update_inputs;
+	wh->base.update_inputs = u_device_noop_update_inputs;
 	wh->base.get_tracked_pose = wmr_hmd_get_tracked_pose;
 	wh->base.get_view_poses = wmr_hmd_get_view_poses;
 	wh->base.destroy = wmr_hmd_destroy;

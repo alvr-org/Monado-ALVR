@@ -71,12 +71,6 @@ slam_device(struct xrt_device *xdev)
 }
 
 static void
-twrap_slam_update_inputs(struct xrt_device *xdev)
-{
-	// Empty
-}
-
-static void
 twrap_slam_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             uint64_t at_timestamp_ns,
@@ -158,7 +152,7 @@ twrap_slam_create_device(struct xrt_frame_context *xfctx,
 
 
 
-	dx->base.update_inputs = twrap_slam_update_inputs;
+	dx->base.update_inputs = u_device_noop_update_inputs;
 	dx->base.get_tracked_pose = twrap_slam_get_tracked_pose;
 	dx->base.get_view_poses = twrap_slam_get_view_poses;
 	dx->base.destroy = twrap_slam_destroy;

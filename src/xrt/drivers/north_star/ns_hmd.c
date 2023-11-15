@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // Copyright 2020, Nova King.
 // Copyright 2020, Moses Turner.
 // SPDX-License-Identifier: BSL-1.0
@@ -368,13 +368,6 @@ ns_hmd_destroy(struct xrt_device *xdev)
 }
 
 static void
-ns_hmd_update_inputs(struct xrt_device *xdev)
-{
-	struct ns_hmd *ns = ns_hmd(xdev);
-	NS_DEBUG(ns, "Called!");
-}
-
-static void
 ns_hmd_get_tracked_pose(struct xrt_device *xdev,
                         enum xrt_input_name name,
                         uint64_t at_timestamp_ns,
@@ -471,7 +464,7 @@ ns_hmd_create(const cJSON *config_json)
 
 
 	ns->base.compute_distortion = ns_mesh_calc;
-	ns->base.update_inputs = ns_hmd_update_inputs;
+	ns->base.update_inputs = u_device_noop_update_inputs;
 	ns->base.get_tracked_pose = ns_hmd_get_tracked_pose;
 	ns->base.get_view_poses = ns_hmd_get_view_poses;
 	ns->base.destroy = ns_hmd_destroy;

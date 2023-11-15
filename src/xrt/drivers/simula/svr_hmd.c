@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // Copyright 2020, Moses Turner.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -71,10 +71,6 @@ svr_hmd_destroy(struct xrt_device *xdev)
 
 	u_device_free(&ns->base);
 }
-//
-static void
-svr_hmd_update_inputs(struct xrt_device *xdev)
-{}
 
 static void
 svr_hmd_get_tracked_pose(struct xrt_device *xdev,
@@ -224,7 +220,7 @@ svr_hmd_create(struct svr_two_displays_distortion *distortion)
 
 
 
-	svr->base.update_inputs = svr_hmd_update_inputs;
+	svr->base.update_inputs = u_device_noop_update_inputs;
 	svr->base.get_tracked_pose = svr_hmd_get_tracked_pose;
 	svr->base.get_view_poses = svr_hmd_get_view_poses;
 	svr->base.destroy = svr_hmd_destroy;

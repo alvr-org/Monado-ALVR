@@ -1,4 +1,4 @@
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -54,13 +54,6 @@ r_hmd_destroy(struct xrt_device *xdev)
 
 	// Free this device with the helper.
 	u_device_free(&rh->base);
-}
-
-static void
-r_hmd_update_inputs(struct xrt_device *xdev)
-{
-	struct r_hmd *rh = r_hmd(xdev);
-	(void)rh;
 }
 
 static void
@@ -148,7 +141,7 @@ r_hmd_create(struct r_hub *r)
 	    struct r_hmd, flags, input_count, output_count);
 
 	// Setup the basics.
-	rh->base.update_inputs = r_hmd_update_inputs;
+	rh->base.update_inputs = u_device_noop_update_inputs;
 	rh->base.get_tracked_pose = r_hmd_get_tracked_pose;
 	rh->base.get_hand_tracking = r_hmd_get_hand_tracking;
 	rh->base.get_view_poses = r_hmd_get_view_poses;

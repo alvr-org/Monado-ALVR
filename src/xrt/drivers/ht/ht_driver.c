@@ -1,4 +1,4 @@
-// Copyright 2021, Collabora, Ltd.
+// Copyright 2021-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -146,12 +146,6 @@ userConfigSetDefaults(struct ht_device *htd)
  */
 
 static void
-ht_device_update_inputs(struct xrt_device *xdev)
-{
-	// Empty
-}
-
-static void
 ht_device_get_hand_tracking(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             uint64_t at_timestamp_ns,
@@ -214,7 +208,7 @@ ht_device_create_common(struct t_stereo_camera_calibration *calib,
 	htd->base.tracking_origin->offset.position.z = 0.0f;
 	htd->base.tracking_origin->offset.orientation.w = 1.0f;
 
-	htd->base.update_inputs = ht_device_update_inputs;
+	htd->base.update_inputs = u_device_noop_update_inputs;
 	htd->base.get_hand_tracking = ht_device_get_hand_tracking;
 	htd->base.destroy = ht_device_destroy;
 

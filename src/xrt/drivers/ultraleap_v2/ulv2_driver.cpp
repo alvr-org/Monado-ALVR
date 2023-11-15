@@ -1,4 +1,4 @@
-// Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // Copyright 2020-2021, Moses Turner
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -323,13 +323,6 @@ cleanup_leap_loop:
 }
 
 static void
-ulv2_device_update_inputs(struct xrt_device *xdev)
-{
-	// Empty
-}
-
-
-static void
 ulv2_device_get_hand_tracking(struct xrt_device *xdev,
                               enum xrt_input_name name,
                               uint64_t at_timestamp_ns,
@@ -398,7 +391,7 @@ ulv2_create_device(struct xrt_device **out_xdev)
 
 	ulv2d->log_level = debug_get_log_option_ulv2_log();
 
-	ulv2d->base.update_inputs = ulv2_device_update_inputs;
+	ulv2d->base.update_inputs = u_device_noop_update_inputs;
 	ulv2d->base.get_hand_tracking = ulv2_device_get_hand_tracking;
 	ulv2d->base.destroy = ulv2_device_destroy;
 

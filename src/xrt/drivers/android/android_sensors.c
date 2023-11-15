@@ -1,7 +1,7 @@
 // Copyright 2013, Fredrik Hultin.
 // Copyright 2013, Jakob Bornecrantz.
 // Copyright 2015, Joey Ferwerda.
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -170,12 +170,6 @@ android_device_destroy(struct xrt_device *xdev)
 }
 
 static void
-android_device_update_inputs(struct xrt_device *xdev)
-{
-	// Empty
-}
-
-static void
 android_device_get_tracked_pose(struct xrt_device *xdev,
                                 enum xrt_input_name name,
                                 uint64_t at_timestamp_ns,
@@ -229,7 +223,7 @@ android_device_create()
 
 	d->base.name = XRT_DEVICE_GENERIC_HMD;
 	d->base.destroy = android_device_destroy;
-	d->base.update_inputs = android_device_update_inputs;
+	d->base.update_inputs = u_device_noop_update_inputs;
 	d->base.get_tracked_pose = android_device_get_tracked_pose;
 	d->base.get_view_poses = android_device_get_view_poses;
 	d->base.compute_distortion = android_device_compute_distortion;
