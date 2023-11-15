@@ -1,4 +1,4 @@
-// Copyright 2019-2020, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -65,7 +65,7 @@ oh_prober_autoprobe(struct xrt_auto_prober *xap,
 }
 
 struct xrt_auto_prober *
-oh_create_auto_prober()
+oh_create_auto_prober(void)
 {
 	struct oh_prober *ohp = U_TYPED_CALLOC(struct oh_prober);
 	ohp->base.name = "OpenHMD";

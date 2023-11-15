@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -26,7 +26,7 @@ extern "C" {
  * @ingroup drv_ohmd
  */
 struct xrt_auto_prober *
-oh_create_auto_prober();
+oh_create_auto_prober(void);
 
 /*!
  * @dir drivers/ohmd
