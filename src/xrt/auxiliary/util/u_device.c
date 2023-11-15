@@ -1,4 +1,4 @@
-// Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -397,6 +397,13 @@ u_device_get_view_pose(const struct xrt_vec3 *eye_relation, uint32_t view_index,
 	*out_pose = pose;
 }
 
+
+/*
+ *
+ * Default implementation of functions.
+ *
+ */
+
 void
 u_device_get_view_poses(struct xrt_device *xdev,
                         const struct xrt_vec3 *default_eye_relation,
@@ -415,4 +422,79 @@ u_device_get_view_poses(struct xrt_device *xdev,
 	for (uint32_t i = 0; i < view_count; i++) {
 		u_device_get_view_pose(default_eye_relation, i, &out_poses[i]);
 	}
+}
+
+
+/*
+ *
+ * No-op implementation of functions.
+ *
+ */
+
+void
+u_device_noop_update_inputs(struct xrt_device *xdev)
+{
+	// Empty, should only be used from a device without any inputs.
+}
+
+
+/*
+ *
+ * Not implemented function helpers.
+ *
+ */
+
+#define E(FN) U_LOG_E("Function " #FN " is not implemented for '%s'", xdev->str)
+
+void
+u_device_ni_get_hand_tracking(struct xrt_device *xdev,
+                              enum xrt_input_name name,
+                              uint64_t desired_timestamp_ns,
+                              struct xrt_hand_joint_set *out_value,
+                              uint64_t *out_timestamp_ns)
+{
+	E(get_hand_tracking);
+}
+
+void
+u_device_ni_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
+{
+	E(get_hand_tracking);
+}
+
+void
+u_device_ni_get_view_poses(struct xrt_device *xdev,
+                           const struct xrt_vec3 *default_eye_relation,
+                           uint64_t at_timestamp_ns,
+                           uint32_t view_count,
+                           struct xrt_space_relation *out_head_relation,
+                           struct xrt_fov *out_fovs,
+                           struct xrt_pose *out_poses)
+{
+	E(get_hand_tracking);
+}
+
+bool
+u_device_ni_compute_distortion(
+    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
+{
+	E(compute_distortion);
+	return false;
+}
+
+xrt_result_t
+u_device_ni_get_visibility_mask(struct xrt_device *xdev,
+                                enum xrt_visibility_mask_type type,
+                                uint32_t view_index,
+                                struct xrt_visibility_mask **out_mask)
+{
+	E(get_visibility_mask);
+	return XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED;
+}
+
+bool
+u_device_ni_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
+{
+	E(is_form_factor_available);
+	return false;
 }

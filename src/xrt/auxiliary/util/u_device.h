@@ -1,4 +1,4 @@
-// Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -144,6 +144,13 @@ u_device_assign_xdev_roles(struct xrt_device **xdevs, size_t xdev_count, int *he
 void
 u_device_get_view_pose(const struct xrt_vec3 *eye_relation, uint32_t view_index, struct xrt_pose *out_pose);
 
+
+/*
+ *
+ * Default implementation of functions.
+ *
+ */
+
 /*!
  * Helper function for `get_view_poses` in a HMD driver.
  */
@@ -155,6 +162,91 @@ u_device_get_view_poses(struct xrt_device *xdev,
                         struct xrt_space_relation *out_head_relation,
                         struct xrt_fov *out_fovs,
                         struct xrt_pose *out_poses);
+
+
+/*
+ *
+ * No-op implementation of functions.
+ *
+ */
+
+/*!
+ * Noop function for @ref xrt_device::update_inputs,
+ * should only be used from a device with any inputs.
+ *
+ * @ingroup aux_util
+ */
+void
+u_device_noop_update_inputs(struct xrt_device *xdev);
+
+
+/*
+ *
+ * Not implemented function helpers.
+ *
+ */
+
+/*!
+ * Not implemented function for @ref xrt_device::get_hand_tracking.
+ *
+ * @ingroup aux_util
+ */
+void
+u_device_ni_get_hand_tracking(struct xrt_device *xdev,
+                              enum xrt_input_name name,
+                              uint64_t desired_timestamp_ns,
+                              struct xrt_hand_joint_set *out_value,
+                              uint64_t *out_timestamp_ns);
+
+/*!
+ * Not implemented function for @ref xrt_device::set_output.
+ *
+ * @ingroup aux_util
+ */
+void
+u_device_ni_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value);
+
+/*!
+ * Not implemented function for @ref xrt_device::get_view_poses.
+ *
+ * @ingroup aux_util
+ */
+void
+u_device_ni_get_view_poses(struct xrt_device *xdev,
+                           const struct xrt_vec3 *default_eye_relation,
+                           uint64_t at_timestamp_ns,
+                           uint32_t view_count,
+                           struct xrt_space_relation *out_head_relation,
+                           struct xrt_fov *out_fovs,
+                           struct xrt_pose *out_poses);
+
+/*!
+ * Not implemented function for @ref xrt_device::compute_distortion.
+ *
+ * @ingroup aux_util
+ */
+bool
+u_device_ni_compute_distortion(
+    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result);
+
+/*!
+ * Not implemented function for @ref xrt_device::get_visibility_mask.
+ *
+ * @ingroup aux_util
+ */
+xrt_result_t
+u_device_ni_get_visibility_mask(struct xrt_device *xdev,
+                                enum xrt_visibility_mask_type type,
+                                uint32_t view_index,
+                                struct xrt_visibility_mask **out_mask);
+
+/*!
+ * Not implemented function for @ref xrt_device::is_form_factor_available.
+ *
+ * @ingroup aux_util
+ */
+bool
+u_device_ni_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor);
 
 
 #ifdef __cplusplus
