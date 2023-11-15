@@ -91,6 +91,18 @@ if(XRT_FEATURE_SLAM)
 	target_link_libraries(xrt-external-slam INTERFACE ${SLAM_LDFLAGS})
 endif()
 
+# SDL
+if(XRT_HAVE_SDL2)
+	add_library(xrt-external-sdl2 INTERFACE)
+	target_link_libraries(xrt-external-sdl2 INTERFACE SDL2::SDL2)
+
+	# Fix SDL2 build include for Alpine Linux
+	find_path(SDL2_DIRECTFB_INCLUDE_DIR directfb.h PATH_SUFFIXES directfb)
+	if(SDL2_DIRECTFB_INCLUDE_DIR)
+		target_include_directories(xrt-external-sdl2 INTERFACE ${SDL2_DIRECTFB_INCLUDE_DIR})
+	endif()
+endif()
+
 # STB
 add_library(xrt-external-stb INTERFACE)
 target_include_directories(xrt-external-stb SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/stb)
@@ -144,12 +156,7 @@ if(XRT_HAVE_OPENGL)
 			imgui/imgui/imgui_impl_sdl.h
 			)
 		target_link_libraries(
-			xrt-external-imgui-sdl2
-			PUBLIC xrt-external-imgui
-			PUBLIC SDL2::SDL2
-			)
-		target_include_directories(
-			xrt-external-imgui-sdl2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/imgui
+			xrt-external-imgui-sdl2 PUBLIC xrt-external-imgui xrt-external-sdl2
 			)
 		set_target_properties(
 			xrt-external-imgui-sdl2 PROPERTIES INTERPROCEDURAL_OPTIMIZATION OFF
