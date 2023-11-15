@@ -6,7 +6,7 @@
  * @brief  The "One Euro Filter" for filtering interaction data.
  * @author Moses Turner <moses@collabora.com>
  * @author Jan Schmidt <jan@centricular.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
  *
  * Based in part on https://github.com/thaytan/OpenHMD/blob/rift-kalman-filter/src/exponential-filter.c

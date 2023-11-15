@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Header for D3D12-backed image buffer allocator factory function.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
  * @ingroup aux_d3d
  */

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Interoperability helpers connecting internal math types and Eigen.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Nis Madsen <nima_zero_one@protonmail.com>
  * @ingroup aux_math
  */

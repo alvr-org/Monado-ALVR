@@ -4,7 +4,7 @@
  * @file
  * @brief  Implementations of handle functions
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  *
  */

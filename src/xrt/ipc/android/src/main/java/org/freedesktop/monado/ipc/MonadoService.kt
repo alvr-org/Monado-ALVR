@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Service implementation for exposing IMonado.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_android
  */
 package org.freedesktop.monado.ipc

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Input transform tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include "math/m_mathinclude.h"

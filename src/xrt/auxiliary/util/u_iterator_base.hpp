@@ -6,7 +6,7 @@
  *
  * @brief A template class to serve as the base of iterator and const_iterator
  * types for things with "random access".
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 

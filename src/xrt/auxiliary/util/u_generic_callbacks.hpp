@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Implementation of a generic callback collection, intended to be wrapped for a specific event type.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Fragment to display the VR Mode status and actions.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 package org.freedesktop.monado.android_common;

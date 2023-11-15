@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  C++ helpers for xrt_device
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup xrt_iface
  */
 

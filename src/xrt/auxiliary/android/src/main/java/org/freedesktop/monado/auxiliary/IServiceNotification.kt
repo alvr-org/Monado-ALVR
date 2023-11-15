@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Interface used by the IPC service to create a notification to keep it in the foreground..
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 

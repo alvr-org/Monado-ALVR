@@ -4,7 +4,7 @@
  * @file
  * @brief  Partially-generated wrapper for the
  * `org.freedesktop.monado.auxiliary` Java package.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 

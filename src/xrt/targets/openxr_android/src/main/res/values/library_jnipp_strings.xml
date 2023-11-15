@@ -5,7 +5,7 @@
         SPDX-License-Identifier: BSL-1.0
     -->
     <string name="define_plu_jnipp">type</string>
-    <string name="library_jnipp_author">Mitchell Dowd, Ryan Pavlik</string>
+    <string name="library_jnipp_author">Mitchell Dowd, Rylie Pavlik</string>
     <string name="library_jnipp_authorWebsite">https://github.com/rpavlik/jnipp</string>
     <string name="library_jnipp_libraryName">JNIPP</string>
     <string name="library_jnipp_libraryDescription">C++ wrapper for the Java Native Interface</string>

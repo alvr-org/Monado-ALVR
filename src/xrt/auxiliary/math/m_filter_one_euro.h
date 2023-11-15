@@ -6,7 +6,7 @@
  * @brief  Header for a "One Euro Filter" implementation.
  * @author Moses Turner <moses@collabora.com>
  * @author Jan Schmidt <jan@centricular.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
  *
  * See the original publication:

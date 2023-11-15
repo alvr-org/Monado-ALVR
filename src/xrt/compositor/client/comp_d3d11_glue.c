@@ -4,7 +4,7 @@
  * @file
  * @brief  Glue code to D3D11 client side code: expressing requirements and connecting `comp_` APIs to `xrt_gfx_`
  * interfaces.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup comp_client
  */
 

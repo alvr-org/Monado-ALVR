@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Wrap some ring buffer internals for somewhat generic C usage.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 

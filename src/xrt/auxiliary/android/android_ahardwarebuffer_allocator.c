@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief AHardwareBuffer backed image buffer allocator.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 

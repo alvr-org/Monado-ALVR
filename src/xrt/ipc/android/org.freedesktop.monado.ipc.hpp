@@ -4,7 +4,7 @@
  * @file
  * @brief  Partially-generated wrapper for the
  * `org.freedesktop.monado.ipc` Java package.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_android
  */
 

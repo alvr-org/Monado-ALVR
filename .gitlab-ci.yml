@@ -573,14 +573,14 @@ debian:bullseye:package:
   variables:
     GIT_STRATEGY: clone
     DEBFULLNAME: "Monado CI"
-    DEBEMAIL: "ryan.pavlik@collabora.com"
+    DEBEMAIL: "rylie.pavlik@collabora.com"
     DISTRO: debian
     CODENAME: bullseye
     DEB_VERSION_SUFFIX: bpo11
   stage: package
   before_script:
     - git config --global user.name Monado CI
-    - git config --global user.email ryan.pavlik@collabora.com
+    - git config --global user.email rylie.pavlik@collabora.com
   script:
     - .gitlab-ci/prebuild.sh
     # Prep the source tree
@@ -600,14 +600,14 @@ ubuntu:focal:package:
   variables:
     GIT_STRATEGY: clone
     DEBFULLNAME: "Monado CI"
-    DEBEMAIL: "ryan.pavlik@collabora.com"
+    DEBEMAIL: "rylie.pavlik@collabora.com"
     DISTRO: ubuntu
     CODENAME: focal
     DEB_VERSION_SUFFIX: ubuntu2004
   stage: package
   before_script:
     - git config --global user.name Monado CI
-    - git config --global user.email ryan.pavlik@collabora.com
+    - git config --global user.email rylie.pavlik@collabora.com
   script:
     - .gitlab-ci/prebuild.sh
     # Prep the source tree
@@ -627,14 +627,14 @@ ubuntu:jammy:package:
   variables:
     GIT_STRATEGY: clone
     DEBFULLNAME: "Monado CI"
-    DEBEMAIL: "ryan.pavlik@collabora.com"
+    DEBEMAIL: "rylie.pavlik@collabora.com"
     DISTRO: ubuntu
     CODENAME: jammy
     DEB_VERSION_SUFFIX: ubuntu2204
   stage: package
   before_script:
     - git config --global user.name Monado CI
-    - git config --global user.email ryan.pavlik@collabora.com
+    - git config --global user.email rylie.pavlik@collabora.com
   script:
     - .gitlab-ci/prebuild.sh
     # Prep the source tree

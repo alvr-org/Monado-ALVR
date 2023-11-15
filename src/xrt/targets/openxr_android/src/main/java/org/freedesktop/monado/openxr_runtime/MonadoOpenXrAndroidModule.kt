@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Module that binds all the dependencies we inject with Hilt.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 package org.freedesktop.monado.openxr_runtime

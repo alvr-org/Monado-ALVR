@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief DXGI formats shared between D3D11 and D3D12 tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #pragma once

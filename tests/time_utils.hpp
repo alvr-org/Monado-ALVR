@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Utilities for tests involving time points and durations
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #pragma once

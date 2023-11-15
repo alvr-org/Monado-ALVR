@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Utility class to deal with having a native-code counterpart object
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android_java
  */
 

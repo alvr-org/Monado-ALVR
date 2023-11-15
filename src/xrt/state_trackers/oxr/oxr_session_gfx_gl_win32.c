@@ -4,7 +4,7 @@
  * @file
  * @brief  Holds OpenGL-specific session functions for Windows
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_main
  * @ingroup comp_client
  */

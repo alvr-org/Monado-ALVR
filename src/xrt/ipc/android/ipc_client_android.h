@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Header exposing Android-specific IPC client code to C.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_android
  */
 

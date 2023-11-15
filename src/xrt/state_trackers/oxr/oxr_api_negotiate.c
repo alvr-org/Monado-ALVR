@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  File for negotiating with the loader.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup oxr_api
  */

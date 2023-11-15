@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Additional server entry points needed for Android.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_server
  */
 

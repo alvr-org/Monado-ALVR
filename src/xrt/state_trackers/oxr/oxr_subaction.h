@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Provides a utility macro for dealing with subaction paths
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_input
  */
 

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  D3D11 client side glue to compositor implementation.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
  * @ingroup comp_client

@@ -4,7 +4,7 @@
  * @file
  * @brief A collection of strings, like a list of extensions to enable
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  *
  */

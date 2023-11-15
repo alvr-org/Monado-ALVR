@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Library exposing IPC server.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_android
  */
 

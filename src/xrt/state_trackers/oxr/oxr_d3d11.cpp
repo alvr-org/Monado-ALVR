@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Holds D3D11 related functions that didn't fit somewhere else.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_main
  */
 

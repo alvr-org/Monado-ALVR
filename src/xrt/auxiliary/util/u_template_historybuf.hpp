@@ -4,7 +4,7 @@
 /*!
  * @file
  * @brief Ringbuffer implementation for keeping track of the past state of things
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Moses Turner <moses@collabora.com>
  * @ingroup aux_util
  */

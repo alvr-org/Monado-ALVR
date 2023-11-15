@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Very simple file opening functions, mostly using std::filesystem for portability.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Pete Black <pblack@collabora.com>
  * @ingroup aux_util

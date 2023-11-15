@@ -4,7 +4,7 @@
  * @file
  * @brief  Interface to @ref drv_vive
  * @author Christoph Haag <christoph.haag@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup drv_vive
  */
 

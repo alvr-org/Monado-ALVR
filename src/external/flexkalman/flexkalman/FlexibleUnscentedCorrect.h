@@ -12,8 +12,8 @@
     @date 2016-2019
 
     @author
-    Ryan Pavlik
-    <ryan.pavlik@collabora.com>
+    Rylie Pavlik
+    <rylie.pavlik@collabora.com>
 
     @author
     Sensics, Inc.

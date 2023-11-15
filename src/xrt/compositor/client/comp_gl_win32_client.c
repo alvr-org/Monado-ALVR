@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Win32 client side glue to compositor implementation.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Milan Jaros <milan.jaros@vsb.cz>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_client

@@ -4,7 +4,7 @@
 /*!
  * @file
  * @brief iterator details for ring buffer
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 #pragma once

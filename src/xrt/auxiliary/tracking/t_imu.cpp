@@ -4,7 +4,7 @@
  * @file
  * @brief  IMU fusion implementation - for inclusion into the single
  * kalman-incuding translation unit.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_tracking
  */
 // IWYU pragma: no_include "src/Core/MatrixBase.h"

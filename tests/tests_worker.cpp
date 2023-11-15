@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Thread pool tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include <util/u_worker.hpp>

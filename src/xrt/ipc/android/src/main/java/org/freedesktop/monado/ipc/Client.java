@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Implementation of the Monado AIDL server
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_android
  */
 

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Function for loading Java code from a package.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 

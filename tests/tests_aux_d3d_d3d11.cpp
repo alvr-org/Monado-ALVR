@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Direct3D 11 tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 #include "aux_d3d_dxgi_formats.hpp"
 

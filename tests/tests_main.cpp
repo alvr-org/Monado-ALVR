@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Translation unit to build Catch2 main.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #define CATCH_CONFIG_MAIN

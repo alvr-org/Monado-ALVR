@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Holds debug utils/messenger related functions.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_main
  */
 

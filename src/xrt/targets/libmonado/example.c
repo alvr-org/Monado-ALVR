@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Small cli application to demonstrate use of libmonado.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Pete Black <pblack@collabora.com>
  */
 

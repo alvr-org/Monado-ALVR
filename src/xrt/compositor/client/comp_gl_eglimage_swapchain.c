@@ -4,7 +4,7 @@
  * @file
  * @brief  OpenGL client side glue to swapchain implementation -
  * EGLImageKHR-backed.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_client
  */

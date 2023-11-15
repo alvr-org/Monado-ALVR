@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief D3D11 backed image buffer allocator.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
  * @ingroup aux_d3d
  */

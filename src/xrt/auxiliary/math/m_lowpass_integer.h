@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Low-pass IIR filter for integers - C wrapper
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Malek Hodroj <pocmalek@gmail.com>
  * @ingroup aux_math
  */

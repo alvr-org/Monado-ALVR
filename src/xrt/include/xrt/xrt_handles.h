@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Native handle types.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup xrt_iface
  */
 

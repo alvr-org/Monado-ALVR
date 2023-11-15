@@ -11,7 +11,7 @@
  * then run clang-format on this file. Two entire chunks of this file get
  * replaced by that script: comments indicate where they are.
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #pragma once

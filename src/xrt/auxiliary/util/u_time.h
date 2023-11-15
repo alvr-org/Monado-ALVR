@@ -9,7 +9,7 @@
  * simpler (like @ref aux_os_time) for most purposes that aren't in OpenXR
  * interface code.
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  *
  * @see time_state

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Functions for Android-specific global state.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 

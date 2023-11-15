@@ -10,7 +10,7 @@
  *
  * @author Drew DeVault <sir@cmpwn.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  *
  * @ingroup aux_os
  */

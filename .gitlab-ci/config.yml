@@ -286,4 +286,4 @@ android:
 packaging:
   # Name and email associated with the package
   name: "Monado CI"
-  email: "ryan.pavlik@collabora.com"
+  email: "rylie.pavlik@collabora.com"

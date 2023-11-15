@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Format conversion for DXGI/D3D.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_d3d
  */
 

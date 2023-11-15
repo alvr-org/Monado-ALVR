@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Generic callback collection tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include "catch/catch.hpp"

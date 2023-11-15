@@ -4,7 +4,7 @@
  * @file
  * @brief  Contains handle-related functions and defines only required in a few
  * locations.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_main
  */
 

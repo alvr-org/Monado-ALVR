@@ -4,8 +4,8 @@
     @date 2019
 
     @author
-    Ryan Pavlik
-    <ryan.pavlik@collabora.com>
+    Rylie Pavlik
+    <rylie.pavlik@collabora.com>
 */
 
 // Copyright 2019 Collabora, Ltd.

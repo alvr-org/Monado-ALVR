@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Glue code to OpenGL Win32 client side code.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_client
  */

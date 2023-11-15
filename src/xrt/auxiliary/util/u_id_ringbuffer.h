@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Ring buffer for things keyed on an ID but otherwise maintained externally, for C usage.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 

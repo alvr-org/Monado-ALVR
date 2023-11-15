@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Miscellanous C++ wrapper tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include <iostream>

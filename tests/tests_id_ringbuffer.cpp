@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief u_id_ringbuffer collection tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include <util/u_id_ringbuffer.h>

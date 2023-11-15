@@ -5,7 +5,7 @@
  * @file
  * @brief  IPC message channel functions for Windows.
  * @author Julian Petrov <jpetrov@magicleap.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Pete Black <pblack@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup ipc_shared

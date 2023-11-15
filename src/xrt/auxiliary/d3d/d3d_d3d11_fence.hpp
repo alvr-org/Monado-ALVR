@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief D3D11-backed fence (timeline semaphore) creation routine.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_d3d
  */
 

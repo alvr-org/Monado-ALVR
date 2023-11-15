@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Header defining a D3D11 graphics interface
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup xrt_iface
  */
 

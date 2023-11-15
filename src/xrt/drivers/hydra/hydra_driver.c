@@ -4,11 +4,11 @@
 /*!
  * @file
  * @brief  Razer Hydra prober and driver code
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  *
  * Portions based on the VRPN Razer Hydra driver,
- * originally written by Ryan Pavlik and available under the BSL-1.0.
+ * originally written by Rylie Pavlik and available under the BSL-1.0.
  */
 
 

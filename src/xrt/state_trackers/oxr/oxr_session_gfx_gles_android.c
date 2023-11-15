@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Holds OpenGLES-specific session functions.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Drew DeVault <sir@cmpwn.com>
  * @author Simon Ser <contact@emersion.fr>
  * @ingroup oxr_main

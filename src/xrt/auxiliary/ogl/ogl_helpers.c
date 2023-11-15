@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Common OpenGL code.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_ogl
  */
 

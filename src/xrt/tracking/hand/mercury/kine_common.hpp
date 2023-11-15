@@ -39,7 +39,7 @@ struct one_curl
 };
 
 // Inputs to kinematic optimizers
-//!@todo Ask Ryan if adding `= {}` only does something if we do one_frame_one_view bla = {}.
+//!@todo Ask Rylie if adding `= {}` only does something if we do one_frame_one_view bla = {}.
 struct one_frame_one_view
 {
 	bool active = true;

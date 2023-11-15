@@ -4,7 +4,7 @@
  * @file
  * @brief  Just the client connection setup/teardown bits.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_client
  */
 

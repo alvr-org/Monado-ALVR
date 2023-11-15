@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Generic unique_ptr deleters for Monado types
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup xrt_iface
  */
 

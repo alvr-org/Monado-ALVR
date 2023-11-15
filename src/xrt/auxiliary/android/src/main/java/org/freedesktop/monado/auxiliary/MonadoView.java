@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Class to inject a custom surface into an activity.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android_java
  */
 

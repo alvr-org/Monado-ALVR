@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  IPC message channel functions.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_shared
  */
 

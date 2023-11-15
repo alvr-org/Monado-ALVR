@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  File for verifying app input into api functions.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup oxr_main
  * @ingroup oxr_api

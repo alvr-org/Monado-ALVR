@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Low-pass IIR filter for floats - C wrapper
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
  */
 

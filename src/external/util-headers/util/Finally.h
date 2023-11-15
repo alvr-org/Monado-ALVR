@@ -8,7 +8,7 @@
     since its introduction into the C++ global consciousness, and this
     implementation was written independently after I couldn't find a
     previous independent implementation I had written a few weeks earlier in
-    an implementation file. -- Ryan Pavlik
+    an implementation file. -- Rylie Pavlik
 
     See UniqueDestructionActionWrapper for a "generalized" (in some sense)
     version of this.
@@ -29,9 +29,9 @@
     @date 2016
 
     @author
-    Ryan Pavlik
-    <ryan.pavlik@gmail.com>
-    <http://ryanpavlik.com>
+    Rylie Pavlik
+    <rylie@ryliepavlik.com>
+    <https://ryliepavlik.com>
 */
 
 // Copyright 2016, Sensics, Inc.

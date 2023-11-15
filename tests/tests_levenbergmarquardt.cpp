@@ -4,7 +4,7 @@
  * @file
  * @brief Test for Levenberg-Marquardt kinematic optimizer
  * @author Moses Turner <moses@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 #include "util/u_logging.h"
 #include "xrt/xrt_defines.h"

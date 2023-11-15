@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Functionality common to D3D11 and D3D12 for client side compositor implementation.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
  * @ingroup comp_client

@@ -5,7 +5,7 @@
  * @brief  Functions for dealing generically with various handle types defined
  * in xrt_handles.h
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  *
  */

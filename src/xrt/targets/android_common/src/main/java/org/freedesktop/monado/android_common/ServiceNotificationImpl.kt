@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Implementation of service notification.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 package org.freedesktop.monado.android_common
 

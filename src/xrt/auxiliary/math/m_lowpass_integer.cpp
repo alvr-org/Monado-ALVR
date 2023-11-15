@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Wrap integer filters for C
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
  */
 

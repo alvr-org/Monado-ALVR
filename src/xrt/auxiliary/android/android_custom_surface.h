@@ -4,7 +4,7 @@
  * @file
  * @brief  Functions for adding a new Surface to a window and otherwise
  *         interacting with an Android View.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 

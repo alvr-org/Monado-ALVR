@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Interface to bootstrap the Monado IPC connection.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup ipc_android
  */
 

@@ -5,7 +5,7 @@
  * @brief  Header declaring XRT graphics interfaces.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Christoph Haag <christoph.haag@collabora.com>
  * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup xrt_iface

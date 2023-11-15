@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  OpenGL on Win32 client side glue to compositor header.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_client
  */

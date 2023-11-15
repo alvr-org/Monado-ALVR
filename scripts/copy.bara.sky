@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: BSL-1.0
 """Configuration for "copybara" <https://github.com/google/copybara> to update vendored source"""
 
-gitlab_url = "git@gitlab.freedesktop.org:ryan.pavlik/monado.git"
-author = "Ryan Pavlik <ryan.pavlik@collabora.com>"
+gitlab_url = "git@gitlab.freedesktop.org:rpavlik/monado.git"
+author = "Rylie Pavlik <rylie.pavlik@collabora.com>"
 
 # update-stb: Update STB libraries
 core.workflow(

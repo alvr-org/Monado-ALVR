@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Implementation of native code for Android custom surface.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
  * @ingroup aux_android
  */

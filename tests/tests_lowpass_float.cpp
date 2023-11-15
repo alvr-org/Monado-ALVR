@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Scalar float low pass filter tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include <math/m_lowpass_float.hpp>

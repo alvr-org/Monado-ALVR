@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Basic Vulkan compositor tests.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 

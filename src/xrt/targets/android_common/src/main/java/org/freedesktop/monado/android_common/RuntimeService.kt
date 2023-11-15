@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Simple service for Android to just expose metadata.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 package org.freedesktop.monado.android_common

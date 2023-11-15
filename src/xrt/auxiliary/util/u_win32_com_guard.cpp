@@ -4,7 +4,7 @@
  * @file
  * @brief An object that serves to keep the reference count of COM initialization greater than 0.
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  *
  */

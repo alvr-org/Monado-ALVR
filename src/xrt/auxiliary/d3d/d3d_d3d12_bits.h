@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Usage bits for D3D12.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_d3d
  */
 

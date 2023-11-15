@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  D3D 11 and 12 shared routines
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_main
  */
 

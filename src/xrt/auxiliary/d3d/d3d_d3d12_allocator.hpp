@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Higher-level D3D12-backed image buffer allocation routine.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
  * @ingroup aux_d3d
  */

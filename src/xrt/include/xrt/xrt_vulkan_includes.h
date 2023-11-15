@@ -4,7 +4,7 @@
  * @file
  * @brief  Include all of the Vulkan headers in one place, and cope with any "messy" includes implied by it.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup xrt_iface
  */
 

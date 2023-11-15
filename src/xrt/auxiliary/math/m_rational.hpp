@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  A very simple rational number type.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
  */
 

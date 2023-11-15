@@ -251,8 +251,9 @@ See `CONTRIBUTING.md` for details of contribution guidelines. GitLab Issues and
 Merge Requests are the preferred way to discuss problems, suggest enhancements,
 or submit changes for review. **In case of a security issue**, you should choose
 the "confidential" option when using the GitLab issues page. For highest
-security, you can send encrypted email (using GPG/OpenPGP) to Ryan Pavlik, with
-the address below and the associated key on <https://keys.openpgp.org>.
+security, you can send encrypted email (using GPG/OpenPGP) to Rylie Pavlik at
+<rylie.pavlik@collabora.com> and using the associated key from
+<https://keys.openpgp.org/vks/v1/by-fingerprint/45207B2B1E53E1F2755FF63CC5A2D593A61DBC9D>.
 
 Please note that this project is released with a Contributor Code of Conduct.
 By participating in this project you agree to abide by its terms.
@@ -266,7 +267,7 @@ reported by contacting:
 
 * First-line project contacts:
   * Jakob Bornecrantz <jakob@collabora.com>
-  * Ryan Pavlik <ryan.pavlik@collabora.com>
+  * Rylie Pavlik <rylie.pavlik@collabora.com>
 * freedesktop.org contacts: see most recent list at <https://www.freedesktop.org/wiki/CodeOfConduct/>
 
 Code of Conduct section excerpt adapted from the

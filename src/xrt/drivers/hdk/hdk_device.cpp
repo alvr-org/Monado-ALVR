@@ -9,7 +9,7 @@
  * Based in part on the corresponding VRPN driver,
  * available under BSL-1.0.
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Kevin M. Godby <kevin@godby.org>
  * @ingroup drv_hdk
  */

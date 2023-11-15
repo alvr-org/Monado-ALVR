@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Utilities for accessing members in an OpenXR structure chain.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #pragma once

@@ -5,7 +5,7 @@
  * @brief  Single compiled file for all kalman filter using source.
  *
  * Centralizes the build cost in one place.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_tracking
  */
 

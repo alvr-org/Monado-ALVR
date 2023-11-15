@@ -22,7 +22,7 @@ SPDX-License-Identifier: BSL-1.0
 
 
 # About spatial types
-In response to Ryan disliking all my nested arrays, I created some spatial types (lm_defines.hpp; Quat, Vec3 and Vec2) and stuck most of the nested arrays inside structs (Translations55, Orientations54). I think this slowed compile times down by a fair bit, and I suspect compile times are why Ceres uses a lot of raw nested arrays in their examples - sure, it's unsafe, hairy and slightly harder to understand, but iteration times are faster and that counts for a whole lot. For now we'll keep the spatial types, but I might be motivated to switch everything back to nested arrays of Jets if compile times start driving me up the wall.
+In response to Rylie disliking all my nested arrays, I created some spatial types (lm_defines.hpp; Quat, Vec3 and Vec2) and stuck most of the nested arrays inside structs (Translations55, Orientations54). I think this slowed compile times down by a fair bit, and I suspect compile times are why Ceres uses a lot of raw nested arrays in their examples - sure, it's unsafe, hairy and slightly harder to understand, but iteration times are faster and that counts for a whole lot. For now we'll keep the spatial types, but I might be motivated to switch everything back to nested arrays of Jets if compile times start driving me up the wall.
 
 We could very much use Eigen's spatial types - they template well (enough) with ceres::Jets, but I decided not to:
 * I don't like digging through Eigen - when I want my code to do something, I'd rather just write the procedure myself rather than hope Eigen is doing what I expect it to do.

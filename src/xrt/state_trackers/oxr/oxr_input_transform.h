@@ -4,7 +4,7 @@
  * @file
  * @brief  Defines ways of performing (possibly multi-step) conversions of input
  * data.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup oxr_input_transform
  */
 

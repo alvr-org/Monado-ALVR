@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Implementation of a steady, convertible clock.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 

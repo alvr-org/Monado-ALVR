@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Interface for D3D12 client-side code.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup comp_client
  */
 

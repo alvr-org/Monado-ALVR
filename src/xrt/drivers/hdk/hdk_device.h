@@ -4,7 +4,7 @@
  * @file
  * @brief  Interface to direct OSVR HDK driver code.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup drv_hdk
  */
 

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Holds D3D11 specific session functions.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup oxr_main
  * @ingroup comp_client

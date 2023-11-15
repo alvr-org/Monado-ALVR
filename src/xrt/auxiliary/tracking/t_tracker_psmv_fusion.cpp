@@ -6,7 +6,7 @@
  *
  * Typically built as a part of t_kalman.cpp to reduce incremental build times.
  *
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Pete Black <pblack@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_tracking

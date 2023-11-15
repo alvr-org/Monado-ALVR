@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Implementation
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
 #include "oxr_handle.h"

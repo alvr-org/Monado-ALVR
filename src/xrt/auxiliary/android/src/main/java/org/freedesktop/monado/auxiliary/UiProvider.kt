@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Interface for target-specific UI-related things on Android.
- * @author Ryan Pavlik <ryan.pavlik@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_android
  */
 package org.freedesktop.monado.auxiliary
