@@ -42,7 +42,9 @@
  * behavior.
  */
 
+#include "xrt/xrt_compiler.h"
 #include "xrt/xrt_config_have.h"
+#include "xrt/xrt_results.h"
 
 #include "os/os_time.h"
 
@@ -276,7 +278,7 @@ can_do_one_projection_layer_fast_path(struct comp_compositor *c)
 	return true;
 }
 
-static xrt_result_t
+static XRT_CHECK_RESULT xrt_result_t
 compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sync_handle)
 {
 	COMP_TRACE_MARKER();
@@ -296,7 +298,10 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 	u_graphics_sync_unref(&sync_handle);
 
 	// Do the drawing
-	comp_renderer_draw(c->r);
+	xrt_result_t xret = comp_renderer_draw(c->r);
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
 
 	u_frame_times_widget_push_sample(&c->compositor_frame_times, os_monotonic_get_ns());
 
