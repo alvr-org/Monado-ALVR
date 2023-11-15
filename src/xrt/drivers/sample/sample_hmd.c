@@ -77,7 +77,11 @@ sample_hmd_destroy(struct xrt_device *xdev)
 static void
 sample_hmd_update_inputs(struct xrt_device *xdev)
 {
-	// Empty, you should put code to update the attached input fields (if any)
+	/*
+	 * Empty for the sampler driver, if you need to you should
+	 * put code to update the attached inputs fields. If not you can use
+	 * the u_device_noop_update_inputs helper to make it a no-op.
+	 */
 }
 
 static void
