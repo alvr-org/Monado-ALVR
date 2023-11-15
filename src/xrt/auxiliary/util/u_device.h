@@ -152,7 +152,9 @@ u_device_get_view_pose(const struct xrt_vec3 *eye_relation, uint32_t view_index,
  */
 
 /*!
- * Helper function for `get_view_poses` in a HMD driver.
+ * Helper function to implement @ref xrt_device::get_view_poses in a HMD driver.
+ *
+ * The field @ref xrt_device::hmd needs to be set and valid.
  */
 void
 u_device_get_view_poses(struct xrt_device *xdev,
