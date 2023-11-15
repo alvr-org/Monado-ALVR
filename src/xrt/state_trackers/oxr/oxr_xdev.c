@@ -37,7 +37,7 @@ void
 oxr_xdev_update(struct xrt_device *xdev)
 {
 	if (xdev != NULL) {
-		xdev->update_inputs(xdev);
+		xrt_device_update_inputs(xdev);
 	}
 }
 
