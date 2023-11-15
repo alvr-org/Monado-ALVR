@@ -206,6 +206,15 @@ typedef AHardwareBuffer *xrt_graphics_buffer_handle_t;
 #define XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER 1
 
 /*!
+ * Defined to indicate that the graphics buffer has a reference added by the import into Vulkan,
+ * and is not consumed nor does it need to be kept alive until destruction of the imported image.
+ *
+ * @relates xrt_graphics_buffer_handle_t
+ * @see XRT_GRAPHICS_BUFFER_HANDLE_CONSUMED_BY_VULKAN_IMPORT
+ */
+#define XRT_GRAPHICS_BUFFER_HANDLE_REFERENCE_ADDED_BY_VULKAN_IMPORT 1
+
+/*!
  * Check whether a graphics buffer handle is valid.
  *
  * @public @memberof xrt_graphics_buffer_handle_t
@@ -244,6 +253,14 @@ typedef int xrt_graphics_buffer_handle_t;
 #define XRT_GRAPHICS_BUFFER_HANDLE_IS_FD 1
 
 /*!
+ * Defined to indicate that the graphics buffer is consumed by the import into Vulkan
+ *
+ * @relates xrt_graphics_buffer_handle_t
+ * @see XRT_GRAPHICS_BUFFER_HANDLE_REFERENCE_ADDED_BY_VULKAN_IMPORT
+ */
+#define XRT_GRAPHICS_BUFFER_HANDLE_CONSUMED_BY_VULKAN_IMPORT 1
+
+/*!
  * Check whether a graphics buffer handle is valid.
  *
  * @public @memberof xrt_graphics_buffer_handle_t
@@ -280,6 +297,14 @@ typedef HANDLE xrt_graphics_buffer_handle_t;
  * @relates xrt_graphics_buffer_handle_t
  */
 #define XRT_GRAPHICS_BUFFER_HANDLE_IS_WIN32_HANDLE 1
+
+/*!
+ * Defined to indicate that the graphics buffer is consumed by the import into Vulkan
+ *
+ * @relates xrt_graphics_buffer_handle_t
+ * @see XRT_GRAPHICS_BUFFER_HANDLE_REFERENCE_ADDED_BY_VULKAN_IMPORT
+ */
+#define XRT_GRAPHICS_BUFFER_HANDLE_CONSUMED_BY_VULKAN_IMPORT 1
 
 /*!
  * Check whether a graphics buffer handle is valid.
@@ -388,6 +413,12 @@ xrt_graphics_sync_handle_is_valid(xrt_graphics_sync_handle_t handle)
  */
 #define XRT_GRAPHICS_SYNC_HANDLE_INVALID (NULL)
 
+#endif
+
+#if (!defined(XRT_GRAPHICS_BUFFER_HANDLE_REFERENCE_ADDED_BY_VULKAN_IMPORT)) &&                                         \
+    (!defined(XRT_GRAPHICS_BUFFER_HANDLE_CONSUMED_BY_VULKAN_IMPORT))
+// Exactly one of these must be defined in each platform.
+#error "Needs port: Must define a macro indicating the Vulkan image import buffer behavior"
 #endif
 
 #ifdef __cplusplus
