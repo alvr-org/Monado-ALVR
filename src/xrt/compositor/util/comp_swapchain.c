@@ -245,6 +245,49 @@ set_common_fields(struct comp_swapchain *sc,
 }
 
 static void
+image_view_array_cleanup(struct vk_bundle *vk, size_t array_size, VkImageView **views_ptr)
+{
+	VkImageView *views = *views_ptr;
+	if (views == NULL) {
+		return;
+	}
+
+	for (uint32_t i = 0; i < array_size; ++i) {
+		if (views[i] == VK_NULL_HANDLE) {
+			continue;
+		}
+
+		D(ImageView, views[i]);
+	}
+
+	free(views);
+	array_size = 0;
+
+	*views_ptr = NULL;
+}
+
+/*!
+ * Free and destroy any initialized fields on the given image, safe to pass in
+ * images that has one or all fields set to NULL.
+ */
+static void
+image_cleanup(struct vk_bundle *vk, struct comp_swapchain_image *image)
+{
+	/*
+	 * This makes sure that any pending command buffer has completed and all
+	 * resources referred by it can now be manipulated. This make sure that
+	 * validation doesn't complain. This is done during image destruction so
+	 * isn't time critical.
+	 */
+	os_mutex_lock(&vk->queue_mutex);
+	vk->vkDeviceWaitIdle(vk->device);
+	os_mutex_unlock(&vk->queue_mutex);
+
+	image_view_array_cleanup(vk, image->array_size, &image->views.alpha);
+	image_view_array_cleanup(vk, image->array_size, &image->views.no_alpha);
+}
+
+static void
 do_post_create_vulkan_setup(struct vk_bundle *vk,
                             const struct xrt_swapchain_create_info *info,
                             struct comp_swapchain *sc)
@@ -382,49 +425,6 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 
 		sc->images[i].use_count = 0;
 	}
-}
-
-static void
-clean_image_views(struct vk_bundle *vk, size_t array_size, VkImageView **views_ptr)
-{
-	VkImageView *views = *views_ptr;
-	if (views == NULL) {
-		return;
-	}
-
-	for (uint32_t i = 0; i < array_size; ++i) {
-		if (views[i] == VK_NULL_HANDLE) {
-			continue;
-		}
-
-		D(ImageView, views[i]);
-	}
-
-	free(views);
-	array_size = 0;
-
-	*views_ptr = NULL;
-}
-
-/*!
- * Free and destroy any initialized fields on the given image, safe to pass in
- * images that has one or all fields set to NULL.
- */
-static void
-image_cleanup(struct vk_bundle *vk, struct comp_swapchain_image *image)
-{
-	/*
-	 * This makes sure that any pending command buffer has completed and all
-	 * resources referred by it can now be manipulated. This make sure that
-	 * validation doesn't complain. This is done during image destruction so
-	 * isn't time critical.
-	 */
-	os_mutex_lock(&vk->queue_mutex);
-	vk->vkDeviceWaitIdle(vk->device);
-	os_mutex_unlock(&vk->queue_mutex);
-
-	clean_image_views(vk, image->array_size, &image->views.alpha);
-	clean_image_views(vk, image->array_size, &image->views.no_alpha);
 }
 
 /*!
