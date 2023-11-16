@@ -15,8 +15,10 @@
 #include "util/u_trace_marker.h"
 #include "util/u_limited_unique_id.h"
 
-#include "util/comp_swapchain.h"
 #include "vk/vk_cmd_pool.h"
+#include "vk/vk_mini_helpers.h"
+
+#include "util/comp_swapchain.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -214,12 +216,6 @@ swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
  * Helper functions.
  *
  */
-
-#define D(TYPE, thing)                                                                                                 \
-	if (thing != VK_NULL_HANDLE) {                                                                                 \
-		vk->vkDestroy##TYPE(vk->device, thing, NULL);                                                          \
-		thing = VK_NULL_HANDLE;                                                                                \
-	}
 
 static struct comp_swapchain *
 set_common_fields(struct comp_swapchain *sc,
