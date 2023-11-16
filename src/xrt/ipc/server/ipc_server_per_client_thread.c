@@ -1,4 +1,4 @@
-// Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -26,12 +26,63 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
+#endif // XRT_OS_WINDOWS
+
 
 /*
  *
  * Helper functions.
  *
  */
+
+static void
+common_shutdown(volatile struct ipc_client_state *ics)
+{
+	/*
+	 * Remove the thread from the server.
+	 */
+
+	// Multiple threads might be looking at these fields.
+	os_mutex_lock(&ics->server->global_state.lock);
+
+	ipc_message_channel_close((struct ipc_message_channel *)&ics->imc);
+
+	ics->server->threads[ics->server_thread_index].state = IPC_THREAD_STOPPING;
+	ics->server_thread_index = -1;
+	memset((void *)&ics->client_state, 0, sizeof(struct ipc_app_state));
+
+	os_mutex_unlock(&ics->server->global_state.lock);
+
+
+	/*
+	 * Clean up various resources.
+	 */
+
+	// If the session hasn't been stopped, destroy the compositor.
+	ipc_server_client_destroy_compositor(ics);
+
+	// Make sure undestroyed spaces are unreferenced
+	for (uint32_t i = 0; i < IPC_MAX_CLIENT_SPACES; i++) {
+		// Cast away volatile.
+		xrt_space_reference((struct xrt_space **)&ics->xspcs[i], NULL);
+	}
+
+	// Should we stop the server when a client disconnects?
+	if (ics->server->exit_on_disconnect) {
+		ics->server->running = false;
+	}
+
+	ipc_server_deactivate_session(ics);
+}
+
+
+/*
+ *
+ * Client loop and per platform helpers.
+ *
+ */
+
+#ifndef XRT_OS_WINDOWS // Linux & Android
 
 static int
 setup_epoll(volatile struct ipc_client_state *ics)
@@ -58,13 +109,6 @@ setup_epoll(volatile struct ipc_client_state *ics)
 
 	return epoll_fd;
 }
-
-
-/*
- *
- * Client loop.
- *
- */
 
 static void
 client_loop(volatile struct ipc_client_state *ics)
@@ -132,31 +176,8 @@ client_loop(volatile struct ipc_client_state *ics)
 	close(epoll_fd);
 	epoll_fd = -1;
 
-	// Multiple threads might be looking at these fields.
-	os_mutex_lock(&ics->server->global_state.lock);
-
-	ipc_message_channel_close((struct ipc_message_channel *)&ics->imc);
-
-	ics->server->threads[ics->server_thread_index].state = IPC_THREAD_STOPPING;
-	ics->server_thread_index = -1;
-	memset((void *)&ics->client_state, 0, sizeof(struct ipc_app_state));
-
-	os_mutex_unlock(&ics->server->global_state.lock);
-
-	ipc_server_client_destroy_compositor(ics);
-
-	// Make sure undestroyed spaces are unreferenced
-	for (uint32_t i = 0; i < IPC_MAX_CLIENT_SPACES; i++) {
-		// Cast away volatile.
-		xrt_space_reference((struct xrt_space **)&ics->xspcs[i], NULL);
-	}
-
-	// Should we stop the server when a client disconnects?
-	if (ics->server->exit_on_disconnect) {
-		ics->server->running = false;
-	}
-
-	ipc_server_deactivate_session(ics);
+	// Following code is same for all platforms.
+	common_shutdown(ics);
 }
 
 #else // XRT_OS_WINDOWS
@@ -199,34 +220,12 @@ client_loop(volatile struct ipc_client_state *ics)
 		}
 	}
 
-	// Multiple threads might be looking at these fields.
-	os_mutex_lock(&ics->server->global_state.lock);
-
-	ipc_message_channel_close((struct ipc_message_channel *)&ics->imc);
-
-	ics->server->threads[ics->server_thread_index].state = IPC_THREAD_STOPPING;
-	ics->server_thread_index = -1;
-	memset((void *)&ics->client_state, 0, sizeof(struct ipc_app_state));
-
-	os_mutex_unlock(&ics->server->global_state.lock);
-
-	ipc_server_client_destroy_compositor(ics);
-
-	// Make sure undestroyed spaces are unreferenced
-	for (uint32_t i = 0; i < IPC_MAX_CLIENT_SPACES; i++) {
-		// Cast away volatile.
-		xrt_space_reference((struct xrt_space **)&ics->xspcs[i], NULL);
-	}
-
-	// Should we stop the server when a client disconnects?
-	if (ics->server->exit_on_disconnect) {
-		ics->server->running = false;
-	}
-
-	ipc_server_deactivate_session(ics);
+	// Following code is same for all platforms.
+	common_shutdown(ics);
 }
 
 #endif // XRT_OS_WINDOWS
+
 
 /*
  *
