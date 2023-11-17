@@ -1270,23 +1270,15 @@ union xrt_output_value {
 
 /*
  *
- * Inline functions
+ * Misc enums.
  *
  */
 
-static inline bool
-xrt_reference_dec(struct xrt_reference *xref)
-{
-	int32_t count = xrt_atomic_s32_dec_return(&xref->count);
-	return count == 0;
-}
-
-static inline void
-xrt_reference_inc(struct xrt_reference *xref)
-{
-	xrt_atomic_s32_inc_return(&xref->count);
-}
-
+/*!
+ * What form factor is this device, mostly maps onto OpenXR's @p XrFormFactor.
+ *
+ * @ingroup xrt_iface
+ */
 enum xrt_form_factor
 {
 	XRT_FORM_FACTOR_HMD,      //!< Head mounted display.
@@ -1304,6 +1296,27 @@ enum xrt_visibility_mask_type
 	XRT_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH = 2,
 	XRT_VISIBILITY_MASK_TYPE_LINE_LOOP = 3,
 };
+
+
+/*
+ *
+ * Inline functions
+ *
+ */
+
+static inline void
+xrt_reference_inc(struct xrt_reference *xref)
+{
+	xrt_atomic_s32_inc_return(&xref->count);
+}
+
+static inline bool
+xrt_reference_dec(struct xrt_reference *xref)
+{
+	int32_t count = xrt_atomic_s32_dec_return(&xref->count);
+	return count == 0;
+}
+
 
 #ifdef __cplusplus
 }
