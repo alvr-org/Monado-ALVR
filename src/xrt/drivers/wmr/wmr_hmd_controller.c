@@ -113,7 +113,7 @@ wmr_hmd_controller_connection_disconnect(struct wmr_controller_connection *base)
 {
 	struct wmr_hmd_controller_connection *conn = (struct wmr_hmd_controller_connection *)(base);
 
-	if (xrt_reference_dec(&conn->ref)) {
+	if (xrt_reference_dec_and_is_zero(&conn->ref)) {
 		wmr_hmd_controller_connection_destroy(conn);
 	} else {
 		os_mutex_lock(&conn->lock);

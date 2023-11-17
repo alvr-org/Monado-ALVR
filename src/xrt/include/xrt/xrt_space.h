@@ -66,7 +66,7 @@ xrt_space_reference(struct xrt_space **dst, struct xrt_space *src)
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			old_dst->destroy(old_dst);
 		}
 	}

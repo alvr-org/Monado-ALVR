@@ -498,7 +498,7 @@ xrt_swapchain_reference(struct xrt_swapchain **dst, struct xrt_swapchain *src)
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			old_dst->destroy(old_dst);
 		}
 	}
@@ -694,7 +694,7 @@ xrt_compositor_semaphore_reference(struct xrt_compositor_semaphore **dst, struct
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			old_dst->destroy(old_dst);
 		}
 	}

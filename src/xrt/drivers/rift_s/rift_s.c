@@ -304,7 +304,7 @@ rift_s_system_reference(struct rift_s_system **dst, struct rift_s_system *src)
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->ref)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->ref)) {
 			rift_s_system_free(old_dst);
 		}
 	}

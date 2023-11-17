@@ -79,7 +79,7 @@ u_worker_thread_pool_reference(struct u_worker_thread_pool **dst, struct u_worke
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			u_worker_thread_pool_destroy(old_dst);
 		}
 	}
@@ -164,7 +164,7 @@ u_worker_group_reference(struct u_worker_group **dst, struct u_worker_group *src
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			u_worker_group_destroy(old_dst);
 		}
 	}

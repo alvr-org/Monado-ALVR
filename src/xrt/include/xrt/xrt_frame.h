@@ -143,7 +143,7 @@ xrt_frame_reference(struct xrt_frame **dst, struct xrt_frame *src)
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			old_dst->destroy(old_dst);
 		}
 	}

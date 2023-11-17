@@ -307,7 +307,7 @@ t_stereo_camera_calibration_reference(struct t_stereo_camera_calibration **dst, 
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->reference)) {
 			t_stereo_camera_calibration_destroy(old_dst);
 		}
 	}

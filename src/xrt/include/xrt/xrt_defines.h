@@ -1304,14 +1304,51 @@ enum xrt_visibility_mask_type
  *
  */
 
+/*!
+ * Increment the reference, probably want @ref xrt_reference_inc_and_was_zero.
+ *
+ * @memberof xrt_reference
+ * @ingroup xrt_iface
+ */
 static inline void
 xrt_reference_inc(struct xrt_reference *xref)
 {
 	xrt_atomic_s32_inc_return(&xref->count);
 }
 
-static inline bool
+/*!
+ * Decrement the reference, probably want @ref xrt_reference_dec_and_is_zero.
+ *
+ * @memberof xrt_reference
+ * @ingroup xrt_iface
+ */
+static inline void
 xrt_reference_dec(struct xrt_reference *xref)
+{
+	xrt_atomic_s32_dec_return(&xref->count);
+}
+
+/*!
+ * Increment the reference and return true if the value @p was zero.
+ *
+ * @memberof xrt_reference
+ * @ingroup xrt_iface
+ */
+XRT_CHECK_RESULT static inline bool
+xrt_reference_inc_and_was_zero(struct xrt_reference *xref)
+{
+	int32_t count = xrt_atomic_s32_inc_return(&xref->count);
+	return count == 1;
+}
+
+/*!
+ * Decrement the reference and return true if the value is now zero.
+ *
+ * @memberof xrt_reference
+ * @ingroup xrt_iface
+ */
+XRT_CHECK_RESULT static inline bool
+xrt_reference_dec_and_is_zero(struct xrt_reference *xref)
 {
 	int32_t count = xrt_atomic_s32_dec_return(&xref->count);
 	return count == 0;

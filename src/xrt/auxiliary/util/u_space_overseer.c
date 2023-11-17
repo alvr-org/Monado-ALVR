@@ -125,7 +125,7 @@ u_space_reference(struct u_space **dst, struct u_space *src)
 	*dst = src;
 
 	if (old_dst) {
-		if (xrt_reference_dec(&old_dst->base.reference)) {
+		if (xrt_reference_dec_and_is_zero(&old_dst->base.reference)) {
 			old_dst->base.destroy(&old_dst->base);
 		}
 	}
