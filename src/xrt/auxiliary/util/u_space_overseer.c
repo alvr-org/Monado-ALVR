@@ -84,6 +84,9 @@ struct u_space_overseer
 
 	//! Map from xdev to space, each entry holds a reference.
 	struct u_hashmap_int *xdev_map;
+
+	//! Tracks usage of reference spaces.
+	struct xrt_reference ref_space_use[XRT_SPACE_REFERENCE_TYPE_COUNT];
 };
 
 
@@ -103,6 +106,18 @@ static inline struct u_space_overseer *
 u_space_overseer(struct xrt_space_overseer *xso)
 {
 	return (struct u_space_overseer *)xso;
+}
+
+static const char *
+type_to_small_string(enum xrt_reference_space_type type)
+{
+	switch (type) {
+	case XRT_SPACE_REFERENCE_TYPE_VIEW: return "view";
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL: return "local";
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR: return "local_floor";
+	case XRT_SPACE_REFERENCE_TYPE_STAGE: return "stage";
+	case XRT_SPACE_REFERENCE_TYPE_UNBOUNDED: return "unbounded";
+	}
 }
 
 /*!
@@ -435,6 +450,52 @@ locate_device(struct xrt_space_overseer *xso,
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+ref_space_inc(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
+{
+	struct u_space_overseer *uso = u_space_overseer(xso);
+
+	// No more checking then this.
+	assert(type < XRT_SPACE_REFERENCE_TYPE_COUNT);
+
+	// If it wasn't zero nothing to do.
+	if (!xrt_reference_inc_and_was_zero(&uso->ref_space_use[type])) {
+		return XRT_SUCCESS;
+	}
+
+	U_LOG_D("Ref-space %s in use", type_to_small_string(type));
+
+	/*
+	 * This space intentionally left blank for future expansion,
+	 * use it for adding new functionality on used/unused switches.
+	 */
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
+{
+	struct u_space_overseer *uso = u_space_overseer(xso);
+
+	// No more checking then this.
+	assert(type < XRT_SPACE_REFERENCE_TYPE_COUNT);
+
+	// If it is not zero we are done.
+	if (!xrt_reference_dec_and_is_zero(&uso->ref_space_use[type])) {
+		return XRT_SUCCESS;
+	}
+
+	U_LOG_D("Ref-space %s no longer in use", type_to_small_string(type));
+
+	/*
+	 * This space intentionally left blank for future expansion,
+	 * use it for adding new functionality on used/unused switches.
+	 */
+
+	return XRT_SUCCESS;
+}
+
 static void
 destroy(struct xrt_space_overseer *xso)
 {
@@ -471,6 +532,8 @@ u_space_overseer_create(void)
 	uso->base.create_pose_space = create_pose_space;
 	uso->base.locate_space = locate_space;
 	uso->base.locate_device = locate_device;
+	uso->base.ref_space_inc = ref_space_inc;
+	uso->base.ref_space_dec = ref_space_dec;
 	uso->base.destroy = destroy;
 
 	XRT_MAYBE_UNUSED int ret = 0;
