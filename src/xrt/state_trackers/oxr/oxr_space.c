@@ -119,6 +119,12 @@ oxr_space_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 {
 	struct oxr_space *spc = (struct oxr_space *)hb;
 
+	// Unreference the reference space.
+	enum xrt_reference_space_type xtype = oxr_ref_space_to_xrt(spc->space_type);
+	if (xtype != XRT_SPACE_REFERENCE_TYPE_INVALID) {
+		xrt_space_overseer_ref_space_inc(spc->sess->sys->xso, xtype);
+	}
+
 	xrt_space_reference(&spc->action.xs, NULL);
 	spc->action.xdev = NULL;
 	spc->action.name = 0;
@@ -164,11 +170,20 @@ oxr_space_reference_create(struct oxr_logger *log,
 		return oxr_error(log, XR_ERROR_POSE_INVALID, "(createInfo->poseInReferenceSpace)");
 	}
 
+	// Convert the type into the different enums.
+	enum oxr_space_type oxr_type = xr_ref_space_to_oxr(createInfo->referenceSpaceType);
+	enum xrt_reference_space_type xtype = oxr_ref_space_to_xrt(oxr_type);
+
 	struct oxr_space *spc = NULL;
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, spc, OXR_XR_DEBUG_SPACE, oxr_space_destroy, &sess->handle);
 	spc->sess = sess;
-	spc->space_type = xr_ref_space_to_oxr(createInfo->referenceSpaceType);
+	spc->space_type = oxr_type;
 	memcpy(&spc->pose, &createInfo->poseInReferenceSpace, sizeof(spc->pose));
+
+	// Reference the reference space, if not supported by Monado just skip.
+	if (xtype != XRT_SPACE_REFERENCE_TYPE_INVALID) {
+		xrt_space_overseer_ref_space_inc(sess->sys->xso, xtype);
+	}
 
 	*out_space = spc;
 

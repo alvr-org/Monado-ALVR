@@ -11,6 +11,7 @@
 #pragma once
 
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_space.h"
 #include "xrt/xrt_vulkan_includes.h"
 #include "xrt/xrt_openxr_includes.h"
 
@@ -98,4 +99,29 @@ xr_ref_space_to_string(XrReferenceSpaceType space_type)
 	case XR_REFERENCE_SPACE_TYPE_MAX_ENUM: return "XR_REFERENCE_SPACE_TYPE_MAX_ENUM";
 	default: return "UNKNOWN REFERENCE SPACE";
 	}
+}
+
+static inline enum xrt_reference_space_type
+oxr_ref_space_to_xrt(enum oxr_space_type space_type)
+{
+	switch (space_type) {
+	case OXR_SPACE_TYPE_REFERENCE_VIEW: return XRT_SPACE_REFERENCE_TYPE_VIEW;
+	case OXR_SPACE_TYPE_REFERENCE_LOCAL: return XRT_SPACE_REFERENCE_TYPE_LOCAL;
+	case OXR_SPACE_TYPE_REFERENCE_LOCAL_FLOOR: return XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR;
+	case OXR_SPACE_TYPE_REFERENCE_STAGE: return XRT_SPACE_REFERENCE_TYPE_STAGE;
+	case OXR_SPACE_TYPE_REFERENCE_UNBOUNDED_MSFT: return XRT_SPACE_REFERENCE_TYPE_UNBOUNDED;
+
+	// Has no mapping to a Monado semantic space.
+	case OXR_SPACE_TYPE_REFERENCE_COMBINED_EYE_VARJO: return XRT_SPACE_REFERENCE_TYPE_INVALID;
+	case OXR_SPACE_TYPE_ACTION: return XRT_SPACE_REFERENCE_TYPE_INVALID;
+	}
+
+	/*
+	 * This is the default case, we do not have a explicit default case
+	 * so that we get warnings for unhandled enum members. This is fine
+	 * because the C specification says if there is no default case and
+	 * and a non-matching value is given no case is executed.
+	 */
+
+	return XRT_SPACE_REFERENCE_TYPE_INVALID;
 }
