@@ -164,6 +164,22 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	}
 #endif
 
+#ifdef VK_KHR_image_format_list
+	if (vk->has_KHR_image_format_list && info->format_count != 0) {
+		VkImageFormatListCreateInfoKHR image_format_list_create_info = {
+		    .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO_KHR,
+		    .viewFormatCount = info->format_count,
+		    .pViewFormats = info->formats,
+		};
+
+		CHAIN(image_format_list_create_info);
+	}
+#else
+	if (info->format_count != 0) {
+		VK_WARN(vk, "VK_KHR_image_format_list not supported");
+	}
+#endif
+
 	if (info->face_count == 6) {
 		image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
