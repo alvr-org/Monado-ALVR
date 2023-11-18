@@ -37,9 +37,20 @@ typedef void (*__eglMustCastToProperFunctionPointerType)(void); // NOLINT
 typedef __eglMustCastToProperFunctionPointerType (*PFNEGLGETPROCADDRESSPROC)(const char *procname);
 #endif
 
-#if defined(XR_USE_GRAPHICS_API_D3D11)
+#if defined(XR_USE_PLATFORM_WIN32)
 #include "xrt_windows.h"
+#endif
+
+#if defined(XR_USE_GRAPHICS_API_D3D11)
 #include <d3d11.h>
+#endif
+
+#if defined(XR_USE_GRAPHICS_API_D3D12)
+#include <d3d12.h>
+#endif
+
+#if defined(XR_USE_GRAPHICS_API_VULKAN)
+#include "xrt_vulkan_includes.h"
 #endif
 
 #ifdef XR_USE_TIMESPEC
