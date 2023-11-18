@@ -807,7 +807,7 @@ struct xrt_swapchain_create_info
 {
 	enum xrt_swapchain_create_flags create;
 	enum xrt_swapchain_usage_bits bits;
-	int64_t format;
+	uint32_t format;
 	uint32_t sample_count;
 	uint32_t width;
 	uint32_t height;

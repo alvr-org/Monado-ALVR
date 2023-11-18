@@ -498,7 +498,7 @@ comp_swapchain_create_init(struct comp_swapchain *sc,
 {
 	VkResult ret;
 
-	VK_DEBUG(vk, "CREATE %p %" PRIu32 "x%" PRIu32 " %s (%" PRId64 ")", //
+	VK_DEBUG(vk, "CREATE %p %" PRIu32 "x%" PRIu32 " %s (%" PRIu32 ")", //
 	         (void *)sc,                                               //
 	         info->width, info->height,                                //
 	         vk_format_string(info->format), info->format);
@@ -560,7 +560,7 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 {
 	VkResult ret;
 
-	VK_DEBUG(vk, "IMPORT %p %" PRIu32 "x%" PRIu32 " %s (%" PRId64 ")", //
+	VK_DEBUG(vk, "IMPORT %p %" PRIu32 "x%" PRIu32 " %s (%" PRIu32 ")", //
 	         (void *)sc,                                               //
 	         info->width, info->height,                                //
 	         vk_format_string(info->format), info->format);
