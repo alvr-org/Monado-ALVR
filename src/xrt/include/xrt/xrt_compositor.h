@@ -814,6 +814,13 @@ struct xrt_swapchain_create_info
 	uint32_t face_count;
 	uint32_t array_size;
 	uint32_t mip_count;
+
+	/*
+	 * List of formats that could be use when creating views of the swapchain images.
+	 * See XR_KHR_vulkan_swapchain_format_list and VK_KHR_image_format_list
+	 */
+	uint32_t format_count;
+	uint32_t formats[XRT_MAX_SWAPCHAIN_CREATE_INFO_FORMAT_LIST_COUNT];
 };
 
 /*!

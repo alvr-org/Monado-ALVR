@@ -35,5 +35,10 @@
 #define XRT_MAX_SWAPCHAIN_FORMATS 16
 
 /*!
+ * Max formats in the swapchain creation info formats list, artificial limit.
+ */
+#define XRT_MAX_SWAPCHAIN_CREATE_INFO_FORMAT_LIST_COUNT 8
+
+/*!
  * @}
  */
