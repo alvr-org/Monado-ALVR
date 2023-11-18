@@ -12,6 +12,7 @@
 #include "util/u_debug.h"
 #include "util/u_trace_marker.h"
 
+#include "oxr_chain.h"
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
@@ -115,6 +116,27 @@ oxr_xrCreateSwapchain(XrSession session, const XrSwapchainCreateInfo *createInfo
 		return oxr_error(&log, XR_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED,
 		                 "(createInfo->format == 0x%04" PRIx64 ") is not supported", createInfo->format);
 	}
+
+#ifdef OXR_HAVE_KHR_vulkan_swapchain_format_list
+	const XrVulkanSwapchainFormatListCreateInfoKHR *format_list = NULL;
+	if (sess->sys->inst->extensions.KHR_vulkan_swapchain_format_list) {
+		format_list = OXR_GET_INPUT_FROM_CHAIN(createInfo, XR_TYPE_VULKAN_SWAPCHAIN_FORMAT_LIST_CREATE_INFO_KHR,
+		                                       XrVulkanSwapchainFormatListCreateInfoKHR);
+	}
+
+	if (format_list) {
+		if ((createInfo->usageFlags & XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT) == 0) {
+			return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(createInfo->usageFlags) passing in XrVulkanSwapchainFormatListCreateInfoKHR "
+			                 "requires the XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT bit set");
+		}
+
+		if (sess->gfx_ext != OXR_SESSION_GRAPHICS_EXT_VULKAN) {
+			return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE,
+			                 "XrVulkanSwapchainFormatListCreateInfoKHR used with non-Vulkan graphics API.");
+		}
+	}
+#endif
 
 	ret = sess->create_swapchain(&log, sess, createInfo, &sc);
 	if (ret != XR_SUCCESS) {

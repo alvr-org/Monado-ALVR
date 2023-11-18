@@ -10,6 +10,7 @@
 #include "util/u_debug.h"
 #include "util/u_misc.h"
 
+#include "oxr_chain.h"
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_handle.h"
@@ -276,16 +277,38 @@ oxr_swapchain_common_create(struct oxr_logger *log,
 {
 	xrt_result_t xret = XRT_SUCCESS;
 
-	struct xrt_swapchain_create_info info;
-	info.create = convert_create_flags(createInfo->createFlags);
-	info.bits = convert_usage_bits(createInfo->usageFlags);
-	info.format = createInfo->format;
-	info.sample_count = createInfo->sampleCount;
-	info.width = createInfo->width;
-	info.height = createInfo->height;
-	info.face_count = createInfo->faceCount;
-	info.array_size = createInfo->arraySize;
-	info.mip_count = createInfo->mipCount;
+	struct xrt_swapchain_create_info info = {
+	    .create = convert_create_flags(createInfo->createFlags),
+	    .bits = convert_usage_bits(createInfo->usageFlags),
+	    .format = createInfo->format,
+	    .sample_count = createInfo->sampleCount,
+	    .width = createInfo->width,
+	    .height = createInfo->height,
+	    .face_count = createInfo->faceCount,
+	    .array_size = createInfo->arraySize,
+	    .mip_count = createInfo->mipCount,
+	};
+
+#ifdef OXR_HAVE_KHR_vulkan_swapchain_format_list
+	const XrVulkanSwapchainFormatListCreateInfoKHR *format_list = NULL;
+	if (sess->sys->inst->extensions.KHR_vulkan_swapchain_format_list) {
+		format_list = OXR_GET_INPUT_FROM_CHAIN(createInfo, XR_TYPE_VULKAN_SWAPCHAIN_FORMAT_LIST_CREATE_INFO_KHR,
+		                                       XrVulkanSwapchainFormatListCreateInfoKHR);
+	}
+
+	if (format_list) {
+		// Check in oxr_api_swapchain.c verification.
+		assert((createInfo->usageFlags & XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT) == 0);
+
+		if (format_list->viewFormatCount > ARRAY_SIZE(info.formats)) {
+			/* Hardcoded limit of 8 formats */
+			return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "Too many formats");
+		}
+
+		info.format_count = format_list->viewFormatCount;
+		memcpy(info.formats, format_list->viewFormats, sizeof(uint32_t) * info.format_count);
+	}
+#endif
 
 	struct xrt_swapchain *xsc = NULL; // Has to be NULL.
 	xret = xrt_comp_create_swapchain(sess->compositor, &info, &xsc);

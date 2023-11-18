@@ -235,6 +235,18 @@
 
 
 /*
+ * XR_KHR_vulkan_swapchain_format_list
+ */
+#if defined(XR_KHR_vulkan_swapchain_format_list) && defined(XR_USE_GRAPHICS_API_VULKAN)
+#define OXR_HAVE_KHR_vulkan_swapchain_format_list
+#define OXR_EXTENSION_SUPPORT_KHR_vulkan_swapchain_format_list(_)                                                      \
+	_(KHR_vulkan_swapchain_format_list, KHR_VULKAN_SWAPCHAIN_FORMAT_LIST)
+#else
+#define OXR_EXTENSION_SUPPORT_KHR_vulkan_swapchain_format_list(_)
+#endif
+
+
+/*
  * XR_KHR_win32_convert_performance_counter_time
  */
 #if defined(XR_KHR_win32_convert_performance_counter_time) && defined(XR_USE_PLATFORM_WIN32)
@@ -548,6 +560,7 @@
     OXR_EXTENSION_SUPPORT_KHR_visibility_mask(_) \
     OXR_EXTENSION_SUPPORT_KHR_vulkan_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_vulkan_enable2(_) \
+    OXR_EXTENSION_SUPPORT_KHR_vulkan_swapchain_format_list(_) \
     OXR_EXTENSION_SUPPORT_KHR_win32_convert_performance_counter_time(_) \
     OXR_EXTENSION_SUPPORT_EXT_debug_utils(_) \
     OXR_EXTENSION_SUPPORT_EXT_dpad_binding(_) \
