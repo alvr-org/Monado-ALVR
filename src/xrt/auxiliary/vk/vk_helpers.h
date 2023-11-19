@@ -472,7 +472,7 @@ struct vk_buffer
 	do {                                                                                                           \
 		VkResult _ret = RET;                                                                                   \
 		if (_ret != VK_SUCCESS) {                                                                              \
-			vk_print_result(vk, _ret, FUNC_STR, __FILE__, __LINE__);                                       \
+			vk_print_result(vk, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                             \
 			return _ret;                                                                                   \
 		}                                                                                                      \
 	} while (false)
@@ -497,7 +497,7 @@ struct vk_buffer
 	do {                                                                                                           \
 		VkResult _ret = RET;                                                                                   \
 		if (_ret != VK_SUCCESS) {                                                                              \
-			vk_print_result(vk, _ret, FUNC_STR, __FILE__, __LINE__);                                       \
+			vk_print_result(vk, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                             \
 			return TO_RET;                                                                                 \
 		}                                                                                                      \
 	} while (false)
@@ -523,7 +523,7 @@ struct vk_buffer
 	do {                                                                                                           \
 		VkResult _ret = RET;                                                                                   \
 		if (_ret != VK_SUCCESS) {                                                                              \
-			vk_print_result(vk, _ret, FUNC_STR, __FILE__, __LINE__);                                       \
+			vk_print_result(vk, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                             \
 			goto GOTO;                                                                                     \
 		}                                                                                                      \
 	} while (false)
@@ -727,7 +727,8 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
  * @ingroup aux_vk
  */
 void
-vk_print_result(struct vk_bundle *vk, VkResult ret, const char *fun, const char *file, int line);
+vk_print_result(
+    struct vk_bundle *vk, const char *file, int line, const char *calling_func, VkResult ret, const char *called_func);
 
 /*!
  * Print device information to the logger at the given logging level,

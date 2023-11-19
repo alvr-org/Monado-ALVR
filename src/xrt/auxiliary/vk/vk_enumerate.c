@@ -26,7 +26,7 @@
 	do {                                                                                                           \
 		VkResult _ret = RET;                                                                                   \
 		if (_ret != VK_SUCCESS) {                                                                              \
-			vk_print_result(vk, _ret, FUNC, __FILE__, __LINE__);                                           \
+			vk_print_result(vk, __FILE__, __LINE__, __func__, _ret, FUNC);                                 \
 			return RET;                                                                                    \
 		}                                                                                                      \
 		if (COUNT == 0) {                                                                                      \
@@ -38,7 +38,7 @@
 	do {                                                                                                           \
 		VkResult _ret = RET;                                                                                   \
 		if (_ret != VK_SUCCESS) {                                                                              \
-			vk_print_result(vk, _ret, FUNC, __FILE__, __LINE__);                                           \
+			vk_print_result(vk, __FILE__, __LINE__, __func__, _ret, FUNC);                                 \
 			free(TO_FREE);                                                                                 \
 			return RET;                                                                                    \
 		}                                                                                                      \

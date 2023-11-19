@@ -46,13 +46,29 @@
  */
 
 void
-vk_print_result(struct vk_bundle *vk, VkResult ret, const char *fun, const char *file, int line)
+vk_print_result(
+    struct vk_bundle *vk, const char *file, int line, const char *calling_func, VkResult ret, const char *called_func)
 {
-	if (ret == VK_SUCCESS) {
-		VK_INFO(vk, "%s: %s [%s:%d]", fun, vk_result_string(ret), file, line);
-	} else {
-		VK_ERROR(vk, "%s failed: %s [%s:%d]", fun, vk_result_string(ret), file, line);
+	bool success = ret == VK_SUCCESS;
+	enum u_logging_level level = success ? U_LOGGING_INFO : U_LOGGING_ERROR;
+
+	// Should we be logging?
+	if (level < vk->log_level) {
+		return;
 	}
+
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	if (success) {
+		u_pp(dg, "%s: ", called_func);
+	} else {
+		u_pp(dg, "%s failed: ", called_func);
+	}
+
+	u_pp(dg, "%s [%s:%i]", vk_result_string(ret), file, line);
+
+	u_log(file, line, calling_func, level, "%s", sink.buffer);
 }
 
 void
