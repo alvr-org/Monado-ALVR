@@ -1505,6 +1505,9 @@ struct oxr_session
 	struct oxr_handle_base handle;
 	struct oxr_system *sys;
 
+	//! What graphics type was this session created with.
+	enum oxr_session_graphics_ext gfx_ext;
+
 	//! Native compositor that is wrapped by client compositors.
 	struct xrt_compositor_native *xcn;
 

@@ -686,10 +686,16 @@ oxr_session_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 }
 
 static XrResult
-oxr_session_allocate_and_init(struct oxr_logger *log, struct oxr_system *sys, struct oxr_session **out_session)
+oxr_session_allocate_and_init(struct oxr_logger *log,
+                              struct oxr_system *sys,
+                              enum oxr_session_graphics_ext gfx_ext,
+                              struct oxr_session **out_session)
 {
 	struct oxr_session *sess = NULL;
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, sess, OXR_XR_DEBUG_SESSION, oxr_session_destroy, &sys->inst->handle);
+
+	// What graphics API type was this created with.
+	sess->gfx_ext = gfx_ext;
 
 	// What system is this session based on.
 	sess->sys = sys;
@@ -742,9 +748,9 @@ oxr_session_allocate_and_init(struct oxr_logger *log, struct oxr_system *sys, st
 		}                                                                                                      \
 	} while (false)
 
-#define OXR_SESSION_ALLOCATE_AND_INIT(LOG, SYS, OUT)                                                                   \
+#define OXR_SESSION_ALLOCATE_AND_INIT(LOG, SYS, GFX_TYPE, OUT)                                                         \
 	do {                                                                                                           \
-		XrResult ret = oxr_session_allocate_and_init(LOG, SYS, &OUT);                                          \
+		XrResult ret = oxr_session_allocate_and_init(LOG, SYS, GFX_TYPE, &OUT);                                \
 		if (ret != XR_SUCCESS) {                                                                               \
 			return ret;                                                                                    \
 		}                                                                                                      \
@@ -774,7 +780,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 			                 "xrGetOpenGL[ES]GraphicsRequirementsKHR");
 		}
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_XLIB_GL, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_gl_xlib(log, sys, opengl_xlib, *out_session);
 	}
@@ -793,7 +799,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 			                 "xrGetOpenGLESGraphicsRequirementsKHR");
 		}
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_ANDROID_GLES, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_gles_android(log, sys, opengles_android, *out_session);
 	}
@@ -810,7 +816,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 			                 "Has not called xrGetOpenGLGraphicsRequirementsKHR");
 		}
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_WIN32_GL, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_gl_win32(log, sys, opengl_win32, *out_session);
 	}
@@ -849,7 +855,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 			    (void *)vulkan->physicalDevice, (void *)sys->suggested_vulkan_physical_device, fn);
 		}
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_VULKAN, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_vk(log, sys, vulkan, *out_session);
 	}
@@ -867,7 +873,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 			                 "xrGetOpenGL[ES]GraphicsRequirementsKHR");
 		}
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_EGL, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_egl(log, sys, egl, *out_session);
 	}
@@ -892,7 +898,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_D3D11, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_d3d11(log, sys, d3d11, *out_session);
 	}
@@ -917,7 +923,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_D3D12, *out_session);
 		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_d3d12(log, sys, d3d12, *out_session);
 	}
@@ -932,7 +938,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 
 #ifdef OXR_HAVE_MND_headless
 	if (sys->inst->extensions.MND_headless) {
-		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, *out_session);
+		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_HEADLESS, *out_session);
 		(*out_session)->compositor = NULL;
 		(*out_session)->create_swapchain = NULL;
 		return XR_SUCCESS;

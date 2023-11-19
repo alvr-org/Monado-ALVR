@@ -102,3 +102,21 @@ enum oxr_space_type
 
 	OXR_SPACE_TYPE_ACTION,
 };
+
+/*!
+ * What graphics API was this session created with.
+ *
+ * @ingroup oxr_main
+ */
+enum oxr_session_graphics_ext
+{
+	OXR_SESSION_GRAPHICS_EXT_HEADLESS,
+	// Can't reliable tell the difference between Vulkan 1 & 2.
+	OXR_SESSION_GRAPHICS_EXT_VULKAN,
+	OXR_SESSION_GRAPHICS_EXT_D3D11,
+	OXR_SESSION_GRAPHICS_EXT_D3D12,
+	OXR_SESSION_GRAPHICS_EXT_WIN32_GL,
+	OXR_SESSION_GRAPHICS_EXT_XLIB_GL,
+	OXR_SESSION_GRAPHICS_EXT_ANDROID_GLES,
+	OXR_SESSION_GRAPHICS_EXT_EGL,
+};
