@@ -884,7 +884,12 @@ comp_target_swapchain_present(struct comp_target *ct,
 	    .pImageIndices = &index,
 	};
 
+
+	// Need to take the queue lock for present.
+	os_mutex_lock(&vk->queue_mutex);
 	VkResult ret = vk->vkQueuePresentKHR(queue, &presentInfo);
+	os_mutex_unlock(&vk->queue_mutex);
+
 
 #ifdef VK_EXT_display_control
 	if (cts->vblank.has_started) {
