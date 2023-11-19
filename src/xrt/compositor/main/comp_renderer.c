@@ -567,10 +567,7 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 
 	assert(r->acquired_buffer >= 0);
 	ret = vk->vkResetFences(vk->device, 1, &r->fences[r->acquired_buffer]);
-	if (ret != VK_SUCCESS) {
-		COMP_ERROR(r->c, "vkResetFences: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkResetFences");
 
 
 	/*
@@ -634,10 +631,7 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	 * @ref vk_cmd_submit_locked tho.
 	 */
 	ret = vk_cmd_submit_locked(vk, 1, &comp_submit_info, r->fences[r->acquired_buffer]);
-	if (ret != VK_SUCCESS) {
-		COMP_ERROR(r->c, "vkQueueSubmit: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vk_cmd_submit_locked");
 
 	// This buffer now have a pending fence.
 	r->fenced_buffer = r->acquired_buffer;
