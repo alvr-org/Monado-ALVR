@@ -397,12 +397,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 
 	// Now lets create the command buffer.
 	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &cmd_buffer);
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "Failed to barrier images");
-		vk_cmd_pool_unlock(pool);
-		cleanup_post_create_vulkan_setup(vk, sc);
-		return XRT_ERROR_VULKAN;
-	}
+	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", error_unlock);
 
 	// Name it for debugging.
 	VK_NAME_COMMAND_BUFFER(vk, cmd_buffer, "comp_swapchain command buffer");
@@ -436,11 +431,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 	vk_cmd_pool_unlock(pool);
 
 	// Check results from submit.
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "Failed to barrier images");
-		cleanup_post_create_vulkan_setup(vk, sc);
-		return XRT_ERROR_VULKAN;
-	}
+	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked", error);
 
 	// Init all of the threading objects.
 	for (uint32_t i = 0; i < image_count; i++) {
@@ -462,8 +453,14 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 		sc->images[i].use_count = 0;
 	}
 
+	if (xret != XRT_SUCCESS) {
+		cleanup_post_create_vulkan_setup(vk, sc);
+	}
+
 	return xret;
 
+error_unlock:
+	vk_cmd_pool_unlock(pool);
 error:
 	cleanup_post_create_vulkan_setup(vk, sc);
 
