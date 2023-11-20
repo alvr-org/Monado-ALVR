@@ -331,11 +331,13 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 	for (uint32_t i = 0; i < image_count; i++) {
 		sc->images[i].views.alpha = U_TYPED_ARRAY_CALLOC(VkImageView, info->array_size);
 		sc->images[i].views.no_alpha = U_TYPED_ARRAY_CALLOC(VkImageView, info->array_size);
+
 		if (!sc->images[i].views.alpha || !sc->images[i].views.no_alpha) {
 			cleanup_post_create_vulkan_setup(vk, sc);
 			//! @todo actually out of memory
 			return XRT_ERROR_VULKAN;
 		}
+
 		sc->images[i].array_size = info->array_size;
 
 		for (uint32_t layer = 0; layer < info->array_size; ++layer) {
@@ -402,6 +404,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 		return XRT_ERROR_VULKAN;
 	}
 
+	// Name it for debugging.
 	VK_NAME_COMMAND_BUFFER(vk, cmd_buffer, "comp_swapchain command buffer");
 
 	VkImageAspectFlagBits image_barrier_aspect = vk_csci_get_barrier_aspect_mask(image_view_format);
@@ -439,6 +442,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 		return XRT_ERROR_VULKAN;
 	}
 
+	// Init all of the threading objects.
 	for (uint32_t i = 0; i < image_count; i++) {
 
 		ret = pthread_cond_init(&sc->images[i].use_cond, NULL);
@@ -462,6 +466,7 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 
 error:
 	cleanup_post_create_vulkan_setup(vk, sc);
+
 	return XRT_ERROR_VULKAN;
 }
 
