@@ -305,7 +305,9 @@ space_destroy(struct xrt_space *xs)
 }
 
 /*!
- * Creates a space, returns with a reference of one.
+ * Creates a space, returns with a reference of one. The lock doesn't need to be
+ * held as this function is not modifying any of the currently existing spaces
+ * only creating a new one that is not pointed to by any other spaces.
  */
 static struct u_space *
 create_space(enum u_space_type type, struct u_space *parent)
