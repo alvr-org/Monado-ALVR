@@ -148,6 +148,9 @@
 		]
 	},
 
+	"space_recenter_local_spaces": {
+	},
+
 	"compositor_get_info": {
 		"out": [
 			{"name": "info", "type": "struct xrt_compositor_info"}

@@ -210,6 +210,14 @@ ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type
 	IPC_CHK_ALWAYS_RET(icspo->ipc_c, xret, "ipc_call_space_unmark_ref_space_in_use");
 }
 
+static xrt_result_t
+recenter_local_spaces(struct xrt_space_overseer *xso)
+{
+	struct ipc_client_space_overseer *icspo = ipc_client_space_overseer(xso);
+
+	return ipc_call_space_recenter_local_spaces(icspo->ipc_c);
+}
+
 static void
 destroy(struct xrt_space_overseer *xso)
 {
@@ -260,6 +268,7 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	icspo->base.locate_device = locate_device;
 	icspo->base.ref_space_inc = ref_space_inc;
 	icspo->base.ref_space_dec = ref_space_dec;
+	icspo->base.recenter_local_spaces = recenter_local_spaces;
 	icspo->base.destroy = destroy;
 	icspo->ipc_c = ipc_c;
 

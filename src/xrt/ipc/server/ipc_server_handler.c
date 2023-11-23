@@ -546,6 +546,14 @@ ipc_handle_space_unmark_ref_space_in_use(volatile struct ipc_client_state *ics, 
 }
 
 xrt_result_t
+ipc_handle_space_recenter_local_spaces(volatile struct ipc_client_state *ics)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+
+	return xrt_space_overseer_recenter_local_spaces(xso);
+}
+
+xrt_result_t
 ipc_handle_compositor_get_info(volatile struct ipc_client_state *ics, struct xrt_compositor_info *out_info)
 {
 	IPC_TRACE_MARKER();
