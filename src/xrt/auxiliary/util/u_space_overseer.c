@@ -12,6 +12,8 @@
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_tracking.h"
 
+#include "os/os_time.h"
+
 #include "math/m_space.h"
 
 #include "util/u_misc.h"
@@ -87,6 +89,15 @@ struct u_space_overseer
 
 	//! Tracks usage of reference spaces.
 	struct xrt_reference ref_space_use[XRT_SPACE_REFERENCE_TYPE_COUNT];
+
+	/*!
+	 * Can we do a recenter of the local and local_floor spaces, protected
+	 * by the lock.
+	 *
+	 * This requires that local and local_floor are either null or offset
+	 * spaces and that they share the same parent.
+	 */
+	bool can_do_local_spaces_recenter;
 };
 
 
@@ -169,6 +180,37 @@ find_xdev_space_read_locked(struct u_space_overseer *uso, struct xrt_device *xde
 	assert(ptr != NULL);
 
 	return (struct u_space *)ptr;
+}
+
+/*!
+ * Updates the offset of a NULL or OFFSET space.
+ */
+static void
+update_offset_write_locked(struct u_space *us, const struct xrt_pose *new_offset)
+{
+	assert(us->type == U_SPACE_TYPE_NULL || us->type == U_SPACE_TYPE_OFFSET);
+
+	if (m_pose_is_identity(new_offset)) { // Small optimisation.
+		us->type = U_SPACE_TYPE_NULL;
+		U_ZERO(&us->offset.pose);
+	} else {
+		us->type = U_SPACE_TYPE_OFFSET;
+		us->offset.pose = *new_offset;
+	}
+}
+
+/*!
+ * Returns the offset for an offset space or an identity pose, it's valid to
+ * call on all spaces.
+ */
+static void
+get_offset_or_ident_read_locked(const struct u_space *us, struct xrt_pose *offset)
+{
+	if (us->type == U_SPACE_TYPE_OFFSET) {
+		*offset = us->offset.pose;
+	} else {
+		*offset = (struct xrt_pose)XRT_POSE_IDENTITY;
+	}
 }
 
 
@@ -498,6 +540,93 @@ ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+recenter_local_spaces(struct xrt_space_overseer *xso)
+{
+	struct u_space_overseer *uso = u_space_overseer(xso);
+
+	// Take the full lock from the start.
+	pthread_rwlock_wrlock(&uso->lock);
+
+	// Can we do recentering, check with lock held.
+	if (uso->can_do_local_spaces_recenter) {
+		goto err_unlock;
+	}
+
+
+	/*
+	 * We go from the view to the parent of local/local_view,
+	 * they must share the same parent.
+	 */
+
+	uint64_t new_ns = os_monotonic_get_ns();
+	struct u_space *uview = u_space(xso->semantic.view);
+	struct u_space *ulocal = u_space(xso->semantic.local);
+	struct u_space *ulocal_floor = u_space(xso->semantic.local_floor);
+	assert(uview != NULL);
+	assert(ulocal != NULL);
+	assert(ulocal_floor != NULL);
+
+	struct u_space *uparent = ulocal->next;
+	assert(uparent != NULL);
+	assert(uparent == ulocal_floor->next);
+
+
+	/*
+	 * Get the offset of view in the parent space of local and local_floor.
+	 */
+
+	struct xrt_relation_chain xrc = {0};
+	build_relation_chain_read_locked(uso, &xrc, uparent, uview, new_ns);
+
+	struct xrt_space_relation rel;
+	special_resolve(&xrc, &rel);
+
+	bool pos_valid = (rel.relation_flags & XRT_SPACE_RELATION_POSITION_VALID_BIT) != 0;
+	bool ori_valid = (rel.relation_flags & XRT_SPACE_RELATION_ORIENTATION_VALID_BIT) != 0;
+
+	if (!pos_valid || !ori_valid) {
+		goto err_unlock;
+	}
+
+
+	/*
+	 * Calculate new offsets for the spaces.
+	 */
+
+	// Only save the rotation around y axis.
+	rel.pose.orientation.x = 0;
+	rel.pose.orientation.z = 0;
+	math_quat_normalize(&rel.pose.orientation);
+
+	struct xrt_pose local_offset, local_floor_offset;
+	get_offset_or_ident_read_locked(ulocal, &local_offset);
+	get_offset_or_ident_read_locked(ulocal_floor, &local_floor_offset);
+
+	// Take the "flat" rotations and apply to both.
+	local_offset.orientation = rel.pose.orientation;
+	local_floor_offset.orientation = rel.pose.orientation;
+
+	// Keep y offset the same.
+	local_offset.position.x = rel.pose.position.x;
+	local_offset.position.z = rel.pose.position.z;
+	local_floor_offset.position.x = rel.pose.position.x;
+	local_floor_offset.position.z = rel.pose.position.z;
+
+	// Update the offsets.
+	update_offset_write_locked(ulocal, &local_offset);
+	update_offset_write_locked(ulocal_floor, &local_floor_offset);
+
+	pthread_rwlock_unlock(&uso->lock);
+
+	return XRT_SUCCESS;
+
+err_unlock:
+	pthread_rwlock_unlock(&uso->lock);
+
+	return XRT_ERROR_RECENTERING_NOT_SUPPORTED;
+}
+
 static void
 destroy(struct xrt_space_overseer *xso)
 {
@@ -536,6 +665,7 @@ u_space_overseer_create(void)
 	uso->base.locate_device = locate_device;
 	uso->base.ref_space_inc = ref_space_inc;
 	uso->base.ref_space_dec = ref_space_dec;
+	uso->base.recenter_local_spaces = recenter_local_spaces;
 	uso->base.destroy = destroy;
 
 	XRT_MAYBE_UNUSED int ret = 0;
