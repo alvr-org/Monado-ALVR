@@ -11,6 +11,7 @@
 
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_space.h"
 
 
 #ifdef __cplusplus
@@ -51,6 +52,9 @@ enum xrt_session_event_type
 
 	//! The referesh rate of session (compositor) has changed.
 	XRT_SESSION_EVENT_DISPLAY_REFRESH_RATE_CHANGE = 5,
+
+	//! A reference space for this session has a pending change.
+	XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING = 6,
 };
 
 /*!
@@ -117,6 +121,23 @@ struct xrt_session_event_display_refresh_rate_change
 };
 
 /*!
+ * Event that tells the application that the reference space has a pending
+ * change to it, maps to @p XrEventDataReferenceSpaceChangePending,
+ * type @ref XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING.
+ *
+ * @see xrt_session_event
+ * @ingroup xrt_iface
+ */
+struct xrt_session_event_reference_space_change_pending
+{
+	enum xrt_session_event_type event_type;
+	enum xrt_reference_space_type ref_type;
+	uint64_t timestamp_ns;
+	struct xrt_pose pose_in_previous_space;
+	bool pose_valid;
+};
+
+/*!
  * Union of all session events, used to return multiple events through one call.
  * Each event struct must start with a @ref xrt_session_event_type field.
  *
@@ -130,6 +151,7 @@ union xrt_session_event {
 	struct xrt_session_event_loss_pending loss_pending;
 	struct xrt_session_event_lost lost;
 	struct xrt_session_event_display_refresh_rate_change display;
+	struct xrt_session_event_reference_space_change_pending ref_change;
 };
 
 /*!
