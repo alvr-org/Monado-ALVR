@@ -26,6 +26,7 @@ typedef enum op_mode
 	MODE_SET_PRIMARY,
 	MODE_SET_FOCUSED,
 	MODE_TOGGLE_IO,
+	MODE_RECENTER,
 } op_mode_t;
 
 
@@ -130,6 +131,19 @@ toggle_io(struct ipc_connection *ipc_c, int client_id)
 }
 
 int
+recenter_local_spaces(struct ipc_connection *ipc_c)
+{
+	xrt_result_t r;
+
+	r = ipc_call_space_recenter_local_spaces(ipc_c);
+	if (r != XRT_SUCCESS) {
+		PE("Failed to recenter local spaces.\n");
+		return 1;
+	}
+
+	return 0;
+}
+int
 main(int argc, char *argv[])
 {
 	op_mode_t op_mode = MODE_GET;
@@ -139,7 +153,7 @@ main(int argc, char *argv[])
 	int s_val = 0;
 
 	opterr = 0;
-	while ((c = getopt(argc, argv, "p:f:i:")) != -1) {
+	while ((c = getopt(argc, argv, "p:f:i:c")) != -1) {
 		switch (c) {
 		case 'p':
 			s_val = atoi(optarg);
@@ -153,11 +167,13 @@ main(int argc, char *argv[])
 			s_val = atoi(optarg);
 			op_mode = MODE_TOGGLE_IO;
 			break;
+		case 'c': op_mode = MODE_RECENTER; break;
 		case '?':
 			if (optopt == 's') {
 				PE("Option -s requires an id to set.\n");
 			} else if (isprint(optopt)) {
 				PE("Option `-%c' unknown. Usage:\n", optopt);
+				PE("    -c: Recenter local spaces\n");
 				PE("    -f <id>: Set focused client\n");
 				PE("    -p <id>: Set primary client\n");
 				PE("    -i <id>: Toggle whether client receives input\n");
@@ -187,6 +203,7 @@ main(int argc, char *argv[])
 	case MODE_SET_PRIMARY: exit(set_primary(&ipc_c, s_val)); break;
 	case MODE_SET_FOCUSED: exit(set_focused(&ipc_c, s_val)); break;
 	case MODE_TOGGLE_IO: exit(toggle_io(&ipc_c, s_val)); break;
+	case MODE_RECENTER: exit(recenter_local_spaces(&ipc_c)); break;
 	default: P("Unrecognised operation mode.\n"); exit(1);
 	}
 
