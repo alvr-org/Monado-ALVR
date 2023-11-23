@@ -24,7 +24,7 @@ extern "C" {
 //! Major version of the API.
 #define MND_API_VERSION_MAJOR 1
 //! Minor version of the API.
-#define MND_API_VERSION_MINOR 0
+#define MND_API_VERSION_MINOR 1
 //! Patch version of the API.
 #define MND_API_VERSION_PATCH 0
 
@@ -39,6 +39,8 @@ typedef enum mnd_result
 	MND_ERROR_INVALID_VALUE = -2,
 	MND_ERROR_CONNECTING_FAILED = -3,
 	MND_ERROR_OPERATION_FAILED = -4,
+	//! Supported in version 1.1 and above.
+	MND_ERROR_RECENTERING_NOT_SUPPORTED = -5,
 } mnd_result_t;
 
 /*!
@@ -240,6 +242,18 @@ mnd_root_get_device_info(mnd_root_t *root, uint32_t device_index, uint32_t *out_
  */
 mnd_result_t
 mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *out_device_id);
+
+/*!
+ * Trigger a recenter of the local spaces.
+ *
+ * Supported in version 1.1 and above.
+ *
+ * @param root The libmonado state.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_recenter_local_spaces(mnd_root_t *root);
 
 
 #ifdef __cplusplus
