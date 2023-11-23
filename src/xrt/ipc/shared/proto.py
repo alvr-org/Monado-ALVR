@@ -413,6 +413,28 @@ ipc_dispatch(volatile struct ipc_client_state *ics, ipc_command_t *ipc_command)
 }
 
 ''')
+
+    f.write('''
+size_t
+ipc_command_size(const enum ipc_command cmd)
+{
+\tswitch (cmd) {
+''')
+
+    for call in p.calls:
+        if call.needs_msg_struct:
+            f.write("\tcase " + call.id + ": return sizeof(struct ipc_{}_msg);\n".format(call.name))
+        else:
+            f.write("\tcase " + call.id + ": return sizeof(enum ipc_command);\n")
+
+    f.write('''\tdefault:
+\t\tU_LOG_E("UNHANDLED IPC COMMAND! %d", cmd);
+\t\treturn 0;
+\t}
+}
+
+''')
+
     f.close()
 
 
@@ -437,8 +459,8 @@ def generate_server_header(file, p):
     write_cpp_header_guard_start(f)
     f.write("\n")
 
-    # This decl is constant, but we must write it here
-    # because it depends on a generated enum.
+    # Those decls are constant, but we must write them here
+    # because they depends on a generated enum.
     write_decl(
         f,
         "xrt_result_t",
@@ -446,6 +468,16 @@ def generate_server_header(file, p):
         [
             "volatile struct ipc_client_state *ics",
             "ipc_command_t *ipc_command"
+        ]
+    )
+    f.write(";\n")
+
+    write_decl(
+        f,
+        "size_t",
+        "ipc_command_size",
+        [
+            "const enum ipc_command cmd"
         ]
     )
     f.write(";\n")
