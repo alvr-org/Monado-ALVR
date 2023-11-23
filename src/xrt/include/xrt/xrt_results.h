@@ -1,4 +1,4 @@
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -158,4 +158,9 @@ typedef enum xrt_result
 	 * Some D3D12 error
 	 */
 	XRT_ERROR_D3D12 = -25,
+	/*!
+	 * The @ref xrt_space_overseer doesn't support recentering driven from
+	 * the application side of things.
+	 */
+	XRT_ERROR_RECENTERING_NOT_SUPPORTED = -26,
 } xrt_result_t;

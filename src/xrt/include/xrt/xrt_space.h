@@ -236,6 +236,16 @@ struct xrt_space_overseer
 	xrt_result_t (*ref_space_dec)(struct xrt_space_overseer *xso, enum xrt_reference_space_type type);
 
 	/*!
+	 * Trigger a re-center of the local and local_floor spaces, not all
+	 * implementations of @ref xrt_space_overseer may support recenter. The
+	 * recenter operation will normally mean that the local and local_floor
+	 * will move to the where the view space currently is.
+	 *
+	 * @param[in] xso The space overseer.
+	 */
+	xrt_result_t (*recenter_local_spaces)(struct xrt_space_overseer *xso);
+
+	/*!
 	 * Destroy function.
 	 *
 	 * @param xso The space overseer.
@@ -336,6 +346,19 @@ static inline xrt_result_t
 xrt_space_overseer_ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
 {
 	return xso->ref_space_dec(xso, type);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::recenter_local_spaces
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_recenter_local_spaces(struct xrt_space_overseer *xso)
+{
+	return xso->recenter_local_spaces(xso);
 }
 
 /*!
