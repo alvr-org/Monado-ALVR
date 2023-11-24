@@ -258,9 +258,11 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 			break;
 		case XRT_COMPOSITOR_EVENT_LOST: sess->has_lost = true; break;
 		case XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE:
+#ifdef OXR_HAVE_FB_display_refresh_rate
 			oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(log, sess,
 			                                                      xce.display.from_display_refresh_rate_hz,
 			                                                      xce.display.to_display_refresh_rate_hz);
+#endif
 			break;
 		default: U_LOG_W("unhandled event type! %d", xce.type); break;
 		}
