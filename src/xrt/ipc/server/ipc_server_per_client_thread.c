@@ -74,7 +74,7 @@ common_shutdown(volatile struct ipc_client_state *ics)
 			continue;
 		}
 
-		xrt_space_overseer_ref_space_dec(ics->server->xso, i);
+		xrt_space_overseer_ref_space_dec(ics->server->xso, (enum xrt_reference_space_type)i);
 		ics->ref_space_used[i] = false;
 	}
 
