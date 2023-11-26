@@ -128,6 +128,10 @@ xrt_builder_create_func_t target_builder_list[] = {
     t_builder_simula_create,
 #endif // T_BUILDER_SIMULAVR
 
+#ifdef T_BUILDER_STEAMVR
+    t_builder_steamvr_create,
+#endif // T_BUILDER_STEAMVR
+
 #ifdef T_BUILDER_LIGHTHOUSE
     t_builder_lighthouse_create,
 #endif // T_BUILDER_LIGHTHOUSE

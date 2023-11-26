@@ -23,6 +23,10 @@
 #define T_BUILDER_LIGHTHOUSE
 #endif
 
+#if defined(XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE) || defined(XRT_DOXYGEN)
+#define T_BUILDER_STEAMVR
+#endif
+
 #if defined(XRT_BUILD_DRIVER_NS) || defined(XRT_DOXYGEN)
 #define T_BUILDER_NS
 #endif
@@ -64,6 +68,14 @@
  */
 struct xrt_builder *
 t_builder_legacy_create(void);
+#endif
+
+#ifdef T_BUILDER_STEAMVR
+/*!
+ * Builder for SteamVR proprietary wrapper (vive, index, tundra trackers, etc.)
+ */
+struct xrt_builder *
+t_builder_steamvr_create(void);
 #endif
 
 #ifdef T_BUILDER_LIGHTHOUSE

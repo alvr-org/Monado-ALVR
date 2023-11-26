@@ -47,10 +47,6 @@
 #include "survive/survive_interface.h"
 #endif
 
-#ifdef XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE
-#include "steamvr_lh/steamvr_lh_interface.h"
-#endif
-
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
 #include "ht/ht_interface.h"
 #include "ht_ctrl_emu/ht_ctrl_emu_interface.h"
@@ -64,8 +60,6 @@
 
 #if defined(XRT_BUILD_DRIVER_SURVIVE)
 #define DEFAULT_DRIVER "survive"
-#elif defined(XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE)
-#define DEFAULT_DRIVER "steamvr"
 #else
 #define DEFAULT_DRIVER "vive"
 #endif
@@ -92,10 +86,6 @@ DEBUG_GET_ONCE_TRISTATE_OPTION(lh_handtracking, "LH_HANDTRACKING")
 #define LH_ASSERT_(predicate) LH_ASSERT(predicate, "Assertion failed " #predicate)
 
 static const char *driver_list[] = {
-#ifdef XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE
-    "steamvr_lh",
-#endif
-
 #ifdef XRT_BUILD_DRIVER_SURVIVE
     "survive",
 #endif
@@ -309,14 +299,8 @@ lighthouse_estimate_system(struct xrt_builder *xb,
 	bool have_survive_drv = false;
 #endif
 
-#ifdef XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE
-	bool have_steamvr_drv = true;
-#else
-	bool have_steamvr_drv = false;
-#endif
-
 	const char *drv = debug_get_option_lh_impl();
-	if (have_steamvr_drv && strcmp(drv, "steamvr") == 0) {
+	if (strcmp(drv, "steamvr") == 0) {
 		lhs->driver = DRIVER_STEAMVR;
 	} else if (have_survive_drv && strcmp(drv, "survive") == 0) {
 		lhs->driver = DRIVER_SURVIVE;
@@ -327,9 +311,6 @@ lighthouse_estimate_system(struct xrt_builder *xb,
 		if (have_survive_drv) {
 			selected = "survive";
 			lhs->driver = DRIVER_SURVIVE;
-		} else if (have_steamvr_drv) {
-			selected = "steamvr";
-			lhs->driver = DRIVER_STEAMVR;
 		} else if (have_vive_drv) {
 			selected = "vive";
 			lhs->driver = DRIVER_VIVE;
@@ -337,6 +318,12 @@ lighthouse_estimate_system(struct xrt_builder *xb,
 			LH_ASSERT_(false);
 		}
 		LH_WARN("Requested driver %s was not available, so we went with %s instead", drv, selected);
+	}
+
+	// Error on wrong configuration.
+	if (lhs->driver == DRIVER_STEAMVR) {
+		LH_ERROR("Use new env variable STEAMVR_LH_ENABLE=true to enable SteamVR driver");
+		return XRT_ERROR_PROBING_FAILED;
 	}
 
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
@@ -558,10 +545,8 @@ lighthouse_open_system_impl(struct xrt_builder *xb,
 
 	switch (lhs->driver) {
 	case DRIVER_STEAMVR: {
-#ifdef XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE
-		xsysd->xdev_count += steamvr_lh_get_devices(&xsysd->xdevs[xsysd->xdev_count]);
-#endif
-		break;
+		assert(false);
+		return XRT_ERROR_DEVICE_CREATION_FAILED;
 	}
 	case DRIVER_SURVIVE: {
 #ifdef XRT_BUILD_DRIVER_SURVIVE
@@ -790,7 +775,7 @@ t_builder_lighthouse_create(void)
 	lhs->base.base.open_system = u_builder_open_system_static_roles;
 	lhs->base.base.destroy = lighthouse_destroy;
 	lhs->base.base.identifier = "lighthouse";
-	lhs->base.base.name = "Lighthouse-tracked (Vive, Index, Tundra trackers, etc.) devices builder";
+	lhs->base.base.name = "Lighthouse-tracked FLOSS (Vive, Index, Tundra trackers, etc.) devices builder";
 	lhs->base.base.driver_identifiers = driver_list;
 	lhs->base.base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
