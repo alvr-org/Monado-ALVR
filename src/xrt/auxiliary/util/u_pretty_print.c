@@ -326,6 +326,7 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	case XRT_ERROR_D3D:                                  DG("XRT_ERROR_D3D"); return;
 	case XRT_ERROR_D3D11:                                DG("XRT_ERROR_D3D11"); return;
 	case XRT_ERROR_D3D12:                                DG("XRT_ERROR_D3D12"); return;
+	case XRT_ERROR_RECENTERING_NOT_SUPPORTED:            DG("XRT_ERROR_RECENTERING_NOT_SUPPORTED"); return;
 	// clang-format on
 	default: break;
 	}
