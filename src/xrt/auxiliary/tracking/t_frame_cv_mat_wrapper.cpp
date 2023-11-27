@@ -21,13 +21,6 @@ namespace xrt::auxiliary::tracking {
  *
  */
 
-extern "C" void
-frame_mat_destroy(struct xrt_frame *xf)
-{
-	FrameMat *fm = (FrameMat *)xf;
-	delete fm;
-}
-
 
 /*
  *
@@ -48,7 +41,7 @@ FrameMat::fillInFields(cv::Mat mat, xrt_format format, const Params &params)
 	// Main wrapping of cv::Mat by frame.
 	xrt_frame &frame = this->frame;
 	frame.reference.count = 1;
-	frame.destroy = frame_mat_destroy;
+	frame.destroy = destroyFrame;
 	frame.data = mat.ptr<uint8_t>();
 	frame.format = format;
 	frame.width = width;
@@ -69,6 +62,13 @@ FrameMat::~FrameMat()
 FrameMat::FrameMat()
 {
 	// Noop
+}
+
+void
+FrameMat::destroyFrame(xrt_frame *xf)
+{
+	FrameMat *fm = (FrameMat *)xf;
+	delete fm;
 }
 
 

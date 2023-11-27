@@ -40,11 +40,6 @@ public:
 
 public: // Methods
 	/*!
-	 * Only public due to C needed to destroy it.
-	 */
-	~FrameMat();
-
-	/*!
 	 * Wraps the given cv::Mat assuming it's a 24bit RGB format matrix.
 	 * In all but the most strange cases you probably want the pointer
 	 * pointed to by @p xf_ptr to be `nullptr`, if not `nullptr` it will have
@@ -64,10 +59,15 @@ public: // Methods
 
 
 private:
+	~FrameMat();
 	FrameMat();
 
 	void
 	fillInFields(cv::Mat mat, xrt_format format, const Params &params);
+
+	//! C callback used when the reference of the frames reaches zero.
+	static void
+	destroyFrame(xrt_frame *frame);
 };
 
 
