@@ -118,8 +118,9 @@ enum lighthouse_driver
 
 struct lighthouse_system
 {
-	struct xrt_builder base;
-	struct u_system_devices_static *devices;
+	struct u_builder base;
+
+	struct xrt_frame_context *xfctx;
 	enum lighthouse_driver driver; //!< Which lighthouse implementation we are using
 	bool is_valve_index; //!< Is our HMD a Valve Index? If so, try to set up hand-tracking and SLAM as needed
 	struct vive_tracking_status vive_tstatus; //!< Visual tracking status for Index under Vive driver
@@ -165,12 +166,11 @@ on_video_device(struct xrt_prober *xp,
                 void *ptr)
 {
 	struct lighthouse_system *lhs = (struct lighthouse_system *)ptr;
-	struct u_system_devices *usysd = &lhs->devices->base;
 
 	// Hardcoded for the Index.
 	if (product != NULL && manufacturer != NULL) {
 		if ((strcmp(product, "3D Camera") == 0) && (strcmp(manufacturer, "Etron Technology, Inc.") == 0)) {
-			xrt_prober_open_video_device(xp, pdev, &usysd->xfctx, &lhs->xfs);
+			xrt_prober_open_video_device(xp, pdev, lhs->xfctx, &lhs->xfs);
 			return;
 		}
 	}
@@ -518,27 +518,19 @@ try_add_opengloves(struct xrt_device *left,
 }
 
 static xrt_result_t
-lighthouse_open_system(struct xrt_builder *xb,
-                       cJSON *config,
-                       struct xrt_prober *xp,
-                       struct xrt_system_devices **out_xsysd,
-                       struct xrt_space_overseer **out_xso)
+lighthouse_open_system_impl(struct xrt_builder *xb,
+                            cJSON *config,
+                            struct xrt_prober *xp,
+                            struct xrt_tracking_origin *origin,
+                            struct xrt_system_devices *xsysd,
+                            struct xrt_frame_context *xfctx,
+                            struct u_builder_roles_helper *ubrh)
 {
 	struct lighthouse_system *lhs = (struct lighthouse_system *)xb;
-
-	// Use the static system devices helper, no dynamic roles.
-	lhs->devices = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &lhs->devices->base.base;
-	struct xrt_frame_context *xfctx = &lhs->devices->base.xfctx;
-
-
 	xrt_result_t result = XRT_SUCCESS;
 
-	if (out_xsysd == NULL || *out_xsysd != NULL) {
-		LH_ERROR("Invalid output system pointer");
-		result = XRT_ERROR_DEVICE_CREATION_FAILED;
-		goto end_err;
-	}
+	// Needed when we probe for video devices.
+	lhs->xfctx = xfctx;
 
 	// Decide whether to initialize the SLAM tracker
 	bool slam_wanted = debug_get_bool_option_vive_slam();
@@ -755,28 +747,21 @@ end_valve_index:
 	}
 
 	// Assign to role(s).
-	xsysd->static_roles.head = head;
-	xsysd->static_roles.hand_tracking.left = left_ht;
-	xsysd->static_roles.hand_tracking.right = right_ht;
+	ubrh->head = head;
+	ubrh->left = left;
+	ubrh->right = right;
+	ubrh->hand_tracking.left = left_ht;
+	ubrh->hand_tracking.right = right_ht;
 
-	u_system_devices_static_finalize( //
-	    lhs->devices,                 // usysds
-	    left,                         // left
-	    right);                       // right
-
-	*out_xsysd = xsysd;
-	u_builder_create_space_overseer_legacy( //
-	    head,                               // head
-	    left,                               // left
-	    right,                              // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    out_xso);                           // out_xso
+	// Clean up after us.
+	lhs->xfctx = NULL;
 
 	return XRT_SUCCESS;
 
+
 end_err:
-	xrt_system_devices_destroy(&xsysd);
+	// Clean up after us.
+	lhs->xfctx = NULL;
 
 	return result;
 }
@@ -799,13 +784,18 @@ struct xrt_builder *
 t_builder_lighthouse_create(void)
 {
 	struct lighthouse_system *lhs = U_TYPED_CALLOC(struct lighthouse_system);
-	lhs->base.estimate_system = lighthouse_estimate_system;
-	lhs->base.open_system = lighthouse_open_system;
-	lhs->base.destroy = lighthouse_destroy;
-	lhs->base.identifier = "lighthouse";
-	lhs->base.name = "Lighthouse-tracked (Vive, Index, Tundra trackers, etc.) devices builder";
-	lhs->base.driver_identifiers = driver_list;
-	lhs->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	return &lhs->base;
+	// xrt_builder fields.
+	lhs->base.base.estimate_system = lighthouse_estimate_system;
+	lhs->base.base.open_system = u_builder_open_system_static_roles;
+	lhs->base.base.destroy = lighthouse_destroy;
+	lhs->base.base.identifier = "lighthouse";
+	lhs->base.base.name = "Lighthouse-tracked (Vive, Index, Tundra trackers, etc.) devices builder";
+	lhs->base.base.driver_identifiers = driver_list;
+	lhs->base.base.driver_identifier_count = ARRAY_SIZE(driver_list);
+
+	// u_builder fields.
+	lhs->base.open_system_static_roles = lighthouse_open_system_impl;
+
+	return &lhs->base.base;
 }

@@ -82,26 +82,21 @@ nreal_air_estimate_system(struct xrt_builder *xb,
 }
 
 static xrt_result_t
-nreal_air_open_system(struct xrt_builder *xb,
-                      cJSON *config,
-                      struct xrt_prober *xp,
-                      struct xrt_system_devices **out_xsysd,
-                      struct xrt_space_overseer **out_xso)
+nreal_air_open_system_impl(struct xrt_builder *xb,
+                           cJSON *config,
+                           struct xrt_prober *xp,
+                           struct xrt_tracking_origin *origin,
+                           struct xrt_system_devices *xsysd,
+                           struct xrt_frame_context *xfctx,
+                           struct u_builder_roles_helper *ubrh)
 {
 	struct xrt_prober_device **xpdevs = NULL;
 	size_t xpdev_count = 0;
 	xrt_result_t xret = XRT_SUCCESS;
 
-	assert(out_xsysd != NULL);
-	assert(*out_xsysd == NULL);
-
 	DRV_TRACE_MARKER();
 
 	nreal_air_log_level = debug_get_log_option_nreal_air_log();
-
-	// Use the static system devices helper, no dynamic roles.
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -152,26 +147,7 @@ nreal_air_open_system(struct xrt_builder *xb,
 	xsysd->xdevs[xsysd->xdev_count++] = na_device;
 
 	// Assign to role(s).
-	xsysd->static_roles.head = na_device;
-
-	u_system_devices_static_finalize( //
-	    usysds,                       // usysds
-	    NULL,                         // left
-	    NULL);                        // right
-
-
-	/*
-	 * Done.
-	 */
-
-	*out_xsysd = xsysd;
-	u_builder_create_space_overseer_legacy( //
-	    na_device,                          // head
-	    NULL,                               // left
-	    NULL,                               // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    out_xso);                           // out_xso
+	ubrh->head = na_device;
 
 	return XRT_SUCCESS;
 
@@ -188,8 +164,6 @@ unlock_and_fail:
 
 	/* Fallthrough */
 fail:
-	xrt_system_devices_destroy(&xsysd);
-
 	return XRT_ERROR_DEVICE_CREATION_FAILED;
 }
 
@@ -209,15 +183,19 @@ nreal_air_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 nreal_air_builder_create(void)
 {
+	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
 
-	struct xrt_builder *xb = U_TYPED_CALLOC(struct xrt_builder);
-	xb->estimate_system = nreal_air_estimate_system;
-	xb->open_system = nreal_air_open_system;
-	xb->destroy = nreal_air_destroy;
-	xb->identifier = "nreal_air";
-	xb->name = "Nreal Air";
-	xb->driver_identifiers = driver_list;
-	xb->driver_identifier_count = ARRAY_SIZE(driver_list);
+	// xrt_builder fields.
+	ub->base.estimate_system = nreal_air_estimate_system;
+	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.destroy = nreal_air_destroy;
+	ub->base.identifier = "nreal_air";
+	ub->base.name = "Nreal Air";
+	ub->base.driver_identifiers = driver_list;
+	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	return xb;
+	// u_builder fields.
+	ub->open_system_static_roles = nreal_air_open_system_impl;
+
+	return &ub->base;
 }

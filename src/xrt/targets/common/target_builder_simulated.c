@@ -90,15 +90,14 @@ simulated_estimate_system(struct xrt_builder *xb,
 }
 
 static xrt_result_t
-simulated_open_system(struct xrt_builder *xb,
-                      cJSON *config,
-                      struct xrt_prober *xp,
-                      struct xrt_system_devices **out_xsysd,
-                      struct xrt_space_overseer **out_xso)
+simulated_open_system_impl(struct xrt_builder *xb,
+                           cJSON *config,
+                           struct xrt_prober *xp,
+                           struct xrt_tracking_origin *origin,
+                           struct xrt_system_devices *xsysd,
+                           struct xrt_frame_context *xfctx,
+                           struct u_builder_roles_helper *ubrh)
 {
-	assert(out_xsysd != NULL);
-	assert(*out_xsysd == NULL);
-
 	const struct xrt_pose head_center = {XRT_QUAT_IDENTITY, {0.0f, 1.6f, 0.0f}}; // "nominal height" 1.6m
 	const struct xrt_pose left_center = {XRT_QUAT_IDENTITY, {-0.2f, 1.3f, -0.5f}};
 	const struct xrt_pose right_center = {XRT_QUAT_IDENTITY, {0.2f, 1.3f, -0.5f}};
@@ -119,10 +118,6 @@ simulated_open_system(struct xrt_builder *xb,
 	//! @todo Create a shared tracking origin on the system devices struct instead.
 	head->tracking_origin->type = XRT_TRACKING_TYPE_OTHER; // Just anything other then none.
 
-	// Use the static system devices helper, no dynamic roles.
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
-
 	// Add to device list.
 	xsysd->xdevs[xsysd->xdev_count++] = head;
 	if (left != NULL) {
@@ -133,26 +128,9 @@ simulated_open_system(struct xrt_builder *xb,
 	}
 
 	// Assign to role(s).
-	xsysd->static_roles.head = head;
-
-	u_system_devices_static_finalize( //
-	    usysds,                       // usysds
-	    left,                         // left
-	    right);                       // right
-
-
-	/*
-	 * Done.
-	 */
-
-	*out_xsysd = xsysd;
-	u_builder_create_space_overseer_legacy( //
-	    head,                               // head
-	    left,                               // left
-	    right,                              // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    out_xso);                           // out_xso
+	ubrh->head = head;
+	ubrh->left = left;
+	ubrh->right = right;
 
 	return XRT_SUCCESS;
 }
@@ -173,15 +151,20 @@ simulated_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 t_builder_simulated_create(void)
 {
-	struct xrt_builder *xb = U_TYPED_CALLOC(struct xrt_builder);
-	xb->estimate_system = simulated_estimate_system;
-	xb->open_system = simulated_open_system;
-	xb->destroy = simulated_destroy;
-	xb->identifier = "simulated";
-	xb->name = "Simulated devices builder";
-	xb->driver_identifiers = driver_list;
-	xb->driver_identifier_count = ARRAY_SIZE(driver_list);
-	xb->exclude_from_automatic_discovery = !debug_get_bool_option_simulated_enabled();
+	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
 
-	return xb;
+	// xrt_builder fields.
+	ub->base.estimate_system = simulated_estimate_system;
+	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.destroy = simulated_destroy;
+	ub->base.identifier = "simulated";
+	ub->base.name = "Simulated devices builder";
+	ub->base.driver_identifiers = driver_list;
+	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
+	ub->base.exclude_from_automatic_discovery = !debug_get_bool_option_simulated_enabled();
+
+	// u_builder fields.
+	ub->open_system_static_roles = simulated_open_system_impl;
+
+	return &ub->base;
 }

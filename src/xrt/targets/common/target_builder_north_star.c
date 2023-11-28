@@ -102,7 +102,7 @@ struct ns_t265
 
 struct ns_builder
 {
-	struct xrt_builder base;
+	struct u_builder base;
 
 	const char *config_path;
 	cJSON *config_json;
@@ -442,29 +442,17 @@ ns_estimate_system(struct xrt_builder *xb, cJSON *config, struct xrt_prober *xp,
 	return XRT_SUCCESS;
 }
 
-
-
 static xrt_result_t
-ns_open_system(struct xrt_builder *xb,
-               cJSON *config,
-               struct xrt_prober *xp,
-               struct xrt_system_devices **out_xsysd,
-               struct xrt_space_overseer **out_xso)
+ns_open_system_impl(struct xrt_builder *xb,
+                    cJSON *config,
+                    struct xrt_prober *xp,
+                    struct xrt_tracking_origin *origin,
+                    struct xrt_system_devices *xsysd,
+                    struct xrt_frame_context *xfctx,
+                    struct u_builder_roles_helper *ubrh)
 {
 	struct ns_builder *nsb = (struct ns_builder *)xb;
 	xrt_result_t result = XRT_SUCCESS;
-
-	// Use the static system devices helper, no dynamic roles.
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
-	struct xrt_frame_context *xfctx = &usysds->base.xfctx;
-
-	if (out_xsysd == NULL || *out_xsysd != NULL) {
-		NS_ERROR("Invalid output system pointer");
-		result = XRT_ERROR_DEVICE_CREATION_FAILED;
-		goto end;
-	}
-
 
 	bool load_success = ns_config_load(nsb);
 	if (!load_success) {
@@ -591,31 +579,16 @@ ns_open_system(struct xrt_builder *xb,
 	}
 
 	// Assign to role(s).
-	xsysd->static_roles.head = head_wrap;
-	xsysd->static_roles.hand_tracking.left = left_ht;
-	xsysd->static_roles.hand_tracking.right = right_ht;
-
-	u_system_devices_static_finalize( //
-	    usysds,                       // usysds
-	    left,                         // left
-	    right);                       // right
-
+	ubrh->head = head_wrap;
+	ubrh->left = left;
+	ubrh->right = right;
+	ubrh->hand_tracking.left = left_ht;
+	ubrh->hand_tracking.right = right_ht;
 
 end:
-	if (result == XRT_SUCCESS) {
-		*out_xsysd = xsysd;
-		u_builder_create_space_overseer_legacy( //
-		    head_wrap,                          // head
-		    left,                               // left
-		    right,                              // right
-		    xsysd->xdevs,                       // xdevs
-		    xsysd->xdev_count,                  // xdev_count
-		    out_xso);                           // out_xso
-	} else {
-		xrt_system_devices_destroy(&xsysd);
-	}
 	if (nsb->config_json != NULL) {
 		cJSON_Delete(nsb->config_json);
+		nsb->config_path = NULL;
 	}
 
 	return result;
@@ -627,6 +600,7 @@ ns_destroy(struct xrt_builder *xb)
 	free(xb);
 }
 
+
 /*
  *
  * 'Exported' functions.
@@ -637,13 +611,18 @@ struct xrt_builder *
 t_builder_north_star_create(void)
 {
 	struct ns_builder *sb = U_TYPED_CALLOC(struct ns_builder);
-	sb->base.estimate_system = ns_estimate_system;
-	sb->base.open_system = ns_open_system;
-	sb->base.destroy = ns_destroy;
-	sb->base.identifier = "north_star";
-	sb->base.name = "North Star headset";
-	sb->base.driver_identifiers = driver_list;
-	sb->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	return &sb->base;
+	// xrt_builder fields.
+	sb->base.base.estimate_system = ns_estimate_system;
+	sb->base.base.open_system = u_builder_open_system_static_roles;
+	sb->base.base.destroy = ns_destroy;
+	sb->base.base.identifier = "north_star";
+	sb->base.base.name = "North Star headset";
+	sb->base.base.driver_identifiers = driver_list;
+	sb->base.base.driver_identifier_count = ARRAY_SIZE(driver_list);
+
+	// u_builder fields.
+	sb->base.open_system_static_roles = ns_open_system_impl;
+
+	return &sb->base.base;
 }

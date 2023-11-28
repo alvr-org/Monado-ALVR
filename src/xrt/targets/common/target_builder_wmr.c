@@ -176,11 +176,13 @@ wmr_estimate_system(struct xrt_builder *xb,
 }
 
 static xrt_result_t
-wmr_open_system(struct xrt_builder *xb,
-                cJSON *config,
-                struct xrt_prober *xp,
-                struct xrt_system_devices **out_xsysd,
-                struct xrt_space_overseer **out_xso)
+wmr_open_system_impl(struct xrt_builder *xb,
+                     cJSON *config,
+                     struct xrt_prober *xp,
+                     struct xrt_tracking_origin *origin,
+                     struct xrt_system_devices *xsysd,
+                     struct xrt_frame_context *xfctx,
+                     struct u_builder_roles_helper *ubrh)
 {
 	enum u_logging_level log_level = debug_get_log_option_wmr_log();
 	struct wmr_bt_controllers_search_results ctrls = {0};
@@ -271,9 +273,6 @@ wmr_open_system(struct xrt_builder *xb,
 	assert(xret_unlock == XRT_SUCCESS);
 	(void)xret_unlock;
 
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
-
 	xsysd->xdevs[xsysd->xdev_count++] = head;
 	if (left != NULL) {
 		xsysd->xdevs[xsysd->xdev_count++] = left;
@@ -298,33 +297,11 @@ wmr_open_system(struct xrt_builder *xb,
 
 
 	// Assign to role(s).
-	xsysd->static_roles.head = head;
-	xsysd->static_roles.hand_tracking.left = ht_left;
-	xsysd->static_roles.hand_tracking.right = ht_right;
-
-	u_system_devices_static_finalize( //
-	    usysds,                       // usysds
-	    left,                         // left
-	    right);                       // right
-
-	// Create space overseer last once all devices set.
-	struct xrt_space_overseer *xso = NULL;
-	u_builder_create_space_overseer_legacy( //
-	    head,                               // head
-	    left,                               // left
-	    right,                              // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    &xso);                              // out_xso
-	assert(xso != NULL);
-
-
-	/*
-	 * Output.
-	 */
-
-	*out_xsysd = xsysd;
-	*out_xso = xso;
+	ubrh->head = head;
+	ubrh->left = left;
+	ubrh->right = right;
+	ubrh->hand_tracking.left = ht_left;
+	ubrh->hand_tracking.right = ht_right;
 
 	return XRT_SUCCESS;
 
@@ -355,14 +332,19 @@ wmr_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 t_builder_wmr_create(void)
 {
-	struct xrt_builder *xb = U_TYPED_CALLOC(struct xrt_builder);
-	xb->estimate_system = wmr_estimate_system;
-	xb->open_system = wmr_open_system;
-	xb->destroy = wmr_destroy;
-	xb->identifier = "wmr";
-	xb->name = "Windows Mixed Reality";
-	xb->driver_identifiers = driver_list;
-	xb->driver_identifier_count = ARRAY_SIZE(driver_list);
+	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
 
-	return xb;
+	// xrt_builder fields.
+	ub->base.estimate_system = wmr_estimate_system;
+	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.destroy = wmr_destroy;
+	ub->base.identifier = "wmr";
+	ub->base.name = "Windows Mixed Reality";
+	ub->base.driver_identifiers = driver_list;
+	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
+
+	// u_builder fields.
+	ub->open_system_static_roles = wmr_open_system_impl;
+
+	return &ub->base;
 }

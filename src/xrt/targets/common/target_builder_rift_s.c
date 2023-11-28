@@ -93,26 +93,21 @@ rift_s_estimate_system(struct xrt_builder *xb,
 }
 
 static xrt_result_t
-rift_s_open_system(struct xrt_builder *xb,
-                   cJSON *config,
-                   struct xrt_prober *xp,
-                   struct xrt_system_devices **out_xsysd,
-                   struct xrt_space_overseer **out_xso)
+rift_s_open_system_impl(struct xrt_builder *xb,
+                        cJSON *config,
+                        struct xrt_prober *xp,
+                        struct xrt_tracking_origin *origin,
+                        struct xrt_system_devices *xsysd,
+                        struct xrt_frame_context *xfctx,
+                        struct u_builder_roles_helper *ubrh)
 {
 	struct xrt_prober_device **xpdevs = NULL;
 	size_t xpdev_count = 0;
 	xrt_result_t xret = XRT_SUCCESS;
 
-	assert(out_xsysd != NULL);
-	assert(*out_xsysd == NULL);
-
 	DRV_TRACE_MARKER();
 
 	rift_s_log_level = debug_get_log_option_rift_s_log();
-
-	// Use the static system devices helper, no dynamic roles.
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -180,6 +175,9 @@ rift_s_open_system(struct xrt_builder *xb,
 	xsysd->xdevs[xsysd->xdev_count++] = right_xdev;
 
 
+	struct xrt_device *left_ht = NULL;
+	struct xrt_device *right_ht = NULL;
+
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
 	struct xrt_device *ht_xdev = rift_s_system_get_hand_tracking_device(sys);
 	if (ht_xdev != NULL) {
@@ -189,8 +187,8 @@ rift_s_open_system(struct xrt_builder *xb,
 		struct xrt_device *two_hands[2];
 		cemu_devices_create(hmd_xdev, ht_xdev, two_hands);
 
-		xsysd->static_roles.hand_tracking.left = two_hands[0];
-		xsysd->static_roles.hand_tracking.right = two_hands[1];
+		left_ht = two_hands[0];
+		right_ht = two_hands[1];
 
 		xsysd->xdevs[xsysd->xdev_count++] = two_hands[0];
 		xsysd->xdevs[xsysd->xdev_count++] = two_hands[1];
@@ -203,26 +201,11 @@ rift_s_open_system(struct xrt_builder *xb,
 #endif
 
 	// Assign to role(s).
-	xsysd->static_roles.head = hmd_xdev;
-
-	u_system_devices_static_finalize( //
-	    usysds,                       // usysds
-	    left_xdev,                    // left
-	    right_xdev);                  // right
-
-
-	/*
-	 * Done.
-	 */
-
-	*out_xsysd = xsysd;
-	u_builder_create_space_overseer_legacy( //
-	    hmd_xdev,                           // head
-	    left_xdev,                          // left
-	    right_xdev,                         // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    out_xso);                           // out_xso
+	ubrh->head = hmd_xdev;
+	ubrh->left = left_xdev;
+	ubrh->right = right_xdev;
+	ubrh->hand_tracking.left = left_ht;
+	ubrh->hand_tracking.right = right_ht;
 
 	return XRT_SUCCESS;
 
@@ -235,7 +218,6 @@ unlock_and_fail:
 
 	/* Fallthrough */
 fail:
-	xrt_system_devices_destroy(&xsysd);
 	return XRT_ERROR_DEVICE_CREATION_FAILED;
 }
 
@@ -255,15 +237,19 @@ rift_s_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 rift_s_builder_create(void)
 {
+	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
 
-	struct xrt_builder *xb = U_TYPED_CALLOC(struct xrt_builder);
-	xb->estimate_system = rift_s_estimate_system;
-	xb->open_system = rift_s_open_system;
-	xb->destroy = rift_s_destroy;
-	xb->identifier = "rift_s";
-	xb->name = "Oculus Rift S";
-	xb->driver_identifiers = driver_list;
-	xb->driver_identifier_count = ARRAY_SIZE(driver_list);
+	// xrt_builder fields.
+	ub->base.estimate_system = rift_s_estimate_system;
+	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.destroy = rift_s_destroy;
+	ub->base.identifier = "rift_s";
+	ub->base.name = "Oculus Rift S";
+	ub->base.driver_identifiers = driver_list;
+	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	return xb;
+	// u_builder fields.
+	ub->open_system_static_roles = rift_s_open_system_impl;
+
+	return &ub->base;
 }

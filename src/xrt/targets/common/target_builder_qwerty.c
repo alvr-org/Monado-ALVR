@@ -68,15 +68,14 @@ qwerty_estimate_system(struct xrt_builder *xb,
 }
 
 static xrt_result_t
-qwerty_open_system(struct xrt_builder *xb,
-                   cJSON *config,
-                   struct xrt_prober *xp,
-                   struct xrt_system_devices **out_xsysd,
-                   struct xrt_space_overseer **out_xso)
+qwerty_open_system_impl(struct xrt_builder *xb,
+                        cJSON *config,
+                        struct xrt_prober *xp,
+                        struct xrt_tracking_origin *origin,
+                        struct xrt_system_devices *xsysd,
+                        struct xrt_frame_context *xfctx,
+                        struct u_builder_roles_helper *ubrh)
 {
-	assert(out_xsysd != NULL);
-	assert(*out_xsysd == NULL);
-
 	struct xrt_device *head = NULL;
 	struct xrt_device *left = NULL;
 	struct xrt_device *right = NULL;
@@ -86,10 +85,6 @@ qwerty_open_system(struct xrt_builder *xb,
 	if (xret != XRT_SUCCESS) {
 		return xret;
 	}
-
-	// Use the static system devices helper, no dynamic roles.
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
 
 	// Add to device list.
 	xsysd->xdevs[xsysd->xdev_count++] = head;
@@ -101,26 +96,9 @@ qwerty_open_system(struct xrt_builder *xb,
 	}
 
 	// Assign to role(s).
-	xsysd->static_roles.head = head;
-
-	u_system_devices_static_finalize( //
-	    usysds,                       // usysds
-	    left,                         // left
-	    right);                       // right
-
-
-	/*
-	 * Done.
-	 */
-
-	*out_xsysd = xsysd;
-	u_builder_create_space_overseer_legacy( //
-	    head,                               // head
-	    left,                               // left
-	    right,                              // right
-	    xsysd->xdevs,                       // xdevs
-	    xsysd->xdev_count,                  // xdev_count
-	    out_xso);                           // out_xso
+	ubrh->head = head;
+	ubrh->left = left;
+	ubrh->right = right;
 
 	return XRT_SUCCESS;
 }
@@ -141,15 +119,20 @@ qwerty_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 t_builder_qwerty_create(void)
 {
-	struct xrt_builder *xb = U_TYPED_CALLOC(struct xrt_builder);
-	xb->estimate_system = qwerty_estimate_system;
-	xb->open_system = qwerty_open_system;
-	xb->destroy = qwerty_destroy;
-	xb->identifier = "qwerty";
-	xb->name = "Qwerty devices builder";
-	xb->driver_identifiers = driver_list;
-	xb->driver_identifier_count = ARRAY_SIZE(driver_list);
-	xb->exclude_from_automatic_discovery = !debug_get_bool_option_enable_qwerty();
+	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
 
-	return xb;
+	// xrt_builder fields.
+	ub->base.estimate_system = qwerty_estimate_system;
+	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.destroy = qwerty_destroy;
+	ub->base.identifier = "qwerty";
+	ub->base.name = "Qwerty devices builder";
+	ub->base.driver_identifiers = driver_list;
+	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
+	ub->base.exclude_from_automatic_discovery = !debug_get_bool_option_enable_qwerty();
+
+	// u_builder fields.
+	ub->open_system_static_roles = qwerty_open_system_impl;
+
+	return &ub->base;
 }

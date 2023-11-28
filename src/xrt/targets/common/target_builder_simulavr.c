@@ -51,7 +51,8 @@ static const char *driver_list[] = {
 
 struct simula_builder
 {
-	struct xrt_builder base;
+	struct u_builder base;
+
 	struct svr_two_displays_distortion display_distortion;
 };
 
@@ -192,22 +193,23 @@ svr_estimate_system(struct xrt_builder *xb, cJSON *config, struct xrt_prober *xp
 }
 
 static xrt_result_t
-svr_open_system(struct xrt_builder *xb,
-                cJSON *config,
-                struct xrt_prober *xp,
-                struct xrt_system_devices **out_xsysd,
-                struct xrt_space_overseer **out_xso)
+svr_open_system_impl(struct xrt_builder *xb,
+                     cJSON *config,
+                     struct xrt_prober *xp,
+                     struct xrt_tracking_origin *origin,
+                     struct xrt_system_devices *xsysd,
+                     struct xrt_frame_context *xfctx,
+                     struct u_builder_roles_helper *ubrh)
 {
 	struct simula_builder *sb = (struct simula_builder *)xb;
 	xrt_result_t result = XRT_SUCCESS;
 
-	if (out_xsysd == NULL || *out_xsysd != NULL) {
-		SVR_ERROR("Invalid output system pointer");
+	struct xrt_device *t265_dev = rs_create_tracked_device_internal_slam();
+	if (t265_dev == NULL) {
+		SVR_ERROR("Failed to open T265 device!");
 		result = XRT_ERROR_DEVICE_CREATION_FAILED;
 		goto end;
 	}
-
-	struct xrt_device *t265_dev = rs_create_tracked_device_internal_slam();
 
 	struct xrt_device *svr_dev = svr_hmd_create(&sb->display_distortion);
 
@@ -217,36 +219,13 @@ svr_open_system(struct xrt_builder *xb,
 	struct xrt_device *head_device = multi_create_tracking_override(
 	    XRT_TRACKING_OVERRIDE_ATTACHED, svr_dev, t265_dev, XRT_INPUT_GENERIC_TRACKER_POSE, &ident);
 
-	// Use the static system devices helper, no dynamic roles.
-	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
-	struct xrt_system_devices *xsysd = &usysds->base.base;
-
 	// Add to device list.
 	xsysd->xdevs[xsysd->xdev_count++] = head_device;
 
 	// Assign to role(s).
-	xsysd->static_roles.head = head_device;
-
+	ubrh->head = head_device;
 
 end:
-	if (result == XRT_SUCCESS) {
-		u_system_devices_static_finalize( //
-		    usysds,                       // usysds
-		    NULL,                         // left
-		    NULL);                        // right
-
-		*out_xsysd = xsysd;
-		u_builder_create_space_overseer_legacy( //
-		    head_device,                        // head
-		    NULL,                               // left
-		    NULL,                               // right
-		    xsysd->xdevs,                       // xdevs
-		    xsysd->xdev_count,                  // xdev_count
-		    out_xso);                           // out_xso
-	} else {
-		xrt_system_devices_destroy(&xsysd);
-	}
-
 	return result;
 }
 
@@ -255,6 +234,7 @@ svr_destroy(struct xrt_builder *xb)
 {
 	free(xb);
 }
+
 
 /*
  *
@@ -266,13 +246,18 @@ struct xrt_builder *
 t_builder_simula_create(void)
 {
 	struct simula_builder *sb = U_TYPED_CALLOC(struct simula_builder);
-	sb->base.estimate_system = svr_estimate_system;
-	sb->base.open_system = svr_open_system;
-	sb->base.destroy = svr_destroy;
-	sb->base.identifier = "simula";
-	sb->base.name = "SimulaVR headset";
-	sb->base.driver_identifiers = driver_list;
-	sb->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	return &sb->base;
+	// xrt_builder fields.
+	sb->base.base.estimate_system = svr_estimate_system;
+	sb->base.base.open_system = u_builder_open_system_static_roles;
+	sb->base.base.destroy = svr_destroy;
+	sb->base.base.identifier = "simula";
+	sb->base.base.name = "SimulaVR headset";
+	sb->base.base.driver_identifiers = driver_list;
+	sb->base.base.driver_identifier_count = ARRAY_SIZE(driver_list);
+
+	// u_builder fields.
+	sb->base.open_system_static_roles = svr_open_system_impl;
+
+	return &sb->base.base;
 }
