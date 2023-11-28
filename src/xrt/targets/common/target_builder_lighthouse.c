@@ -283,6 +283,7 @@ valve_index_hand_track(struct lighthouse_system *lhs,
 	return false;
 }
 
+
 /*
  *
  * Member functions.

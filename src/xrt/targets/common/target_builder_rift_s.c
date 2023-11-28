@@ -40,7 +40,7 @@ enum u_logging_level rift_s_log_level;
 
 /*
  *
- * Defines & structs.
+ * Misc stuff.
  *
  */
 
@@ -49,6 +49,17 @@ DEBUG_GET_ONCE_LOG_OPTION(rift_s_log, "RIFT_S_LOG", U_LOGGING_WARN)
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
 DEBUG_GET_ONCE_BOOL_OPTION(rift_s_hand_tracking_as_controller, "RIFT_S_HAND_TRACKING_AS_CONTROLLERS", false)
 #endif
+
+static const char *driver_list[] = {
+    "rift-s",
+};
+
+
+/*
+ *
+ * Member functions.
+ *
+ */
 
 static xrt_result_t
 rift_s_estimate_system(struct xrt_builder *xb,
@@ -228,20 +239,18 @@ fail:
 	return XRT_ERROR_DEVICE_CREATION_FAILED;
 }
 
-/*
- *
- * 'Exported' functions.
- *
- */
-static const char *driver_list[] = {
-    "rift-s",
-};
-
 static void
 rift_s_destroy(struct xrt_builder *xb)
 {
 	free(xb);
 }
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 struct xrt_builder *
 rift_s_builder_create(void)

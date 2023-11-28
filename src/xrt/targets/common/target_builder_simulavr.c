@@ -133,6 +133,13 @@ end:
 	return good;
 }
 
+
+/*
+ *
+ * Member functions.
+ *
+ */
+
 static xrt_result_t
 svr_estimate_system(struct xrt_builder *xb, cJSON *config, struct xrt_prober *xp, struct xrt_builder_estimate *estimate)
 {

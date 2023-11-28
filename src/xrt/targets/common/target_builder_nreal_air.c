@@ -32,13 +32,25 @@ enum u_logging_level nreal_air_log_level;
 #define NA_WARN(...) U_LOG_IFL_W(nreal_air_log_level, __VA_ARGS__)
 #define NA_ERROR(...) U_LOG_IFL_E(nreal_air_log_level, __VA_ARGS__)
 
+
 /*
  *
- * Defines & structs.
+ * Misc stuff.
  *
  */
 
 DEBUG_GET_ONCE_LOG_OPTION(nreal_air_log, "NA_LOG", U_LOGGING_WARN)
+
+static const char *driver_list[] = {
+    "nreal_air",
+};
+
+
+/*
+ *
+ * Member functions.
+ *
+ */
 
 static xrt_result_t
 nreal_air_estimate_system(struct xrt_builder *xb,
@@ -181,20 +193,18 @@ fail:
 	return XRT_ERROR_DEVICE_CREATION_FAILED;
 }
 
-/*
- *
- * 'Exported' functions.
- *
- */
-static const char *driver_list[] = {
-    "nreal_air",
-};
-
 static void
 nreal_air_destroy(struct xrt_builder *xb)
 {
 	free(xb);
 }
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 struct xrt_builder *
 nreal_air_builder_create(void)

@@ -369,6 +369,13 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 }
 #endif
 
+
+/*
+ *
+ * Member functions.
+ *
+ */
+
 // Note: We're just checking for the config file's existence
 static xrt_result_t
 ns_estimate_system(struct xrt_builder *xb, cJSON *config, struct xrt_prober *xp, struct xrt_builder_estimate *estimate)
