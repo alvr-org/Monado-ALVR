@@ -13,6 +13,7 @@
 
 #include "util/u_debug.h"
 #include "util/u_builders.h"
+#include "util/u_system_helpers.h"
 #include "util/u_space_overseer.h"
 
 
@@ -179,4 +180,80 @@ u_builder_create_space_overseer_legacy(struct xrt_device *head,
 	u_space_overseer_legacy_setup(uso, xdevs, xdev_count, head, &T_stage_local);
 
 	*out_xso = (struct xrt_space_overseer *)uso;
+}
+
+xrt_result_t
+u_builder_roles_helper_open_system(struct xrt_builder *xb,
+                                   cJSON *config,
+                                   struct xrt_prober *xp,
+                                   struct xrt_system_devices **out_xsysd,
+                                   struct xrt_space_overseer **out_xso,
+                                   u_builder_open_system_fn fn)
+{
+	struct u_builder_roles_helper ubrh = XRT_STRUCT_INIT;
+	xrt_result_t xret;
+
+	// Use the static system devices helper, no dynamic roles.
+	struct u_system_devices_static *usysds = u_system_devices_static_allocate();
+	struct xrt_tracking_origin *origin = &usysds->base.origin;
+	struct xrt_system_devices *xsysd = &usysds->base.base;
+	struct xrt_frame_context *xfctx = &usysds->base.xfctx;
+
+	xret = fn(  //
+	    xb,     // xb
+	    config, // config
+	    xp,     // xp
+	    origin, // origin
+	    xsysd,  // xsysd
+	    xfctx,  // xfctx
+	    &ubrh); // ubrh
+	if (xret != XRT_SUCCESS) {
+		xrt_system_devices_destroy(&xsysd);
+		return xret;
+	}
+
+	/*
+	 * Assign to role(s).
+	 */
+
+	xsysd->static_roles.head = ubrh.head;
+
+	u_system_devices_static_finalize( //
+	    usysds,                       // usysds
+	    ubrh.left,                    // left
+	    ubrh.right);                  // right
+
+
+	/*
+	 * Create the space overseer.
+	 */
+
+	*out_xsysd = xsysd;
+	u_builder_create_space_overseer_legacy( //
+	    ubrh.head,                          // head
+	    ubrh.left,                          // left
+	    ubrh.right,                         // right
+	    xsysd->xdevs,                       // xdevs
+	    xsysd->xdev_count,                  // xdev_count
+	    out_xso);                           // out_xso
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
+u_builder_open_system_static_roles(struct xrt_builder *xb,
+                                   cJSON *config,
+                                   struct xrt_prober *xp,
+                                   struct xrt_system_devices **out_xsysd,
+                                   struct xrt_space_overseer **out_xso)
+{
+	struct u_builder *ub = (struct u_builder *)xb;
+
+	return u_builder_roles_helper_open_system( //
+	    xb,                                    //
+	    config,                                //
+	    xp,                                    //
+	    out_xsysd,                             //
+	    out_xso,                               //
+	    ub->open_system_static_roles);         //
 }
