@@ -89,6 +89,11 @@ if(XRT_FEATURE_SLAM)
 		)
 	target_include_directories(xrt-external-slam SYSTEM INTERFACE ${SLAM_INCLUDE_DIRS})
 	target_link_libraries(xrt-external-slam INTERFACE ${SLAM_LDFLAGS})
+
+	add_library(xrt-external-vit INTERFACE)
+	target_include_directories(
+		xrt-external-vit INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/vit_includes
+		)
 endif()
 
 # SDL
