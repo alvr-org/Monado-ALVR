@@ -163,4 +163,10 @@ typedef enum xrt_result
 	 * the application side of things.
 	 */
 	XRT_ERROR_RECENTERING_NOT_SUPPORTED = -26,
+	/*!
+	 * The system doesn't support compositor, this error can be returned
+	 * when trying to create the system compositor or trying to create the
+	 * native compositor.
+	 */
+	XRT_ERROR_COMPOSITOR_NOT_SUPPORTED = -27,
 } xrt_result_t;
