@@ -75,11 +75,15 @@ add_library(
 	u_pretty_print.h
 	u_prober.c
 	u_prober.h
+	u_session.c
+	u_session.h
 	u_space_overseer.c
 	u_space_overseer.h
 	u_string_list.cpp
 	u_string_list.h
 	u_string_list.hpp
+	u_system.c
+	u_system.h
 	u_system_helpers.c
 	u_system_helpers.h
 	u_template_historybuf.hpp
