@@ -130,6 +130,7 @@ err_xina:
 
 static xrt_result_t
 ipc_client_instance_create_system(struct xrt_instance *xinst,
+                                  struct xrt_system **out_xsys,
                                   struct xrt_system_devices **out_xsysd,
                                   struct xrt_space_overseer **out_xso,
                                   struct xrt_system_compositor **out_xsysc)
@@ -137,12 +138,17 @@ ipc_client_instance_create_system(struct xrt_instance *xinst,
 	struct ipc_client_instance *ii = ipc_client_instance(xinst);
 	xrt_result_t xret = XRT_SUCCESS;
 
+	assert(out_xsys != NULL);
+	assert(*out_xsys == NULL);
 	assert(out_xsysd != NULL);
 	assert(*out_xsysd == NULL);
 	assert(out_xsysc == NULL || *out_xsysc == NULL);
 
+	struct xrt_system_devices *xsysd = NULL;
+	struct xrt_system_compositor *xsysc = NULL;
+
 	// Allocate a helper xrt_system_devices struct.
-	struct xrt_system_devices *xsysd = ipc_client_system_devices_create(&ii->ipc_c);
+	xsysd = ipc_client_system_devices_create(&ii->ipc_c);
 
 	// Take the devices from this instance.
 	for (uint32_t i = 0; i < ii->xdev_count; i++) {
@@ -167,29 +173,36 @@ ipc_client_instance_create_system(struct xrt_instance *xinst,
 
 	// Done here now.
 	if (out_xsysc == NULL) {
-		*out_xsysd = xsysd;
-		*out_xso = ipc_client_space_overseer_create(&ii->ipc_c);
-		return XRT_SUCCESS;
+		goto out;
 	}
 
 	if (xsysd->static_roles.head == NULL) {
 		IPC_ERROR((&ii->ipc_c), "No head device found but asking for system compositor!");
-		xrt_system_devices_destroy(&xsysd);
-		return XRT_ERROR_IPC_FAILURE;
+		xret = XRT_ERROR_IPC_FAILURE;
+		goto err_destroy;
 	}
 
-	struct xrt_system_compositor *xsysc = NULL;
 	xret = create_system_compositor(ii, xsysd->static_roles.head, &xsysc);
 	if (xret != XRT_SUCCESS) {
-		xrt_system_devices_destroy(&xsysd);
-		return xret;
+		goto err_destroy;
 	}
 
+out:
+	*out_xsys = ipc_client_system_create(&ii->ipc_c, xsysc);
 	*out_xsysd = xsysd;
 	*out_xso = ipc_client_space_overseer_create(&ii->ipc_c);
-	*out_xsysc = xsysc;
+
+	if (xsysc != NULL) {
+		assert(out_xsysc != NULL);
+		*out_xsysc = xsysc;
+	}
 
 	return XRT_SUCCESS;
+
+err_destroy:
+	xrt_system_devices_destroy(&xsysd);
+
+	return xret;
 }
 
 static xrt_result_t

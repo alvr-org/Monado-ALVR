@@ -1440,6 +1440,7 @@ public:
 
 private:
 	struct xrt_instance *m_xinst = NULL;
+	struct xrt_system *m_xsys = NULL;
 	struct xrt_system_devices *m_xsysd = NULL;
 	struct xrt_space_overseer *m_xso = NULL;
 	struct xrt_device *m_xhmd = NULL;
@@ -1471,7 +1472,7 @@ CServerDriver_Monado::Init(vr::IVRDriverContext *pDriverContext)
 		return vr::VRInitError_Init_HmdNotFound;
 	}
 
-	xret = xrt_instance_create_system(m_xinst, &m_xsysd, &m_xso, NULL);
+	xret = xrt_instance_create_system(m_xinst, &m_xsys, &m_xsysd, &m_xso, NULL);
 	if (xret < 0) {
 		ovrd_log("Failed to create system devices\n");
 		xrt_instance_destroy(&m_xinst);
@@ -1481,6 +1482,7 @@ CServerDriver_Monado::Init(vr::IVRDriverContext *pDriverContext)
 		ovrd_log("Didn't get a HMD device!\n");
 		xrt_space_overseer_destroy(&m_xso);
 		xrt_system_devices_destroy(&m_xsysd);
+		xrt_system_destroy(&m_xsys);
 		xrt_instance_destroy(&m_xinst);
 		return vr::VRInitError_Init_HmdNotFound;
 	}
@@ -1530,6 +1532,7 @@ CServerDriver_Monado::Cleanup()
 
 	xrt_space_overseer_destroy(&m_xso);
 	xrt_system_devices_destroy(&m_xsysd);
+	xrt_system_destroy(&m_xsys);
 	m_xhmd = NULL;
 	m_left->m_xdev = NULL;
 	m_right->m_xdev = NULL;

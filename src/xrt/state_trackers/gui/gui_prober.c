@@ -72,7 +72,7 @@ gui_prober_select(struct gui_program *p)
 {
 	XRT_TRACE_MARKER();
 
-	xrt_result_t xret = xrt_instance_create_system(p->instance, &p->xsysd, &p->xso, NULL);
+	xrt_result_t xret = xrt_instance_create_system(p->instance, &p->xsys, &p->xsysd, &p->xso, NULL);
 	if (xret != XRT_SUCCESS) {
 		return -1;
 	}
@@ -104,6 +104,7 @@ gui_prober_teardown(struct gui_program *p)
 
 	xrt_space_overseer_destroy(&p->xso);
 	xrt_system_devices_destroy(&p->xsysd);
+	xrt_system_destroy(&p->xsys);
 
 	xrt_instance_destroy(&p->instance);
 }

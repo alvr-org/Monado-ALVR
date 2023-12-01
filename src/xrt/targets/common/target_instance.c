@@ -13,6 +13,7 @@
 #include "os/os_time.h"
 
 #include "util/u_debug.h"
+#include "util/u_system.h"
 #include "util/u_trace_marker.h"
 #include "util/u_system_helpers.h"
 
@@ -46,22 +47,29 @@ null_compositor_create_system(struct xrt_device *xdev, struct xrt_system_composi
 
 static xrt_result_t
 t_instance_create_system(struct xrt_instance *xinst,
+                         struct xrt_system **out_xsys,
                          struct xrt_system_devices **out_xsysd,
                          struct xrt_space_overseer **out_xso,
                          struct xrt_system_compositor **out_xsysc)
 {
 	XRT_TRACE_MARKER();
 
+	assert(out_xsys != NULL);
+	assert(*out_xsys == NULL);
 	assert(out_xsysd != NULL);
 	assert(*out_xsysd == NULL);
 	assert(out_xso != NULL);
 	assert(*out_xso == NULL);
 	assert(out_xsysc == NULL || *out_xsysc == NULL);
 
+	struct u_system *usys = NULL;
 	struct xrt_system_compositor *xsysc = NULL;
 	struct xrt_space_overseer *xso = NULL;
 	struct xrt_system_devices *xsysd = NULL;
 	xrt_result_t xret = XRT_SUCCESS;
+
+	usys = u_system_create();
+	assert(usys != NULL); // Should never fail.
 
 	xret = u_system_devices_create_from_prober(xinst, &xsysd, &xso);
 	if (xret != XRT_SUCCESS) {
@@ -70,8 +78,7 @@ t_instance_create_system(struct xrt_instance *xinst,
 
 	// Early out if we only want devices.
 	if (out_xsysc == NULL) {
-		*out_xsysd = xsysd;
-		return XRT_SUCCESS;
+		goto out;
 	}
 
 	struct xrt_device *head = xsysd->static_roles.head;
@@ -101,14 +108,29 @@ t_instance_create_system(struct xrt_instance *xinst,
 #endif
 
 	if (xret != XRT_SUCCESS) {
-		xrt_space_overseer_destroy(&xso);
-		xrt_system_devices_destroy(&xsysd);
-		return xret;
+		goto err_destroy;
 	}
 
+out:
+	*out_xsys = &usys->base;
 	*out_xsysd = xsysd;
 	*out_xso = xso;
-	*out_xsysc = xsysc;
+
+	if (xsysc != NULL) {
+		// Tell the system about the system compositor.
+		u_system_set_system_compositor(usys, xsysc);
+
+		assert(out_xsysc != NULL);
+		*out_xsysc = xsysc;
+	}
+
+	return xret;
+
+
+err_destroy:
+	xrt_space_overseer_destroy(&xso);
+	xrt_system_devices_destroy(&xsysd);
+	u_system_destroy(&usys);
 
 	return xret;
 }

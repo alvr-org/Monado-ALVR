@@ -75,10 +75,12 @@ cli_cmd_test(int argc, const char **argv)
 	// (multiple) devices.
 	printf(" :: Creating system devices!\n");
 
+	struct xrt_system *xsys = NULL;
 	struct xrt_system_devices *xsysd = NULL;
 	struct xrt_space_overseer *xso = NULL;
 	xret = xrt_instance_create_system( //
 	    xi,                            // Instance
+	    &xsys,                         // System
 	    &xsysd,                        // System devices.
 	    &xso,                          // Space Overseer.
 	    NULL);                         // System compositor.
@@ -141,6 +143,7 @@ cli_cmd_test(int argc, const char **argv)
 
 	xrt_space_overseer_destroy(&xso);
 	xrt_system_devices_destroy(&xsysd);
+	xrt_system_destroy(&xsys);
 
 	// Finally done
 	return do_exit(&xi, 0);

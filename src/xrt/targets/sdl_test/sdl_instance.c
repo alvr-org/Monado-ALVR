@@ -11,6 +11,7 @@
 #include "xrt/xrt_config_drivers.h"
 
 #include "util/u_misc.h"
+#include "util/u_system.h"
 #include "util/u_builders.h"
 #include "util/u_trace_marker.h"
 
@@ -66,18 +67,26 @@ sdl_instance_get_prober(struct xrt_instance *xinst, struct xrt_prober **out_xp)
 
 static xrt_result_t
 sdl_instance_create_system(struct xrt_instance *xinst,
+                           struct xrt_system **out_xsys,
                            struct xrt_system_devices **out_xsysd,
                            struct xrt_space_overseer **out_xso,
                            struct xrt_system_compositor **out_xsysc)
 {
+	assert(out_xsys != NULL);
+	assert(*out_xsys == NULL);
 	assert(out_xsysd != NULL);
 	assert(*out_xsysd == NULL);
 	assert(out_xso != NULL);
 	assert(*out_xso == NULL);
 	assert(out_xsysc == NULL || *out_xsysc == NULL);
 
+	// Use system helper.
+	struct u_system *usys = u_system_create();
+	assert(usys != NULL); // Should never fail.
+
 	struct sdl_program *sp = from_xinst(xinst);
 
+	*out_xsys = &usys->base;
 	*out_xsysd = &sp->xsysd_base;
 	*out_xso = sp->xso;
 
@@ -86,7 +95,13 @@ sdl_instance_create_system(struct xrt_instance *xinst,
 		return XRT_SUCCESS;
 	}
 
-	sdl_compositor_create_system(sp, out_xsysc);
+	struct xrt_system_compositor *xsysc = NULL;
+	sdl_compositor_create_system(sp, &xsysc);
+
+	// Tell the system about the system compositor.
+	u_system_set_system_compositor(usys, xsysc);
+
+	*out_xsysc = xsysc;
 
 	return XRT_SUCCESS;
 }

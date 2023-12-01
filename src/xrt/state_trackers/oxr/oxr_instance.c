@@ -316,9 +316,9 @@ oxr_instance_create(struct oxr_logger *log,
 
 	// Create the system.
 	if (should_create_compositor) {
-		xret = xrt_instance_create_system(inst->xinst, &sys->xsysd, &sys->xso, &sys->xsysc);
+		xret = xrt_instance_create_system(inst->xinst, &sys->xsys, &sys->xsysd, &sys->xso, &sys->xsysc);
 	} else {
-		xret = xrt_instance_create_system(inst->xinst, &sys->xsysd, &sys->xso, NULL);
+		xret = xrt_instance_create_system(inst->xinst, &sys->xsys, &sys->xsysd, &sys->xso, NULL);
 	}
 
 	if (xret != XRT_SUCCESS) {

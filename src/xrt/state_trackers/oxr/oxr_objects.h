@@ -1273,6 +1273,9 @@ struct oxr_system
 {
 	struct oxr_instance *inst;
 
+	//! The @ref xrt_iface level system.
+	struct xrt_system *xsys;
+
 	//! System devices used in all session types.
 	struct xrt_system_devices *xsysd;
 

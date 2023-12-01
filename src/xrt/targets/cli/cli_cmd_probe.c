@@ -48,10 +48,12 @@ cli_cmd_probe(int argc, const char **argv)
 	// Need to prime the prober with devices before dumping and listing.
 	printf(" :: Creating system devices!\n");
 
+	struct xrt_system *xsys = NULL;
 	struct xrt_system_devices *xsysd = NULL;
 	struct xrt_space_overseer *xso = NULL;
 	xret = xrt_instance_create_system( //
 	    xi,                            // Instance
+	    &xsys,                         // System
 	    &xsysd,                        // System devices.
 	    &xso,                          // Space overseer.
 	    NULL);                         // System compositor.
@@ -119,6 +121,7 @@ cli_cmd_probe(int argc, const char **argv)
 
 	xrt_space_overseer_destroy(&xso);
 	xrt_system_devices_destroy(&xsysd);
+	xrt_system_destroy(&xsys);
 
 	// End of program
 	printf(" :: All ok, shutting down.\n");

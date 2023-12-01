@@ -46,6 +46,7 @@ struct gui_program
 
 	struct gui_scene_manager *gsm;
 
+	struct xrt_system *xsys;
 	struct xrt_system_devices *xsysd;
 	struct xrt_space_overseer *xso;
 	struct xrt_instance *instance;

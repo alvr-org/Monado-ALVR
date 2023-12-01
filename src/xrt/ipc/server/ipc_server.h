@@ -320,6 +320,9 @@ struct ipc_server
 
 	struct u_debug_gui *debug_gui;
 
+	//! The @ref xrt_iface level system.
+	struct xrt_system *xsys;
+
 	//! System devices.
 	struct xrt_system_devices *xsysd;
 
