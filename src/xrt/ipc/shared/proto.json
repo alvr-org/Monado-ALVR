@@ -68,6 +68,12 @@
 		]
 	},
 
+	"session_poll_events": {
+		"out": [
+			{"name": "event", "type": "union xrt_session_event"}
+		]
+	},
+
 	"session_begin": {},
 
 	"session_end": {},

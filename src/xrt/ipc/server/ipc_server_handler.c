@@ -232,6 +232,17 @@ ipc_handle_session_create(volatile struct ipc_client_state *ics, const struct xr
 }
 
 xrt_result_t
+ipc_handle_session_poll_events(volatile struct ipc_client_state *ics, union xrt_session_event *out_xse)
+{
+	// Have we created the session?
+	if (ics->xs == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_session_poll_events(ics->xs, out_xse);
+}
+
+xrt_result_t
 ipc_handle_session_begin(volatile struct ipc_client_state *ics)
 {
 	IPC_TRACE_MARKER();
@@ -272,7 +283,7 @@ ipc_handle_session_destroy(volatile struct ipc_client_state *ics)
 		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
 	}
 
-	ipc_server_client_destroy_compositor(ics);
+	ipc_server_client_destroy_session_and_compositor(ics);
 
 	return XRT_SUCCESS;
 }

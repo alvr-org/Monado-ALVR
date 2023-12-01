@@ -66,7 +66,9 @@ add_library(
 	client/ipc_client_device.c
 	client/ipc_client_hmd.c
 	client/ipc_client_instance.c
+	client/ipc_client_session.c
 	client/ipc_client_space_overseer.c
+	client/ipc_client_system.c
 	client/ipc_client_system_devices.c
 	)
 target_include_directories(

@@ -82,6 +82,9 @@ struct ipc_client_state
 	//! Link back to the main server.
 	struct ipc_server *server;
 
+	//! Session for this client.
+	struct xrt_session *xs;
+
 	//! Compositor for this client.
 	struct xrt_compositor *xc;
 
@@ -420,7 +423,7 @@ ipc_server_client_thread(void *_ics);
  * created from it, like all of the swapchains.
  */
 void
-ipc_server_client_destroy_compositor(volatile struct ipc_client_state *ics);
+ipc_server_client_destroy_session_and_compositor(volatile struct ipc_client_state *ics);
 
 /*!
  * @defgroup ipc_server_internals Server Internals

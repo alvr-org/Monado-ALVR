@@ -59,7 +59,7 @@ common_shutdown(volatile struct ipc_client_state *ics)
 	 */
 
 	// If the session hasn't been stopped, destroy the compositor.
-	ipc_server_client_destroy_compositor(ics);
+	ipc_server_client_destroy_session_and_compositor(ics);
 
 	// Make sure undestroyed spaces are unreferenced
 	for (uint32_t i = 0; i < IPC_MAX_CLIENT_SPACES; i++) {
@@ -294,7 +294,7 @@ client_loop(volatile struct ipc_client_state *ics)
  */
 
 void
-ipc_server_client_destroy_compositor(volatile struct ipc_client_state *ics)
+ipc_server_client_destroy_session_and_compositor(volatile struct ipc_client_state *ics)
 {
 	// Multiple threads might be looking at these fields.
 	os_mutex_lock(&ics->server->global_state.lock);
@@ -319,6 +319,9 @@ ipc_server_client_destroy_compositor(volatile struct ipc_client_state *ics)
 
 	// Cast away volatile.
 	xrt_comp_destroy((struct xrt_compositor **)&ics->xc);
+
+	// Cast away volatile.
+	xrt_session_destroy((struct xrt_session **)&ics->xs);
 }
 
 void *
