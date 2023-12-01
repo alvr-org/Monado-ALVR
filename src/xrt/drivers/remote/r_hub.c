@@ -71,74 +71,82 @@ DEBUG_GET_ONCE_LOG_OPTION(remote_log, "REMOTE_LOG", U_LOGGING_INFO)
 
 /*
  *
- * Socket functions.
+ * Platform socket wrapper functions.
  *
  */
 
-
-
 #if defined(XRT_OS_WINDOWS)
-static void
+
+static inline void
 socket_close(SOCKET id)
 {
 	closesocket(id);
 }
 
-static SOCKET
+static inline SOCKET
 socket_create(void)
 {
 	return socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
-static int
+static inline int
 socket_set_opt(SOCKET id, int flag)
 {
 	return setsockopt(id, SOL_SOCKET, SO_REUSEADDR, (const char *)&flag, sizeof(flag));
 }
 
-static ssize_t
+static inline ssize_t
 socket_read(SOCKET id, void *ptr, size_t size, size_t current)
 {
 	return recv(id, (char *)ptr, size - current, 0);
 }
 
-static size_t
+static inline size_t
 socket_write(SOCKET id, void *ptr, size_t size, size_t current)
 {
 	return send(id, (const char *)ptr, size - current, 0);
 }
 
-#else
-static void
+#elif defined(XRT_OS_UNIX)
+
+static inline void
 socket_close(SOCKET id)
 {
 	close(id);
 }
 
-static SOCKET
+static inline SOCKET
 socket_create(void)
 {
 	return socket(AF_INET, SOCK_STREAM, 0);
 }
 
-static int
+static inline int
 socket_set_opt(SOCKET id, int flag)
 {
 	return setsockopt(id, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 }
 
-static ssize_t
+static inline ssize_t
 socket_read(SOCKET id, void *ptr, size_t size, size_t current)
 {
 	return read(id, ptr, size - current);
 }
 
-static ssize_t
+static inline ssize_t
 socket_write(SOCKET id, void *ptr, size_t size, size_t current)
 {
 	return write(id, ptr, size - current);
 }
-#endif
+
+#endif // XRT_OS_UNIX
+
+
+/*
+ *
+ * Helper functions.
+ *
+ */
 
 static int
 setup_accept_fd(struct r_hub *r)
