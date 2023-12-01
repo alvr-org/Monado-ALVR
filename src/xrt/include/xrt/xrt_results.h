@@ -169,4 +169,9 @@ typedef enum xrt_result
 	 * native compositor.
 	 */
 	XRT_ERROR_COMPOSITOR_NOT_SUPPORTED = -27,
+	/*!
+	 * The client has not created a compositor on this IPC connection,
+	 * which is needed for the given command.
+	 */
+	XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED = -28,
 } xrt_result_t;
