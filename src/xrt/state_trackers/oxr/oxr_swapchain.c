@@ -298,7 +298,7 @@ oxr_swapchain_common_create(struct oxr_logger *log,
 
 	if (format_list) {
 		// Check in oxr_api_swapchain.c verification.
-		assert((createInfo->usageFlags & XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT) == 0);
+		assert((createInfo->usageFlags & XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT) != 0);
 
 		if (format_list->viewFormatCount > ARRAY_SIZE(info.formats)) {
 			/* Hardcoded limit of 8 formats */
