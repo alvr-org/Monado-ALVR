@@ -1,4 +1,4 @@
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -13,8 +13,107 @@
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
 
-struct xrt_system_devices;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct xrt_instance;
+struct xrt_system_devices;
+struct xrt_session;
+struct xrt_compositor_native;
+struct xrt_session_info;
+
+
+/*
+ *
+ * System.
+ *
+ */
+
+/*!
+ * A system is a collection of devices, policies and optionally a compositor
+ * that is organised into a chosive group that is usable by one user, most of
+ * the functionality of a system is exposed through other objects, this is the
+ * main object. It is from this you create sessions that is used to by apps to
+ * interact with the "system".
+ *
+ * Sibling objects: @ref xrt_system_devices, @ref xrt_system_compositor and
+ * @ref xrt_space_overseer.
+ *
+ * @ingroup xrt_iface
+ */
+struct xrt_system
+{
+	/*!
+	 * Create a @ref xrt_session and optionally a @ref xrt_compositor_native
+	 * for this system.
+	 *
+	 * param[in]  xsys    Pointer to self.
+	 * param[in]  xsi     Session info.
+	 * param[out] out_xs  Created session.
+	 * param[out] out_xcn Native compositor for this session, optional.
+	 */
+	xrt_result_t (*create_session)(struct xrt_system *xsys,
+	                               const struct xrt_session_info *xsi,
+	                               struct xrt_session **out_xs,
+	                               struct xrt_compositor_native **out_xcn);
+
+	/*!
+	 * Destroy the system, must be destroyed after system devices and system
+	 * compositor has been destroyed.
+	 *
+	 * Code consuming this interface should use @ref xrt_system_destroy.
+	 *
+	 * @param xsys Pointer to self
+	 */
+	void (*destroy)(struct xrt_system *xsys);
+};
+
+/*!
+ * @copydoc xrt_system::create_session
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_system
+ */
+static inline xrt_result_t
+xrt_system_create_session(struct xrt_system *xsys,
+                          const struct xrt_session_info *xsi,
+                          struct xrt_session **out_xs,
+                          struct xrt_compositor_native **out_xcn)
+{
+	return xsys->create_session(xsys, xsi, out_xs, out_xcn);
+}
+
+/*!
+ * Destroy an xrt_system - helper function.
+ *
+ * @param[in,out] xsysd_ptr A pointer to the xrt_system struct pointer.
+ *
+ * Will destroy the system if `*xsys_ptr` is not NULL. Will then set
+ * `*xsys_ptr` to NULL.
+ *
+ * @public @memberof xrt_system
+ */
+static inline void
+xrt_system_destroy(struct xrt_system **xsys_ptr)
+{
+	struct xrt_system *xsys = *xsys_ptr;
+	if (xsys == NULL) {
+		return;
+	}
+
+	*xsys_ptr = NULL;
+	xsys->destroy(xsys);
+}
+
+
+/*
+ *
+ * System devices.
+ *
+ */
 
 /*!
  * Maximum number of devices simultaneously usable by an implementation of
@@ -212,3 +311,8 @@ xrt_system_devices_destroy(struct xrt_system_devices **xsysd_ptr)
 	*xsysd_ptr = NULL;
 	xsysd->destroy(xsysd);
 }
+
+
+#ifdef __cplusplus
+}
+#endif
