@@ -373,11 +373,7 @@ r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
 	}
 
 	if (r->rc.fd >= 0) {
-#ifdef _WIN32
-		closesocket(r->rc.fd);
-#else
-		close(r->rc.fd);
-#endif
+		socket_close(r->rc.fd);
 		r->rc.fd = -1;
 	}
 
