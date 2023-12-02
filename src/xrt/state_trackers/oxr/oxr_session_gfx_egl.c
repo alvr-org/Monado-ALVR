@@ -67,7 +67,7 @@ oxr_session_populate_egl(struct oxr_logger *log,
 	    next->display,                                  //
 	    next->config,                                   //
 	    next->context,                                  //
-	    next->getProcAddress,                           //
+	    (PFNEGLGETPROCADDRESSPROC)next->getProcAddress, //
 	    renderdoc_enabled,                              // renderdoc_enabled
 	    &xcgl);                                         //
 
