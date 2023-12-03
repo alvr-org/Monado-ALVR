@@ -109,6 +109,10 @@ if(XRT_BUILD_DRIVER_ULV2)
 	target_link_libraries(target_lists PRIVATE drv_ulv2)
 endif()
 
+if(XRT_BUILD_DRIVER_ULV5)
+	target_link_libraries(target_lists PRIVATE drv_ulv5)
+endif()
+
 if(XRT_BUILD_DRIVER_OHMD)
 	target_link_libraries(target_lists PRIVATE drv_ohmd)
 endif()

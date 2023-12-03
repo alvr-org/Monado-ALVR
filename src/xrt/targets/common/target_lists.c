@@ -72,6 +72,10 @@
 #include "ultraleap_v2/ulv2_interface.h"
 #endif
 
+#ifdef XRT_BUILD_DRIVER_ULV5
+#include "ultraleap_v5/ulv5_interface.h"
+#endif
+
 #ifdef XRT_BUILD_DRIVER_DEPTHAI
 #include "depthai/depthai_interface.h"
 #endif

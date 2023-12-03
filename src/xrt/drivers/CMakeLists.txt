@@ -127,6 +127,11 @@ if(XRT_BUILD_DRIVER_ULV2)
 	target_link_libraries(drv_ulv2 PRIVATE xrt-interfaces aux_util aux_math LeapV2::LeapV2)
 endif()
 
+if(XRT_BUILD_DRIVER_ULV5)
+	add_library(drv_ulv5 STATIC ultraleap_v5/ulv5_driver.cpp ultraleap_v5/ulv5_interface.h)
+	target_link_libraries(drv_ulv5 PRIVATE xrt-interfaces aux_util aux_math LeapSDK::LeapC)
+endif()
+
 if(XRT_BUILD_DRIVER_OHMD)
 	add_library(
 		drv_ohmd STATIC ohmd/oh_device.c ohmd/oh_device.h ohmd/oh_interface.h
