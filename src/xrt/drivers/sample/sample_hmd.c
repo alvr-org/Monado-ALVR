@@ -14,18 +14,17 @@
 
 #include "xrt/xrt_device.h"
 
-#include "os/os_time.h"
-
 #include "math/m_api.h"
-#include "math/m_mathinclude.h"
+#include "math/m_mathinclude.h" // IWYU pragma: keep
 
 #include "util/u_var.h"
-#include "util/u_misc.h"
 #include "util/u_time.h"
 #include "util/u_debug.h"
 #include "util/u_device.h"
 #include "util/u_logging.h"
 #include "util/u_distortion_mesh.h"
+#include "util/u_visibility_mask.h"
+#include "xrt/xrt_results.h"
 
 #include <stdio.h>
 
@@ -115,6 +114,24 @@ sample_hmd_get_view_poses(struct xrt_device *xdev,
 	                        out_poses);
 }
 
+bool
+sample_hmd_compute_distortion(
+    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
+{
+	return u_compute_distortion_none(u, u, out_result);
+}
+
+xrt_result_t
+sample_hmd_get_visibility_mask(struct xrt_device *xdev,
+                               enum xrt_visibility_mask_type type,
+                               uint32_t view_index,
+                               struct xrt_visibility_mask **out_mask)
+{
+	struct xrt_fov fov = xdev->hmd->distortion.fov[view_index];
+	u_visibility_mask_get_default(type, &fov, out_mask);
+	return XRT_SUCCESS;
+}
+
 struct xrt_device *
 sample_hmd_create(void)
 {
@@ -132,6 +149,8 @@ sample_hmd_create(void)
 	sh->base.update_inputs = sample_hmd_update_inputs;
 	sh->base.get_tracked_pose = sample_hmd_get_tracked_pose;
 	sh->base.get_view_poses = sample_hmd_get_view_poses;
+	sh->base.compute_distortion = sample_hmd_compute_distortion;
+	sh->base.get_visibility_mask = sample_hmd_get_visibility_mask;
 	sh->base.destroy = sample_hmd_destroy;
 
 	sh->pose = (struct xrt_pose)XRT_POSE_IDENTITY;
