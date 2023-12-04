@@ -38,8 +38,6 @@ spotless {
     }
 }
 
-// apply from: file("../android_common/fetch-eigen.gradle")
-
 androidGitVersion {
     tagPattern(/^v[0-9]+.*/)
     codeFormat = 'MMNPBBBBB'
@@ -130,7 +128,10 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments "-DEIGEN3_INCLUDE_DIR=${project.eigenIncludeDir}", "-DANDROID_PLATFORM=${project.sharedMinSdk}", "-DANDROID_STL=${project.stl}", "-DANDROID_ARM_NEON=TRUE"
+                arguments "-DEIGEN3_INCLUDE_DIR=${project.eigenIncludeDir}",
+                    "-DANDROID_PLATFORM=${project.sharedMinSdk}",
+                    "-DANDROID_STL=${project.stl}",
+                    "-DANDROID_ARM_NEON=TRUE"
 
             }
             if (project.pythonBinary != null) {
