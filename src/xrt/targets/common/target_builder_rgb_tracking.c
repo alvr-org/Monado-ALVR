@@ -7,16 +7,17 @@
  * @ingroup xrt_iface
  */
 
-#include "xrt/xrt_config_have.h"
+#include "xrt/xrt_compiler.h"
+#include "xrt/xrt_config_have.h" // IWYU pragma: keep
 #include "xrt/xrt_config_drivers.h"
 
 #include "xrt/xrt_prober.h"
 #include "xrt/xrt_settings.h"
 #include "xrt/xrt_frameserver.h"
 
-#include "util/u_sink.h"
+#include "util/u_sink.h" // IWYU pragma: keep
 #include "util/u_misc.h"
-#include "util/u_device.h"
+#include "util/u_device.h" // IWYU pragma: keep
 #include "util/u_logging.h"
 #include "util/u_builders.h"
 #include "util/u_config_json.h"
