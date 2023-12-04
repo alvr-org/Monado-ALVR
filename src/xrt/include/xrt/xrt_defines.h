@@ -69,9 +69,9 @@ struct xrt_luid
 typedef struct xrt_luid xrt_luid_t;
 
 /*!
- * A limited unique id, it's only unique for the process it's in so must not be
+ * A limited unique id, it is only unique for the process it is in, so must not be
  * used or synchronized across process boundaries. A value of zero is invalid
- * and means it hasn't be properly initialised.
+ * and means it has not be properly initialised.
  *
  * @ingroup xrt_iface
  */
