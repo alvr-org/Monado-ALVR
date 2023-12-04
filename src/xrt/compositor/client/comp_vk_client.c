@@ -875,7 +875,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 		struct vk_bundle *vk = &c->vk;
 		VkPhysicalDeviceProperties pdp;
 		vk->vkGetPhysicalDeviceProperties(vk->physical_device, &pdp);
-		c->base.base.info.max_tetxure_size = pdp.limits.maxImageDimension2D;
+		c->base.base.info.max_texture_size = pdp.limits.maxImageDimension2D;
 	}
 
 	if (!c->renderdoc_enabled) {

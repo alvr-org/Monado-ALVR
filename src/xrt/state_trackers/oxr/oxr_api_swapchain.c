@@ -64,7 +64,7 @@ oxr_xrCreateSwapchain(XrSession session, const XrSwapchainCreateInfo *createInfo
 	OXR_VERIFY_ARG_NOT_ZERO(&log, createInfo->width);
 	OXR_VERIFY_ARG_NOT_ZERO(&log, createInfo->height);
 
-	const uint32_t max_dims = sess->compositor->info.max_tetxure_size;
+	const uint32_t max_dims = sess->compositor->info.max_texture_size;
 	if (max_dims != 0) {
 		if (createInfo->width > max_dims) {
 			return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE, "(createInfo->width > %u) width too large",

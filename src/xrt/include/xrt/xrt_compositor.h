@@ -828,7 +828,7 @@ struct xrt_swapchain_create_info
 	uint32_t mip_count;
 
 	/*
-	 * List of formats that could be use when creating views of the swapchain images.
+	 * List of formats that could be used when creating views of the swapchain images.
 	 * See XR_KHR_vulkan_swapchain_format_list and VK_KHR_image_format_list
 	 */
 	uint32_t format_count;
@@ -872,8 +872,8 @@ struct xrt_compositor_info
 	//! Supported formats, never changes.
 	int64_t formats[XRT_MAX_SWAPCHAIN_FORMATS];
 
-	//! Max texture size that GPU supports, zero means any size.
-	uint32_t max_tetxure_size;
+	//! Max texture size that GPU supports (size of a single dimension), zero means any size.
+	uint32_t max_texture_size;
 };
 
 /*!
