@@ -61,11 +61,38 @@ wmr_camera_set_exposure_gain(struct wmr_camera *cam, uint8_t camera_id, uint16_t
 #else
 
 /* Stubs to disable camera functions without libusb */
-#define wmr_camera_open(config) NULL
-#define wmr_camera_free(cam)
-#define wmr_camera_start(cam) false
-#define wmr_camera_stop(cam) false
-#define wmr_camera_set_exposure_gain(cam, camera_id, exposure, gain) -1
+static inline struct wmr_camera *
+wmr_camera_open(struct wmr_camera_open_config *config)
+{
+	(void)config;
+	return NULL;
+}
+static inline void
+wmr_camera_free(struct wmr_camera *cam)
+{
+	(void)cam;
+}
+static inline bool
+wmr_camera_start(struct wmr_camera *cam)
+{
+	(void)cam;
+	return false;
+}
+static inline bool
+wmr_camera_stop(struct wmr_camera *cam)
+{
+	(void)cam;
+	return false;
+}
+static inline int
+wmr_camera_set_exposure_gain(struct wmr_camera *cam, uint8_t camera_id, uint16_t exposure, uint8_t gain)
+{
+	(void)cam;
+	(void)camera_id;
+	(void)exposure;
+	(void)gain;
+	return -1;
+}
 
 #endif
 
