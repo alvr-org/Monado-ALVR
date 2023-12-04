@@ -15,7 +15,7 @@
 #
 # Original Author:
 # 2009-2021 Rylie Pavlik <rylie@ryliepavlik.com>
-# https://ryliepavlik.com
+# https://ryliepavlik.com/
 #
 # Copyright 2009-2010, Iowa State University
 # Copyright 2021, Collabora, Ltd.

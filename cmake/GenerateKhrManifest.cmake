@@ -1,9 +1,9 @@
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2023, Collabora, Ltd.
 #
 # SPDX-License-Identifier: BSL-1.0
 #
 # Maintained by:
-# 2019-2022 Rylie Pavlik <rylie.pavlik@collabora.com> <rylie@ryliepavlik.com>
+# 2019-2023 Rylie Pavlik <rylie.pavlik@collabora.com> <rylie@ryliepavlik.com>
 
 #[[.rst:
 GenerateKhrManifest
