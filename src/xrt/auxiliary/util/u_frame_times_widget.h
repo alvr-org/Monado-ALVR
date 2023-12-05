@@ -47,18 +47,16 @@ u_frame_times_widget_push_sample(struct u_frame_times_widget *widget, uint64_t n
 
 	// update fps only once every FPS_NUM_TIMINGS
 	if (widget->index == 0) {
-		float total_s = 0;
+		float total_ms = 0;
 
 		// frame *timings* are durations between *times*
 		int NUM_FRAME_TIMINGS = FPS_WIDGET_NUM_FRAME_TIMES - 1;
 
 		for (int i = 0; i < NUM_FRAME_TIMINGS; i++) {
-			uint64_t frametime_ns = widget->times_ns[i + 1] - widget->times_ns[i];
-			float frametime_s = (float)time_ns_to_s(frametime_ns);
-			total_s += frametime_s;
+			total_ms += widget->timings_ms[i];
 		}
-		float avg_frametime_s = total_s / ((float)NUM_FRAME_TIMINGS);
-		widget->fps = 1.f / avg_frametime_s;
+		float avg_frametime_ms = total_ms / ((float)NUM_FRAME_TIMINGS);
+		widget->fps = 1000.f / avg_frametime_ms;
 	}
 
 	widget->times_ns[widget->index] = new_frame_time;
