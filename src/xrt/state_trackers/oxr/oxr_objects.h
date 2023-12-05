@@ -1519,6 +1519,9 @@ struct oxr_session
 	//! What graphics type was this session created with.
 	enum oxr_session_graphics_ext gfx_ext;
 
+	//! The @ref xrt_session backing this session.
+	struct xrt_session *xs;
+
 	//! Native compositor that is wrapped by client compositors.
 	struct xrt_compositor_native *xcn;
 

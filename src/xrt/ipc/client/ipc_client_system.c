@@ -70,10 +70,10 @@ ipc_client_system_create_session(struct xrt_system *xsys,
 		goto out_session;
 	}
 
-	xret = xrt_syscomp_create_native_compositor( //
-	    icsys->xsysc,                            //
-	    xsi,                                     //
-	    out_xcn);                                //
+	xret = ipc_client_create_native_compositor( //
+	    icsys->xsysc,                           //
+	    xsi,                                    //
+	    out_xcn);                               //
 	if (xret != XRT_SUCCESS) {
 		goto err;
 	}

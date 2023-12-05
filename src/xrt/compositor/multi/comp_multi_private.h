@@ -116,6 +116,9 @@ struct multi_compositor
 	// Client info.
 	struct xrt_session_info xsi;
 
+	//! Where events for this compositor should go.
+	struct xrt_session_event_sink *xses;
+
 	//! Owning system compositor.
 	struct multi_system_compositor *msc;
 
@@ -218,6 +221,7 @@ multi_compositor(struct xrt_compositor *xc)
 xrt_result_t
 multi_compositor_create(struct multi_system_compositor *msc,
                         const struct xrt_session_info *xsi,
+                        struct xrt_session_event_sink *xses,
                         struct xrt_compositor_native **out_xcn);
 
 /*!

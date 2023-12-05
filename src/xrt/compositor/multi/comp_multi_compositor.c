@@ -1001,6 +1001,7 @@ multi_compositor_retire_delivered_locked(struct multi_compositor *mc, uint64_t w
 xrt_result_t
 multi_compositor_create(struct multi_system_compositor *msc,
                         const struct xrt_session_info *xsi,
+                        struct xrt_session_event_sink *xses,
                         struct xrt_compositor_native **out_xcn)
 {
 	COMP_TRACE_MARKER();
@@ -1035,6 +1036,7 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->base.base.get_display_refresh_rate = multi_compositor_get_display_refresh_rate;
 	mc->base.base.request_display_refresh_rate = multi_compositor_request_display_refresh_rate;
 	mc->msc = msc;
+	mc->xses = xses;
 	mc->xsi = *xsi;
 
 	os_mutex_init(&mc->event.mutex);

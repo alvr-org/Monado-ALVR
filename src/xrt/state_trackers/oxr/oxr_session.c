@@ -10,6 +10,7 @@
  */
 
 #include "xrt/xrt_device.h"
+#include "xrt/xrt_session.h"
 #include "xrt/xrt_config_build.h" // IWYU pragma: keep
 #include "xrt/xrt_config_have.h"  // IWYU pragma: keep
 
@@ -682,6 +683,7 @@ oxr_session_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 
 	xrt_comp_destroy(&sess->compositor);
 	xrt_comp_native_destroy(&sess->xcn);
+	xrt_session_destroy(&sess->xs);
 
 	os_precise_sleeper_deinit(&sess->sleeper);
 	os_semaphore_destroy(&sess->sem);
@@ -739,15 +741,19 @@ oxr_session_allocate_and_init(struct oxr_logger *log,
 		}                                                                                                      \
 	} while (false)
 
-#define OXR_ALLOCATE_NATIVE_COMPOSITOR(LOG, XSI, SESS)                                                                 \
+#define OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(LOG, XSI, SESS)                                                   \
 	do {                                                                                                           \
-		xrt_result_t xret = xrt_syscomp_create_native_compositor((SESS)->sys->xsysc, (XSI), &(SESS)->xcn);     \
+		if ((SESS)->sys->xsysc == NULL) {                                                                      \
+			return oxr_error((LOG), XR_ERROR_RUNTIME_FAILURE,                                              \
+			                 "The system compositor wasn't created, can't create native compositor!");     \
+		}                                                                                                      \
+		xrt_result_t xret = xrt_system_create_session((SESS)->sys->xsys, (XSI), &(SESS)->xs, &(SESS)->xcn);    \
 		if (xret == XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED) {                                                 \
 			return oxr_error((LOG), XR_ERROR_LIMIT_REACHED, "Per instance multi-session not supported.");  \
 		}                                                                                                      \
 		if (xret != XRT_SUCCESS) {                                                                             \
-			return oxr_error((LOG), XR_ERROR_RUNTIME_FAILURE, "Failed to create native compositor! '%i'",  \
-			                 xret);                                                                        \
+			return oxr_error((LOG), XR_ERROR_RUNTIME_FAILURE,                                              \
+			                 "Failed to create xrt_session and xrt_compositor_native! '%i'", xret);        \
 		}                                                                                                      \
 		if ((SESS)->sys->xsysc->xmcc != NULL) {                                                                \
 			xrt_syscomp_set_state((SESS)->sys->xsysc, &(SESS)->xcn->base, true, true);                     \
@@ -788,7 +794,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_XLIB_GL, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_gl_xlib(log, sys, opengl_xlib, *out_session);
 	}
 #endif
@@ -807,7 +813,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_ANDROID_GLES, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_gles_android(log, sys, opengles_android, *out_session);
 	}
 #endif
@@ -824,7 +830,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_WIN32_GL, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_gl_win32(log, sys, opengl_win32, *out_session);
 	}
 #endif
@@ -863,7 +869,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_VULKAN, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_vk(log, sys, vulkan, *out_session);
 	}
 #endif
@@ -881,7 +887,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 		}
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_EGL, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_egl(log, sys, egl, *out_session);
 	}
 #endif
@@ -906,7 +912,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_D3D11, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_d3d11(log, sys, d3d11, *out_session);
 	}
 #endif
@@ -931,7 +937,7 @@ oxr_session_create_impl(struct oxr_logger *log,
 
 
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_D3D12, *out_session);
-		OXR_ALLOCATE_NATIVE_COMPOSITOR(log, xsi, *out_session);
+		OXR_CREATE_XRT_SESSION_AND_NATIVE_COMPOSITOR(log, xsi, *out_session);
 		return oxr_session_populate_d3d12(log, sys, d3d12, *out_session);
 	}
 #endif
@@ -948,6 +954,15 @@ oxr_session_create_impl(struct oxr_logger *log,
 		OXR_SESSION_ALLOCATE_AND_INIT(log, sys, OXR_SESSION_GRAPHICS_EXT_HEADLESS, *out_session);
 		(*out_session)->compositor = NULL;
 		(*out_session)->create_swapchain = NULL;
+
+		xrt_result_t xret = xrt_system_create_session(sys->xsys, xsi, &(*out_session)->xs, NULL);
+		if (xret == XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED) {
+			return oxr_error(log, XR_ERROR_LIMIT_REACHED, "Per instance multi-session not supported.");
+		}
+		if (xret != XRT_SUCCESS) {
+			return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "Failed to create xrt_session! '%i'", xret);
+		}
+
 		return XR_SUCCESS;
 	}
 #endif

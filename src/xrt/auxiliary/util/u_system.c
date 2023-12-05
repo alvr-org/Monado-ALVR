@@ -70,6 +70,7 @@ create_session(struct xrt_system *xsys,
 	xret = xrt_syscomp_create_native_compositor( //
 	    usys->xsysc,                             //
 	    xsi,                                     //
+	    &us->sink,                               //
 	    out_xcn);                                //
 	if (xret != XRT_SUCCESS) {
 		goto err;

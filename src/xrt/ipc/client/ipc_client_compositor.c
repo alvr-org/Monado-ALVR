@@ -988,13 +988,14 @@ ipc_compositor_images_destroy(struct xrt_image_native_allocator *xina)
 xrt_result_t
 ipc_syscomp_create_native_compositor(struct xrt_system_compositor *xsc,
                                      const struct xrt_session_info *xsi,
+                                     struct xrt_session_event_sink *xses,
                                      struct xrt_compositor_native **out_xcn)
 {
 	struct ipc_client_compositor *icc = container_of(xsc, struct ipc_client_compositor, system);
-	xrt_result_t xret;
 
-	xret = ipc_client_create_native_compositor(xsc, xsi, out_xcn);
-	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_client_create_native_compositor");
+	IPC_ERROR(icc->ipc_c, "This function shouldn't be called!");
+
+	return XRT_ERROR_IPC_FAILURE;
 }
 
 void

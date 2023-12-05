@@ -46,6 +46,7 @@ extern "C" {
 struct xrt_device;
 struct xrt_image_native;
 struct xrt_compositor;
+struct xrt_session_event_sink;
 
 typedef struct VkCommandBuffer_T *VkCommandBuffer;
 #ifdef XRT_64_BIT
@@ -2262,6 +2263,7 @@ struct xrt_system_compositor
 	 */
 	xrt_result_t (*create_native_compositor)(struct xrt_system_compositor *xsc,
 	                                         const struct xrt_session_info *xsi,
+	                                         struct xrt_session_event_sink *xses,
 	                                         struct xrt_compositor_native **out_xcn);
 
 	/*!
@@ -2407,9 +2409,10 @@ xrt_syscomp_notify_display_refresh_changed(struct xrt_system_compositor *xsc,
 static inline xrt_result_t
 xrt_syscomp_create_native_compositor(struct xrt_system_compositor *xsc,
                                      const struct xrt_session_info *xsi,
+                                     struct xrt_session_event_sink *xses,
                                      struct xrt_compositor_native **out_xcn)
 {
-	return xsc->create_native_compositor(xsc, xsi, out_xcn);
+	return xsc->create_native_compositor(xsc, xsi, xses, out_xcn);
 }
 
 /*!

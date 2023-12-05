@@ -661,11 +661,12 @@ system_compositor_notify_display_refresh_changed(struct xrt_system_compositor *x
 static xrt_result_t
 system_compositor_create_native_compositor(struct xrt_system_compositor *xsc,
                                            const struct xrt_session_info *xsi,
+                                           struct xrt_session_event_sink *xses,
                                            struct xrt_compositor_native **out_xcn)
 {
 	struct multi_system_compositor *msc = multi_system_compositor(xsc);
 
-	return multi_compositor_create(msc, xsi, out_xcn);
+	return multi_compositor_create(msc, xsi, xses, out_xcn);
 }
 
 static void

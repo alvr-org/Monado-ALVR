@@ -208,13 +208,14 @@ ipc_handle_session_create(volatile struct ipc_client_state *ics, const struct xr
 {
 	IPC_TRACE_MARKER();
 
+	struct xrt_session *xs = NULL;
 	struct xrt_compositor_native *xcn = NULL;
 
-	if (ics->xc != NULL) {
+	if (ics->xs != NULL) {
 		return XRT_ERROR_IPC_SESSION_ALREADY_CREATED;
 	}
 
-	xrt_result_t xret = xrt_syscomp_create_native_compositor(ics->server->xsysc, xsi, &xcn);
+	xrt_result_t xret = xrt_system_create_session(ics->server->xsys, xsi, &xs, &xcn);
 	if (xret != XRT_SUCCESS) {
 		return xret;
 	}
@@ -222,6 +223,7 @@ ipc_handle_session_create(volatile struct ipc_client_state *ics, const struct xr
 	ics->client_state.session_overlay = xsi->is_overlay;
 	ics->client_state.z_order = xsi->z_order;
 
+	ics->xs = xs;
 	ics->xc = &xcn->base;
 
 	xrt_syscomp_set_state(ics->server->xsysc, ics->xc, ics->client_state.session_visible,
@@ -247,8 +249,14 @@ ipc_handle_session_begin(volatile struct ipc_client_state *ics)
 {
 	IPC_TRACE_MARKER();
 
-	if (ics->xc == NULL) {
+	// Have we created the session?
+	if (ics->xs == NULL) {
 		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	// Need to check both because begin session is handled by compositor.
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED;
 	}
 
 	//! @todo Pass the view type down.
@@ -267,8 +275,14 @@ ipc_handle_session_end(volatile struct ipc_client_state *ics)
 {
 	IPC_TRACE_MARKER();
 
-	if (ics->xc == NULL) {
+	// Have we created the session?
+	if (ics->xs == NULL) {
 		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	// Need to check both because end session is handled by compositor.
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED;
 	}
 
 	return xrt_comp_end_session(ics->xc);
@@ -279,7 +293,8 @@ ipc_handle_session_destroy(volatile struct ipc_client_state *ics)
 {
 	IPC_TRACE_MARKER();
 
-	if (ics->xc == NULL) {
+	// Have we created the session?
+	if (ics->xs == NULL) {
 		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
 	}
 
