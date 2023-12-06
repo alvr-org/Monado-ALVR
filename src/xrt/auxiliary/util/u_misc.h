@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -89,7 +89,11 @@ static inline void *
 u_realloc_or_free(void *ptr, size_t new_size)
 {
 	void *ret = realloc(ptr, new_size);
-	if (ret == NULL) {
+	if (ret == NULL && new_size != 0) {
+		/*
+		 * We only need to call free if the new size isn't zero, and
+		 * that realloc failed to allocate a new array.
+		 */
 		free(ptr);
 	}
 	return ret;
