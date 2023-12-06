@@ -17,6 +17,7 @@
 #include "util/u_debug.h"
 #include "util/u_trace_marker.h"
 
+#include "oxr_frame_sync.h"
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
@@ -99,7 +100,8 @@ oxr_xrBeginSession(XrSession session, const XrSessionBeginInfo *beginInfo)
 		OXR_VERIFY_VIEW_CONFIG_TYPE(&log, sess->sys->inst, beginInfo->primaryViewConfigurationType);
 	}
 
-	if (sess->has_begun) {
+	// Going to effectively double check this, but this gives us an early out.
+	if (oxr_frame_sync_is_session_running(&sess->frame_sync)) {
 		return oxr_error(&log, XR_ERROR_SESSION_RUNNING, "Session is already running");
 	}
 

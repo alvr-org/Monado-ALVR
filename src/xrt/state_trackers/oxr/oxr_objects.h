@@ -32,6 +32,7 @@
 #include "oxr_extension_support.h"
 #include "oxr_subaction.h"
 #include "oxr_defines.h"
+#include "oxr_frame_sync.h"
 
 #if defined(XRT_HAVE_D3D11) || defined(XRT_HAVE_D3D12)
 #include <dxgi.h>
@@ -1758,7 +1759,7 @@ struct oxr_session
 	struct oxr_session *next;
 
 	XrSessionState state;
-	bool has_begun;
+
 	/*!
 	 * There is a extra state between xrBeginSession has been called and
 	 * the first xrEndFrame has been called. These are to track this.
@@ -1782,7 +1783,7 @@ struct oxr_session
 		int64_t begun;
 	} frame_id;
 
-	struct os_semaphore sem;
+	struct oxr_frame_sync frame_sync;
 
 	/*!
 	 * Used to implement precise extra sleeping in wait frame.

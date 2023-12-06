@@ -9,6 +9,7 @@
  * @ingroup oxr_main
  */
 
+#include "oxr_frame_sync.h"
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_session.h"
 #include "xrt/xrt_config_build.h" // IWYU pragma: keep
@@ -263,8 +264,11 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 		oxr_session_change_state(log, sess, XR_SESSION_STATE_VISIBLE, 0);
 		oxr_session_change_state(log, sess, XR_SESSION_STATE_FOCUSED, 0);
 	}
-
-	sess->has_begun = true;
+	XrResult ret = oxr_frame_sync_begin_session(&sess->frame_sync);
+	if (ret != XR_SUCCESS) {
+		return oxr_error(log, ret,
+		                 "Frame sync object refused to let us begin session, probably already running");
+	}
 
 	return oxr_session_success_result(sess);
 }
@@ -326,8 +330,10 @@ oxr_session_end(struct oxr_logger *log, struct oxr_session *sess)
 		oxr_session_change_state(log, sess, XR_SESSION_STATE_READY, 0);
 #endif // !XRT_OS_ANDROID
 	}
-
-	sess->has_begun = false;
+	XrResult ret = oxr_frame_sync_end_session(&sess->frame_sync);
+	if (ret != XR_SUCCESS) {
+		return oxr_error(log, ret, "Frame sync object refused to let us end session, probably not running");
+	}
 	sess->has_ended_once = false;
 
 	return oxr_session_success_result(sess);
@@ -791,7 +797,11 @@ oxr_session_frame_wait(struct oxr_logger *log, struct oxr_session *sess, XrFrame
 	 * multiple threads. We do this before so we call predicted after any
 	 * waiting for xrBeginFrame has happened, for better timing information.
 	 */
-	os_semaphore_wait(&sess->sem, 0);
+	XrResult ret = oxr_frame_sync_wait_frame(&sess->frame_sync);
+	if (XR_SUCCESS != ret) {
+		// session not running
+		return ret;
+	}
 
 	if (sess->frame_timing_spew) {
 		oxr_log(log, "Finished waiting for previous frame begin at %8.3fms", ts_ms(sess));
@@ -802,17 +812,19 @@ oxr_session_frame_wait(struct oxr_logger *log, struct oxr_session *sess, XrFrame
 	int64_t predicted_display_period = 0;
 	XrTime converted_time = 0;
 
-	XrResult ret = do_wait_frame_and_checks( //
-	    log,                                 // log
-	    sess,                                // sess
-	    &frame_id,                           // out_frame_id
-	    &predicted_display_time,             // out_predicted_display_time
-	    &predicted_display_period,           // out_predicted_display_period
-	    &converted_time);                    // out_converted_time
+	ret = do_wait_frame_and_checks( //
+	    log,                        // log
+	    sess,                       // sess
+	    &frame_id,                  // out_frame_id
+	    &predicted_display_time,    // out_predicted_display_time
+	    &predicted_display_period,  // out_predicted_display_period
+	    &converted_time);           // out_converted_time
 	if (ret != XR_SUCCESS) {
 		// On error we need to release the semaphore ourselves as xrBeginFrame won't do it.
-		os_semaphore_release(&sess->sem);
-
+		// Should not get an error.
+		XrResult release_ret = oxr_frame_sync_release(&sess->frame_sync);
+		assert(release_ret == XR_SUCCESS);
+		(void)release_ret;
 		// Error already logged.
 		return ret;
 	}
@@ -894,7 +906,12 @@ oxr_session_frame_begin(struct oxr_logger *log, struct oxr_session *sess)
 		sess->frame_id.waited = -1;
 	}
 
-	os_semaphore_release(&sess->sem);
+	// beginFrame is about to succeed, we can release an xrWaitFrame, if available.
+	XrResult osh_ret = oxr_frame_sync_release(&sess->frame_sync);
+	if (XR_SUCCESS != osh_ret) {
+		// session not running
+		return osh_ret;
+	}
 
 	return ret;
 }
@@ -927,7 +944,7 @@ oxr_session_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 	xrt_session_destroy(&sess->xs);
 
 	os_precise_sleeper_deinit(&sess->sleeper);
-	os_semaphore_destroy(&sess->sem);
+	oxr_frame_sync_fini(&sess->frame_sync);
 	os_mutex_destroy(&sess->active_wait_frames_lock);
 
 	free(sess);
@@ -950,8 +967,8 @@ oxr_session_allocate_and_init(struct oxr_logger *log,
 	// What system is this session based on.
 	sess->sys = sys;
 
-	// Init the begin/wait frame semaphore and related fields.
-	os_semaphore_init(&sess->sem, 1);
+	// Init the begin/wait frame handler.
+	oxr_frame_sync_init(&sess->frame_sync);
 
 	// Init the wait frame precise sleeper.
 	os_precise_sleeper_init(&sess->sleeper);

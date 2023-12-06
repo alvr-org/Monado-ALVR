@@ -32,6 +32,8 @@ add_library(
 	oxr_dpad.c
 	oxr_event.c
 	oxr_extension_support.h
+	oxr_frame_sync.c
+	oxr_frame_sync.h
 	oxr_handle_base.c
 	oxr_input.c
 	oxr_input_transform.c

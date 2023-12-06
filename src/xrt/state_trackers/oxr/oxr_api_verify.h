@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "oxr_frame_sync.h" // iwyu pragma: keep
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -255,7 +257,7 @@ extern "C" {
 
 #define OXR_VERIFY_SESSION_RUNNING(log, sess)                                                                          \
 	do {                                                                                                           \
-		if (!sess->has_begun) {                                                                                \
+		if (!oxr_frame_sync_is_session_running(&sess->frame_sync)) {                                           \
 			return oxr_error(log, XR_ERROR_SESSION_NOT_RUNNING, "Session is not running");                 \
 		}                                                                                                      \
 	} while (false)
