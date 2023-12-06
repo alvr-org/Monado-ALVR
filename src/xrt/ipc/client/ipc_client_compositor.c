@@ -993,20 +993,8 @@ ipc_syscomp_create_native_compositor(struct xrt_system_compositor *xsc,
 	struct ipc_client_compositor *icc = container_of(xsc, struct ipc_client_compositor, system);
 	xrt_result_t xret;
 
-	if (icc->compositor_created) {
-		return XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED;
-	}
-
-	// Needs to be done before init.
-	xret = ipc_call_session_create(icc->ipc_c, xsi);
-	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_session_create");
-
-	// Needs to be done after session create call.
-	ipc_compositor_init(icc, out_xcn);
-
-	icc->compositor_created = true;
-
-	return XRT_SUCCESS;
+	xret = ipc_client_create_native_compositor(xsc, xsi, out_xcn);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_client_create_native_compositor");
 }
 
 void
@@ -1030,15 +1018,31 @@ ipc_syscomp_destroy(struct xrt_system_compositor *xsc)
  *
  */
 
-/*!
- *
- *
- * This actually creates an IPC client "native" compositor with deferred initialization.
- * It owns a special implementation of the @ref xrt_system_compositor interface
- * whose "create_native_compositor" method actually completes the deferred initialization
- * of the compositor, effectively finishing creation of a compositor IPC proxy.
- */
-int
+xrt_result_t
+ipc_client_create_native_compositor(struct xrt_system_compositor *xsysc,
+                                    const struct xrt_session_info *xsi,
+                                    struct xrt_compositor_native **out_xcn)
+{
+	struct ipc_client_compositor *icc = container_of(xsysc, struct ipc_client_compositor, system);
+	xrt_result_t xret;
+
+	if (icc->compositor_created) {
+		return XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED;
+	}
+
+	// Needs to be done before init.
+	xret = ipc_call_session_create(icc->ipc_c, xsi);
+	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_session_create");
+
+	// Needs to be done after session create call.
+	ipc_compositor_init(icc, out_xcn);
+
+	icc->compositor_created = true;
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
 ipc_client_create_system_compositor(struct ipc_connection *ipc_c,
                                     struct xrt_image_native_allocator *xina,
                                     struct xrt_device *xdev,
@@ -1067,5 +1071,5 @@ ipc_client_create_system_compositor(struct ipc_connection *ipc_c,
 
 	*out_xcs = &c->system;
 
-	return 0;
+	return XRT_SUCCESS;
 }

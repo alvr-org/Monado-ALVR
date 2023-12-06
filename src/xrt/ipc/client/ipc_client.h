@@ -202,17 +202,39 @@ ipc_client_xdev(struct xrt_device *xdev)
 /*!
  * Create an IPC client system compositor.
  *
+ * It owns a special implementation of the @ref xrt_system_compositor interface.
+ *
+ * This actually creates an IPC client "native" compositor with deferred
+ * initialization. The @ref ipc_client_create_native_compositor function
+ * actually completes the deferred initialization of the compositor, effectively
+ * finishing creation of a compositor IPC proxy.
+ *
  * @param ipc_c IPC connection
  * @param xina Optional native image allocator for client-side allocation. Takes
  * ownership if one is supplied.
  * @param xdev Taken in but not used currently @todo remove this param?
  * @param[out] out_xcs Pointer to receive the created xrt_system_compositor.
  */
-int
+xrt_result_t
 ipc_client_create_system_compositor(struct ipc_connection *ipc_c,
                                     struct xrt_image_native_allocator *xina,
                                     struct xrt_device *xdev,
                                     struct xrt_system_compositor **out_xcs);
+
+/*!
+ * Create a native compositor from a system compositor, this is used instead
+ * of the normal xrt_system_compositor::create_native_compositor function
+ * because it doesn't support events being generated on the app side. This will
+ * also create the session on the service side.
+ *
+ * @param xsysc        IPC created system compositor.
+ * @param xsi          Session information struct.
+ * @param[out] out_xcn Pointer to receive the created xrt_compositor_native.
+ */
+xrt_result_t
+ipc_client_create_native_compositor(struct xrt_system_compositor *xsysc,
+                                    const struct xrt_session_info *xsi,
+                                    struct xrt_compositor_native **out_xcn);
 
 struct xrt_device *
 ipc_client_hmd_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *xtrack, uint32_t device_id);

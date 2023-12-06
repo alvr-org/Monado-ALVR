@@ -95,21 +95,30 @@ create_system_compositor(struct ipc_client_instance *ii,
 {
 	struct xrt_system_compositor *xsysc = NULL;
 	struct xrt_image_native_allocator *xina = NULL;
+	xrt_result_t xret;
 
 #ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
 	// On Android, we allocate images natively on the client side.
 	xina = android_ahardwarebuffer_allocator_create();
 #endif // XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
 
-	int ret = ipc_client_create_system_compositor(&ii->ipc_c, xina, xdev, &xsysc);
-	if (ret < 0 || xsysc == NULL) {
-		xrt_images_destroy(&xina);
-		return XRT_ERROR_IPC_FAILURE;
+	xret = ipc_client_create_system_compositor(&ii->ipc_c, xina, xdev, &xsysc);
+	IPC_CHK_WITH_GOTO(&ii->ipc_c, xret, "ipc_client_create_system_compositor", err_xina);
+
+	// Paranoia.
+	if (xsysc == NULL) {
+		xret = XRT_ERROR_IPC_FAILURE;
+		IPC_ERROR(&ii->ipc_c, "Variable xsysc NULL!");
+		goto err_xina;
 	}
 
 	*out_xsysc = xsysc;
 
-	return 0;
+	return XRT_SUCCESS;
+
+err_xina:
+	xrt_images_destroy(&xina);
+	return xret;
 }
 
 
