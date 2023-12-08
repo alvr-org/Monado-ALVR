@@ -80,7 +80,7 @@ target_include_directories(
 	xrt-external-openxr INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/openxr_includes
 	)
 
-# External SLAM tracking
+# External SLAM interface
 if(XRT_FEATURE_SLAM)
 	add_library(xrt-external-slam STATIC slam_tracker/slam_tracker.hpp)
 	set_target_properties(xrt-external-slam PROPERTIES LINKER_LANGUAGE CXX)
