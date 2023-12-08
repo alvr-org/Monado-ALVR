@@ -5,6 +5,7 @@
  * @file
  * @brief  Holds input related functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_main
  */
 
@@ -783,6 +784,10 @@ oxr_action_attachment_bind(struct oxr_logger *log,
 	 * and sticks with it.
 	 */
 	if (act_ref->action_type == XR_ACTION_TYPE_POSE_INPUT) {
+
+#define RESET_ANY(NAME) act_attached->any_pose_subaction_path.NAME = false;
+		OXR_FOR_EACH_VALID_SUBACTION_PATH(RESET_ANY)
+#undef RESET_ANY
 
 #define POSE_ANY(NAME)                                                                                                 \
 	if ((act_ref->subaction_paths.NAME || act_ref->subaction_paths.any) && act_attached->NAME.input_count > 0) {   \
