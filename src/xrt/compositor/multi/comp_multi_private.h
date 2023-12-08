@@ -23,7 +23,20 @@ extern "C" {
 #endif
 
 
+/*!
+ * Number of max active clients.
+ *
+ * @todo Move to `xrt_limits.h`, or make dynamic to remove limit.
+ * @ingroup comp_multi
+ */
 #define MULTI_MAX_CLIENTS 64
+
+/*!
+ * Number of max active layers per @ref multi_compositor.
+ *
+ * @todo Move to `xrt_limits.h` and share.
+ * @ingroup comp_multi
+ */
 #define MULTI_MAX_LAYERS 16
 
 
@@ -186,6 +199,11 @@ struct multi_compositor
 	struct u_pacing_app *upa;
 };
 
+/*!
+ * Small helper go from @ref xrt_compositor to @ref multi_compositor.
+ *
+ * @ingroup comp_multi
+ */
 static inline struct multi_compositor *
 multi_compositor(struct xrt_compositor *xc)
 {
@@ -298,23 +316,33 @@ enum multi_system_state
 };
 
 /*!
- * The multi-client system compositor multiplexes access to a single native compositor,
- * merging layers from one or more client apps/sessions.
+ * The multi-client module (aka multi compositor) is  system compositor that
+ * multiplexes access to a single @ref xrt_compositor_native, merging layers
+ * from one or more client apps/sessions. This object implements the
+ * @ref xrt_system_compositor, and gives each session a @ref multi_compositor,
+ * which implements @ref xrt_compositor_native.
  *
  * @ingroup comp_multi
  * @implements xrt_system_compositor
  */
 struct multi_system_compositor
 {
+	//! Base interface.
 	struct xrt_system_compositor base;
 
 	//! Extra functions to handle multi client.
 	struct xrt_multi_compositor_control xmcc;
 
-	//! Real native compositor.
+	/*!
+	 * Real native compositor, which this multi client module submits the
+	 * combined layers of active @ref multi_compositor objects.
+	 */
 	struct xrt_compositor_native *xcn;
 
-	//! App pacer factory.
+	/*!
+	 * App pacer factory, when a new @ref multi_compositor is created a
+	 * pacer is created from this factory.
+	 */
 	struct u_pacing_app_factory *upaf;
 
 	//! Render loop thread.
@@ -347,6 +375,7 @@ struct multi_system_compositor
 		uint64_t diff_ns;
 	} last_timings;
 
+	//! List of active clients.
 	struct multi_compositor *clients[MULTI_MAX_CLIENTS];
 };
 

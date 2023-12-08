@@ -30,6 +30,8 @@ struct u_pacing_app_factory;
  * @param xsci          Information to be exposed.
  * @param do_warm_start Should we always submit a frame at startup.
  * @param out_xsysc     Created @ref xrt_system_compositor.
+ *
+ * @public @memberof multi_system_compositor
  */
 xrt_result_t
 comp_multi_create_system_compositor(struct xrt_compositor_native *xcn,
