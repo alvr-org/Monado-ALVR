@@ -89,8 +89,14 @@ struct comp_frame
 /*!
  * Main compositor struct tying everything in the compositor together.
  *
+ *
+ * This ultimately implements @ref xrt_compositor_native but does so by
+ * extending @ref comp_base. Yes, it looks like a little bit of "code reuse
+ * through inheritance," but it is useful here to avoid lots of boilerplate
+ * due to the use of C.
+ *
  * @ingroup comp_main
- * @implements xrt_compositor_native
+ * @extends comp_base
  */
 struct comp_compositor
 {
