@@ -360,15 +360,6 @@ client_vk_swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
  *
  */
 
-static xrt_result_t
-client_vk_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	COMP_TRACE_MARKER();
-
-	// Pipe down call into native compositor.
-	return xrt_comp_poll_events(to_native_compositor(xc), out_xce);
-}
-
 static void
 client_vk_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -818,7 +809,6 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	c->base.base.layer_equirect2 = client_vk_compositor_layer_equirect2;
 	c->base.base.layer_commit = client_vk_compositor_layer_commit;
 	c->base.base.destroy = client_vk_compositor_destroy;
-	c->base.base.poll_events = client_vk_compositor_poll_events;
 
 	c->xcn = xcn;
 	// passthrough our formats from the native compositor to the client

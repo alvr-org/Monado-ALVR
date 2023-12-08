@@ -452,49 +452,6 @@ null_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle
 	return XRT_SUCCESS;
 }
 
-static xrt_result_t
-null_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	struct null_compositor *c = null_compositor(xc);
-	NULL_TRACE(c, "POLL_EVENTS");
-
-	/*
-	 * The null compositor does only minimal state keeping. If using the
-	 * null compositor as a base for a new compositor this is where you can
-	 * improve the state tracking. Note this is very often consumed only
-	 * by the multi compositor.
-	 */
-
-	U_ZERO(out_xce);
-
-	switch (c->state) {
-	case NULL_COMP_STATE_UNINITIALIZED:
-		NULL_ERROR(c, "Polled uninitialized compositor");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE;
-		break;
-	case NULL_COMP_STATE_READY: out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE; break;
-	case NULL_COMP_STATE_PREPARED:
-		NULL_DEBUG(c, "PREPARED -> VISIBLE");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		out_xce->state.visible = true;
-		c->state = NULL_COMP_STATE_VISIBLE;
-		break;
-	case NULL_COMP_STATE_VISIBLE:
-		NULL_DEBUG(c, "VISIBLE -> FOCUSED");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		out_xce->state.visible = true;
-		out_xce->state.focused = true;
-		c->state = NULL_COMP_STATE_FOCUSED;
-		break;
-	case NULL_COMP_STATE_FOCUSED:
-		// No more transitions.
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE;
-		break;
-	}
-
-	return XRT_SUCCESS;
-}
-
 static void
 null_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -547,12 +504,10 @@ null_compositor_create_system(struct xrt_device *xdev, struct xrt_system_composi
 	c->base.base.base.begin_frame = null_compositor_begin_frame;
 	c->base.base.base.discard_frame = null_compositor_discard_frame;
 	c->base.base.base.layer_commit = null_compositor_layer_commit;
-	c->base.base.base.poll_events = null_compositor_poll_events;
 	c->base.base.base.destroy = null_compositor_destroy;
 	c->settings.log_level = debug_get_log_option_log();
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
-	c->state = NULL_COMP_STATE_READY;
 	c->settings.frame_interval_ns = U_TIME_1S_IN_NS / 20; // 20 FPS
 	c->xdev = xdev;
 

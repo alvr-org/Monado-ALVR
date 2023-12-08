@@ -52,20 +52,6 @@ struct sdl_swapchain
 };
 
 /*!
- * State to emulate state transitions correctly.
- *
- * @ingroup sdl_test
- */
-enum sdl_comp_state
-{
-	SDL_COMP_STATE_UNINITIALIZED = 0,
-	SDL_COMP_STATE_READY = 1,
-	SDL_COMP_STATE_PREPARED = 2,
-	SDL_COMP_STATE_VISIBLE = 3,
-	SDL_COMP_STATE_FOCUSED = 4,
-};
-
-/*!
  * Tracking frame state.
  *
  * @ingroup sdl_test
@@ -104,8 +90,6 @@ struct sdl_compositor
 	// Kept here for convenience.
 	struct xrt_system_compositor_info sys_info;
 
-	//! State for generating the correct set of events.
-	enum sdl_comp_state state;
 
 	//! @todo Insert your own required members here
 

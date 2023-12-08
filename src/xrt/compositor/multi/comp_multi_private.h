@@ -88,17 +88,6 @@ struct multi_layer_slot
 };
 
 /*!
- * Render state for a single client, including all layers.
- *
- * @ingroup comp_multi
- */
-struct multi_event
-{
-	struct multi_event *next;
-	union xrt_compositor_event xce;
-};
-
-/*!
  * A single compositor for feeding the layers from one session/app into
  * the multi-client-capable system compositor.
  *
@@ -127,12 +116,6 @@ struct multi_compositor
 
 	//! Used when waiting for the scheduled frame to complete.
 	struct os_precise_sleeper scheduled_sleeper;
-
-	struct
-	{
-		struct os_mutex mutex;
-		struct multi_event *next;
-	} event;
 
 	struct
 	{
@@ -225,13 +208,14 @@ multi_compositor_create(struct multi_system_compositor *msc,
                         struct xrt_compositor_native **out_xcn);
 
 /*!
- * Push a event to be delivered to the client.
+ * Push a event to be delivered to the session that corresponds
+ * to the given @ref multi_compositor.
  *
  * @ingroup comp_multi
  * @private @memberof multi_compositor
  */
-void
-multi_compositor_push_event(struct multi_compositor *mc, const union xrt_compositor_event *xce);
+XRT_CHECK_RESULT xrt_result_t
+multi_compositor_push_event(struct multi_compositor *mc, const union xrt_session_event *xse);
 
 /*!
  * Deliver any scheduled frames at that is to be display at or after the given @p display_time_ns. Called by the render

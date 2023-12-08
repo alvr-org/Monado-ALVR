@@ -8,6 +8,8 @@
  * @ingroup comp_multi
  */
 
+#include "xrt/xrt_session.h"
+
 #include "os/os_time.h"
 
 #include "util/u_var.h"
@@ -95,50 +97,11 @@ slot_move_and_clear_locked(struct multi_compositor *mc, struct multi_layer_slot 
  *
  */
 
-void
-multi_compositor_push_event(struct multi_compositor *mc, const union xrt_compositor_event *xce)
+xrt_result_t
+multi_compositor_push_event(struct multi_compositor *mc, const union xrt_session_event *xse)
 {
-	struct multi_event *me = U_TYPED_CALLOC(struct multi_event);
-	me->xce = *xce;
-
-	os_mutex_lock(&mc->event.mutex);
-
-	// Find the last slot.
-	struct multi_event **slot = &mc->event.next;
-	while (*slot != NULL) {
-		slot = &(*slot)->next;
-	}
-
-	*slot = me;
-
-	os_mutex_unlock(&mc->event.mutex);
-}
-
-static void
-pop_event(struct multi_compositor *mc, union xrt_compositor_event *out_xce)
-{
-	out_xce->type = XRT_COMPOSITOR_EVENT_NONE;
-
-	os_mutex_lock(&mc->event.mutex);
-
-	if (mc->event.next != NULL) {
-		struct multi_event *me = mc->event.next;
-
-		*out_xce = me->xce;
-		mc->event.next = me->next;
-		free(me);
-	}
-
-	os_mutex_unlock(&mc->event.mutex);
-}
-
-static void
-drain_events(struct multi_compositor *mc)
-{
-	union xrt_compositor_event xce;
-	do {
-		pop_event(mc, &xce);
-	} while (xce.type != XRT_COMPOSITOR_EVENT_NONE);
+	// Dispatch to the current event sink.
+	return xrt_session_event_sink_push(mc->xses, xse);
 }
 
 
@@ -864,18 +827,6 @@ multi_compositor_layer_commit_with_semaphore(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
-multi_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	COMP_TRACE_MARKER();
-
-	struct multi_compositor *mc = multi_compositor(xc);
-
-	pop_event(mc, out_xce);
-
-	return XRT_SUCCESS;
-}
-
-static xrt_result_t
 multi_compositor_set_thread_hint(struct xrt_compositor *xc, enum xrt_thread_hint hint, uint32_t thread_id)
 {
 	// No-op
@@ -927,8 +878,6 @@ multi_compositor_destroy(struct xrt_compositor *xc)
 
 	os_mutex_unlock(&mc->msc->list_and_timing_lock);
 
-	drain_events(mc);
-
 	// Destroy the wait thread, destroy also stops the thread.
 	os_thread_helper_destroy(&mc->wait_thread.oth);
 
@@ -946,7 +895,6 @@ multi_compositor_destroy(struct xrt_compositor *xc)
 	os_precise_sleeper_deinit(&mc->scheduled_sleeper);
 
 	os_mutex_destroy(&mc->slot_lock);
-	os_mutex_destroy(&mc->event.mutex);
 
 	free(mc);
 }
@@ -1031,7 +979,6 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->base.base.layer_commit = multi_compositor_layer_commit;
 	mc->base.base.layer_commit_with_semaphore = multi_compositor_layer_commit_with_semaphore;
 	mc->base.base.destroy = multi_compositor_destroy;
-	mc->base.base.poll_events = multi_compositor_poll_events;
 	mc->base.base.set_thread_hint = multi_compositor_set_thread_hint;
 	mc->base.base.get_display_refresh_rate = multi_compositor_get_display_refresh_rate;
 	mc->base.base.request_display_refresh_rate = multi_compositor_request_display_refresh_rate;
@@ -1039,7 +986,6 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->xses = xses;
 	mc->xsi = *xsi;
 
-	os_mutex_init(&mc->event.mutex);
 	os_mutex_init(&mc->slot_lock);
 	os_thread_helper_init(&mc->wait_thread.oth);
 

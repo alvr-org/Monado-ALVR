@@ -1056,18 +1056,6 @@ ipc_handle_compositor_layer_sync_with_semaphore(volatile struct ipc_client_state
 }
 
 xrt_result_t
-ipc_handle_compositor_poll_events(volatile struct ipc_client_state *ics, union xrt_compositor_event *out_xce)
-{
-	IPC_TRACE_MARKER();
-
-	if (ics->xc == NULL) {
-		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
-	}
-
-	return xrt_comp_poll_events(ics->xc, out_xce);
-}
-
-xrt_result_t
 ipc_handle_compositor_set_thread_hint(volatile struct ipc_client_state *ics,
                                       enum xrt_thread_hint hint,
                                       uint32_t thread_id)

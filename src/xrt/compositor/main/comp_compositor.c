@@ -319,42 +319,6 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 }
 
 static xrt_result_t
-compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	struct comp_compositor *c = comp_compositor(xc);
-	COMP_SPEW(c, "POLL_EVENTS");
-
-	U_ZERO(out_xce);
-
-	switch (c->state) {
-	case COMP_STATE_UNINITIALIZED:
-		COMP_ERROR(c, "Polled uninitialized compositor");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE;
-		break;
-	case COMP_STATE_READY: out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE; break;
-	case COMP_STATE_PREPARED:
-		COMP_DEBUG(c, "PREPARED -> VISIBLE");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		out_xce->state.visible = true;
-		c->state = COMP_STATE_VISIBLE;
-		break;
-	case COMP_STATE_VISIBLE:
-		COMP_DEBUG(c, "VISIBLE -> FOCUSED");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		out_xce->state.visible = true;
-		out_xce->state.focused = true;
-		c->state = COMP_STATE_FOCUSED;
-		break;
-	case COMP_STATE_FOCUSED:
-		// No more transitions.
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE;
-		break;
-	}
-
-	return XRT_SUCCESS;
-}
-
-static xrt_result_t
 compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
 {
 	struct comp_compositor *c = comp_compositor(xc);
@@ -959,7 +923,6 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	c->base.base.base.begin_frame = compositor_begin_frame;
 	c->base.base.base.discard_frame = compositor_discard_frame;
 	c->base.base.base.layer_commit = compositor_layer_commit;
-	c->base.base.base.poll_events = compositor_poll_events;
 	c->base.base.base.get_display_refresh_rate = compositor_get_display_refresh_rate;
 	c->base.base.base.request_display_refresh_rate = compositor_request_display_refresh_rate;
 	c->base.base.base.destroy = compositor_destroy;
@@ -1105,8 +1068,6 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	if (!c->deferred_surface) {
 		comp_renderer_add_debug_vars(c->r);
 	}
-
-	c->state = COMP_STATE_READY;
 
 	// Standard app pacer.
 	struct u_pacing_app_factory *upaf = NULL;

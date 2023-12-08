@@ -529,13 +529,6 @@ client_gl_swapchain_create(struct xrt_compositor *xc,
 	return XRT_SUCCESS;
 }
 
-static xrt_result_t
-client_gl_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	// Pipe down call into native compositor.
-	return xrt_comp_poll_events(to_native_compositor(xc), out_xce);
-}
-
 static void
 client_gl_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -583,7 +576,6 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 	c->base.base.layer_equirect2 = client_gl_compositor_layer_equirect2;
 	c->base.base.layer_commit = client_gl_compositor_layer_commit;
 	c->base.base.destroy = client_gl_compositor_destroy;
-	c->base.base.poll_events = client_gl_compositor_poll_events;
 	c->context_begin_locked = context_begin_locked;
 	c->context_end_locked = context_end_locked;
 	c->create_swapchain = create_swapchain;

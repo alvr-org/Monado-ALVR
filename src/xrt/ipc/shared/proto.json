@@ -211,12 +211,6 @@
 		]
 	},
 
-	"compositor_poll_events": {
-		"out": [
-			{"name": "event", "type": "union xrt_compositor_event"}
-		]
-	},
-
 	"compositor_set_thread_hint": {
 		"in": [
 			{"name": "hint", "type": "enum xrt_thread_hint"},

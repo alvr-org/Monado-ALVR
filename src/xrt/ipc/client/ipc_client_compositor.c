@@ -464,18 +464,6 @@ ipc_compositor_semaphore_create(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
-ipc_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
-	xrt_result_t xret;
-
-	IPC_TRACE(icc->ipc_c, "Polling for events.");
-
-	xret = ipc_call_compositor_poll_events(icc->ipc_c, out_xce);
-	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_poll_events");
-}
-
-static xrt_result_t
 ipc_compositor_begin_session(struct xrt_compositor *xc, const struct xrt_begin_session_info *info)
 {
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
@@ -857,7 +845,6 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.layer_commit = ipc_compositor_layer_commit;
 	icc->base.base.layer_commit_with_semaphore = ipc_compositor_layer_commit_with_semaphore;
 	icc->base.base.destroy = ipc_compositor_destroy;
-	icc->base.base.poll_events = ipc_compositor_poll_events;
 	icc->base.base.set_thread_hint = ipc_compositor_set_thread_hint;
 	icc->base.base.get_display_refresh_rate = ipc_compositor_get_display_refresh_rate;
 	icc->base.base.request_display_refresh_rate = ipc_compositor_request_display_refresh_rate;

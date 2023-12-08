@@ -717,84 +717,6 @@ xrt_compositor_semaphore_wait(struct xrt_compositor_semaphore *xcsem, uint64_t v
 
 /*
  *
- * Events.
- *
- */
-
-/*!
- * Event type for compositor events, none means no event was returned.
- */
-enum xrt_compositor_event_type
-{
-	XRT_COMPOSITOR_EVENT_NONE = 0,
-	XRT_COMPOSITOR_EVENT_STATE_CHANGE = 1,
-	XRT_COMPOSITOR_EVENT_OVERLAY_CHANGE = 2,
-	XRT_COMPOSITOR_EVENT_LOSS_PENDING = 3,
-	XRT_COMPOSITOR_EVENT_LOST = 4,
-	XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE = 5,
-};
-
-/*!
- * Session state changes event.
- */
-struct xrt_compositor_event_state_change
-{
-	enum xrt_compositor_event_type type;
-	bool visible;
-	bool focused;
-};
-
-/*!
- * Primary session state changes event.
- */
-struct xrt_compositor_event_overlay
-{
-	enum xrt_compositor_event_type type;
-	bool primary_focused;
-};
-
-/*!
- * Loss pending event.
- */
-struct xrt_compositor_event_loss_pending
-{
-	enum xrt_compositor_event_type type;
-	uint64_t loss_time_ns;
-};
-
-/*!
- * Lost event.
- */
-struct xrt_compositor_event_lost
-{
-	enum xrt_compositor_event_type type;
-};
-
-/*!
- * Display refresh rate changed event.
- */
-struct xrt_compositor_event_display_refresh_rate_change
-{
-	enum xrt_compositor_event_type type;
-	float from_display_refresh_rate_hz;
-	float to_display_refresh_rate_hz;
-};
-
-/*!
- * Compositor events union.
- */
-union xrt_compositor_event {
-	enum xrt_compositor_event_type type;
-	struct xrt_compositor_event_state_change state;
-	struct xrt_compositor_event_state_change overlay;
-	struct xrt_compositor_event_loss_pending loss_pending;
-	struct xrt_compositor_event_lost lost;
-	struct xrt_compositor_event_display_refresh_rate_change display;
-};
-
-
-/*
- *
  * Compositor.
  *
  */
@@ -965,14 +887,6 @@ struct xrt_compositor
 	                                 xrt_graphics_sync_handle_t *out_handle,
 	                                 struct xrt_compositor_semaphore **out_xcsem);
 	/*! @} */
-
-
-	/*!
-	 * Poll events from this compositor.
-	 *
-	 * This function is very much WIP.
-	 */
-	xrt_result_t (*poll_events)(struct xrt_compositor *xc, union xrt_compositor_event *out_xce);
 
 	/*!
 	 * @name Function pointers for session functions
@@ -1395,19 +1309,6 @@ xrt_comp_create_semaphore(struct xrt_compositor *xc,
 
 /*! @} */
 
-
-/*!
- * @copydoc xrt_compositor::poll_events
- *
- * Helper for calling through the function pointer.
- *
- * @public @memberof xrt_compositor
- */
-static inline xrt_result_t
-xrt_comp_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	return xc->poll_events(xc, out_xce);
-}
 
 /*!
  * @name Session methods

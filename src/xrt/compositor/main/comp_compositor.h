@@ -61,21 +61,6 @@ extern "C" {
  */
 
 /*!
- * State to emulate state transitions correctly.
- *
- * @ingroup comp_main
- */
-enum comp_state
-{
-	COMP_STATE_UNINITIALIZED = 0,
-	COMP_STATE_READY = 1,
-	COMP_STATE_PREPARED = 2,
-	COMP_STATE_VISIBLE = 3,
-	COMP_STATE_FOCUSED = 4,
-};
-
-
-/*!
  * Tracking frame state.
  */
 struct comp_frame
@@ -125,9 +110,6 @@ struct comp_compositor
 
 	//! Timestamp of last-rendered (immersive) frame.
 	int64_t last_frame_time_ns;
-
-	//! State for generating the correct set of events.
-	enum comp_state state;
 
 	// Extents of one view, in pixels.
 	VkExtent2D view_extents;

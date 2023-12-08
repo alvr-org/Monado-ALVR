@@ -55,20 +55,6 @@ extern "C" {
  */
 
 /*!
- * State to emulate state transitions correctly.
- *
- * @ingroup comp_null
- */
-enum null_comp_state
-{
-	NULL_COMP_STATE_UNINITIALIZED = 0,
-	NULL_COMP_STATE_READY = 1,
-	NULL_COMP_STATE_PREPARED = 2,
-	NULL_COMP_STATE_VISIBLE = 3,
-	NULL_COMP_STATE_FOCUSED = 4,
-};
-
-/*!
  * Tracking frame state.
  *
  * @ingroup comp_null
@@ -110,9 +96,6 @@ struct null_compositor
 
 	// Kept here for convenience.
 	struct xrt_system_compositor_info sys_info;
-
-	//! State for generating the correct set of events.
-	enum null_comp_state state;
 
 	//! @todo Insert your own required members here
 

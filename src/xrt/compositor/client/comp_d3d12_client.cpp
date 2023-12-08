@@ -967,15 +967,6 @@ client_d3d12_compositor_get_swapchain_create_properties(struct xrt_compositor *x
 	return xrt_comp_get_swapchain_create_properties(&c->xcn->base, &xinfo, xsccp);
 }
 
-static xrt_result_t
-client_d3d12_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	struct client_d3d12_compositor *c = as_client_d3d12_compositor(xc);
-
-	// Pipe down call into native compositor.
-	return xrt_comp_poll_events(&c->xcn->base, out_xce);
-}
-
 static void
 client_d3d12_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -1112,7 +1103,6 @@ try {
 	c->base.base.layer_equirect2 = client_d3d12_compositor_layer_equirect2;
 	c->base.base.layer_commit = client_d3d12_compositor_layer_commit;
 	c->base.base.destroy = client_d3d12_compositor_destroy;
-	c->base.base.poll_events = client_d3d12_compositor_poll_events;
 
 
 	// Passthrough our formats from the native compositor to the client.

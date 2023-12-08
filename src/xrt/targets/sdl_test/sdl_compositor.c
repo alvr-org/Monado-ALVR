@@ -467,50 +467,6 @@ sdl_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_
 	return XRT_SUCCESS;
 }
 
-static xrt_result_t
-sdl_compositor_poll_events(struct xrt_compositor *xc, union xrt_compositor_event *out_xce)
-{
-	struct sdl_compositor *c = &from_comp(xc)->c;
-
-	SC_TRACE(c, "POLL_EVENTS");
-
-	/*
-	 * The null compositor does only minimal state keeping. If using the
-	 * null compositor as a base for a new compositor this is where you can
-	 * improve the state tracking. Note this is very often consumed only
-	 * by the multi compositor.
-	 */
-
-	U_ZERO(out_xce);
-
-	switch (c->state) {
-	case SDL_COMP_STATE_UNINITIALIZED:
-		SC_ERROR(c, "Polled uninitialized compositor");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE;
-		break;
-	case SDL_COMP_STATE_READY: out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE; break;
-	case SDL_COMP_STATE_PREPARED:
-		SC_DEBUG(c, "PREPARED -> VISIBLE");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		out_xce->state.visible = true;
-		c->state = SDL_COMP_STATE_VISIBLE;
-		break;
-	case SDL_COMP_STATE_VISIBLE:
-		SC_DEBUG(c, "VISIBLE -> FOCUSED");
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		out_xce->state.visible = true;
-		out_xce->state.focused = true;
-		c->state = SDL_COMP_STATE_FOCUSED;
-		break;
-	case SDL_COMP_STATE_FOCUSED:
-		// No more transitions.
-		out_xce->state.type = XRT_COMPOSITOR_EVENT_NONE;
-		break;
-	}
-
-	return XRT_SUCCESS;
-}
-
 static void
 sdl_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -566,12 +522,10 @@ sdl_compositor_init(struct sdl_program *sp)
 	c->base.base.base.begin_frame = sdl_compositor_begin_frame;
 	c->base.base.base.discard_frame = sdl_compositor_discard_frame;
 	c->base.base.base.layer_commit = sdl_compositor_layer_commit;
-	c->base.base.base.poll_events = sdl_compositor_poll_events;
 	c->base.base.base.destroy = sdl_compositor_destroy;
 	c->base.vk.log_level = log_level;
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
-	c->state = SDL_COMP_STATE_READY;
 	c->settings.frame_interval_ns = U_TIME_1S_IN_NS / 60; // 60 FPS
 
 	SC_DEBUG(c, "Doing init %p", (void *)c);

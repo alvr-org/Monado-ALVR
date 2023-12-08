@@ -10,6 +10,7 @@
  */
 
 #include "xrt/xrt_config_os.h"
+#include "xrt/xrt_session.h"
 
 #include "os/os_time.h"
 #include "os/os_threading.h"
@@ -558,12 +559,12 @@ system_compositor_set_state(struct xrt_system_compositor *xsc, struct xrt_compos
 		mc->state.visible = visible;
 		mc->state.focused = focused;
 
-		union xrt_compositor_event xce = XRT_STRUCT_INIT;
-		xce.type = XRT_COMPOSITOR_EVENT_STATE_CHANGE;
-		xce.state.visible = visible;
-		xce.state.focused = focused;
+		union xrt_session_event xse = XRT_STRUCT_INIT;
+		xse.type = XRT_SESSION_EVENT_STATE_CHANGE;
+		xse.state.visible = visible;
+		xse.state.focused = focused;
 
-		multi_compositor_push_event(mc, &xce);
+		return multi_compositor_push_event(mc, &xse);
 	}
 
 	return XRT_SUCCESS;
@@ -589,13 +590,11 @@ system_compositor_set_main_app_visibility(struct xrt_system_compositor *xsc, str
 	struct multi_compositor *mc = multi_compositor(xc);
 	(void)msc;
 
-	union xrt_compositor_event xce = XRT_STRUCT_INIT;
-	xce.type = XRT_COMPOSITOR_EVENT_OVERLAY_CHANGE;
-	xce.overlay.visible = visible;
+	union xrt_session_event xse = XRT_STRUCT_INIT;
+	xse.type = XRT_SESSION_EVENT_OVERLAY_CHANGE;
+	xse.overlay.visible = visible;
 
-	multi_compositor_push_event(mc, &xce);
-
-	return XRT_SUCCESS;
+	return multi_compositor_push_event(mc, &xse);
 }
 
 static xrt_result_t
@@ -607,13 +606,11 @@ system_compositor_notify_loss_pending(struct xrt_system_compositor *xsc,
 	struct multi_compositor *mc = multi_compositor(xc);
 	(void)msc;
 
-	union xrt_compositor_event xce = XRT_STRUCT_INIT;
-	xce.type = XRT_COMPOSITOR_EVENT_LOSS_PENDING;
-	xce.loss_pending.loss_time_ns = loss_time_ns;
+	union xrt_session_event xse = XRT_STRUCT_INIT;
+	xse.type = XRT_SESSION_EVENT_LOSS_PENDING;
+	xse.loss_pending.loss_time_ns = loss_time_ns;
 
-	multi_compositor_push_event(mc, &xce);
-
-	return XRT_SUCCESS;
+	return multi_compositor_push_event(mc, &xse);
 }
 
 static xrt_result_t
@@ -623,12 +620,10 @@ system_compositor_notify_lost(struct xrt_system_compositor *xsc, struct xrt_comp
 	struct multi_compositor *mc = multi_compositor(xc);
 	(void)msc;
 
-	union xrt_compositor_event xce = XRT_STRUCT_INIT;
-	xce.type = XRT_COMPOSITOR_EVENT_LOST;
+	union xrt_session_event xse = XRT_STRUCT_INIT;
+	xse.type = XRT_SESSION_EVENT_LOST;
 
-	multi_compositor_push_event(mc, &xce);
-
-	return XRT_SUCCESS;
+	return multi_compositor_push_event(mc, &xse);
 }
 
 static xrt_result_t
@@ -641,14 +636,12 @@ system_compositor_notify_display_refresh_changed(struct xrt_system_compositor *x
 	struct multi_compositor *mc = multi_compositor(xc);
 	(void)msc;
 
-	union xrt_compositor_event xce = XRT_STRUCT_INIT;
-	xce.type = XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE;
-	xce.display.from_display_refresh_rate_hz = from_display_refresh_rate_hz;
-	xce.display.to_display_refresh_rate_hz = to_display_refresh_rate_hz;
+	union xrt_session_event xse = XRT_STRUCT_INIT;
+	xse.type = XRT_SESSION_EVENT_DISPLAY_REFRESH_RATE_CHANGE;
+	xse.display.from_display_refresh_rate_hz = from_display_refresh_rate_hz;
+	xse.display.to_display_refresh_rate_hz = to_display_refresh_rate_hz;
 
-	multi_compositor_push_event(mc, &xce);
-
-	return XRT_SUCCESS;
+	return multi_compositor_push_event(mc, &xse);
 }
 
 

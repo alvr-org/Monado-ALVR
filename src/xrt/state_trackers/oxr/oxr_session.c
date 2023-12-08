@@ -226,46 +226,51 @@ oxr_session_request_exit(struct oxr_logger *log, struct oxr_session *sess)
 	return oxr_session_success_result(sess);
 }
 
-void
+XrResult
 oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 {
-	struct xrt_compositor *xc = sess->compositor;
-	if (xc == NULL) {
-		return;
+	struct xrt_session *xs = sess->xs;
+	xrt_result_t xret;
+
+	if (xs == NULL) {
+		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "xrt_session is null");
 	}
 
 	bool read_more_events = true;
 	while (read_more_events) {
-		union xrt_compositor_event xce = {0};
-		xc->poll_events(xc, &xce);
+		union xrt_session_event xse = {0};
+		xret = xrt_session_poll_events(xs, &xse);
+		OXR_CHECK_XRET(log, sess, xret, "xrt_session_poll_events");
 
 		// dispatch based on event type
-		switch (xce.type) {
-		case XRT_COMPOSITOR_EVENT_NONE:
+		switch (xse.type) {
+		case XRT_SESSION_EVENT_NONE:
 			// No more events.
 			read_more_events = false;
 			break;
-		case XRT_COMPOSITOR_EVENT_STATE_CHANGE:
-			sess->compositor_visible = xce.state.visible;
-			sess->compositor_focused = xce.state.focused;
+		case XRT_SESSION_EVENT_STATE_CHANGE:
+			sess->compositor_visible = xse.state.visible;
+			sess->compositor_focused = xse.state.focused;
 			break;
-		case XRT_COMPOSITOR_EVENT_OVERLAY_CHANGE:
-			oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(log, sess, xce.overlay.visible);
+		case XRT_SESSION_EVENT_OVERLAY_CHANGE:
+			oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(log, sess, xse.overlay.visible);
 			break;
-		case XRT_COMPOSITOR_EVENT_LOSS_PENDING:
+		case XRT_SESSION_EVENT_LOSS_PENDING:
 			oxr_session_change_state(
 			    log, sess, XR_SESSION_STATE_LOSS_PENDING,
-			    time_state_monotonic_to_ts_ns(sess->sys->inst->timekeeping, xce.loss_pending.loss_time_ns));
+			    time_state_monotonic_to_ts_ns(sess->sys->inst->timekeeping, xse.loss_pending.loss_time_ns));
 			break;
-		case XRT_COMPOSITOR_EVENT_LOST: sess->has_lost = true; break;
-		case XRT_COMPOSITOR_EVENT_DISPLAY_REFRESH_RATE_CHANGE:
+		case XRT_SESSION_EVENT_LOST: sess->has_lost = true; break;
+		case XRT_SESSION_EVENT_DISPLAY_REFRESH_RATE_CHANGE:
 #ifdef OXR_HAVE_FB_display_refresh_rate
-			oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(log, sess,
-			                                                      xce.display.from_display_refresh_rate_hz,
-			                                                      xce.display.to_display_refresh_rate_hz);
+			oxr_event_push_XrEventDataDisplayRefreshRateChangedFB( //
+			    log,                                               //
+			    sess,                                              //
+			    xse.display.from_display_refresh_rate_hz,          //
+			    xse.display.to_display_refresh_rate_hz);           //
 #endif
 			break;
-		default: U_LOG_W("unhandled event type! %d", xce.type); break;
+		default: U_LOG_W("unhandled event type! %d", xse.type); break;
 		}
 	}
 
@@ -284,6 +289,8 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 	if (sess->state == XR_SESSION_STATE_VISIBLE && !sess->compositor_visible) {
 		oxr_session_change_state(log, sess, XR_SESSION_STATE_SYNCHRONIZED, 0);
 	}
+
+	return XR_SUCCESS;
 }
 
 static inline XrViewStateFlags

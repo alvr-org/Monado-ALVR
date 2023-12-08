@@ -721,7 +721,7 @@ oxr_session_end(struct oxr_logger *log, struct oxr_session *sess);
 XrResult
 oxr_session_request_exit(struct oxr_logger *log, struct oxr_session *sess);
 
-void
+XRT_CHECK_RESULT XrResult
 oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess);
 
 XrResult

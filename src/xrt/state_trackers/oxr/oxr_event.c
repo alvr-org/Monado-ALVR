@@ -243,8 +243,14 @@ XrResult
 oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuffer *eventData)
 {
 	struct oxr_session *sess = inst->sessions;
+	XrResult ret;
+
 	while (sess) {
-		oxr_session_poll(log, sess);
+		ret = oxr_session_poll(log, sess);
+		if (ret != XR_SUCCESS) {
+			return ret;
+		}
+
 		sess = sess->next;
 	}
 
@@ -256,7 +262,7 @@ oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuf
 		return XR_EVENT_UNAVAILABLE;
 	}
 
-	XrResult ret = event->result;
+	ret = event->result;
 	memcpy(eventData, oxr_event_extra(event), event->length);
 	free(event);
 
