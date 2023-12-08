@@ -84,7 +84,10 @@ struct null_comp_frame
 /*!
  * Main compositor struct tying everything in the compositor together.
  *
- * @implements xrt_compositor_native, comp_base.
+ * This ultimately implements @ref xrt_compositor_native but does so by
+ * extending @ref comp_base, similar to how @ref comp_compositor works.
+ *
+ * @extends comp_base
  * @ingroup comp_null
  */
 struct null_compositor
