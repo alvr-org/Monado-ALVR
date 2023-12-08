@@ -79,8 +79,12 @@ struct sdl_comp_frame
 };
 
 /*!
- * Split out for convinecne.
+ * Split out for convenience.
  *
+ * This ultimately implements @ref xrt_compositor_native but does so by
+ * extending @ref comp_base, similar to how @ref comp_compositor works.
+ *
+ * @extends comp_base
  * @ingroup sdl_test
  */
 struct sdl_compositor
