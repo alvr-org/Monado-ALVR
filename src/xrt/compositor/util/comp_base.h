@@ -88,8 +88,11 @@ struct comp_layer_slot
  * * @ref xrt_compositor::poll_events
  * * @ref xrt_compositor::destroy
  *
+ * Partially implements @ref xrt_compositor_native, meant to serve as
+ * the base of a main compositor implementation.
+ *
+ * @implements xrt_compositor_native
  * @ingroup comp_util
- * @see comp_base
  */
 struct comp_base
 {
@@ -140,6 +143,8 @@ comp_base(struct xrt_compositor *xc)
  * The bundle needs to be initialised before any of the implemented functions
  * are call, but is not required to be initialised before this function is
  * called.
+ *
+ * @protected @memberof comp_base
  */
 void
 comp_base_init(struct comp_base *cb);
@@ -148,6 +153,8 @@ comp_base_init(struct comp_base *cb);
  * De-initialises all structs, except @ref vk_bundle.
  *
  * The bundle needs to be de-initialised by the sub-class.
+ *
+ * @private @memberof comp_base
  */
 void
 comp_base_fini(struct comp_base *cb);
