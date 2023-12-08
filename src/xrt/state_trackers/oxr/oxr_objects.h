@@ -2013,10 +2013,17 @@ oxr_space_type_is_reference(enum oxr_space_type space_type)
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL_FLOOR:
 	case OXR_SPACE_TYPE_REFERENCE_STAGE:
 	case OXR_SPACE_TYPE_REFERENCE_UNBOUNDED_MSFT:
-	case OXR_SPACE_TYPE_REFERENCE_COMBINED_EYE_VARJO: return true;
+	case OXR_SPACE_TYPE_REFERENCE_COMBINED_EYE_VARJO:
+	case OXR_SPACE_TYPE_REFERENCE_LOCALIZATION_MAP_ML:
+		// These are reference spaces.
+		return true;
 
-	case OXR_SPACE_TYPE_ACTION: return false;
+	case OXR_SPACE_TYPE_ACTION:
+		// Not a reference space.
+		return false;
 	}
+
+	// Handles invalid value.
 	return false;
 }
 
