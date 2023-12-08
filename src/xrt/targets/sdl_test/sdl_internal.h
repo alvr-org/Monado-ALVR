@@ -121,6 +121,10 @@ struct sdl_program_plus;
 /*!
  * C base class for the SDL program.
  *
+ * @implements xrt_instance
+ * @implements xrt_device
+ * @implements xrt_system_devices
+ * @extends sdl_compositor
  * @ingroup sdl_test
  */
 struct sdl_program
