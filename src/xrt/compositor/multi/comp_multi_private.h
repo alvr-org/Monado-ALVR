@@ -89,7 +89,12 @@ struct multi_event
  * A single compositor for feeding the layers from one session/app into
  * the multi-client-capable system compositor.
  *
+ * An instance (usually an IPC server instance) might have several of
+ * these at once, feeding layers to a single multi-client-capable system
+ * compositor.
+ *
  * @ingroup comp_multi
+ * @implements xrt_compositor_native
  */
 struct multi_compositor
 {
