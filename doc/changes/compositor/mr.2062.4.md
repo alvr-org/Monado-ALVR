@@ -1,0 +1,1 @@
+client: Remove event functions.
