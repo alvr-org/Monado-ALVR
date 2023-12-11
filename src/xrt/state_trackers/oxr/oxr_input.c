@@ -904,14 +904,14 @@ oxr_input_combine_input(struct oxr_session *sess,
                         struct oxr_subaction_paths *subaction_path,
                         struct oxr_action_cache *cache,
                         struct oxr_input_value_tagged *out_input,
-                        int64_t *timestamp,
-                        bool *is_active)
+                        int64_t *out_timestamp,
+                        bool *out_is_active)
 {
 	struct oxr_action_input *inputs = cache->inputs;
 	size_t input_count = cache->input_count;
 
 	if (input_count == 0) {
-		*is_active = false;
+		*out_is_active = false;
 		return true;
 	}
 
@@ -996,9 +996,9 @@ oxr_input_combine_input(struct oxr_session *sess,
 		}
 	}
 
-	*is_active = any_active;
+	*out_is_active = any_active;
 	*out_input = res;
-	*timestamp = res_timestamp;
+	*out_timestamp = res_timestamp;
 
 	return true;
 }
@@ -1031,7 +1031,6 @@ oxr_action_cache_update(struct oxr_logger *log,
 
 	struct oxr_input_value_tagged combined;
 	int64_t timestamp;
-	bool is_active;
 
 	/* a cache can only have outputs or inputs, not both */
 	if (cache->output_count > 0) {
@@ -1041,8 +1040,18 @@ oxr_action_cache_update(struct oxr_logger *log,
 		}
 	} else if (cache->input_count > 0) {
 
-		if (!oxr_input_combine_input(sess, countActionSets, actionSets, act_attached, subaction_path, cache,
-		                             &combined, &timestamp, &is_active)) {
+		bool is_active = false;
+		bool bret = oxr_input_combine_input( //
+		    sess,                            // sess
+		    countActionSets,                 // countActionSets
+		    actionSets,                      // actionSets
+		    act_attached,                    // act_attached
+		    subaction_path,                  // subaction_path
+		    cache,                           // cache
+		    &combined,                       // out_input
+		    &timestamp,                      // out_timestamp
+		    &is_active);                     // out_is_active
+		if (!bret) {
 			oxr_log(log, "Failed to get/combine input values '%s'", act_attached->act_ref->name);
 			return;
 		}
