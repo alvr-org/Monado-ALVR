@@ -20,6 +20,7 @@
 #include "oxr_two_call.h"
 #include "oxr_input_transform.h"
 #include "oxr_subaction.h"
+#include "oxr_conversions.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -1450,10 +1451,19 @@ oxr_action_bind_io(struct oxr_logger *log,
 			oxr_slog(slog, "\t\t\t\tRejected! (NO TRANSFORM)\n");
 		}
 
+
 		// No inputs found, prented we never bound it.
 		if (count == 0) {
 			free(cache->inputs);
 			cache->inputs = NULL;
+		} else {
+			oxr_slog(slog, "\t\tBound to:\n");
+			for (uint32_t i = 0; i < input_count; i++) {
+				enum xrt_input_type t = XRT_GET_INPUT_TYPE(inputs[i].input->name);
+				bool active = inputs[i].input->active;
+				oxr_slog(slog, "\t\t\t'%s' on '%s' (%s)\n", xrt_input_type_to_str(t),
+				         inputs[i].xdev->str, active ? "active" : "inactive");
+			}
 		}
 
 		cache->input_count = count;
