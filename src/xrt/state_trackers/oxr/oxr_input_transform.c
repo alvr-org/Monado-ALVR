@@ -13,6 +13,7 @@
 #include "oxr_input_transform.h"
 #include "oxr_logger.h"
 #include "oxr_objects.h"
+#include "oxr_conversions.h"
 
 #include "util/u_misc.h"
 
@@ -32,22 +33,6 @@ xr_action_type_to_str(XrActionType type)
 	XR_LIST_ENUM_XrActionType(PRINT)
 #undef PRINT
 	default: return "XR_ACTION_TYPE_UNKNOWN";
-	}
-	// clang-format on
-}
-
-static const char *
-xrt_input_type_to_str(enum xrt_input_type type)
-{
-	// clang-format off
-	switch (type) {
-	case XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE: return "XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE";
-	case XRT_INPUT_TYPE_VEC1_MINUS_ONE_TO_ONE: return "XRT_INPUT_TYPE_VEC1_MINUS_ONE_TO_ONE";
-	case XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE: return "XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE";
-	case XRT_INPUT_TYPE_VEC3_MINUS_ONE_TO_ONE: return "XRT_INPUT_TYPE_VEC3_MINUS_ONE_TO_ONE";
-	case XRT_INPUT_TYPE_BOOLEAN: return "XRT_INPUT_TYPE_BOOLEAN";
-	case XRT_INPUT_TYPE_POSE: return "XRT_INPUT_TYPE_POSE";
-	default: return "XRT_INPUT_UNKNOWN";
 	}
 	// clang-format on
 }

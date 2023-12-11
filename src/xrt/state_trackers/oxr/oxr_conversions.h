@@ -16,6 +16,12 @@
 #include "xrt/xrt_openxr_includes.h"
 
 
+/*
+ *
+ * Space things.
+ *
+ */
+
 static inline XrSpaceLocationFlags
 xrt_to_xr_space_location_flags(enum xrt_space_relation_flags relation_flags)
 {
@@ -128,4 +134,27 @@ oxr_ref_space_to_xrt(enum oxr_space_type space_type)
 	 */
 
 	return XRT_SPACE_REFERENCE_TYPE_INVALID;
+}
+
+
+/*
+ *
+ * IO things.
+ *
+ */
+
+static inline const char *
+xrt_input_type_to_str(enum xrt_input_type type)
+{
+	// clang-format off
+	switch (type) {
+	case XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE: return "XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE";
+	case XRT_INPUT_TYPE_VEC1_MINUS_ONE_TO_ONE: return "XRT_INPUT_TYPE_VEC1_MINUS_ONE_TO_ONE";
+	case XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE: return "XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE";
+	case XRT_INPUT_TYPE_VEC3_MINUS_ONE_TO_ONE: return "XRT_INPUT_TYPE_VEC3_MINUS_ONE_TO_ONE";
+	case XRT_INPUT_TYPE_BOOLEAN: return "XRT_INPUT_TYPE_BOOLEAN";
+	case XRT_INPUT_TYPE_POSE: return "XRT_INPUT_TYPE_POSE";
+	default: return "XRT_INPUT_UNKNOWN";
+	}
+	// clang-format on
 }
