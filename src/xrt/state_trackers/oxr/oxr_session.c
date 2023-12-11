@@ -158,6 +158,15 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 
 		xrt_result_t xret = xrt_comp_begin_session(xc, &begin_session_info);
 		OXR_CHECK_XRET(log, sess, xret, xrt_comp_begin_session);
+	} else {
+		// Headless, pretend we got event from the compositor.
+		sess->compositor_visible = true;
+		sess->compositor_focused = true;
+
+		// Transition into focused.
+		oxr_session_change_state(log, sess, XR_SESSION_STATE_SYNCHRONIZED, 0);
+		oxr_session_change_state(log, sess, XR_SESSION_STATE_VISIBLE, 0);
+		oxr_session_change_state(log, sess, XR_SESSION_STATE_FOCUSED, 0);
 	}
 
 	sess->has_begun = true;
@@ -191,6 +200,10 @@ oxr_session_end(struct oxr_logger *log, struct oxr_session *sess)
 
 		xrt_result_t xret = xrt_comp_end_session(xc);
 		OXR_CHECK_XRET(log, sess, xret, xrt_comp_end_session);
+	} else {
+		// Headless, pretend we got event from the compositor.
+		sess->compositor_visible = false;
+		sess->compositor_focused = false;
 	}
 
 	oxr_session_change_state(log, sess, XR_SESSION_STATE_IDLE, 0);
