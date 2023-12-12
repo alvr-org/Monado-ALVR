@@ -130,6 +130,10 @@ is_session_link_to_event(struct oxr_event *event, XrSession session)
 		XrEventDataInteractionProfileChanged *changed = (XrEventDataInteractionProfileChanged *)type;
 		return changed->session == session;
 	}
+	case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING: {
+		XrEventDataReferenceSpaceChangePending *pending = (XrEventDataReferenceSpaceChangePending *)type;
+		return pending->session == session;
+	}
 	default: return false;
 	}
 }
@@ -178,6 +182,35 @@ oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, stru
 
 	changed->type = XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED;
 	changed->session = oxr_session_to_openxr(sess);
+
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+
+XrResult
+oxr_event_push_XrEventDataReferenceSpaceChangePending(struct oxr_logger *log,
+                                                      struct oxr_session *sess,
+                                                      XrReferenceSpaceType referenceSpaceType,
+                                                      XrTime changeTime,
+                                                      XrBool32 poseValid,
+                                                      const XrPosef *poseInPreviousSpace)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrEventDataReferenceSpaceChangePending *pending;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &pending);
+
+	pending->type = XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING;
+	pending->session = oxr_session_to_openxr(sess);
+	pending->referenceSpaceType = referenceSpaceType;
+	pending->changeTime = changeTime;
+	pending->poseValid = poseValid;
+	pending->poseInPreviousSpace = *poseInPreviousSpace;
+	event->result = XR_SUCCESS;
 
 	lock(inst);
 	push(inst, event);

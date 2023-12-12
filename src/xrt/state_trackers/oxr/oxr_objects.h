@@ -944,6 +944,14 @@ oxr_event_push_XrEventDataSessionStateChanged(struct oxr_logger *log,
 XrResult
 oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, struct oxr_session *sess);
 
+XrResult
+oxr_event_push_XrEventDataReferenceSpaceChangePending(struct oxr_logger *log,
+                                                      struct oxr_session *sess,
+                                                      XrReferenceSpaceType referenceSpaceType,
+                                                      XrTime changeTime,
+                                                      XrBool32 poseValid,
+                                                      const XrPosef *poseInPreviousSpace);
+
 #ifdef OXR_HAVE_FB_display_refresh_rate
 XrResult
 oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,

@@ -55,6 +55,13 @@ DEBUG_GET_ONCE_NUM_OPTION(ipd, "OXR_DEBUG_IPD_MM", 63)
 DEBUG_GET_ONCE_NUM_OPTION(wait_frame_sleep, "OXR_DEBUG_WAIT_FRAME_EXTRA_SLEEP_MS", 0)
 DEBUG_GET_ONCE_BOOL_OPTION(frame_timing_spew, "OXR_FRAME_TIMING_SPEW", false)
 
+
+/*
+ *
+ * Helpers.
+ *
+ */
+
 static bool
 should_render(XrSessionState state)
 {
@@ -83,6 +90,74 @@ to_string(XrSessionState state)
 	default: return "";
 	}
 }
+
+static XrResult
+handle_reference_space_change_pending(struct oxr_logger *log,
+                                      struct oxr_session *sess,
+                                      struct xrt_session_event_reference_space_change_pending *ref_change)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrReferenceSpaceType type = XR_REFERENCE_SPACE_TYPE_MAX_ENUM;
+
+
+	switch (ref_change->ref_type) {
+	case XRT_SPACE_REFERENCE_TYPE_VIEW: type = XR_REFERENCE_SPACE_TYPE_VIEW; break;
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL: type = XR_REFERENCE_SPACE_TYPE_LOCAL; break;
+	case XRT_SPACE_REFERENCE_TYPE_STAGE: type = XR_REFERENCE_SPACE_TYPE_STAGE; break;
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR:
+#ifdef OXR_HAVE_EXT_local_floor
+		if (inst->extensions.EXT_local_floor) {
+			type = XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT;
+			break;
+		} else {
+			// Silently ignored, extension not enabled.
+			return XR_SUCCESS;
+		}
+#else
+		// Silently ignored, not compiled with this extension supported.
+		return XR_SUCCESS;
+#endif
+	case XRT_SPACE_REFERENCE_TYPE_UNBOUNDED:
+#ifdef OXR_HAVE_MSFT_unbounded_reference_space
+		if (inst->extensions.MSFT_unbounded_reference_space) {
+			type = XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT;
+			break;
+		} else {
+			// Silently ignored, extension not enabled.
+			return XR_SUCCESS;
+		}
+#else
+		// Silently ignored, not compiled with this extension supported.
+		return XR_SUCCESS;
+#endif
+	}
+
+	if (type == XR_REFERENCE_SPACE_TYPE_MAX_ENUM) {
+		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "invalid reference space type");
+	}
+
+	XrTime changeTime = time_state_monotonic_to_ts_ns(inst->timekeeping, ref_change->timestamp_ns);
+	const XrPosef *poseInPreviousSpace = (XrPosef *)&ref_change->pose_in_previous_space;
+	bool poseValid = ref_change->pose_valid;
+
+	//! @todo properly handle return (not done yet because requires larger rewrite),
+	oxr_event_push_XrEventDataReferenceSpaceChangePending( //
+	    log,                                               // log
+	    sess,                                              // sess
+	    type,                                              // referenceSpaceType
+	    changeTime,                                        // changeTime
+	    poseValid,                                         // poseValid
+	    poseInPreviousSpace);                              // poseInPreviousSpace
+
+	return XR_SUCCESS;
+}
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
 
 void
 oxr_session_change_state(struct oxr_logger *log, struct oxr_session *sess, XrSessionState state, XrTime time)
@@ -284,6 +359,9 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 			    xse.display.from_display_refresh_rate_hz,          //
 			    xse.display.to_display_refresh_rate_hz);           //
 #endif
+			break;
+		case XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING:
+			handle_reference_space_change_pending(log, sess, &xse.ref_change);
 			break;
 		default: U_LOG_W("unhandled event type! %d", xse.type); break;
 		}
