@@ -928,6 +928,7 @@ oxr_system_get_eye_gaze_support(struct oxr_logger *log, struct oxr_instance *ins
 bool
 oxr_system_get_force_feedback_support(struct oxr_logger *log, struct oxr_instance *inst);
 
+
 /*
  *
  * oxr_event.cpp
@@ -935,18 +936,10 @@ oxr_system_get_force_feedback_support(struct oxr_logger *log, struct oxr_instanc
  */
 
 XrResult
-oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuffer *eventData);
-
-XrResult
 oxr_event_push_XrEventDataSessionStateChanged(struct oxr_logger *log,
                                               struct oxr_session *sess,
                                               XrSessionState state,
                                               XrTime time);
-
-XrResult
-oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *log,
-                                                           struct oxr_session *sess,
-                                                           bool visible);
 
 XrResult
 oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, struct oxr_session *sess);
@@ -959,11 +952,22 @@ oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
                                                       float toDisplayRefreshRate);
 #endif // OXR_HAVE_FB_display_refresh_rate
 
+XrResult
+oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *log,
+                                                           struct oxr_session *sess,
+                                                           bool visible);
+
 /*!
  * This clears all pending events refers to the given session.
  */
 XrResult
 oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess);
+
+/*!
+ * Will return one event if available, also drain the sessions event queues.
+ */
+XrResult
+oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuffer *eventData);
 
 
 /*

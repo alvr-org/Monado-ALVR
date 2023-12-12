@@ -134,6 +134,7 @@ is_session_link_to_event(struct oxr_event *event, XrSession session)
 	}
 }
 
+
 /*
  *
  * 'Exported' functions.
@@ -166,7 +167,6 @@ oxr_event_push_XrEventDataSessionStateChanged(struct oxr_logger *log,
 	return XR_SUCCESS;
 }
 
-
 XrResult
 oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, struct oxr_session *sess)
 {
@@ -185,6 +185,30 @@ oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, stru
 
 	return XR_SUCCESS;
 }
+
+#ifdef OXR_HAVE_FB_display_refresh_rate
+XrResult
+oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
+                                                      struct oxr_session *sess,
+                                                      float fromDisplayRefreshRate,
+                                                      float toDisplayRefreshRate)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrEventDataDisplayRefreshRateChangedFB *changed;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_DISPLAY_REFRESH_RATE_CHANGED_FB;
+	changed->fromDisplayRefreshRate = fromDisplayRefreshRate;
+	changed->toDisplayRefreshRate = toDisplayRefreshRate;
+	event->result = XR_SUCCESS;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_FB_display_refresh_rate
 
 XrResult
 oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *log,
@@ -268,27 +292,3 @@ oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuf
 
 	return ret;
 }
-
-#ifdef OXR_HAVE_FB_display_refresh_rate
-XrResult
-oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
-                                                      struct oxr_session *sess,
-                                                      float fromDisplayRefreshRate,
-                                                      float toDisplayRefreshRate)
-{
-	struct oxr_instance *inst = sess->sys->inst;
-	XrEventDataDisplayRefreshRateChangedFB *changed;
-	struct oxr_event *event = NULL;
-
-	ALLOC(log, inst, &event, &changed);
-	changed->type = XR_TYPE_EVENT_DATA_DISPLAY_REFRESH_RATE_CHANGED_FB;
-	changed->fromDisplayRefreshRate = fromDisplayRefreshRate;
-	changed->toDisplayRefreshRate = toDisplayRefreshRate;
-	event->result = XR_SUCCESS;
-	lock(inst);
-	push(inst, event);
-	unlock(inst);
-
-	return XR_SUCCESS;
-}
-#endif // OXR_HAVE_FB_display_refresh_rate
