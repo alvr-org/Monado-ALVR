@@ -266,7 +266,9 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 			sess->compositor_focused = xse.state.focused;
 			break;
 		case XRT_SESSION_EVENT_OVERLAY_CHANGE:
+#ifdef OXR_HAVE_EXTX_overlay
 			oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(log, sess, xse.overlay.visible);
+#endif
 			break;
 		case XRT_SESSION_EVENT_LOSS_PENDING:
 			oxr_session_change_state(

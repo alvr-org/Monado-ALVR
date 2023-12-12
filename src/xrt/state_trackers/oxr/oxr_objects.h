@@ -952,10 +952,12 @@ oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
                                                       float toDisplayRefreshRate);
 #endif // OXR_HAVE_FB_display_refresh_rate
 
+#ifdef OXR_HAVE_EXTX_overlay
 XrResult
 oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *log,
                                                            struct oxr_session *sess,
                                                            bool visible);
+#endif // OXR_HAVE_EXTX_overlay
 
 /*!
  * This clears all pending events refers to the given session.

@@ -210,6 +210,7 @@ oxr_event_push_XrEventDataDisplayRefreshRateChangedFB(struct oxr_logger *log,
 }
 #endif // OXR_HAVE_FB_display_refresh_rate
 
+#ifdef OXR_HAVE_EXTX_overlay
 XrResult
 oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *log,
                                                            struct oxr_session *sess,
@@ -230,6 +231,7 @@ oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *lo
 
 	return XR_SUCCESS;
 }
+#endif // OXR_HAVE_EXTX_overlay
 
 XrResult
 oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess)
