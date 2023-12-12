@@ -80,13 +80,9 @@ sdl_instance_create_system(struct xrt_instance *xinst,
 	assert(*out_xso == NULL);
 	assert(out_xsysc == NULL || *out_xsysc == NULL);
 
-	// Use system helper.
-	struct u_system *usys = u_system_create();
-	assert(usys != NULL); // Should never fail.
-
 	struct sdl_program *sp = from_xinst(xinst);
 
-	*out_xsys = &usys->base;
+	*out_xsys = &sp->usys->base;
 	*out_xsysd = &sp->xsysd_base;
 	*out_xso = sp->xso;
 
@@ -99,7 +95,7 @@ sdl_instance_create_system(struct xrt_instance *xinst,
 	sdl_compositor_create_system(sp, &xsysc);
 
 	// Tell the system about the system compositor.
-	u_system_set_system_compositor(usys, xsysc);
+	u_system_set_system_compositor(sp->usys, xsysc);
 
 	*out_xsysc = xsysc;
 
@@ -121,6 +117,15 @@ sdl_instance_destroy(struct xrt_instance *xinst)
  * Exported function(s).
  *
  */
+
+void
+sdl_system_init(struct sdl_program *sp)
+{
+	struct u_system *usys = u_system_create();
+	assert(usys != NULL); // Should never fail.
+
+	sp->usys = usys;
+}
 
 void
 sdl_system_devices_init(struct sdl_program *sp)

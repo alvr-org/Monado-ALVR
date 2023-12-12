@@ -119,6 +119,9 @@ struct sdl_program
 	//! Instance base.
 	struct xrt_instance xinst_base;
 
+	//! System, implemented for now using helper code.
+	struct u_system *usys;
+
 	//! System devices base.
 	struct xrt_system_devices xsysd_base;
 
@@ -351,6 +354,14 @@ sdl_compositor_create_system(struct sdl_program *sp, struct xrt_system_composito
  * sdl_instance.c
  *
  */
+
+/*!
+ * Init the @ref xrt_system (and @ref u_system) struct.
+ *
+ * @ingroup sdl_test
+ */
+void
+sdl_system_init(struct sdl_program *sp);
 
 /*!
  * Init the @ref xrt_system_devices sub struct.
