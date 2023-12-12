@@ -186,6 +186,7 @@ xrt_result_t
 u_builder_roles_helper_open_system(struct xrt_builder *xb,
                                    cJSON *config,
                                    struct xrt_prober *xp,
+                                   struct xrt_session_event_sink *broadcast,
                                    struct xrt_system_devices **out_xsysd,
                                    struct xrt_space_overseer **out_xso,
                                    u_builder_open_system_fn fn)
@@ -246,6 +247,7 @@ xrt_result_t
 u_builder_open_system_static_roles(struct xrt_builder *xb,
                                    cJSON *config,
                                    struct xrt_prober *xp,
+                                   struct xrt_session_event_sink *broadcast,
                                    struct xrt_system_devices **out_xsysd,
                                    struct xrt_space_overseer **out_xso)
 {
@@ -255,6 +257,7 @@ u_builder_open_system_static_roles(struct xrt_builder *xb,
 	    xb,                                    //
 	    config,                                //
 	    xp,                                    //
+	    broadcast,                             //
 	    out_xsysd,                             //
 	    out_xso,                               //
 	    ub->open_system_static_roles);         //

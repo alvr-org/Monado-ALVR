@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 
+struct xrt_session_event_sink;
+
 
 /*!
  * Helper struct to manage devices by implementing the @ref xrt_system_devices.
@@ -160,6 +162,7 @@ u_system_devices_static_finalize(struct u_system_devices_static *usysds,
  */
 xrt_result_t
 u_system_devices_create_from_prober(struct xrt_instance *xinst,
+                                    struct xrt_session_event_sink *broadcast,
                                     struct xrt_system_devices **out_xsysd,
                                     struct xrt_space_overseer **out_xso);
 

@@ -46,7 +46,11 @@ t_instance_create_system(struct xrt_instance *xinst,
 	usys = u_system_create();
 	assert(usys != NULL); // Should never fail.
 
-	xret = u_system_devices_create_from_prober(xinst, &xsysd, &xso);
+	xret = u_system_devices_create_from_prober( //
+	    xinst,                                  //
+	    &usys->broadcast,                       //
+	    &xsysd,                                 //
+	    &xso);                                  //
 	if (xret != XRT_SUCCESS) {
 		u_system_destroy(&usys);
 		return xret;

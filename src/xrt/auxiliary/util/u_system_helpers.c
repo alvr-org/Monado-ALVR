@@ -151,6 +151,7 @@ u_system_devices_static_finalize(struct u_system_devices_static *usysds,
 
 xrt_result_t
 u_system_devices_create_from_prober(struct xrt_instance *xinst,
+                                    struct xrt_session_event_sink *broadcast,
                                     struct xrt_system_devices **out_xsysd,
                                     struct xrt_space_overseer **out_xso)
 {
@@ -175,7 +176,7 @@ u_system_devices_create_from_prober(struct xrt_instance *xinst,
 		return xret;
 	}
 
-	return xrt_prober_create_system(xp, out_xsysd, out_xso);
+	return xrt_prober_create_system(xp, broadcast, out_xsysd, out_xso);
 }
 
 struct xrt_device *

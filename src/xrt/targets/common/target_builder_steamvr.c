@@ -97,6 +97,7 @@ static xrt_result_t
 steamvr_open_system(struct xrt_builder *xb,
                     cJSON *config,
                     struct xrt_prober *xp,
+                    struct xrt_session_event_sink *broadcast,
                     struct xrt_system_devices **out_xsysd,
                     struct xrt_space_overseer **out_xso)
 {
