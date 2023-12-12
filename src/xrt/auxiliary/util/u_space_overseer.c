@@ -10,6 +10,7 @@
 
 #include "xrt/xrt_space.h"
 #include "xrt/xrt_device.h"
+#include "xrt/xrt_session.h"
 #include "xrt/xrt_tracking.h"
 
 #include "os/os_time.h"
@@ -89,6 +90,9 @@ struct u_space_overseer
 
 	//! Tracks usage of reference spaces.
 	struct xrt_reference ref_space_use[XRT_SPACE_REFERENCE_TYPE_COUNT];
+
+	//! Event sink to broadcast events to all sessions.
+	struct xrt_session_event_sink *broadcast;
 
 	/*!
 	 * Can we do a recenter of the local and local_floor spaces, protected
@@ -544,6 +548,7 @@ static xrt_result_t
 recenter_local_spaces(struct xrt_space_overseer *xso)
 {
 	struct u_space_overseer *uso = u_space_overseer(xso);
+	xrt_result_t xret;
 
 	// Take the full lock from the start.
 	pthread_rwlock_wrlock(&uso->lock);
@@ -617,6 +622,29 @@ recenter_local_spaces(struct xrt_space_overseer *xso)
 	update_offset_write_locked(ulocal, &local_offset);
 	update_offset_write_locked(ulocal_floor, &local_floor_offset);
 
+	// Push the events.
+	union xrt_session_event xse = XRT_STRUCT_INIT;
+
+	// Basics
+	xse.ref_change.event_type = XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING;
+	xse.ref_change.pose_valid = false;
+	xse.ref_change.pose_in_previous_space = (struct xrt_pose)XRT_POSE_IDENTITY;
+	xse.ref_change.timestamp_ns = os_monotonic_get_ns();
+
+	// Event for local space.
+	xse.ref_change.ref_type = XRT_SPACE_REFERENCE_TYPE_LOCAL;
+	xret = xrt_session_event_sink_push(uso->broadcast, &xse);
+	if (xret != XRT_SUCCESS) {
+		U_LOG_E("Failed to push event for LOCAL!");
+	}
+
+	// Event for local floor space.
+	xse.ref_change.ref_type = XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR;
+	xret = xrt_session_event_sink_push(uso->broadcast, &xse);
+	if (xret != XRT_SUCCESS) {
+		U_LOG_E("Failed to push event LOCAL_FLOOR!");
+	}
+
 	pthread_rwlock_unlock(&uso->lock);
 
 	return XRT_SUCCESS;
@@ -656,7 +684,7 @@ destroy(struct xrt_space_overseer *xso)
  */
 
 struct u_space_overseer *
-u_space_overseer_create(void)
+u_space_overseer_create(struct xrt_session_event_sink *broadcast)
 {
 	struct u_space_overseer *uso = U_TYPED_CALLOC(struct u_space_overseer);
 	uso->base.create_offset_space = create_offset_space;
@@ -667,6 +695,7 @@ u_space_overseer_create(void)
 	uso->base.ref_space_dec = ref_space_dec;
 	uso->base.recenter_local_spaces = recenter_local_spaces;
 	uso->base.destroy = destroy;
+	uso->broadcast = broadcast;
 
 	XRT_MAYBE_UNUSED int ret = 0;
 

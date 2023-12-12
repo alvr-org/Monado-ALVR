@@ -17,6 +17,7 @@ extern "C" {
 
 
 struct u_space_overseer;
+struct xrt_session_event_sink;
 
 
 /*
@@ -28,10 +29,11 @@ struct u_space_overseer;
 /*!
  * Create a default implementation of a space overseer.
  *
+ * @param[in] broadcast Event sink that broadcasts events to all sessions.
  * @ingroup aux_util
  */
 struct u_space_overseer *
-u_space_overseer_create(void);
+u_space_overseer_create(struct xrt_session_event_sink *broadcast);
 
 /*!
  * Sets up the space overseer and all semantic spaces in a way that works with

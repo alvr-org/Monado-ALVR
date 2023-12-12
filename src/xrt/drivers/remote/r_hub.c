@@ -477,7 +477,7 @@ r_create_devices(uint16_t port,
 	 * Space overseer.
 	 */
 
-	struct u_space_overseer *uso = u_space_overseer_create();
+	struct u_space_overseer *uso = u_space_overseer_create(broadcast);
 	struct xrt_space_overseer *xso = (struct xrt_space_overseer *)uso;
 	assert(uso != NULL);
 

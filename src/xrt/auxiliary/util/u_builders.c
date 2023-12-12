@@ -173,7 +173,7 @@ u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
 	 * Space overseer.
 	 */
 
-	struct u_space_overseer *uso = u_space_overseer_create();
+	struct u_space_overseer *uso = u_space_overseer_create(broadcast);
 
 	struct xrt_pose T_stage_local = XRT_POSE_IDENTITY;
 	T_stage_local.position.y = 1.6;
