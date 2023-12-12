@@ -83,7 +83,13 @@ oxr_action_bind_io(struct oxr_logger *log,
  */
 
 /*!
- * De-initialize/de-allocate all dynamic members of @ref oxr_action_cache
+ * De-initialize/de-allocate all dynamic members of @ref oxr_action_cache and
+ * reset all fields. This function is used when destroying an action that has
+ * been attached to the session (@ref oxr_action_attachment), or when bindings
+ * are (re)made for the action. Bindings can be (re)made multiple times during
+ * the runtime of the session, such as when a device is dynamically moved
+ * between roles.
+ *
  * @private @memberof oxr_action_cache
  */
 static void
@@ -95,10 +101,14 @@ oxr_action_cache_teardown(struct oxr_action_cache *cache)
 		oxr_input_transform_destroy(&(action_input->transforms));
 		action_input->transform_count = 0;
 	}
+
 	free(cache->inputs);
 	cache->inputs = NULL;
+
 	free(cache->outputs);
 	cache->outputs = NULL;
+
+	U_ZERO(cache);
 }
 
 /*!
@@ -1413,10 +1423,23 @@ oxr_action_bind_io(struct oxr_logger *log,
 	struct oxr_action_output outputs[OXR_MAX_BINDINGS_PER_ACTION] = {0};
 	uint32_t output_count = 0;
 
-	get_binding(log, slog, sess, act_ref, profile, subaction_path, inputs, &input_count, outputs, &output_count);
+	// If we are binding again, reset the cache fully.
+	oxr_action_cache_teardown(cache);
 
-	cache->current.active = false;
+	// Fill out the arrays with the bindings we can find.
+	get_binding(        //
+	    log,            // log
+	    slog,           // slog
+	    sess,           // sess
+	    act_ref,        // act_ref
+	    profile,        // profile
+	    subaction_path, // subaction_path
+	    inputs,         // inputs
+	    &input_count,   // input_count
+	    outputs,        // outputs
+	    &output_count); // output_count
 
+	// Mutually exclusive to outputs.
 	if (input_count > 0) {
 		uint32_t count = 0;
 		cache->current.active = true;
@@ -1469,6 +1492,7 @@ oxr_action_bind_io(struct oxr_logger *log,
 		cache->input_count = count;
 	}
 
+	// Mutually exclusive to inputs.
 	if (output_count > 0) {
 		cache->current.active = true;
 		cache->outputs = U_TYPED_ARRAY_CALLOC(struct oxr_action_output, output_count);
