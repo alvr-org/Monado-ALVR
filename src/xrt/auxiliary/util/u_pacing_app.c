@@ -25,6 +25,7 @@
 DEBUG_GET_ONCE_LOG_OPTION(log_level, "U_PACING_APP_LOG", U_LOGGING_WARN)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_app_time_ms, "U_PACING_APP_MIN_TIME_MS", 1.0f)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_margin_ms, "U_PACING_APP_MIN_MARGIN_MS", 2.0f)
+DEBUG_GET_ONCE_BOOL_OPTION(use_min_frame_period, "U_PACING_APP_USE_MIN_FRAME_PERIOD", false)
 
 #define UPA_LOG_T(...) U_LOG_IFL_T(debug_get_log_option_log_level(), __VA_ARGS__)
 #define UPA_LOG_D(...) U_LOG_IFL_D(debug_get_log_option_log_level(), __VA_ARGS__)
@@ -444,7 +445,19 @@ pa_predict(struct u_pacing_app *upa,
 
 	DEBUG_PRINT_ID(frame_id);
 
-	uint64_t period_ns = calc_period(pa);
+	uint64_t period_ns;
+
+	/*
+	 * We can either limit the application to a calculated frame rate that
+	 * depends on it's total frame time. Or we try to use the minimal frame
+	 * period, aka the compositor's frame period. This will use more power.
+	 */
+	if (!debug_get_bool_option_use_min_frame_period()) {
+		period_ns = min_period(pa);
+	} else {
+		period_ns = calc_period(pa);
+	}
+
 	uint64_t predict_ns = predict_display_time(pa, now_ns, period_ns);
 	// How long we think the frame should take.
 	uint64_t frame_time_ns = total_app_time_ns(pa);
