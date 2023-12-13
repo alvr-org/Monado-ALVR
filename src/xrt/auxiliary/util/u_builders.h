@@ -167,7 +167,8 @@ u_builder_setup_tracking_origins(struct xrt_device *head,
  * @ingroup aux_util
  */
 void
-u_builder_create_space_overseer_legacy(struct xrt_device *head,
+u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
+                                       struct xrt_device *head,
                                        struct xrt_device *left,
                                        struct xrt_device *right,
                                        struct xrt_device **xdevs,

@@ -169,6 +169,7 @@ steamvr_open_system(struct xrt_builder *xb,
 
 	*out_xsysd = xsysd;
 	u_builder_create_space_overseer_legacy( //
+	    broadcast,                          // broadcast
 	    head,                               // head
 	    left,                               // left
 	    right,                              // right
