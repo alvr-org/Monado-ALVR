@@ -342,11 +342,11 @@ get_identifier_str_in_profile(struct oxr_logger *log,
 	return str;
 }
 
-static void
-get_profile_for_device_name(struct oxr_logger *log,
-                            struct oxr_session *sess,
-                            enum xrt_device_name name,
-                            struct oxr_interaction_profile **out_p)
+void
+oxr_get_profile_for_device_name(struct oxr_logger *log,
+                                struct oxr_session *sess,
+                                enum xrt_device_name name,
+                                struct oxr_interaction_profile **out_p)
 {
 	struct oxr_instance *inst = sess->sys->inst;
 	/*
@@ -407,7 +407,7 @@ oxr_find_profile_for_device(struct oxr_logger *log,
 	}
 
 	// Have bindings for this device's interaction profile been suggested?
-	get_profile_for_device_name(log, sess, xdev->name, out_p);
+	oxr_get_profile_for_device_name(log, sess, xdev->name, out_p);
 	if (*out_p != NULL) {
 		return;
 	}
@@ -415,7 +415,7 @@ oxr_find_profile_for_device(struct oxr_logger *log,
 	// Check if bindings for any of this device's alternative interaction profiles have been suggested.
 	for (size_t i = 0; i < xdev->binding_profile_count; i++) {
 		struct xrt_binding_profile *xbp = &xdev->binding_profiles[i];
-		get_profile_for_device_name(log, sess, xbp->name, out_p);
+		oxr_get_profile_for_device_name(log, sess, xbp->name, out_p);
 		if (*out_p != NULL) {
 			return;
 		}

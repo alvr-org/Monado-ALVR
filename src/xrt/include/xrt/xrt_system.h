@@ -5,6 +5,7 @@
  * @file
  * @brief  Header for system objects.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup xrt_iface
  */
 
@@ -171,6 +172,12 @@ struct xrt_system_roles
 	 * device, or negative if none available.
 	 */
 	int32_t gamepad;
+
+	enum xrt_device_name left_profile;
+
+	enum xrt_device_name right_profile;
+
+	enum xrt_device_name gamepad_profile;
 };
 
 /*!
@@ -182,7 +189,7 @@ struct xrt_system_roles
  */
 #define XRT_SYSTEM_ROLES_INIT                                                                                          \
 	{                                                                                                              \
-		0, -1, -1, -1                                                                                          \
+		0, -1, -1, -1, XRT_DEVICE_INVALID, XRT_DEVICE_INVALID, XRT_DEVICE_INVALID,                             \
 	}
 
 

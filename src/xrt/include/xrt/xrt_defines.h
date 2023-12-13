@@ -657,6 +657,8 @@ struct xrt_relation_chain
  */
 enum xrt_device_name
 {
+	XRT_DEVICE_INVALID = 0,
+
 	XRT_DEVICE_GENERIC_HMD = 1,
 
 	// Vive stuff.

@@ -747,6 +747,25 @@ struct oxr_profiles_per_subaction
 #undef PROFILE_MEMBER
 };
 
+static void
+oxr_find_profiles_from_roles(struct oxr_logger *log,
+                             struct oxr_session *sess,
+                             struct oxr_profiles_per_subaction *out_profiles)
+{
+#define FIND_PROFILE(X)                                                                                                \
+	{                                                                                                              \
+		struct xrt_device *xdev = GET_XDEV_BY_ROLE(sess->sys, X);                                              \
+		if (xdev != NULL) {                                                                                    \
+			oxr_find_profile_for_device(log, sess, xdev, &out_profiles->X);                                \
+		} else {                                                                                               \
+			oxr_get_profile_for_device_name(log, sess, GET_PROFILE_NAME_BY_ROLE(sess->sys, X),             \
+			                                &out_profiles->X);                                             \
+		}                                                                                                      \
+	}
+	OXR_FOR_EACH_VALID_SUBACTION_PATH(FIND_PROFILE)
+#undef FIND_PROFILE
+}
+
 /*!
  * @public @memberof oxr_action_attachment
  */
@@ -1661,10 +1680,7 @@ XrResult
 oxr_session_update_action_bindings(struct oxr_logger *log, struct oxr_session *sess)
 {
 	struct oxr_profiles_per_subaction profiles = {0};
-
-#define FIND_PROFILE(X) oxr_find_profile_for_device(log, sess, GET_XDEV_BY_ROLE(sess->sys, X), &profiles.X);
-	OXR_FOR_EACH_VALID_SUBACTION_PATH(FIND_PROFILE)
-#undef FIND_PROFILE
+	oxr_find_profiles_from_roles(log, sess, &profiles);
 
 	for (size_t i = 0; i < sess->action_set_attachment_count; i++) {
 		struct oxr_action_set_attachment *act_set_attached = &sess->act_set_attachments[i];
