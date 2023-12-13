@@ -4,6 +4,7 @@
 - mr.1943
 - mr.1947
 - mr.1950
+- mr.2077
 ---
 
 steamvr_lh: Add driver that wraps the SteamVR Lighthouse driver.
