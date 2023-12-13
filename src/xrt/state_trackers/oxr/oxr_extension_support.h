@@ -373,6 +373,18 @@
 
 
 /*
+ * XR_FB_composition_layer_image_layout
+ */
+#if defined(XR_FB_composition_layer_image_layout) && defined(XRT_FEATURE_OPENXR_LAYER_FB_LAYER_IMAGE_LAYOUT)
+#define OXR_HAVE_FB_composition_layer_image_layout
+#define OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_)                                                     \
+	_(FB_composition_layer_image_layout, FB_COMPOSITION_LAYER_IMAGE_LAYOUT)
+#else
+#define OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_)
+#endif
+
+
+/*
  * XR_FB_display_refresh_rate
  */
 #if defined(XR_FB_display_refresh_rate) && defined(XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE)
@@ -585,6 +597,7 @@
     OXR_EXTENSION_SUPPORT_EXT_local_floor(_) \
     OXR_EXTENSION_SUPPORT_EXT_palm_pose(_) \
     OXR_EXTENSION_SUPPORT_EXT_samsung_odyssey_controller(_) \
+    OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_) \
     OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) \
     OXR_EXTENSION_SUPPORT_ML_ml2_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_MND_headless(_) \

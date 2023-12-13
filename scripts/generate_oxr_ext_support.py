@@ -64,6 +64,7 @@ EXTENSIONS = (
     ['XR_EXT_local_floor', 'XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR'],
     ['XR_EXT_palm_pose', 'XRT_FEATURE_OPENXR_INTERACTION_EXT_PALM_POSE'],
     ['XR_EXT_samsung_odyssey_controller', 'XRT_FEATURE_OPENXR_INTERACTION_WINMR'],
+    ['XR_FB_composition_layer_image_layout', 'XRT_FEATURE_OPENXR_LAYER_FB_LAYER_IMAGE_LAYOUT'],
     ['XR_FB_display_refresh_rate', 'XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE'],
     ['XR_ML_ml2_controller_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_ML2'],
     ['XR_MND_headless', 'XRT_FEATURE_OPENXR_HEADLESS'],

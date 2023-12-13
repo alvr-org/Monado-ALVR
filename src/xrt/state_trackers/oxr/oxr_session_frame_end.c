@@ -162,6 +162,30 @@ fill_in_color_scale_bias(struct oxr_session *sess,
 }
 
 static void
+fill_in_y_flip(struct oxr_session *sess, const XrCompositionLayerBaseHeader *layer, struct xrt_layer_data *xlayer_data)
+{
+#ifdef OXR_HAVE_FB_composition_layer_image_layout
+	// Is the extension enabled?
+	if (!sess->sys->inst->extensions.FB_composition_layer_image_layout) {
+		return;
+	}
+
+	const XrCompositionLayerImageLayoutFB *layer_image_layout = OXR_GET_INPUT_FROM_CHAIN(
+	    layer->next, XR_TYPE_COMPOSITION_LAYER_IMAGE_LAYOUT_FB, XrCompositionLayerImageLayoutFB);
+
+	// Is the layer here, and does it have the flag, if not nothing to do.
+	if (layer_image_layout == NULL ||
+	    (layer_image_layout->flags & XR_COMPOSITION_LAYER_IMAGE_LAYOUT_VERTICAL_FLIP_BIT_FB) == 0) {
+		return;
+	}
+
+	// All conditions met.
+	xlayer_data->flip_y = true;
+
+#endif // OXR_HAVE_FB_composition_layer_image_layout
+}
+
+static void
 fill_in_sub_image(const struct oxr_swapchain *sc, const XrSwapchainSubImage *oxr_sub, struct xrt_sub_image *xsub)
 {
 	const struct xrt_rect *rect = (const struct xrt_rect *)&oxr_sub->imageRect;
@@ -962,6 +986,7 @@ submit_quad_layer(struct oxr_session *sess,
 	data.quad.size = *size;
 	fill_in_sub_image(sc, &quad->subImage, &data.quad.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)quad, &data);
+	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)quad, &data);
 
 	xrt_result_t xret = xrt_comp_layer_quad(xc, head, sc->swapchain, &data);
 	OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_quad);
@@ -1017,6 +1042,7 @@ submit_projection_layer(struct oxr_session *sess,
 	fill_in_sub_image(scs[0], &proj->views[0].subImage, &data.stereo.l.sub);
 	fill_in_sub_image(scs[1], &proj->views[1].subImage, &data.stereo.r.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)proj, &data);
+	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 
 #ifdef OXR_HAVE_KHR_composition_layer_depth
 	const XrCompositionLayerDepthInfoKHR *d_l = OXR_GET_INPUT_FROM_CHAIN(
@@ -1110,6 +1136,7 @@ submit_cube_layer(struct oxr_session *sess,
 	data.cube.sub.image_index = sc->released.index;
 	data.cube.sub.array_index = cube->imageArrayIndex;
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)cube, &data);
+	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)cube, &data);
 
 	struct xrt_pose pose = {
 	    .orientation =
@@ -1173,6 +1200,7 @@ submit_cylinder_layer(struct oxr_session *sess,
 	data.cylinder.aspect_ratio = cylinder->aspectRatio;
 	fill_in_sub_image(sc, &cylinder->subImage, &data.cylinder.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)cylinder, &data);
+	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)cylinder, &data);
 
 	xrt_result_t xret = xrt_comp_layer_cylinder(xc, head, sc->swapchain, &data);
 	OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_cylinder);
@@ -1217,6 +1245,7 @@ submit_equirect1_layer(struct oxr_session *sess,
 	data.equirect1.radius = equirect->radius;
 	fill_in_sub_image(sc, &equirect->subImage, &data.equirect1.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
+	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 
 
 	struct xrt_vec2 *scale = (struct xrt_vec2 *)&equirect->scale;
@@ -1280,6 +1309,7 @@ submit_equirect2_layer(struct oxr_session *sess,
 	data.equirect2.lower_vertical_angle = equirect->lowerVerticalAngle;
 	fill_in_sub_image(sc, &equirect->subImage, &data.equirect2.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
+	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 
 	xrt_result_t xret = xrt_comp_layer_equirect2(xc, head, sc->swapchain, &data);
 	OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_equirect2);
