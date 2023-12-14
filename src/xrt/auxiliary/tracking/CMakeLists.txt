@@ -62,17 +62,8 @@ if(XRT_HAVE_OPENCV)
 endif()
 
 if(XRT_FEATURE_SLAM)
-	target_sources(aux_tracking
-	PRIVATE
-		t_vit_loader.c
-		t_tracker_slam.cpp
-	)
-	target_link_libraries(aux_tracking
-	PRIVATE
-		xrt-external-slam
-		xrt-external-vit
-		${CMAKE_DL_LIBS}
-	)
+	target_sources(aux_tracking PRIVATE t_vit_loader.c t_tracker_slam.cpp)
+	target_link_libraries(aux_tracking PRIVATE xrt-external-vit ${CMAKE_DL_LIBS})
 endif()
 
 if(XRT_HAVE_OPENVR)
