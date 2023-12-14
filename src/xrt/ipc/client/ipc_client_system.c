@@ -42,6 +42,51 @@ ipc_system(struct xrt_system *xsys)
 	return (struct ipc_client_system *)xsys;
 }
 
+static inline xrt_result_t
+create_headless(struct ipc_client_system *icsys, const struct xrt_session_info *xsi, struct xrt_session **out_xs)
+{
+	xrt_result_t xret = XRT_SUCCESS;
+
+	// We create the session ourselves.
+	xret = ipc_call_session_create( //
+	    icsys->ipc_c,               // ipc_c
+	    xsi,                        // xsi
+	    false);                     // create_native_compositor
+	IPC_CHK_AND_RET(icsys->ipc_c, xret, "ipc_call_session_create");
+
+	struct xrt_session *xs = ipc_client_session_create(icsys->ipc_c);
+	assert(xs != NULL);
+
+	*out_xs = xs;
+
+	return XRT_SUCCESS;
+}
+
+static inline xrt_result_t
+create_with_comp(struct ipc_client_system *icsys,
+                 const struct xrt_session_info *xsi,
+                 struct xrt_session **out_xs,
+                 struct xrt_compositor_native **out_xcn)
+{
+	xrt_result_t xret = XRT_SUCCESS;
+
+	assert(icsys->xsysc != NULL);
+
+	// The native compositor creates the session.
+	xret = ipc_client_create_native_compositor( //
+	    icsys->xsysc,                           //
+	    xsi,                                    //
+	    out_xcn);                               //
+	IPC_CHK_AND_RET(icsys->ipc_c, xret, "ipc_client_create_native_compositor");
+
+	struct xrt_session *xs = ipc_client_session_create(icsys->ipc_c);
+	assert(xs != NULL);
+
+	*out_xs = xs;
+
+	return XRT_SUCCESS;
+}
+
 
 /*
  *
@@ -56,35 +101,18 @@ ipc_client_system_create_session(struct xrt_system *xsys,
                                  struct xrt_compositor_native **out_xcn)
 {
 	struct ipc_client_system *icsys = ipc_system(xsys);
-	xrt_result_t xret = XRT_SUCCESS;
 
 	if (out_xcn != NULL && icsys->xsysc == NULL) {
 		U_LOG_E("No system compositor in system, can't create native compositor.");
 		return XRT_ERROR_COMPOSITOR_NOT_SUPPORTED;
 	}
 
-	struct xrt_session *xs = ipc_client_session_create(icsys->ipc_c);
-
 	// Skip making a native compositor if not asked for.
 	if (out_xcn == NULL) {
-		goto out_session;
+		return create_headless(icsys, xsi, out_xs);
+	} else {
+		return create_with_comp(icsys, xsi, out_xs, out_xcn);
 	}
-
-	xret = ipc_client_create_native_compositor( //
-	    icsys->xsysc,                           //
-	    xsi,                                    //
-	    out_xcn);                               //
-	if (xret != XRT_SUCCESS) {
-		goto err;
-	}
-
-out_session:
-	*out_xs = xs;
-
-	return XRT_SUCCESS;
-
-err:
-	return xret;
 }
 
 static void

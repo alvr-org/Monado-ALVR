@@ -60,6 +60,19 @@ static void
 ipc_client_session_destroy(struct xrt_session *xs)
 {
 	struct ipc_client_session *ics = ipc_session(xs);
+	xrt_result_t xret;
+
+	/*
+	 * We own the session in both cases of headless or created with a
+	 * native compositor, so we need to destroy it.
+	 */
+	xret = ipc_call_session_destroy(ics->ipc_c);
+
+	/*
+	 * We are probably in a really bad state if we fail, at
+	 * least print out the error and continue as best we can.
+	 */
+	IPC_CHK_ONLY_PRINT(ics->ipc_c, xret, "ipc_call_session_destroy");
 
 	free(ics);
 }

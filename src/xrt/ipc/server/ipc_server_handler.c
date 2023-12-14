@@ -204,7 +204,9 @@ ipc_handle_system_compositor_get_info(volatile struct ipc_client_state *ics,
 }
 
 xrt_result_t
-ipc_handle_session_create(volatile struct ipc_client_state *ics, const struct xrt_session_info *xsi)
+ipc_handle_session_create(volatile struct ipc_client_state *ics,
+                          const struct xrt_session_info *xsi,
+                          bool create_native_compositor)
 {
 	IPC_TRACE_MARKER();
 
@@ -213,6 +215,10 @@ ipc_handle_session_create(volatile struct ipc_client_state *ics, const struct xr
 
 	if (ics->xs != NULL) {
 		return XRT_ERROR_IPC_SESSION_ALREADY_CREATED;
+	}
+
+	if (!create_native_compositor) {
+		IPC_INFO(ics->server, "App asked for headless session, creating native compositor anyways");
 	}
 
 	xrt_result_t xret = xrt_system_create_session(ics->server->xsys, xsi, &xs, &xcn);

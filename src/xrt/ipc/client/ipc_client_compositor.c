@@ -808,15 +808,6 @@ ipc_compositor_destroy(struct xrt_compositor *xc)
 
 	assert(icc->compositor_created);
 
-	xret = ipc_call_session_destroy(icc->ipc_c);
-
-	/*
-	 * We are probably in a really bad state if we fail, at
-	 * least print out the error and continue as best we can.
-	 */
-	IPC_CHK_ONLY_PRINT(icc->ipc_c, xret, "ipc_call_session_destroy");
-
-
 	os_precise_sleeper_deinit(&icc->sleeper);
 
 	icc->compositor_created = false;
@@ -1018,8 +1009,15 @@ ipc_client_create_native_compositor(struct xrt_system_compositor *xsysc,
 		return XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED;
 	}
 
-	// Needs to be done before init.
-	xret = ipc_call_session_create(icc->ipc_c, xsi);
+	/*
+	 * Needs to be done before init, we don't own the service side session
+	 * the session does. But we create it here in case any extra arguments
+	 * that only the compositor knows about needs to be sent.
+	 */
+	xret = ipc_call_session_create( //
+	    icc->ipc_c,                 // ipc_c
+	    xsi,                        // xsi
+	    true);                      // create_native_compositor
 	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_session_create");
 
 	// Needs to be done after session create call.

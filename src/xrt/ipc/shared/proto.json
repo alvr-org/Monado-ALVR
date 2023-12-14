@@ -64,7 +64,8 @@
 
 	"session_create": {
 		"in": [
-			{"name": "overlay_info", "type": "struct xrt_session_info"}
+			{"name": "xsi", "type": "struct xrt_session_info"},
+			{"name": "create_native_compositor", "type": "bool"}
 		]
 	},
 
