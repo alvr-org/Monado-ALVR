@@ -55,6 +55,18 @@
 
 
 /*
+ * XR_KHR_composition_layer_color_scale_bias
+ */
+#if defined(XR_KHR_composition_layer_color_scale_bias) && defined(XRT_FEATURE_OPENXR_LAYER_COLOR_SCALE_BIAS)
+#define OXR_HAVE_KHR_composition_layer_color_scale_bias
+#define OXR_EXTENSION_SUPPORT_KHR_composition_layer_color_scale_bias(_)                                                \
+	_(KHR_composition_layer_color_scale_bias, KHR_COMPOSITION_LAYER_COLOR_SCALE_BIAS)
+#else
+#define OXR_EXTENSION_SUPPORT_KHR_composition_layer_color_scale_bias(_)
+#endif
+
+
+/*
  * XR_KHR_composition_layer_cube
  */
 #if defined(XR_KHR_composition_layer_cube) && defined(XRT_FEATURE_OPENXR_LAYER_CUBE)
@@ -544,6 +556,7 @@
     OXR_EXTENSION_SUPPORT_KHR_android_create_instance(_) \
     OXR_EXTENSION_SUPPORT_KHR_android_thread_settings(_) \
     OXR_EXTENSION_SUPPORT_KHR_binding_modification(_) \
+    OXR_EXTENSION_SUPPORT_KHR_composition_layer_color_scale_bias(_) \
     OXR_EXTENSION_SUPPORT_KHR_composition_layer_cube(_) \
     OXR_EXTENSION_SUPPORT_KHR_composition_layer_cylinder(_) \
     OXR_EXTENSION_SUPPORT_KHR_composition_layer_depth(_) \

@@ -97,6 +97,13 @@ enum xrt_layer_composition_flags
 	 * adjusted for the IPD.
 	 */
 	XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT = 1u << 3u,
+
+	/*!
+	 * If this flag is set the compositor should use the scale and bias
+	 * from the @ref xrt_layer_data struct.
+	 */
+	XRT_LAYER_COMPOSITION_COLOR_BIAS_SCALE = 1u << 4u,
+
 };
 
 /*!
@@ -316,6 +323,16 @@ struct xrt_layer_data
 	 * compositor.
 	 */
 	bool flip_y;
+
+	/*!
+	 * Modulate the color sourced from the images.
+	 */
+	struct xrt_colour_rgba_f32 color_scale;
+
+	/*!
+	 * Modulate the color sourced from the images.
+	 */
+	struct xrt_colour_rgba_f32 color_bias;
 
 	/*!
 	 * Union of data values for the various layer types.

@@ -36,6 +36,7 @@ EXTENSIONS = (
     ['XR_KHR_android_create_instance', 'XR_USE_PLATFORM_ANDROID'],
     ['XR_KHR_android_thread_settings', 'XR_USE_PLATFORM_ANDROID'],
     ['XR_KHR_binding_modification'],
+    ['XR_KHR_composition_layer_color_scale_bias', 'XRT_FEATURE_OPENXR_LAYER_COLOR_SCALE_BIAS'],
     ['XR_KHR_composition_layer_cube', 'XRT_FEATURE_OPENXR_LAYER_CUBE'],
     ['XR_KHR_composition_layer_cylinder', 'XRT_FEATURE_OPENXR_LAYER_CYLINDER'],
     ['XR_KHR_composition_layer_depth', 'XRT_FEATURE_OPENXR_LAYER_DEPTH'],
