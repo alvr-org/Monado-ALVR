@@ -19,6 +19,7 @@
 #include "util/u_logging.h"
 #include "util/u_time.h"
 #include "util/u_misc.h"
+#include "os/os_time.h"
 
 #include "qwerty_device.h"
 
@@ -116,7 +117,9 @@ qwerty_update_inputs(struct xrt_device *xd)
 	QWERTY_TRACE(qd, "select: %u, menu: %u", qc->select_clicked, qc->menu_clicked);
 
 	xd->inputs[QWERTY_SELECT].value.boolean = qc->select_clicked;
+	xd->inputs[QWERTY_SELECT].timestamp = qc->select_timestamp;
 	xd->inputs[QWERTY_MENU].value.boolean = qc->menu_clicked;
+	xd->inputs[QWERTY_MENU].timestamp = qc->menu_timestamp;
 }
 
 static void
@@ -501,12 +504,33 @@ qwerty_release_all(struct qwerty_device *qd)
 
 // Controller methods
 
-// clang-format off
-void qwerty_press_select(struct qwerty_controller *qc) { qc->select_clicked = true; }
-void qwerty_release_select(struct qwerty_controller *qc) { qc->select_clicked = false; }
-void qwerty_press_menu(struct qwerty_controller *qc) { qc->menu_clicked = true; }
-void qwerty_release_menu(struct qwerty_controller *qc) { qc->menu_clicked = false; }
-// clang-format on
+void
+qwerty_press_select(struct qwerty_controller *qc)
+{
+	qc->select_clicked = true;
+	qc->select_timestamp = os_monotonic_get_ns();
+}
+
+void
+qwerty_release_select(struct qwerty_controller *qc)
+{
+	qc->select_clicked = false;
+	qc->select_timestamp = os_monotonic_get_ns();
+}
+
+void
+qwerty_press_menu(struct qwerty_controller *qc)
+{
+	qc->menu_clicked = true;
+	qc->menu_timestamp = os_monotonic_get_ns();
+}
+
+void
+qwerty_release_menu(struct qwerty_controller *qc)
+{
+	qc->menu_clicked = false;
+	qc->menu_timestamp = os_monotonic_get_ns();
+}
 
 void
 qwerty_follow_hmd(struct qwerty_controller *qc, bool follow)

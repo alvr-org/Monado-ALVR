@@ -91,7 +91,9 @@ struct qwerty_controller
 	struct qwerty_device base;
 
 	bool select_clicked;
+	int64_t select_timestamp;
 	bool menu_clicked;
+	int64_t menu_timestamp;
 
 	/*!
 	 * Only used when a qwerty_hmd exists in the system.
