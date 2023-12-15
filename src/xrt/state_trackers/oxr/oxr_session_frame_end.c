@@ -145,7 +145,7 @@ fill_in_color_scale_bias(struct oxr_session *sess,
                          const XrCompositionLayerBaseHeader *layer,
                          struct xrt_layer_data *xlayer_data)
 {
-#ifdef XRT_FEATURE_OPENXR_LAYER_COLOR_SCALE_BIAS
+#ifdef OXR_HAVE_KHR_composition_layer_color_scale_bias
 	// Is the extension enabled?
 	if (!sess->sys->inst->extensions.KHR_composition_layer_color_scale_bias) {
 		return;
@@ -158,7 +158,7 @@ fill_in_color_scale_bias(struct oxr_session *sess,
 		fill_in_xr_color(&color_scale_bias->colorScale, &xlayer_data->color_scale);
 		fill_in_xr_color(&color_scale_bias->colorBias, &xlayer_data->color_bias);
 	}
-#endif // XRT_FEATURE_OPENXR_LAYER_COLOR_SCALE_BIAS
+#endif // OXR_HAVE_KHR_composition_layer_color_scale_bias
 }
 
 static void
@@ -468,7 +468,7 @@ verify_projection_layer(struct xrt_compositor *xc,
 			                 view->subImage.imageRect.extent.height, sc->width, sc->height);
 		}
 
-#ifdef XRT_FEATURE_OPENXR_LAYER_DEPTH
+#ifdef OXR_HAVE_KHR_composition_layer_depth
 		const XrCompositionLayerDepthInfoKHR *depth_info = OXR_GET_INPUT_FROM_CHAIN(
 		    view, XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR, XrCompositionLayerDepthInfoKHR);
 
@@ -479,17 +479,17 @@ verify_projection_layer(struct xrt_compositor *xc,
 			}
 			depth_layer_count++;
 		}
-#endif // XRT_FEATURE_OPENXR_LAYER_DEPTH
+#endif // OXR_HAVE_KHR_composition_layer_depth
 	}
 
-#ifdef XRT_FEATURE_OPENXR_LAYER_DEPTH
+#ifdef OXR_HAVE_KHR_composition_layer_depth
 	if (depth_layer_count > 0 && depth_layer_count != proj->viewCount) {
 		return oxr_error(
 		    log, XR_ERROR_VALIDATION_FAILURE,
 		    "(frameEndInfo->layers[%u] projection layer must have %u depth layers or none, but has: %u)",
 		    layer_index, proj->viewCount, depth_layer_count);
 	}
-#endif // XRT_FEATURE_OPENXR_LAYER_DEPTH
+#endif // OXR_HAVE_KHR_composition_layer_depth
 
 	return XR_SUCCESS;
 }
@@ -502,7 +502,7 @@ verify_cube_layer(struct xrt_compositor *xc,
                   struct xrt_device *head,
                   uint64_t timestamp)
 {
-#ifndef XRT_FEATURE_OPENXR_LAYER_CUBE
+#ifndef OXR_HAVE_KHR_composition_layer_cube
 	return oxr_error(log, XR_ERROR_LAYER_INVALID,
 	                 "(frameEndInfo->layers[%u]->type) layer type "
 	                 "XrCompositionLayerCubeKHR not supported",
@@ -553,7 +553,7 @@ verify_cube_layer(struct xrt_compositor *xc,
 	}
 
 	return XR_SUCCESS;
-#endif
+#endif // OXR_HAVE_KHR_composition_layer_cube
 }
 
 static XrResult
@@ -564,7 +564,7 @@ verify_cylinder_layer(struct xrt_compositor *xc,
                       struct xrt_device *head,
                       uint64_t timestamp)
 {
-#ifndef XRT_FEATURE_OPENXR_LAYER_CYLINDER
+#ifndef OXR_HAVE_KHR_composition_layer_cylinder
 	return oxr_error(log, XR_ERROR_LAYER_INVALID,
 	                 "(frameEndInfo->layers[%u]->type) layer type "
 	                 "XrCompositionLayerCylinderKHR not supported",
@@ -657,7 +657,7 @@ verify_cylinder_layer(struct xrt_compositor *xc,
 	}
 
 	return XR_SUCCESS;
-#endif
+#endif // OXR_HAVE_KHR_composition_layer_cylinder
 }
 
 static XrResult
@@ -668,7 +668,7 @@ verify_equirect1_layer(struct xrt_compositor *xc,
                        struct xrt_device *head,
                        uint64_t timestamp)
 {
-#ifndef XRT_FEATURE_OPENXR_LAYER_EQUIRECT1
+#ifndef OXR_HAVE_KHR_composition_layer_equirect
 	return oxr_error(log, XR_ERROR_LAYER_INVALID,
 	                 "(frameEndInfo->layers[%u]->type) layer type "
 	                 "XrCompositionLayerEquirectKHR not supported",
@@ -749,7 +749,7 @@ verify_equirect1_layer(struct xrt_compositor *xc,
 	}
 
 	return XR_SUCCESS;
-#endif
+#endif // OXR_HAVE_KHR_composition_layer_equirect
 }
 
 static XrResult
@@ -760,7 +760,7 @@ verify_equirect2_layer(struct xrt_compositor *xc,
                        struct xrt_device *head,
                        uint64_t timestamp)
 {
-#ifndef XRT_FEATURE_OPENXR_LAYER_EQUIRECT2
+#ifndef OXR_HAVE_KHR_composition_layer_equirect2
 	return oxr_error(log, XR_ERROR_LAYER_INVALID,
 	                 "(frameEndInfo->layers[%u]->type) layer type XrCompositionLayerEquirect2KHR not supported",
 	                 layer_index);
@@ -847,7 +847,7 @@ verify_equirect2_layer(struct xrt_compositor *xc,
 	 */
 
 	return XR_SUCCESS;
-#endif
+#endif // OXR_HAVE_KHR_composition_layer_equirect2
 }
 
 
@@ -1018,7 +1018,7 @@ submit_projection_layer(struct oxr_session *sess,
 	fill_in_sub_image(scs[1], &proj->views[1].subImage, &data.stereo.r.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 
-#ifdef XRT_FEATURE_OPENXR_LAYER_DEPTH
+#ifdef OXR_HAVE_KHR_composition_layer_depth
 	const XrCompositionLayerDepthInfoKHR *d_l = OXR_GET_INPUT_FROM_CHAIN(
 	    &proj->views[0], XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR, XrCompositionLayerDepthInfoKHR);
 	if (d_l) {
@@ -1051,10 +1051,10 @@ submit_projection_layer(struct oxr_session *sess,
 		// Need to pass this in.
 		d_scs[1] = sc;
 	}
-#endif // XRT_FEATURE_OPENXR_LAYER_DEPTH
+#endif // OXR_HAVE_KHR_composition_layer_depth
 
 	if (d_scs[0] != NULL && d_scs[1] != NULL) {
-#ifdef XRT_FEATURE_OPENXR_LAYER_DEPTH
+#ifdef OXR_HAVE_KHR_composition_layer_depth
 		data.type = XRT_LAYER_STEREO_PROJECTION_DEPTH;
 		xrt_result_t xret = xrt_comp_layer_stereo_projection_depth( //
 		    xc,                                                     // compositor
@@ -1067,7 +1067,7 @@ submit_projection_layer(struct oxr_session *sess,
 		OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_stereo_projection_depth);
 #else
 		assert(false && "Should not get here");
-#endif // XRT_FEATURE_OPENXR_LAYER_DEPTH
+#endif // OXR_HAVE_KHR_composition_layer_depth
 	} else {
 		xrt_result_t xret = xrt_comp_layer_stereo_projection( //
 		    xc,                                               // compositor
