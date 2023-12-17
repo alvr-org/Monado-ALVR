@@ -249,7 +249,8 @@
 /*
  * XR_KHR_vulkan_swapchain_format_list
  */
-#if defined(XR_KHR_vulkan_swapchain_format_list) && defined(XR_USE_GRAPHICS_API_VULKAN)
+#if defined(XR_KHR_vulkan_swapchain_format_list) && defined(XR_USE_GRAPHICS_API_VULKAN) &&                             \
+    defined(XRT_FEATURE_OPENXR_VULKAN_SWAPCHAIN_FORMAT_LIST)
 #define OXR_HAVE_KHR_vulkan_swapchain_format_list
 #define OXR_EXTENSION_SUPPORT_KHR_vulkan_swapchain_format_list(_)                                                      \
 	_(KHR_vulkan_swapchain_format_list, KHR_VULKAN_SWAPCHAIN_FORMAT_LIST)
