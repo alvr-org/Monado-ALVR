@@ -30,6 +30,9 @@ namespace detail {
  *
  * Note this should only store value types, since there's no way to destroy elements other than overwriting them, and
  * all elements are default-initialized upon construction of the container.
+ *
+ * @note Unlike @ref m_relation_history which is based on this, this data structure is
+ * **not inherently safe for concurrent/threaded use**: there are no locks built-in.
  */
 template <typename T, size_t MaxSize> class HistoryBuffer
 {
