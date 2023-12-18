@@ -5,6 +5,7 @@
  * @brief Small utility for keeping track of the history of an xrt_space_relation, ie. for knowing where a HMD or
  * controller was in the past
  * @author Moses Turner <moses@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_util
  */
 #pragma once
@@ -17,6 +18,10 @@ extern "C" {
 
 /**
  * @brief Opaque type for storing the history of a space relation in a ring buffer
+ *
+ * @note Unlike the bare C++ data structure @ref HistoryBuffer this wraps, **this is a thread safe interface**,
+ * and is safe for concurrent access from multiple threads.
+ * (It is using a simple mutex, not a reader/writer lock, but that is fine until proven to be a bottleneck.)
  *
  * @ingroup aux_util
  */
