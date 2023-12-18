@@ -452,7 +452,7 @@ pa_predict(struct u_pacing_app *upa,
 	 * depends on it's total frame time. Or we try to use the minimal frame
 	 * period, aka the compositor's frame period. This will use more power.
 	 */
-	if (!debug_get_bool_option_use_min_frame_period()) {
+	if (debug_get_bool_option_use_min_frame_period()) {
 		period_ns = min_period(pa);
 	} else {
 		period_ns = calc_period(pa);
