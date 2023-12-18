@@ -1,0 +1,1 @@
+handles: Add defines to characterize the behavior of the Vulkan graphics buffer import functionality: on most platforms, the import consumes the reference, but on some it just increases a ref count/clones the reference.
