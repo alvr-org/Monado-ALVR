@@ -1,0 +1,1 @@
+- Introduce `.mailmap` file.
