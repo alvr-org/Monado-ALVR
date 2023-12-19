@@ -142,10 +142,10 @@ struct rokid_usb_pkt_sensor
 
 DEBUG_GET_ONCE_LOG_OPTION(rokid_log, "ROKID_LOG", U_LOGGING_WARN)
 
-#define ROKID_TRACE(p, ...) U_LOG_XDEV_IFL_T(&rokid->base, rokid->log_level, __VA_ARGS__)
-#define ROKID_DEBUG(p, ...) U_LOG_XDEV_IFL_D(&rokid->base, rokid->log_level, __VA_ARGS__)
-#define ROKID_INFO(p, ...) U_LOG_XDEV_IFL_I(&rokid->base, rokid->log_level, __VA_ARGS__)
-#define ROKID_ERROR(p, ...) U_LOG_XDEV_IFL_E(&rokid->base, rokid->log_level, __VA_ARGS__)
+#define ROKID_TRACE(hmd, ...) U_LOG_XDEV_IFL_T(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define ROKID_DEBUG(hmd, ...) U_LOG_XDEV_IFL_D(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define ROKID_INFO(hmd, ...) U_LOG_XDEV_IFL_I(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define ROKID_ERROR(hmd, ...) U_LOG_XDEV_IFL_E(&hmd->base, hmd->log_level, __VA_ARGS__)
 
 
 static struct xrt_vec3
@@ -462,7 +462,7 @@ rokid_hmd_create(struct xrt_prober_device *prober_device)
 	rokid_fusion_create(&rokid->fusion);
 
 	if (os_thread_helper_init(&rokid->usb_thread) != 0) {
-		ROKID_ERROR(hmd, "Failed to init USB thread");
+		ROKID_ERROR(rokid, "Failed to init USB thread");
 		goto cleanup;
 	}
 	os_thread_helper_name(&rokid->usb_thread, "Rokid USB thread");
@@ -535,19 +535,19 @@ rokid_hmd_create(struct xrt_prober_device *prober_device)
 	rokid_fusion_add_vars(&rokid->fusion, rokid);
 
 	if (os_thread_helper_start(&rokid->usb_thread, rokid_usb_thread, rokid) != 0) {
-		ROKID_ERROR(hmd, "Failed to start USB thread");
+		ROKID_ERROR(rokid, "Failed to start USB thread");
 		goto cleanup;
 	}
 
 	int display_mode = rokid_hmd_get_display_mode(rokid);
 	if (display_mode < 0) {
-		ROKID_ERROR(hmd, "Failed to get display mode");
+		ROKID_ERROR(rokid, "Failed to get display mode");
 		goto cleanup;
 	}
 	if (display_mode != 1) {
 		ROKID_INFO(rokid, "Setting Rokid display to SBS mode");
 		if (!rokid_hmd_set_display_mode(rokid, 1)) {
-			ROKID_ERROR(hmd, "Failed to get display mode");
+			ROKID_ERROR(rokid, "Failed to get display mode");
 			goto cleanup;
 		}
 		os_nanosleep((int64_t)3 * (int64_t)U_TIME_1S_IN_NS);
