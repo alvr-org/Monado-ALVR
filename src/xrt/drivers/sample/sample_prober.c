@@ -1,8 +1,8 @@
-// Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Sample prober code.
+ * @brief  "auto-prober" for Sample HMD that can be autodetected but not through USB VID/PID.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup drv_sample
  */
@@ -10,7 +10,6 @@
 #include "xrt/xrt_prober.h"
 
 #include "util/u_misc.h"
-#include "util/u_debug.h"
 
 #include "sample_interface.h"
 
@@ -25,18 +24,18 @@ struct sample_auto_prober
 
 //! @private @memberof sample_auto_prober
 static inline struct sample_auto_prober *
-sample_auto_prober(struct xrt_auto_prober *p)
+sample_auto_prober(struct xrt_auto_prober *xap)
 {
-	return (struct sample_auto_prober *)p;
+	return (struct sample_auto_prober *)xap;
 }
 
 //! @private @memberof sample_auto_prober
 static void
 sample_auto_prober_destroy(struct xrt_auto_prober *p)
 {
-	struct sample_auto_prober *sap = sample_auto_prober(p);
+	struct sample_auto_prober *ap = sample_auto_prober(p);
 
-	free(sap);
+	free(ap);
 }
 
 //! @public @memberof sample_auto_prober
@@ -47,10 +46,10 @@ sample_auto_prober_autoprobe(struct xrt_auto_prober *xap,
                              struct xrt_prober *xp,
                              struct xrt_device **out_xdevs)
 {
-	struct sample_auto_prober *sap = sample_auto_prober(xap);
-	(void)sap;
+	struct sample_auto_prober *ap = sample_auto_prober(xap);
+	(void)ap;
 
-	// Do not create a sample HMD if we are not looking for HMDs.
+	// Do not create an HMD device if we are not looking for HMDs.
 	if (no_hmds) {
 		return 0;
 	}
@@ -62,10 +61,10 @@ sample_auto_prober_autoprobe(struct xrt_auto_prober *xap,
 struct xrt_auto_prober *
 sample_create_auto_prober(void)
 {
-	struct sample_auto_prober *sap = U_TYPED_CALLOC(struct sample_auto_prober);
-	sap->base.name = "Sample";
-	sap->base.destroy = sample_auto_prober_destroy;
-	sap->base.lelo_dallas_autoprobe = sample_auto_prober_autoprobe;
+	struct sample_auto_prober *ap = U_TYPED_CALLOC(struct sample_auto_prober);
+	ap->base.name = "Sample HMD Auto-Prober";
+	ap->base.destroy = sample_auto_prober_destroy;
+	ap->base.lelo_dallas_autoprobe = sample_auto_prober_autoprobe;
 
-	return &sap->base;
+	return &ap->base;
 }
