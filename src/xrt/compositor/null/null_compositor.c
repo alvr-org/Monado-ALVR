@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,9 +12,13 @@
  * @ingroup comp_null
  */
 
+#include "null_compositor.h"
+#include "null_interfaces.h"
+
 #include "os/os_time.h"
 
 #include "util/u_misc.h"
+#include "util/u_pacing.h"
 #include "util/u_time.h"
 #include "util/u_debug.h"
 #include "util/u_verify.h"
@@ -25,12 +29,15 @@
 
 #include "multi/comp_multi_interface.h"
 
-#include "null_compositor.h"
-#include "null_interfaces.h"
 
+#include <stdint.h>
 #include <stdio.h>
-#include <stdarg.h>
 
+static const uint64_t RECOMMENDED_VIEW_WIDTH = 320;
+static const uint64_t RECOMMENDED_VIEW_HEIGHT = 240;
+
+static const uint64_t MAX_VIEW_WIDTH = 1920;
+static const uint64_t MAX_VIEW_HEIGHT = 1080;
 
 DEBUG_GET_ONCE_LOG_OPTION(log, "XRT_COMPOSITOR_LOG", U_LOGGING_INFO)
 
@@ -265,20 +272,16 @@ compositor_init_sys_info(struct null_compositor *c, struct xrt_device *xdev)
 	(void)sys_info->client_d3d_deviceLUID_valid;
 
 	// clang-format off
-	sys_info->views[0].recommended.width_pixels  = 128;
-	sys_info->views[0].recommended.height_pixels = 128;
+	sys_info->views[0].recommended.width_pixels  = RECOMMENDED_VIEW_WIDTH;
+	sys_info->views[0].recommended.height_pixels = RECOMMENDED_VIEW_HEIGHT;
 	sys_info->views[0].recommended.sample_count  = 1;
-	sys_info->views[0].max.width_pixels          = 1024;
-	sys_info->views[0].max.height_pixels         = 1024;
+	sys_info->views[0].max.width_pixels          = MAX_VIEW_WIDTH;
+	sys_info->views[0].max.height_pixels         = MAX_VIEW_HEIGHT;
 	sys_info->views[0].max.sample_count          = 1;
-
-	sys_info->views[1].recommended.width_pixels  = 128;
-	sys_info->views[1].recommended.height_pixels = 128;
-	sys_info->views[1].recommended.sample_count  = 1;
-	sys_info->views[1].max.width_pixels          = 1024;
-	sys_info->views[1].max.height_pixels         = 1024;
-	sys_info->views[1].max.sample_count          = 1;
 	// clang-format on
+
+	// Assumes the two views (eyes) are similarly configured
+	sys_info->views[1] = sys_info->views[0];
 
 	// Copy the list directly.
 	assert(xdev->hmd->blend_mode_count <= XRT_MAX_DEVICE_BLEND_MODES);
@@ -422,7 +425,7 @@ null_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle
 	int64_t frame_id = c->base.slot.data.frame_id;
 
 	/*
-	 * The null compositor doesn't render and frames, but needs to do
+	 * The null compositor doesn't render any frames, but needs to do
 	 * minimal bookkeeping and handling of arguments. If using the null
 	 * compositor as a base for a new compositor this is where you render
 	 * frames to be displayed to devices or remote clients.
