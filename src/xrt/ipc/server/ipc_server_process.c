@@ -899,7 +899,7 @@ ipc_server_main(int argc, char **argv)
 {
 	struct ipc_server *s = U_TYPED_CALLOC(struct ipc_server);
 
-	U_LOG_I("Monado Service %s starting up...", u_git_tag);
+	U_LOG_I("%s '%s' starting up...", u_runtime_description, u_git_tag);
 
 	// need to create early before any vars are added
 	u_debug_gui_create(&s->debug_gui);

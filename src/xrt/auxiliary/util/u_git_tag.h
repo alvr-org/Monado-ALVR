@@ -20,6 +20,7 @@ extern const char u_git_tag[];
 extern const uint16_t u_version_major;
 extern const uint16_t u_version_minor;
 extern const uint16_t u_version_patch;
+extern const char u_runtime_description[];
 
 
 #ifdef __cplusplus

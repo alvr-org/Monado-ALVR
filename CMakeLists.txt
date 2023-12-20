@@ -6,6 +6,7 @@ project(
 	XRT
 	VERSION 21.0.0
 	LANGUAGES C CXX
+	DESCRIPTION "Monado(XRT) by Collabora et al"
 	)
 
 # CMake 3.11 introduced CMP0072 - Prefer GLVND
