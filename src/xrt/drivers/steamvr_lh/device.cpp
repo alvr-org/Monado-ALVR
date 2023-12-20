@@ -572,6 +572,12 @@ copy_vec3(const double (&vec)[3])
 {
 	return xrt_vec3{(float)vec[0], (float)vec[1], (float)vec[2]};
 }
+
+xrt_pose
+copy_pose(const vr::HmdQuaternion_t &orientation, const double (&position)[3])
+{
+	return xrt_pose{copy_quat(orientation), copy_vec3(position)};
+}
 } // namespace
 
 void
@@ -599,9 +605,9 @@ Device::init_chaperone(const std::string &steam_install)
 	}
 
 	// XXX: This may be broken if there are multiple known universes - how do we determine which to use then?
-	JSONNode universe = lighthousedb["known_universes"][0];
-	std::string id = universe["id"].asString();
-	JSONNode info;
+	const JSONNode universe = lighthousedb["known_universes"][0];
+	const std::string id = universe["id"].asString();
+	JSONNode info = {};
 	for (const JSONNode &u : chap_info["universes"].asArray()) {
 		if (u["universeID"].asString() == id) {
 			DEV_INFO("Found info for universe %s", id.c_str());
@@ -616,65 +622,55 @@ Device::init_chaperone(const std::string &steam_install)
 	}
 
 	std::vector<JSONNode> translation_arr = info["standing"]["translation"].asArray();
-	double yaw = info["standing"]["yaw"].asDouble();
-	chaperone_center = {static_cast<float>(translation_arr[0].asDouble()),
-	                    static_cast<float>(translation_arr[1].asDouble()),
-	                    static_cast<float>(translation_arr[2].asDouble())};
+
+	// If the array is missing elements, add zero.
+	for (size_t i = translation_arr.size(); i < 3; i++) {
+		translation_arr.push_back(JSONNode("0.0"));
+	}
+
+	const double yaw = info["standing"]["yaw"].asDouble();
 	const xrt_vec3 yaw_axis{0.0, -1.0, 0.0};
-	math_quat_from_angle_vector(yaw, &yaw_axis, &chaperone_yaw);
+	math_quat_from_angle_vector(static_cast<float>(yaw), &yaw_axis, &chaperone.orientation);
+	chaperone.position = copy_vec3({
+	    translation_arr[0].asDouble(),
+	    translation_arr[1].asDouble(),
+	    translation_arr[2].asDouble(),
+	});
+	math_quat_rotate_vec3(&chaperone.orientation, &chaperone.position, &chaperone.position);
 	DEV_INFO("Initialized chaperone data.");
 }
 
 void
-Device::update_pose(const vr::DriverPose_t &newPose)
+Device::update_pose(const vr::DriverPose_t &newPose) const
 {
-	xrt_space_relation relation;
+	xrt_space_relation relation = {};
 	if (newPose.poseIsValid && newPose.deviceIsConnected) {
 		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
-
-		const xrt_vec3 to_local_pos = copy_vec3(newPose.vecDriverFromHeadTranslation);
-		const xrt_quat to_local_rot = copy_quat(newPose.qDriverFromHeadRotation);
-		const xrt_vec3 to_world_pos = copy_vec3(newPose.vecWorldFromDriverTranslation);
-		const xrt_quat to_world_rot = copy_quat(newPose.qWorldFromDriverRotation);
-
-		xrt_pose &pose = relation.pose;
-		pose.position = copy_vec3(newPose.vecPosition);
-		pose.orientation = copy_quat(newPose.qRotation);
+		relation.pose = copy_pose(newPose.qRotation, newPose.vecPosition);
 		relation.linear_velocity = copy_vec3(newPose.vecVelocity);
 		relation.angular_velocity = copy_vec3(newPose.vecAngularVelocity);
 
-		// apply world transform
-		auto world_transform = [&](xrt_vec3 &vec) {
-			math_quat_rotate_vec3(&to_world_rot, &vec, &vec);
-			math_vec3_accum(&to_world_pos, &vec);
-		};
-		world_transform(pose.position);
-		math_quat_rotate(&to_world_rot, &pose.orientation, &pose.orientation);
-		math_quat_rotate_vec3(&to_world_rot, &relation.linear_velocity, &relation.linear_velocity);
-		math_quat_rotate_vec3(&pose.orientation, &relation.angular_velocity, &relation.angular_velocity);
+		math_quat_rotate_vec3(&relation.pose.orientation, &relation.angular_velocity,
+		                      &relation.angular_velocity);
 
-		// apply local transform
-		xrt_vec3 local_rotated;
-		math_quat_rotate_vec3(&pose.orientation, &to_local_pos, &local_rotated);
-		math_vec3_accum(&local_rotated, &pose.position);
-		math_quat_rotate(&pose.orientation, &to_local_rot, &pose.orientation);
+		// apply over local transform
+		const xrt_pose local = copy_pose(newPose.qDriverFromHeadRotation, newPose.vecDriverFromHeadTranslation);
+		math_pose_transform(&relation.pose, &local, &relation.pose);
+
+		// apply world transform
+		const xrt_pose world =
+		    copy_pose(newPose.qWorldFromDriverRotation, newPose.vecWorldFromDriverTranslation);
+		math_pose_transform(&world, &relation.pose, &relation.pose);
+		math_quat_rotate_vec3(&world.orientation, &relation.linear_velocity, &relation.linear_velocity);
+		math_quat_rotate_vec3(&world.orientation, &relation.angular_velocity, &relation.angular_velocity);
 
 		// apply chaperone transform
-		auto chap_transform = [&](xrt_vec3 &vec) {
-			math_vec3_accum(&chaperone_center, &vec);
-			math_quat_rotate_vec3(&chaperone_yaw, &vec, &vec);
-		};
-		chap_transform(pose.position);
-		math_quat_rotate(&chaperone_yaw, &pose.orientation, &pose.orientation);
-		math_quat_rotate_vec3(&chaperone_yaw, &relation.linear_velocity, &relation.linear_velocity);
-		math_quat_rotate_vec3(&chaperone_yaw, &relation.angular_velocity, &relation.angular_velocity);
-	} else {
-		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
+		math_pose_transform(&chaperone, &relation.pose, &relation.pose);
+		math_quat_rotate_vec3(&chaperone.orientation, &relation.linear_velocity, &relation.linear_velocity);
+		math_quat_rotate_vec3(&chaperone.orientation, &relation.angular_velocity, &relation.angular_velocity);
 	}
 
-	uint64_t ts = chrono_timestamp_ns();
-	uint64_t ts_offset = static_cast<uint64_t>(newPose.poseTimeOffset * 1000000.0);
-	ts += ts_offset;
+	const uint64_t ts = chrono_timestamp_ns() + static_cast<uint64_t>(newPose.poseTimeOffset * 1000000.0);
 
 	m_relation_history_push(relation_hist, &relation, ts);
 }

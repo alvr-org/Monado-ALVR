@@ -51,7 +51,7 @@ public:
 	update_inputs();
 
 	void
-	update_pose(const vr::DriverPose_t &newPose);
+	update_pose(const vr::DriverPose_t &newPose) const;
 
 	//! Helper to use the @ref m_relation_history member.
 	void
@@ -70,8 +70,7 @@ protected:
 	vr::PropertyContainerHandle_t container_handle{0};
 	std::unordered_map<std::string_view, xrt_input *> inputs_map;
 	std::vector<xrt_input> inputs_vec;
-	inline static xrt_vec3 chaperone_center{};
-	inline static xrt_quat chaperone_yaw = XRT_QUAT_IDENTITY;
+	inline static xrt_pose chaperone = XRT_POSE_IDENTITY;
 	const InputClass *input_class;
 
 	float vsync_to_photon_ns{0.f};
