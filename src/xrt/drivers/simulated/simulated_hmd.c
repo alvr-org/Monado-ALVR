@@ -20,6 +20,7 @@
 #include "util/u_debug.h"
 #include "util/u_device.h"
 #include "util/u_logging.h"
+#include "util/u_pretty_print.h"
 #include "util/u_distortion_mesh.h"
 
 #include "simulated_interface.h"
@@ -69,6 +70,7 @@ DEBUG_GET_ONCE_LOG_OPTION(simulated_log, "SIMULATED_LOG", U_LOGGING_WARN)
 
 #define DH_TRACE(p, ...) U_LOG_XDEV_IFL_T(&dh->base, dh->log_level, __VA_ARGS__)
 #define DH_DEBUG(p, ...) U_LOG_XDEV_IFL_D(&dh->base, dh->log_level, __VA_ARGS__)
+#define DH_INFO(p, ...) U_LOG_XDEV_IFL_I(&dh->base, dh->log_level, __VA_ARGS__)
 #define DH_ERROR(p, ...) U_LOG_XDEV_IFL_E(&dh->base, dh->log_level, __VA_ARGS__)
 
 static void
@@ -160,6 +162,34 @@ simulated_hmd_get_view_poses(struct xrt_device *xdev,
 	                        out_poses);
 }
 
+static xrt_result_t
+simulated_ref_space_usage(struct xrt_device *xdev,
+                          enum xrt_reference_space_type type,
+                          enum xrt_input_name name,
+                          bool used)
+{
+	struct simulated_hmd *dh = simulated_hmd(xdev);
+
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	u_pp(dg, "Ref space ");
+	u_pp_xrt_reference_space_type(dg, type);
+	u_pp(dg, " is %sused", used ? "" : "not ");
+
+	if (name != 0) {
+		u_pp(dg, ", driven by ");
+		u_pp_xrt_input_name(dg, name);
+		u_pp(dg, ".");
+	} else {
+		u_pp(dg, ", not controlled by us.");
+	}
+
+	DH_INFO(dh, "%s", sink.buffer);
+
+	return XRT_SUCCESS;
+}
+
 
 /*
  *
@@ -182,9 +212,11 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	dh->base.update_inputs = simulated_hmd_update_inputs;
 	dh->base.get_tracked_pose = simulated_hmd_get_tracked_pose;
 	dh->base.get_view_poses = simulated_hmd_get_view_poses;
+	dh->base.ref_space_usage = simulated_ref_space_usage;
 	dh->base.destroy = simulated_hmd_destroy;
 	dh->base.name = XRT_DEVICE_GENERIC_HMD;
 	dh->base.device_type = XRT_DEVICE_TYPE_HMD;
+	dh->base.ref_space_usage_supported = true;
 	dh->pose.orientation.w = 1.0f; // All other values set to zero.
 	dh->center = *center;
 	dh->created_ns = os_monotonic_get_ns();
