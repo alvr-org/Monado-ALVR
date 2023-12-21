@@ -95,6 +95,13 @@ struct u_space_overseer
 	struct xrt_session_event_sink *broadcast;
 
 	/*!
+	 * The notify device, usually the head device. Used to notify when
+	 * reference spaces are used and not used. Must not change during
+	 * runtime.
+	 */
+	struct xrt_device *notify;
+
+	/*!
 	 * Can we do a recenter of the local and local_floor spaces, protected
 	 * by the lock.
 	 *
@@ -133,6 +140,20 @@ type_to_small_string(enum xrt_reference_space_type type)
 	case XRT_SPACE_REFERENCE_TYPE_STAGE: return "stage";
 	case XRT_SPACE_REFERENCE_TYPE_UNBOUNDED: return "unbounded";
 	}
+}
+
+static struct u_space *
+get_semantic_space(struct u_space_overseer *uso, enum xrt_reference_space_type type)
+{
+	switch (type) {
+	case XRT_SPACE_REFERENCE_TYPE_VIEW: return u_space(uso->base.semantic.view);
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL: return u_space(uso->base.semantic.local);
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR: return u_space(uso->base.semantic.local_floor);
+	case XRT_SPACE_REFERENCE_TYPE_STAGE: return u_space(uso->base.semantic.stage);
+	case XRT_SPACE_REFERENCE_TYPE_UNBOUNDED: return u_space(uso->base.semantic.unbounded);
+	}
+
+	return NULL;
 }
 
 /*!
@@ -215,6 +236,39 @@ get_offset_or_ident_read_locked(const struct u_space *us, struct xrt_pose *offse
 	} else {
 		*offset = (struct xrt_pose)XRT_POSE_IDENTITY;
 	}
+}
+
+
+/*
+ *
+ * Reference space to device notification code.
+ *
+ */
+
+static void
+notify_ref_space_usage_device(struct u_space_overseer *uso, enum xrt_reference_space_type type, bool used)
+{
+	struct xrt_device *xdev = NULL;
+	enum xrt_input_name name = 0;
+
+	struct u_space *uspace = get_semantic_space(uso, type);
+	if (uspace == NULL) {
+		// This is weird, should always be a space.
+		return;
+	}
+
+	if (uspace->type == U_SPACE_TYPE_POSE) {
+		xdev = uspace->pose.xdev;
+		name = uspace->pose.xname;
+	} else {
+		xdev = uso->notify;
+	}
+
+	if (xdev == NULL || !xdev->ref_space_usage_supported) {
+		return;
+	}
+
+	xrt_device_ref_space_usage(xdev, type, name, used);
 }
 
 
@@ -513,10 +567,13 @@ ref_space_inc(struct xrt_space_overseer *xso, enum xrt_reference_space_type type
 
 	U_LOG_D("Ref-space %s in use", type_to_small_string(type));
 
+
 	/*
-	 * This space intentionally left blank for future expansion,
-	 * use it for adding new functionality on used/unused switches.
+	 * We have a reference space that was not in use but is now in used.
 	 */
+
+	// Notify any device that might want to know about it.
+	notify_ref_space_usage_device(uso, type, true);
 
 	return XRT_SUCCESS;
 }
@@ -536,10 +593,13 @@ ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type
 
 	U_LOG_D("Ref-space %s no longer in use", type_to_small_string(type));
 
+
 	/*
-	 * This space intentionally left blank for future expansion,
-	 * use it for adding new functionality on used/unused switches.
+	 * We have a reference space that was in use but is no longer used.
 	 */
+
+	// Notify any device that might want to know about it.
+	notify_ref_space_usage_device(uso, type, false);
 
 	return XRT_SUCCESS;
 }
@@ -772,6 +832,9 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	// Setup view space if we have a head.
 	if (head != NULL) {
 		u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_HEAD_POSE, &uso->base.semantic.view);
+
+		// Set the head to the notify device, for reference space usage.
+		uso->notify = head;
 	}
 }
 
