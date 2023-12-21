@@ -262,6 +262,7 @@ struct xrt_device
 	bool hand_tracking_supported;
 	bool eye_gaze_supported;
 	bool force_feedback_supported;
+	bool ref_space_usage_supported;
 	bool form_factor_check_supported;
 
 
@@ -418,6 +419,25 @@ struct xrt_device
 	                                    struct xrt_visibility_mask **out_mask);
 
 	/*!
+	 * Called by the @ref xrt_space_overseer when a reference space that is
+	 * implemented by this device is first used, or when the last usage of
+	 * the reference space stops.
+	 *
+	 * What is provided is both the @ref xrt_reference_space_type that
+	 * triggered the usage change and the @ref xrt_input_name (if any) that
+	 * is used to drive the space.
+	 *
+	 * @see xrt_space_overseer_ref_space_inc
+	 * @see xrt_space_overseer_ref_space_dec
+	 * @see xrt_input_name
+	 * @see xrt_reference_space_type
+	 */
+	xrt_result_t (*ref_space_usage)(struct xrt_device *xdev,
+	                                enum xrt_reference_space_type type,
+	                                enum xrt_input_name name,
+	                                bool used);
+
+	/*!
 	 * @brief Check if given form factor is available or not.
 	 *
 	 * This should only be used in HMD device, if the device driver supports form factor check.
@@ -543,6 +563,22 @@ xrt_device_get_visibility_mask(struct xrt_device *xdev,
                                struct xrt_visibility_mask **out_mask)
 {
 	return xdev->get_visibility_mask(xdev, type, view_index, out_mask);
+}
+
+/*!
+ * Helper function for @ref xrt_device::ref_space_usage.
+ *
+ * @copydoc xrt_device::ref_space_usage
+ *
+ * @public @memberof xrt_device
+ */
+static inline xrt_result_t
+xrt_device_ref_space_usage(struct xrt_device *xdev,
+                           enum xrt_reference_space_type type,
+                           enum xrt_input_name name,
+                           bool used)
+{
+	return xdev->ref_space_usage(xdev, type, name, used);
 }
 
 /*!
