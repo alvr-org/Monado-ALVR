@@ -535,6 +535,38 @@ struct xrt_api_requirements
 };
 
 /*!
+ * Type of a OpenXR mapped reference space, maps to the semantic spaces on the
+ * @ref xrt_space_overseer struct. This is used to refer to indirectly for
+ * instance when letting the overseer know that an application is using a
+ * particular reference space.
+ *
+ * @ingroup xrt_iface
+ */
+enum xrt_reference_space_type
+{
+	XRT_SPACE_REFERENCE_TYPE_VIEW,
+	XRT_SPACE_REFERENCE_TYPE_LOCAL,
+	XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR,
+	XRT_SPACE_REFERENCE_TYPE_STAGE,
+	XRT_SPACE_REFERENCE_TYPE_UNBOUNDED,
+};
+
+/*!
+ * The number of enumerations in @ref xrt_reference_space_type.
+ *
+ * @ingroup xrt_iface
+ */
+#define XRT_SPACE_REFERENCE_TYPE_COUNT (XRT_SPACE_REFERENCE_TYPE_UNBOUNDED + 1)
+
+/*!
+ * An invalid @ref xrt_reference_space_type, since it's invalid it's not listed
+ * in the enum.
+ *
+ * @ingroup xrt_iface
+ */
+#define XRT_SPACE_REFERENCE_TYPE_INVALID ((enum xrt_reference_space_type)(-1))
+
+/*!
  * Flags of which components of a @ref xrt_space_relation is valid.
  *
  * @see xrt_space_relation
