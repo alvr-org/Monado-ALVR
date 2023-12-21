@@ -407,6 +407,31 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	}
 }
 
+void
+u_pp_xrt_reference_space_type(struct u_pp_delegate dg, enum xrt_reference_space_type type)
+{
+	// clang-format off
+	switch (type) {
+	case XRT_SPACE_REFERENCE_TYPE_VIEW:                  DG("XRT_SPACE_REFERENCE_TYPE_VIEW"); return;
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL:                 DG("XRT_SPACE_REFERENCE_TYPE_LOCAL"); return;
+	case XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR:           DG("XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR"); return;
+	case XRT_SPACE_REFERENCE_TYPE_STAGE:                 DG("XRT_SPACE_REFERENCE_TYPE_STAGE"); return;
+	case XRT_SPACE_REFERENCE_TYPE_UNBOUNDED:             DG("XRT_SPACE_REFERENCE_TYPE_UNBOUNDED"); return;
+	}
+	// clang-format on
+
+	/*
+	 * No default case so we get warnings of missing entries.
+	 * Invalid values handled below.
+	 */
+
+	switch ((uint32_t)type) {
+	case XRT_SPACE_REFERENCE_TYPE_COUNT: DG("XRT_SPACE_REFERENCE_TYPE_COUNT"); return;
+	case XRT_SPACE_REFERENCE_TYPE_INVALID: DG("XRT_SPACE_REFERENCE_TYPE_INVALID"); return;
+	default: u_pp(dg, "XRT_SPACE_REFERENCE_TYPE_0x%08x", type); return;
+	}
+}
+
 
 /*
  *
