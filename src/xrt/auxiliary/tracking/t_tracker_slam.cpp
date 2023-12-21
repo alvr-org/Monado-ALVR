@@ -108,101 +108,6 @@ using timing_sample = vector<timepoint_ns>;
 
 using xrt::auxiliary::math::RelationHistory;
 
-using cv::Mat;
-using cv::MatAllocator;
-using cv::UMatData;
-using cv::UMatUsageFlags;
-
-#define USING_OPENCV_3_3_1 (CV_VERSION_MAJOR == 3 && CV_VERSION_MINOR == 3 && CV_VERSION_REVISION == 1)
-
-#if defined(XRT_HAVE_KIMERA) && !USING_OPENCV_3_3_1
-#pragma message "Kimera-VIO uses OpenCV 3.3.1, use that to prevent conflicts"
-#endif
-
-//! @todo These defs should make OpenCV 4 work but it wasn't tested against a
-//! SLAM system that supports that version yet.
-#if CV_VERSION_MAJOR < 4
-#define ACCESS_RW 0
-typedef int AccessFlag;
-#define CV_AUTOSTEP 0x7fffffff // From opencv2/core/core_c.h
-#else
-using cv::ACCESS_RW;
-using cv::AccessFlag;
-#define CV_AUTOSTEP cv::Mat::AUTO_STEP
-#endif
-
-/*!
- * @brief Wraps a @ref xrt_frame with a `cv::Mat` (conversely to @ref FrameMat).
- *
- * It works by implementing a `cv::MatAllocator` which determines what to do
- * when a `cv::Mat` refcount reaches zero. In that case, it decrements the @ref
- * xrt_frame refcount once the `cv::Mat` own refcount has reached zero.
- *
- * @note a @ref MatFrame `cv::Mat` can wrap a @ref FrameMat @ref xrt_frame,
- * which in turns wraps a `cv::Mat`, with little overhead, and that is precisely
- * how it is being used in this file when the @ref xrt_frame is a @ref FrameMat.
- */
-class MatFrame final : public MatAllocator
-{
-public:
-	//! Wraps a @ref xrt_frame in a `cv::Mat`
-	Mat
-	wrap(struct xrt_frame *frame)
-	{
-		SLAM_DASSERT_(frame->format == XRT_FORMAT_L8 || frame->format == XRT_FORMAT_R8G8B8);
-		auto img_type = frame->format == XRT_FORMAT_L8 ? CV_8UC1 : CV_8UC3;
-
-		// Wrap the frame data into a cv::Mat header
-		cv::Mat img{(int)frame->height, (int)frame->width, img_type, frame->data, frame->stride};
-
-		// Enable reference counting for a user-allocated cv::Mat (i.e., using existing frame->data)
-		img.u = this->allocate(img.dims, img.size.p, img.type(), img.data, img.step.p, ACCESS_RW,
-		                       cv::USAGE_DEFAULT);
-		SLAM_DASSERT_(img.u->refcount == 0);
-		img.addref();
-
-		// Keep a reference to the xrt_frame in the cv userdata field for when the cv::Mat reference reaches 0
-		SLAM_DASSERT_(img.u->userdata == NULL); // Should be default-constructed
-		xrt_frame_reference((struct xrt_frame **)&img.u->userdata, frame);
-
-		return img;
-	}
-
-	//! Allocates a `cv::UMatData` object which is in charge of reference counting for a `cv::Mat`
-	UMatData *
-	allocate(
-	    int dims, const int *sizes, int type, void *data0, size_t *step, AccessFlag, UMatUsageFlags) const override
-	{
-		SLAM_DASSERT_(dims == 2 && sizes && data0 && step && step[0] != CV_AUTOSTEP);
-		UMatData *u = new UMatData(this);
-		uchar *data = (uchar *)data0;
-		u->data = u->origdata = data;
-		u->size = step[0] * sizes[0];         // Row stride * row count
-		u->flags |= UMatData::USER_ALLOCATED; // External data
-		return u;
-	}
-
-	//! Necessary but unused virtual method for a `cv::MatAllocator`
-	bool
-	allocate(UMatData *, AccessFlag, UMatUsageFlags) const override
-	{
-		SLAM_ASSERT(false, "Shouldn't be reached");
-		return false;
-	}
-
-	//! When `cv::UMatData` refcount reaches zero this method is called, we just
-	//! decrement the original @ref xrt_frame refcount as it is the one in charge
-	//! of the memory.
-	void
-	deallocate(UMatData *u) const override
-	{
-		SLAM_DASSERT_(u->urefcount == 0 && u->refcount == 0);
-		SLAM_DASSERT_(u->flags & UMatData::USER_ALLOCATED);
-		xrt_frame_reference((struct xrt_frame **)&u->userdata, NULL);
-		delete u;
-	}
-};
-
 
 /*
  *
@@ -362,7 +267,6 @@ struct TrackerSlam
 	struct u_var_button reset_state_btn; //!< Reset tracker state button
 
 	enum u_logging_level log_level; //!< Logging level for the SLAM tracker, set by SLAM_LOG var
-	MatFrame *cv_wrapper;           //!< Wraps a xrt_frame in a cv::Mat to send to the SLAM system
 
 	struct xrt_slam_sinks *euroc_recorder; //!< EuRoC dataset recording sinks
 	struct openvr_tracker *ovr_tracker;    //!< OpenVR lighthouse tracker
@@ -1441,16 +1345,15 @@ receive_frame(TrackerSlam &t, struct xrt_frame *frame, uint32_t cam_index)
 	last_ts = ts;
 
 	// Construct and send the image sample
-	cv::Mat img = t.cv_wrapper->wrap(frame);
-
 	vit_img_sample sample = {};
 	sample.cam_index = cam_index;
 	sample.timestamp = ts;
-	sample.data = img.ptr();
-	sample.width = img.cols;
-	sample.height = img.rows;
-	sample.stride = img.step;
-	sample.size = img.cols * img.rows;
+
+	sample.data = frame->data;
+	sample.width = frame->width;
+	sample.height = frame->height;
+	sample.stride = frame->stride;
+	sample.size = frame->size;
 
 	// TODO check format before
 	switch (frame->format) {
@@ -1533,8 +1436,6 @@ t_slam_node_destroy(struct xrt_frame_node *node)
 	os_mutex_destroy(&t.lock_ff);
 	m_ff_vec3_f32_free(&t.filter.pos_ff);
 	m_ff_vec3_f32_free(&t.filter.rot_ff);
-
-	delete t_ptr->cv_wrapper;
 
 	t_ptr->vit.tracker_destroy(t_ptr->tracker);
 	t_vit_bundle_unload(&t_ptr->vit);
