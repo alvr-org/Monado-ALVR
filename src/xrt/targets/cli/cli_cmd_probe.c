@@ -73,10 +73,12 @@ cli_cmd_probe(int argc, const char **argv)
 		return do_exit(&xi, -1);
 	}
 
+	size_t builder_count;
+	struct xrt_builder **builders;
 	size_t num_entries;
 	struct xrt_prober_entry **entries;
 	struct xrt_auto_prober **auto_probers;
-	ret = xrt_prober_get_entries(xp, &num_entries, &entries, &auto_probers);
+	ret = xrt_prober_get_builders(xp, &builder_count, &builders, &num_entries, &entries, &auto_probers);
 	if (ret != 0) {
 		do_exit(&xi, ret);
 	}

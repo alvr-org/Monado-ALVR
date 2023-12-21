@@ -258,19 +258,23 @@ struct xrt_prober
 	int (*list_video_devices)(struct xrt_prober *xp, xrt_prober_list_video_func_t cb, void *ptr);
 
 	/*!
-	 * Retrieve the raw @ref xrt_prober_entry and @ref xrt_auto_prober arrays.
+	 * Retrieve the raw @ref xrt_builder, @ref xrt_prober_entry and @ref xrt_auto_prober arrays.
 	 *
 	 * @param xp Pointer to self
+	 * @param[out] out_builder_count The size of @p out_builders
+	 * @param[out] out_builders An array of builders.
 	 * @param[out] out_entry_count The size of @p out_entries
 	 * @param[out] out_entries An array of prober entries
 	 * @param[out] out_auto_probers An array of up to @ref XRT_MAX_AUTO_PROBERS auto-probers
 	 *
 	 * @return 0 on success, <0 on error.
 	 */
-	int (*get_entries)(struct xrt_prober *xp,
-	                   size_t *out_entry_count,
-	                   struct xrt_prober_entry ***out_entries,
-	                   struct xrt_auto_prober ***out_auto_probers);
+	int (*get_builders)(struct xrt_prober *xp,
+	                    size_t *out_builder_count,
+	                    struct xrt_builder ***out_builders,
+	                    size_t *out_entry_count,
+	                    struct xrt_prober_entry ***out_entries,
+	                    struct xrt_auto_prober ***out_auto_probers);
 
 	/*!
 	 * Returns a string property on the device of the given type
@@ -469,19 +473,21 @@ xrt_prober_list_video_devices(struct xrt_prober *xp, xrt_prober_list_video_func_
 }
 
 /*!
- * @copydoc xrt_prober::get_entries
+ * @copydoc xrt_prober::get_builders
  *
- * Helper function for @ref xrt_prober::get_entries.
+ * Helper function for @ref xrt_prober::get_builders.
  *
  * @public @memberof xrt_prober
  */
 static inline int
-xrt_prober_get_entries(struct xrt_prober *xp,
-                       size_t *out_entry_count,
-                       struct xrt_prober_entry ***out_entries,
-                       struct xrt_auto_prober ***out_auto_probers)
+xrt_prober_get_builders(struct xrt_prober *xp,
+                        size_t *out_builder_count,
+                        struct xrt_builder ***out_builders,
+                        size_t *out_entry_count,
+                        struct xrt_prober_entry ***out_entries,
+                        struct xrt_auto_prober ***out_auto_probers)
 {
-	return xp->get_entries(xp, out_entry_count, out_entries, out_auto_probers);
+	return xp->get_builders(xp, out_builder_count, out_builders, out_entry_count, out_entries, out_auto_probers);
 }
 
 /*!

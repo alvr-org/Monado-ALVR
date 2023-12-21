@@ -113,10 +113,12 @@ static int
 p_list_video_devices(struct xrt_prober *xp, xrt_prober_list_video_func_t cb, void *ptr);
 
 static int
-p_get_entries(struct xrt_prober *xp,
-              size_t *out_num_entries,
-              struct xrt_prober_entry ***out_entries,
-              struct xrt_auto_prober ***out_auto_probers);
+p_get_builders(struct xrt_prober *xp,
+               size_t *out_builder_count,
+               struct xrt_builder ***out_builders,
+               size_t *out_num_entries,
+               struct xrt_prober_entry ***out_entries,
+               struct xrt_auto_prober ***out_auto_probers);
 
 static int
 p_get_string_descriptor(struct xrt_prober *xp,
@@ -442,7 +444,7 @@ initialize(struct prober *p, struct xrt_prober_entry_lists *lists)
 	p->base.open_hid_interface = p_open_hid_interface;
 	p->base.open_video_device = p_open_video_device;
 	p->base.list_video_devices = p_list_video_devices;
-	p->base.get_entries = p_get_entries;
+	p->base.get_builders = p_get_builders;
 	p->base.get_string_descriptor = p_get_string_descriptor;
 	p->base.can_open = p_can_open;
 	p->base.destroy = p_destroy;
@@ -1310,16 +1312,23 @@ p_list_video_devices(struct xrt_prober *xp, xrt_prober_list_video_func_t cb, voi
 }
 
 static int
-p_get_entries(struct xrt_prober *xp,
-              size_t *out_num_entries,
-              struct xrt_prober_entry ***out_entries,
-              struct xrt_auto_prober ***out_auto_probers)
+p_get_builders(struct xrt_prober *xp,
+               size_t *out_builder_count,
+               struct xrt_builder ***out_builders,
+               size_t *out_entry_count,
+               struct xrt_prober_entry ***out_entries,
+               struct xrt_auto_prober ***out_auto_probers)
 {
 	XRT_TRACE_MARKER();
 
 	struct prober *p = (struct prober *)xp;
-	*out_num_entries = p->num_entries;
+
+	*out_builder_count = p->builder_count;
+	*out_builders = p->builders;
+
+	*out_entry_count = p->num_entries;
 	*out_entries = p->entries;
+
 	*out_auto_probers = p->auto_probers;
 
 	return 0;
