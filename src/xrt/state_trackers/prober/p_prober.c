@@ -86,7 +86,7 @@ static xrt_result_t
 p_unlock_list(struct xrt_prober *xp, struct xrt_prober_device ***devices);
 
 static int
-p_dump(struct xrt_prober *xp);
+p_dump(struct xrt_prober *xp, bool use_stdout);
 
 static xrt_result_t
 p_create_system(struct xrt_prober *xp,
@@ -960,17 +960,15 @@ p_unlock_list(struct xrt_prober *xp, struct xrt_prober_device ***devices)
 }
 
 static int
-p_dump(struct xrt_prober *xp)
+p_dump(struct xrt_prober *xp, bool use_stdout)
 {
 	XRT_TRACE_MARKER();
 
 	struct prober *p = (struct prober *)xp;
-	XRT_MAYBE_UNUSED ssize_t k = 0;
-	XRT_MAYBE_UNUSED size_t j = 0;
 
 	for (size_t i = 0; i < p->device_count; i++) {
 		struct prober_device *pdev = &p->devices[i];
-		p_dump_device(p, pdev, (int)i);
+		p_dump_device(p, pdev, (int)i, use_stdout);
 	}
 
 	return 0;

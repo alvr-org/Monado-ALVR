@@ -171,12 +171,15 @@ struct xrt_prober
 	xrt_result_t (*unlock_list)(struct xrt_prober *xp, struct xrt_prober_device ***devices);
 
 	/*!
-	 * Dump a listing of all devices found on the system to platform
-	 * dependent output (stdout).
+	 * Dump a listing of all devices found on the system to logging system
+	 * or platform dependent output (stdout).
+	 *
+	 * @param[in]  xp         Prober self parameter.
+	 * @param[in]  use_stdout If true uses stdout instead of logging code.
 	 *
 	 * @note Code consuming this interface should use xrt_prober_dump()
 	 */
-	int (*dump)(struct xrt_prober *xp);
+	int (*dump)(struct xrt_prober *xp, bool use_stdout);
 
 	/*!
 	 * Create system devices.
@@ -362,9 +365,9 @@ xrt_prober_unlock_list(struct xrt_prober *xp, struct xrt_prober_device ***device
  * @public @memberof xrt_prober
  */
 static inline int
-xrt_prober_dump(struct xrt_prober *xp)
+xrt_prober_dump(struct xrt_prober *xp, bool use_stdout)
 {
-	return xp->dump(xp);
+	return xp->dump(xp, use_stdout);
 }
 
 /*!

@@ -190,7 +190,7 @@ struct prober
  * @public @memberof prober
  */
 void
-p_dump_device(struct prober *p, struct prober_device *pdev, int id);
+p_dump_device(struct prober *p, struct prober_device *pdev, int id, bool use_stdout);
 
 /*!
  * Get or create a @ref prober_device from the device.

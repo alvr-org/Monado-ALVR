@@ -65,7 +65,7 @@ cli_cmd_test(int argc, const char **argv)
 		// So the user can see what we found.
 		printf(" :: Dumping!\n");
 
-		ret = xrt_prober_dump(xp);
+		ret = xrt_prober_dump(xp, true);
 		if (ret != 0) {
 			do_exit(&xi, ret);
 		}
