@@ -11,6 +11,7 @@
 
 #include "util/u_misc.h"
 #include "util/u_handles.h"
+#include "util/u_pretty_print.h"
 #include "util/u_visibility_mask.h"
 #include "util/u_trace_marker.h"
 
@@ -182,12 +183,31 @@ ipc_handle_instance_describe_client(volatile struct ipc_client_state *ics,
 	ics->client_state.info = client_desc->info;
 	ics->client_state.pid = client_desc->pid;
 
-	IPC_INFO(ics->server,
-	         "Client info\n"
-	         "\tapplication_name: '%s'\n"
-	         "\tpid: %i",
-	         client_desc->info.application_name, //
-	         client_desc->pid);                  //
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+#define P(...) u_pp(dg, __VA_ARGS__)
+#define PNT(...) u_pp(dg, "\n\t" __VA_ARGS__)
+#define PNTT(...) u_pp(dg, "\n\t\t" __VA_ARGS__)
+#define EXT(NAME) PNTT(#NAME ": %s", client_desc->info.NAME ? "true" : "false")
+
+	P("Client info:");
+	PNT("id: %u", ics->client_state.id);
+	PNT("application_name: '%s'", client_desc->info.application_name);
+	PNT("pid: %i", client_desc->pid);
+	PNT("extensions:");
+
+	EXT(ext_hand_tracking_enabled);
+	EXT(ext_eye_gaze_interaction_enabled);
+	EXT(ext_hand_interaction_enabled);
+
+#undef EXT
+#undef PTT
+#undef PT
+#undef P
+
+	// Log the pretty message.
+	IPC_INFO(ics->server, "%s", sink.buffer);
 
 	return XRT_SUCCESS;
 }
