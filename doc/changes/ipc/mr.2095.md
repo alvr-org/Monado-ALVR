@@ -1,0 +1,4 @@
+- server: Don't call teardown if mutex fails to be created.
+- server: Pass in log_level to init function.
+- server: Use correct log define error message.
+- server: Print more client info.
