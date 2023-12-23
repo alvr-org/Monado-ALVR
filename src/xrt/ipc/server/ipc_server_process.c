@@ -453,11 +453,15 @@ ipc_server_handle_client_connected(struct ipc_server *vs, xrt_ipc_handle_t ipc_h
 }
 
 static int
-init_all(struct ipc_server *s)
+init_all(struct ipc_server *s, enum u_logging_level log_level)
 {
 	xrt_result_t xret;
 	int ret;
 
+	// First order of business set the log level.
+	s->log_level = log_level;
+
+	// This should never fail.
 	ret = os_mutex_init(&s->global_state.lock);
 	if (ret < 0) {
 		IPC_ERROR(s, "Global state lock mutex failed to init!");
@@ -476,7 +480,6 @@ init_all(struct ipc_server *s)
 	// Yes we should be running.
 	s->running = true;
 	s->exit_on_disconnect = debug_get_bool_option_exit_on_disconnect();
-	s->log_level = debug_get_log_option_ipc_log();
 
 	xret = xrt_instance_create(NULL, &s->xinst);
 	if (xret != XRT_SUCCESS) {
@@ -897,14 +900,19 @@ ipc_server_update_state(struct ipc_server *s)
 int
 ipc_server_main(int argc, char **argv)
 {
-	struct ipc_server *s = U_TYPED_CALLOC(struct ipc_server);
+	// Get log level first.
+	enum u_logging_level log_level = debug_get_log_option_ipc_log();
 
-	U_LOG_I("%s '%s' starting up...", u_runtime_description, u_git_tag);
+	// Log very early who we are.
+	U_LOG_IFL_I(log_level, "%s '%s' starting up...", u_runtime_description, u_git_tag);
+
+	// Allocate the server itself.
+	struct ipc_server *s = U_TYPED_CALLOC(struct ipc_server);
 
 	// need to create early before any vars are added
 	u_debug_gui_create(&s->debug_gui);
 
-	int ret = init_all(s);
+	int ret = init_all(s, log_level);
 	if (ret < 0) {
 		free(s->debug_gui);
 		free(s);
@@ -933,10 +941,13 @@ ipc_server_main(int argc, char **argv)
 int
 ipc_server_main_android(struct ipc_server **ps, void (*startup_complete_callback)(void *data), void *data)
 {
+	// Get log level first.
+	enum u_logging_level log_level = debug_get_log_option_ipc_log();
+
 	struct ipc_server *s = U_TYPED_CALLOC(struct ipc_server);
 	U_LOG_D("Created IPC server!");
 
-	int ret = init_all(s);
+	int ret = init_all(s, log_level);
 	if (ret < 0) {
 		free(s);
 		startup_complete_callback(data);
