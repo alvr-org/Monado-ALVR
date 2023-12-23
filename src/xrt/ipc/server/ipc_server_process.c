@@ -143,9 +143,10 @@ teardown_all(struct ipc_server *s)
 
 	u_process_destroy(s->process);
 
-	os_mutex_destroy(&s->global_state.lock);
-
 	ipc_shmem_destroy(&s->ism_handle, (void **)&s->ism, sizeof(struct ipc_shared_memory));
+
+	// Destroyed last.
+	os_mutex_destroy(&s->global_state.lock);
 }
 
 static int
@@ -465,7 +466,7 @@ init_all(struct ipc_server *s, enum u_logging_level log_level)
 	ret = os_mutex_init(&s->global_state.lock);
 	if (ret < 0) {
 		IPC_ERROR(s, "Global state lock mutex failed to init!");
-		teardown_all(s);
+		// Do not call teardown_all here, os_mutex_destroy will assert.
 		return ret;
 	}
 
