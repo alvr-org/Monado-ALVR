@@ -910,12 +910,16 @@ ipc_server_main(int argc, char **argv)
 	// Allocate the server itself.
 	struct ipc_server *s = U_TYPED_CALLOC(struct ipc_server);
 
-	// need to create early before any vars are added
+	/*
+	 * Need to create early before any vars are added. Not created in
+	 * init_all since that function is shared with Android and the debug
+	 * GUI isn't supported on Android.
+	 */
 	u_debug_gui_create(&s->debug_gui);
 
 	int ret = init_all(s, log_level);
 	if (ret < 0) {
-		free(s->debug_gui);
+		u_debug_gui_stop(&s->debug_gui);
 		free(s);
 		return ret;
 	}
