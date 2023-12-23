@@ -804,7 +804,6 @@ static void
 ipc_compositor_destroy(struct xrt_compositor *xc)
 {
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
-	xrt_result_t xret;
 
 	assert(icc->compositor_created);
 
