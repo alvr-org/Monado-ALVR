@@ -372,6 +372,22 @@ init_shm(struct ipc_server *s)
 	return 0;
 }
 
+static void
+init_server_state(struct ipc_server *s)
+{
+	// set up initial state for global vars, and each client state
+
+	s->global_state.active_client_index = -1; // we start off with no active client.
+	s->global_state.last_active_client_index = -1;
+	s->current_slot_index = 0;
+
+	for (uint32_t i = 0; i < IPC_MAX_CLIENTS; i++) {
+		volatile struct ipc_client_state *ics = &s->threads[i].ics;
+		ics->server = s;
+		ics->server_thread_index = -1;
+	}
+}
+
 void
 ipc_server_handle_failure(struct ipc_server *vs)
 {
@@ -524,6 +540,9 @@ init_all(struct ipc_server *s, enum u_logging_level log_level)
 		return ret;
 	}
 
+	// Never fails, do this second last.
+	init_server_state(s);
+
 	u_var_add_root(s, "IPC Server", false);
 	u_var_add_log_level(s, &s->log_level, "Log level");
 	u_var_add_bool(s, &s->exit_on_disconnect, "exit_on_disconnect");
@@ -543,22 +562,6 @@ main_loop(struct ipc_server *s)
 	}
 
 	return 0;
-}
-
-static void
-init_server_state(struct ipc_server *s)
-{
-	// set up initial state for global vars, and each client state
-
-	s->global_state.active_client_index = -1; // we start off with no active client.
-	s->global_state.last_active_client_index = -1;
-	s->current_slot_index = 0;
-
-	for (uint32_t i = 0; i < IPC_MAX_CLIENTS; i++) {
-		volatile struct ipc_client_state *ics = &s->threads[i].ics;
-		ics->server = s;
-		ics->server_thread_index = -1;
-	}
 }
 
 
@@ -924,8 +927,6 @@ ipc_server_main(int argc, char **argv)
 		return ret;
 	}
 
-	init_server_state(s);
-
 	u_debug_gui_start(s->debug_gui, s->xinst, s->xsysd);
 
 	ret = main_loop(s);
@@ -958,8 +959,6 @@ ipc_server_main_android(struct ipc_server **ps, void (*startup_complete_callback
 		startup_complete_callback(data);
 		return ret;
 	}
-
-	init_server_state(s);
 
 	*ps = s;
 	startup_complete_callback(data);
