@@ -388,87 +388,6 @@ init_server_state(struct ipc_server *s)
 	}
 }
 
-void
-ipc_server_handle_failure(struct ipc_server *vs)
-{
-	// Right now handled just the same as a graceful shutdown.
-	vs->running = false;
-}
-
-void
-ipc_server_handle_shutdown_signal(struct ipc_server *vs)
-{
-	vs->running = false;
-}
-
-void
-ipc_server_handle_client_connected(struct ipc_server *vs, xrt_ipc_handle_t ipc_handle)
-{
-	volatile struct ipc_client_state *ics = NULL;
-	int32_t cs_index = -1;
-
-	os_mutex_lock(&vs->global_state.lock);
-
-	// find the next free thread in our array (server_thread_index is -1)
-	// and have it handle this connection
-	for (uint32_t i = 0; i < IPC_MAX_CLIENTS; i++) {
-		volatile struct ipc_client_state *_cs = &vs->threads[i].ics;
-		if (_cs->server_thread_index < 0) {
-			ics = _cs;
-			cs_index = i;
-			break;
-		}
-	}
-	if (ics == NULL) {
-		xrt_ipc_handle_close(ipc_handle);
-
-		// Unlock when we are done.
-		os_mutex_unlock(&vs->global_state.lock);
-
-		U_LOG_E("Max client count reached!");
-		return;
-	}
-
-	struct ipc_thread *it = &vs->threads[cs_index];
-	if (it->state != IPC_THREAD_READY && it->state != IPC_THREAD_STOPPING) {
-		// we should not get here
-		xrt_ipc_handle_close(ipc_handle);
-
-		// Unlock when we are done.
-		os_mutex_unlock(&vs->global_state.lock);
-
-		U_LOG_E("Client state management error!");
-		return;
-	}
-
-	if (it->state != IPC_THREAD_READY) {
-		os_thread_join(&it->thread);
-		os_thread_destroy(&it->thread);
-		it->state = IPC_THREAD_READY;
-	}
-
-	it->state = IPC_THREAD_STARTING;
-
-	// Allocate a new ID, avoid zero.
-	//! @todo validate ID.
-	uint32_t id = ++vs->id_generator;
-
-	// Reset everything.
-	U_ZERO((struct ipc_client_state *)ics);
-
-	// Set state.
-	ics->client_state.id = id;
-	ics->imc.ipc_handle = ipc_handle;
-	ics->server = vs;
-	ics->server_thread_index = cs_index;
-	ics->io_active = true;
-
-	os_thread_start(&it->thread, ipc_server_client_thread, (void *)ics);
-
-	// Unlock when we are done.
-	os_mutex_unlock(&vs->global_state.lock);
-}
-
 static int
 init_all(struct ipc_server *s, enum u_logging_level log_level)
 {
@@ -809,7 +728,6 @@ toggle_io_client_locked(struct ipc_server *s, uint32_t client_id)
  *
  */
 
-
 xrt_result_t
 ipc_server_get_client_app_state(struct ipc_server *s, uint32_t client_id, struct ipc_app_state *out_ias)
 {
@@ -898,6 +816,87 @@ ipc_server_update_state(struct ipc_server *s)
 	update_server_state_locked(s);
 
 	os_mutex_unlock(&s->global_state.lock);
+}
+
+void
+ipc_server_handle_failure(struct ipc_server *vs)
+{
+	// Right now handled just the same as a graceful shutdown.
+	vs->running = false;
+}
+
+void
+ipc_server_handle_shutdown_signal(struct ipc_server *vs)
+{
+	vs->running = false;
+}
+
+void
+ipc_server_handle_client_connected(struct ipc_server *vs, xrt_ipc_handle_t ipc_handle)
+{
+	volatile struct ipc_client_state *ics = NULL;
+	int32_t cs_index = -1;
+
+	os_mutex_lock(&vs->global_state.lock);
+
+	// find the next free thread in our array (server_thread_index is -1)
+	// and have it handle this connection
+	for (uint32_t i = 0; i < IPC_MAX_CLIENTS; i++) {
+		volatile struct ipc_client_state *_cs = &vs->threads[i].ics;
+		if (_cs->server_thread_index < 0) {
+			ics = _cs;
+			cs_index = i;
+			break;
+		}
+	}
+	if (ics == NULL) {
+		xrt_ipc_handle_close(ipc_handle);
+
+		// Unlock when we are done.
+		os_mutex_unlock(&vs->global_state.lock);
+
+		U_LOG_E("Max client count reached!");
+		return;
+	}
+
+	struct ipc_thread *it = &vs->threads[cs_index];
+	if (it->state != IPC_THREAD_READY && it->state != IPC_THREAD_STOPPING) {
+		// we should not get here
+		xrt_ipc_handle_close(ipc_handle);
+
+		// Unlock when we are done.
+		os_mutex_unlock(&vs->global_state.lock);
+
+		U_LOG_E("Client state management error!");
+		return;
+	}
+
+	if (it->state != IPC_THREAD_READY) {
+		os_thread_join(&it->thread);
+		os_thread_destroy(&it->thread);
+		it->state = IPC_THREAD_READY;
+	}
+
+	it->state = IPC_THREAD_STARTING;
+
+	// Allocate a new ID, avoid zero.
+	//! @todo validate ID.
+	uint32_t id = ++vs->id_generator;
+
+	// Reset everything.
+	U_ZERO((struct ipc_client_state *)ics);
+
+	// Set state.
+	ics->client_state.id = id;
+	ics->imc.ipc_handle = ipc_handle;
+	ics->server = vs;
+	ics->server_thread_index = cs_index;
+	ics->io_active = true;
+
+	os_thread_start(&it->thread, ipc_server_client_thread, (void *)ics);
+
+	// Unlock when we are done.
+	os_mutex_unlock(&vs->global_state.lock);
 }
 
 #ifndef XRT_OS_ANDROID
