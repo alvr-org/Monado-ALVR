@@ -131,6 +131,32 @@ convert_eye_visibility(XrSwapchainUsageFlags xr_visibility)
 	return visibility;
 }
 
+#ifdef OXR_HAVE_FB_composition_layer_settings
+static enum xrt_layer_composition_flags
+convert_layer_settings_flags(XrCompositionLayerSettingsFlagsFB xr_layer_settings_flags)
+{
+	enum xrt_layer_composition_flags layer_settings_flags = 0;
+
+	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SUPER_SAMPLING_BIT_FB) != 0) {
+		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_NORMAL_SUPER_SAMPLING_BIT_FB;
+	}
+
+	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB) != 0) {
+		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SUPER_SAMPLING_BIT_FB;
+	}
+
+	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB) != 0) {
+		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_NORMAL_SHARPENING_BIT_FB;
+	}
+
+	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB) != 0) {
+		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SHARPENING_BIT_FB;
+	}
+
+	return layer_settings_flags;
+}
+#endif // OXR_HAVE_FB_composition_layer_settings
+
 XRT_MAYBE_UNUSED static void
 fill_in_xr_color(const struct XrColor4f *src, struct xrt_colour_rgba_f32 *dest)
 {
@@ -159,30 +185,6 @@ fill_in_color_scale_bias(struct oxr_session *sess,
 		fill_in_xr_color(&color_scale_bias->colorBias, &xlayer_data->color_bias);
 	}
 #endif // OXR_HAVE_KHR_composition_layer_color_scale_bias
-}
-
-static enum xrt_layer_composition_flags
-convert_layer_settings_flags(XrCompositionLayerSettingsFlagsFB xr_layer_settings_flags)
-{
-	enum xrt_layer_composition_flags layer_settings_flags = 0;
-
-	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SUPER_SAMPLING_BIT_FB) != 0) {
-		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_NORMAL_SUPER_SAMPLING_BIT_FB;
-	}
-
-	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB) != 0) {
-		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SUPER_SAMPLING_BIT_FB;
-	}
-
-	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_NORMAL_SHARPENING_BIT_FB) != 0) {
-		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_NORMAL_SHARPENING_BIT_FB;
-	}
-
-	if ((xr_layer_settings_flags & XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB) != 0) {
-		layer_settings_flags |= XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SHARPENING_BIT_FB;
-	}
-
-	return layer_settings_flags;
 }
 
 static void

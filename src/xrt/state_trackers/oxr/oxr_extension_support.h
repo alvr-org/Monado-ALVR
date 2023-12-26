@@ -385,16 +385,6 @@
 
 
 /*
- * XR_FB_display_refresh_rate
- */
-#if defined(XR_FB_display_refresh_rate) && defined(XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE)
-#define OXR_HAVE_FB_display_refresh_rate
-#define OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) _(FB_display_refresh_rate, FB_DISPLAY_REFRESH_RATE)
-#else
-#define OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_)
-#endif
-
-/*
  * XR_FB_composition_layer_settings
  */
 #if defined(XR_FB_composition_layer_settings) && defined(XRT_FEATURE_OPENXR_LAYER_FB_COMPOSITION_SETTINGS)
@@ -404,6 +394,18 @@
 #else
 #define OXR_EXTENSION_SUPPORT_FB_composition_layer_settings(_)
 #endif
+
+
+/*
+ * XR_FB_display_refresh_rate
+ */
+#if defined(XR_FB_display_refresh_rate) && defined(XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE)
+#define OXR_HAVE_FB_display_refresh_rate
+#define OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) _(FB_display_refresh_rate, FB_DISPLAY_REFRESH_RATE)
+#else
+#define OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_)
+#endif
+
 
 /*
  * XR_ML_ml2_controller_interaction
