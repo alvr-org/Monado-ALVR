@@ -375,7 +375,7 @@
 /*
  * XR_FB_composition_layer_image_layout
  */
-#if defined(XR_FB_composition_layer_image_layout) && defined(XRT_FEATURE_OPENXR_LAYER_FB_LAYER_IMAGE_LAYOUT)
+#if defined(XR_FB_composition_layer_image_layout) && defined(XRT_FEATURE_OPENXR_LAYER_FB_IMAGE_LAYOUT)
 #define OXR_HAVE_FB_composition_layer_image_layout
 #define OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_)                                                     \
 	_(FB_composition_layer_image_layout, FB_COMPOSITION_LAYER_IMAGE_LAYOUT)
@@ -387,7 +387,7 @@
 /*
  * XR_FB_composition_layer_settings
  */
-#if defined(XR_FB_composition_layer_settings) && defined(XRT_FEATURE_OPENXR_LAYER_FB_COMPOSITION_SETTINGS)
+#if defined(XR_FB_composition_layer_settings) && defined(XRT_FEATURE_OPENXR_LAYER_FB_SETTINGS)
 #define OXR_HAVE_FB_composition_layer_settings
 #define OXR_EXTENSION_SUPPORT_FB_composition_layer_settings(_)                                                         \
 	_(FB_composition_layer_settings, FB_COMPOSITION_LAYER_SETTINGS)
