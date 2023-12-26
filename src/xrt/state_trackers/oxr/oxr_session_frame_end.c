@@ -95,6 +95,22 @@ convert_blend_mode(XrEnvironmentBlendMode blend_mode)
 	}
 }
 
+#ifdef OXR_HAVE_FB_composition_layer_alpha_blend
+static enum xrt_blend_factor
+convert_blend_factor(XrBlendFactorFB blend_factor)
+{
+	switch (blend_factor) {
+	case XR_BLEND_FACTOR_ZERO_FB: return XRT_BLEND_FACTOR_ZERO;
+	case XR_BLEND_FACTOR_ONE_FB: return XRT_BLEND_FACTOR_ONE;
+	case XR_BLEND_FACTOR_SRC_ALPHA_FB: return XRT_BLEND_FACTOR_SRC_ALPHA;
+	case XR_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA_FB: return XRT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	case XR_BLEND_FACTOR_DST_ALPHA_FB: return XRT_BLEND_FACTOR_DST_ALPHA;
+	case XR_BLEND_FACTOR_ONE_MINUS_DST_ALPHA_FB: return XRT_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+	default: return XRT_BLEND_FACTOR_MAX_ENUM_FB;
+	}
+}
+#endif // OXR_HAVE_FB_composition_layer_alpha_blend
+
 static enum xrt_layer_composition_flags
 convert_layer_flags(XrSwapchainUsageFlags xr_flags)
 {
@@ -226,6 +242,26 @@ fill_in_sub_image(const struct oxr_swapchain *sc, const XrSwapchainSubImage *oxr
 }
 
 static void
+fill_in_blend_factors(struct oxr_session *sess, const XrCompositionLayerBaseHeader *layer, struct xrt_layer_data *data)
+{
+#ifdef OXR_HAVE_FB_composition_layer_alpha_blend
+	// Is the extension enabled?
+	if (!sess->sys->inst->extensions.FB_composition_layer_alpha_blend) {
+		return;
+	}
+	const XrCompositionLayerAlphaBlendFB *alphaBlend = OXR_GET_INPUT_FROM_CHAIN(
+	    layer, (XrStructureType)XR_TYPE_COMPOSITION_LAYER_ALPHA_BLEND_FB, XrCompositionLayerAlphaBlendFB);
+	if (alphaBlend != NULL) {
+		data->flags |= XRT_LAYER_COMPOSITION_ADVANCED_BLENDING_BIT;
+		data->advanced_blend.src_factor_color = convert_blend_factor(alphaBlend->srcFactorColor);
+		data->advanced_blend.dst_factor_color = convert_blend_factor(alphaBlend->dstFactorColor);
+		data->advanced_blend.src_factor_alpha = convert_blend_factor(alphaBlend->srcFactorAlpha);
+		data->advanced_blend.dst_factor_alpha = convert_blend_factor(alphaBlend->dstFactorAlpha);
+	}
+#endif
+}
+
+static void
 fill_in_layer_settings(struct oxr_session *sess,
                        const XrCompositionLayerBaseHeader *layer,
                        struct xrt_layer_data *xlayer_data)
@@ -243,11 +279,55 @@ fill_in_layer_settings(struct oxr_session *sess,
 #endif // OXR_HAVE_FB_composition_layer_settings
 }
 
+
 /*
  *
  * Verify functions.
  *
  */
+
+static XrResult
+verify_blend_factors(struct oxr_logger *log,
+                     struct oxr_session *sess,
+                     uint32_t layer_index,
+                     const XrCompositionLayerBaseHeader *layer)
+{
+#ifdef OXR_HAVE_FB_composition_layer_alpha_blend
+	if (!sess->sys->inst->extensions.FB_composition_layer_alpha_blend) {
+		return XR_SUCCESS;
+	}
+
+	const XrCompositionLayerAlphaBlendFB *alphaBlend = OXR_GET_INPUT_FROM_CHAIN(
+	    layer, (XrStructureType)XR_TYPE_COMPOSITION_LAYER_ALPHA_BLEND_FB, XrCompositionLayerAlphaBlendFB);
+
+	if (alphaBlend != NULL) {
+		if (!u_verify_blend_factor_valid(alphaBlend->srcFactorColor)) {
+			return oxr_error(
+			    log, XR_ERROR_VALIDATION_FAILURE,
+			    "(frameEndInfo->layers[%u]->pNext->srcFactorColor == 0x%08x) unknown blend factor",
+			    layer_index, alphaBlend->srcFactorColor);
+		}
+		if (!u_verify_blend_factor_valid(alphaBlend->dstFactorColor)) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->dstFactorColor == 0x%08x) unknown blend factor",
+			                 layer_index, alphaBlend->dstFactorColor);
+		}
+		if (!u_verify_blend_factor_valid(alphaBlend->srcFactorAlpha)) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->srcFactorAlpha == 0x%08x) unknown blend factor",
+			                 layer_index, alphaBlend->srcFactorAlpha);
+		}
+		if (!u_verify_blend_factor_valid(alphaBlend->dstFactorAlpha)) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->dstFactorAlpha == 0x%08x) unknown blend factor",
+			                 layer_index, alphaBlend->dstFactorAlpha);
+		}
+	}
+#else
+	// Extension isn't enabled, always pass.
+	return XR_SUCCESS;
+#endif
+}
 
 static XrResult
 verify_space(struct oxr_logger *log, uint32_t layer_index, XrSpace space)
@@ -263,7 +343,8 @@ verify_space(struct oxr_logger *log, uint32_t layer_index, XrSpace space)
 }
 
 static XrResult
-verify_quad_layer(struct xrt_compositor *xc,
+verify_quad_layer(struct oxr_session *sess,
+                  struct xrt_compositor *xc,
                   struct oxr_logger *log,
                   uint32_t layer_index,
                   XrCompositionLayerQuad *quad,
@@ -278,6 +359,11 @@ verify_quad_layer(struct xrt_compositor *xc,
 	}
 
 	XrResult ret = verify_space(log, layer_index, quad->space);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	ret = verify_blend_factors(log, sess, layer_index, (XrCompositionLayerBaseHeader *)quad);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
@@ -435,7 +521,8 @@ verify_depth_layer(struct xrt_compositor *xc,
 }
 
 static XrResult
-verify_projection_layer(struct xrt_compositor *xc,
+verify_projection_layer(struct oxr_session *sess,
+                        struct xrt_compositor *xc,
                         struct oxr_logger *log,
                         uint32_t layer_index,
                         XrCompositionLayerProjection *proj,
@@ -443,6 +530,11 @@ verify_projection_layer(struct xrt_compositor *xc,
                         uint64_t timestamp)
 {
 	XrResult ret = verify_space(log, layer_index, proj->space);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	ret = verify_blend_factors(log, sess, layer_index, (XrCompositionLayerBaseHeader *)proj);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
@@ -562,7 +654,8 @@ verify_projection_layer(struct xrt_compositor *xc,
 }
 
 static XrResult
-verify_cube_layer(struct xrt_compositor *xc,
+verify_cube_layer(struct oxr_session *sess,
+                  struct xrt_compositor *xc,
                   struct oxr_logger *log,
                   uint32_t layer_index,
                   const XrCompositionLayerCubeKHR *cube,
@@ -583,6 +676,11 @@ verify_cube_layer(struct xrt_compositor *xc,
 	}
 
 	XrResult ret = verify_space(log, layer_index, cube->space);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	ret = verify_blend_factors(log, sess, layer_index, (XrCompositionLayerBaseHeader *)cube);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
@@ -624,7 +722,8 @@ verify_cube_layer(struct xrt_compositor *xc,
 }
 
 static XrResult
-verify_cylinder_layer(struct xrt_compositor *xc,
+verify_cylinder_layer(struct oxr_session *sess,
+                      struct xrt_compositor *xc,
                       struct oxr_logger *log,
                       uint32_t layer_index,
                       const XrCompositionLayerCylinderKHR *cylinder,
@@ -645,6 +744,11 @@ verify_cylinder_layer(struct xrt_compositor *xc,
 	}
 
 	XrResult ret = verify_space(log, layer_index, cylinder->space);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	ret = verify_blend_factors(log, sess, layer_index, (XrCompositionLayerBaseHeader *)cylinder);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
@@ -728,7 +832,8 @@ verify_cylinder_layer(struct xrt_compositor *xc,
 }
 
 static XrResult
-verify_equirect1_layer(struct xrt_compositor *xc,
+verify_equirect1_layer(struct oxr_session *sess,
+                       struct xrt_compositor *xc,
                        struct oxr_logger *log,
                        uint32_t layer_index,
                        const XrCompositionLayerEquirectKHR *equirect,
@@ -749,6 +854,11 @@ verify_equirect1_layer(struct xrt_compositor *xc,
 	}
 
 	XrResult ret = verify_space(log, layer_index, equirect->space);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	ret = verify_blend_factors(log, sess, layer_index, (XrCompositionLayerBaseHeader *)equirect);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
@@ -820,7 +930,8 @@ verify_equirect1_layer(struct xrt_compositor *xc,
 }
 
 static XrResult
-verify_equirect2_layer(struct xrt_compositor *xc,
+verify_equirect2_layer(struct oxr_session *sess,
+                       struct xrt_compositor *xc,
                        struct oxr_logger *log,
                        uint32_t layer_index,
                        const XrCompositionLayerEquirect2KHR *equirect,
@@ -840,6 +951,11 @@ verify_equirect2_layer(struct xrt_compositor *xc,
 	}
 
 	XrResult ret = verify_space(log, layer_index, equirect->space);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	ret = verify_blend_factors(log, sess, layer_index, (XrCompositionLayerBaseHeader *)equirect);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
@@ -1030,6 +1146,7 @@ submit_quad_layer(struct oxr_session *sess,
 	fill_in_sub_image(sc, &quad->subImage, &data.quad.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)quad, &data);
 	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)quad, &data);
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)quad, &data);
 	fill_in_layer_settings(sess, (XrCompositionLayerBaseHeader *)quad, &data);
 
 	xrt_result_t xret = xrt_comp_layer_quad(xc, head, sc->swapchain, &data);
@@ -1087,7 +1204,7 @@ submit_projection_layer(struct oxr_session *sess,
 	fill_in_sub_image(scs[1], &proj->views[1].subImage, &data.stereo.r.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)proj, &data);
-
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 	fill_in_layer_settings(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 
 #ifdef OXR_HAVE_KHR_composition_layer_depth
@@ -1184,6 +1301,7 @@ submit_cube_layer(struct oxr_session *sess,
 	data.cube.sub.array_index = cube->imageArrayIndex;
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)cube, &data);
 	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)cube, &data);
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)cube, &data);
 
 	struct xrt_pose pose = {
 	    .orientation =
@@ -1248,6 +1366,7 @@ submit_cylinder_layer(struct oxr_session *sess,
 	fill_in_sub_image(sc, &cylinder->subImage, &data.cylinder.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)cylinder, &data);
 	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)cylinder, &data);
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)cylinder, &data);
 	fill_in_layer_settings(sess, (XrCompositionLayerBaseHeader *)cylinder, &data);
 
 	xrt_result_t xret = xrt_comp_layer_cylinder(xc, head, sc->swapchain, &data);
@@ -1294,6 +1413,7 @@ submit_equirect1_layer(struct oxr_session *sess,
 	fill_in_sub_image(sc, &equirect->subImage, &data.equirect1.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 	fill_in_layer_settings(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 
 	struct xrt_vec2 *scale = (struct xrt_vec2 *)&equirect->scale;
@@ -1358,6 +1478,7 @@ submit_equirect2_layer(struct oxr_session *sess,
 	fill_in_sub_image(sc, &equirect->subImage, &data.equirect2.sub);
 	fill_in_color_scale_bias(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 	fill_in_y_flip(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 	fill_in_layer_settings(sess, (XrCompositionLayerBaseHeader *)equirect, &data);
 
 	xrt_result_t xret = xrt_comp_layer_equirect2(xc, head, sc->swapchain, &data);
@@ -1472,27 +1593,27 @@ oxr_session_frame_end(struct oxr_logger *log, struct oxr_session *sess, const Xr
 
 		switch (layer->type) {
 		case XR_TYPE_COMPOSITION_LAYER_PROJECTION:
-			res = verify_projection_layer(xc, log, i, (XrCompositionLayerProjection *)layer, xdev,
+			res = verify_projection_layer(sess, xc, log, i, (XrCompositionLayerProjection *)layer, xdev,
 			                              frameEndInfo->displayTime);
 			break;
 		case XR_TYPE_COMPOSITION_LAYER_QUAD:
-			res = verify_quad_layer(xc, log, i, (XrCompositionLayerQuad *)layer, xdev,
+			res = verify_quad_layer(sess, xc, log, i, (XrCompositionLayerQuad *)layer, xdev,
 			                        frameEndInfo->displayTime);
 			break;
 		case XR_TYPE_COMPOSITION_LAYER_CUBE_KHR:
-			res = verify_cube_layer(xc, log, i, (XrCompositionLayerCubeKHR *)layer, xdev,
+			res = verify_cube_layer(sess, xc, log, i, (XrCompositionLayerCubeKHR *)layer, xdev,
 			                        frameEndInfo->displayTime);
 			break;
 		case XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR:
-			res = verify_cylinder_layer(xc, log, i, (XrCompositionLayerCylinderKHR *)layer, xdev,
+			res = verify_cylinder_layer(sess, xc, log, i, (XrCompositionLayerCylinderKHR *)layer, xdev,
 			                            frameEndInfo->displayTime);
 			break;
 		case XR_TYPE_COMPOSITION_LAYER_EQUIRECT_KHR:
-			res = verify_equirect1_layer(xc, log, i, (XrCompositionLayerEquirectKHR *)layer, xdev,
+			res = verify_equirect1_layer(sess, xc, log, i, (XrCompositionLayerEquirectKHR *)layer, xdev,
 			                             frameEndInfo->displayTime);
 			break;
 		case XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR:
-			res = verify_equirect2_layer(xc, log, i, (XrCompositionLayerEquirect2KHR *)layer, xdev,
+			res = verify_equirect2_layer(sess, xc, log, i, (XrCompositionLayerEquirect2KHR *)layer, xdev,
 			                             frameEndInfo->displayTime);
 			break;
 		default:

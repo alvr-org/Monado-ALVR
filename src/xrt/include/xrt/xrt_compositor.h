@@ -115,6 +115,14 @@ enum xrt_layer_composition_flags
 
 	//! Quality sharpening, see XrCompositionLayerSettingsFlagsFB.
 	XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SHARPENING_BIT_FB = 1u << 8u,
+
+	/*!
+	 * This layer has advanced blending information, this bit
+	 * supersedes the behavior of
+	 * @ref XRT_LAYER_COMPOSITION_BLEND_TEXTURE_SOURCE_ALPHA_BIT,
+	 * see @p XrCompositionLayerAlphaBlendFB.
+	 */
+	XRT_LAYER_COMPOSITION_ADVANCED_BLENDING_BIT = 1u << 9u,
 };
 
 /*!
@@ -130,6 +138,35 @@ enum xrt_layer_eye_visibility
 	XRT_LAYER_EYE_VISIBILITY_LEFT_BIT = 0x1,
 	XRT_LAYER_EYE_VISIBILITY_RIGHT_BIT = 0x2,
 	XRT_LAYER_EYE_VISIBILITY_BOTH = 0x3,
+};
+
+/*!
+ * Blend factors.
+ */
+enum xrt_blend_factor
+{
+	XRT_BLEND_FACTOR_ZERO = 0,
+	XRT_BLEND_FACTOR_ONE = 1,
+	XRT_BLEND_FACTOR_SRC_ALPHA = 2,
+	XRT_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA = 3,
+	XRT_BLEND_FACTOR_DST_ALPHA = 4,
+	XRT_BLEND_FACTOR_ONE_MINUS_DST_ALPHA = 5,
+	XRT_BLEND_FACTOR_MAX_ENUM_FB = 0x7FFFFFFF,
+};
+
+/*!
+ * Advanced blend
+ * provides explicit control over source and destination blend factors,
+ * with separate controls for color and alpha
+ *
+ * See @ref XRT_LAYER_COMPOSITION_ADVANCED_BLENDING_BIT.
+ */
+struct xrt_layer_advanced_blend_data
+{
+	enum xrt_blend_factor src_factor_color;
+	enum xrt_blend_factor dst_factor_color;
+	enum xrt_blend_factor src_factor_alpha;
+	enum xrt_blend_factor dst_factor_alpha;
 };
 
 /*!
@@ -344,6 +381,11 @@ struct xrt_layer_data
 	 * Modulate the color sourced from the images.
 	 */
 	struct xrt_colour_rgba_f32 color_bias;
+
+	/*!
+	 * Advanced blend factors
+	 */
+	struct xrt_layer_advanced_blend_data advanced_blend;
 
 	/*!
 	 * Union of data values for the various layer types.
