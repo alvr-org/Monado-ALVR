@@ -104,6 +104,17 @@ enum xrt_layer_composition_flags
 	 */
 	XRT_LAYER_COMPOSITION_COLOR_BIAS_SCALE = 1u << 4u,
 
+	//! Normal super sampling, see XrCompositionLayerSettingsFlagsFB.
+	XRT_COMPOSITION_LAYER_PROCESSING_NORMAL_SUPER_SAMPLING_BIT_FB = 1u << 5u,
+
+	//! Quality super sampling, see XrCompositionLayerSettingsFlagsFB.
+	XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SUPER_SAMPLING_BIT_FB = 1u << 6u,
+
+	//! Normal sharpening, see XrCompositionLayerSettingsFlagsFB.
+	XRT_COMPOSITION_LAYER_PROCESSING_NORMAL_SHARPENING_BIT_FB = 1u << 7u,
+
+	//! Quality sharpening, see XrCompositionLayerSettingsFlagsFB.
+	XRT_COMPOSITION_LAYER_PROCESSING_QUALITY_SHARPENING_BIT_FB = 1u << 8u,
 };
 
 /*!
