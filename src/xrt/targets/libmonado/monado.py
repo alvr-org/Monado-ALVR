@@ -68,9 +68,9 @@ def load_ffi() -> FFI:
 
 
 class Device:
-    def __init__(self, ident, name):
-        self.ident = ident
+    def __init__(self, name, serial):
         self.name = name
+        self.serial = serial
 
 
 class Client:
@@ -109,8 +109,8 @@ class Monado:
         self.name_ptr = self.ffi.new("char **")
         self.flags_ptr = self.ffi.new("uint32_t *")
         self.client_id_ptr = self.ffi.new("uint32_t *")
-        self.device_id_ptr = self.ffi.new("uint32_t *")
         self.device_name_ptr = self.ffi.new("char **")
+        self.device_serial_ptr = self.ffi.new("char **")
         self.device_count_ptr = self.ffi.new("uint32_t *")
 
     def update_clients(self):
@@ -185,12 +185,20 @@ class Monado:
         return self.device_count_ptr[0]
 
     def get_device_at_index(self, index):
-        ret = self.lib.mnd_root_get_device_info(self.root, index, self.device_id_ptr, self.device_name_ptr)
+        prop = self.lib.MND_PROPERTY_NAME_STRING
+        ret = self.lib.mnd_root_get_device_info_string(self.root, index, prop, self.device_name_ptr)
         if ret != 0:
-            raise Exception(f"Could not get device at index:{index}")
-        dev_id = self.device_id_ptr[0]
+            raise Exception(f"Could not get device name at index:{index}")
+
+        prop = self.lib.MND_PROPERTY_SERIAL_STRING
+        ret = self.lib.mnd_root_get_device_info_string(self.root, index, prop, self.device_serial_ptr)
+        if ret != 0:
+            raise Exception(f"Could not get device serial at index:{index}")
+
         dev_name = self.ffi.string(self.device_name_ptr[0]).decode("utf-8")
-        return Device(dev_id, dev_name)
+        dev_serial = self.ffi.string(self.device_serial_ptr[0]).decode("utf-8")
+
+        return Device(dev_name, dev_serial)
 
     def get_devices(self):
         devices = []

@@ -51,7 +51,7 @@ def main():
     devices = m.get_devices()
     print(f"Devices: {len(devices)}")
     for dev in devices:
-        print(f"\tid: {dev.ident:4d}, name: {dev.name}")
+        print(f"\tname: {dev.name}, serial: {dev.serial}")
 
     roles_map = m.get_device_roles()
     print(f"Roles: {len(roles_map)}")
