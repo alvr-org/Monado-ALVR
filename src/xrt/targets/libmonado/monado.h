@@ -8,6 +8,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 
 #ifdef __cplusplus
@@ -24,7 +25,7 @@ extern "C" {
 //! Major version of the API.
 #define MND_API_VERSION_MAJOR 1
 //! Minor version of the API.
-#define MND_API_VERSION_MINOR 1
+#define MND_API_VERSION_MINOR 2
 //! Patch version of the API.
 #define MND_API_VERSION_PATCH 0
 
@@ -41,6 +42,8 @@ typedef enum mnd_result
 	MND_ERROR_OPERATION_FAILED = -4,
 	//! Supported in version 1.1 and above.
 	MND_ERROR_RECENTERING_NOT_SUPPORTED = -5,
+	//! Supported in version 1.2 and above.
+	MND_ERROR_INVALID_PROPERTY = -6,
 } mnd_result_t;
 
 /*!
@@ -55,6 +58,19 @@ typedef enum mnd_client_flags
 	MND_CLIENT_SESSION_OVERLAY = (1u << 4u),
 	MND_CLIENT_IO_ACTIVE = (1u << 5u),
 } mnd_client_flags_t;
+
+/*!
+ * A property to get from a thing (currently only devices).
+ *
+ * Supported in version 1.2 and above.
+ */
+typedef enum mnd_property
+{
+	//! Supported in version 1.2 and above.
+	MND_PROPERTY_NAME_STRING = 0,
+	//! Supported in version 1.2 and above.
+	MND_PROPERTY_SERIAL_STRING = 1,
+} mnd_property_t;
 
 /*!
  * Opaque type for libmonado state
@@ -217,7 +233,84 @@ mnd_result_t
 mnd_root_get_device_count(mnd_root_t *root, uint32_t *out_device_count);
 
 /*!
+ * Get boolean property for the device at the given index.
+ *
+ * Supported in version 1.2 and above.
+ *
+ * @param root          The libmonado state.
+ * @param device_index  Index of device to retrieve name from.
+ * @param prop          A boolean property enum.
+ * @param[out] out_bool Pointer to populate with the boolean.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_info_bool(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, bool *out_bool);
+
+/*!
+ * Get int32_t property for the device at the given index.
+ *
+ * Supported in version 1.2 and above.
+ *
+ * @param root         The libmonado state.
+ * @param device_index Index of device to retrieve name from.
+ * @param prop         A int32_t property enum.
+ * @param[out] out_i32 Pointer to populate with the int32_t.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_info_i32(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, uint32_t *out_i32);
+
+/*!
+ * Get uint32_t property for the device at the given index.
+ *
+ * Supported in version 1.2 and above.
+ *
+ * @param root          The libmonado state.
+ * @param device_index  Index of device to retrieve name from.
+ * @param prop          A uint32_t property enum.
+ * @param[out] out_u32 Pointer to populate with the uint32_t.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_info_u32(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, uint32_t *out_u32);
+
+/*!
+ * Get float property for the device at the given index.
+ *
+ * Supported in version 1.2 and above.
+ *
+ * @param root           The libmonado state.
+ * @param device_index   Index of device to retrieve name from.
+ * @param prop           A float property enum.
+ * @param[out] out_float Pointer to populate with the float.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_info_float(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, float *out_float);
+
+/*!
+ * Get string property for the device at the given index.
+ *
+ * Supported in version 1.2 and above.
+ *
+ * @param root            The libmonado state.
+ * @param device_index    Index of device to retrieve name from.
+ * @param prop            A string property enum.
+ * @param[out] out_string Pointer to populate with the string.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_info_string(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, const char **out_string);
+
+/*!
  * Get device info at the given index.
+ *
+ * @deprecated Deprecated in version 1.2, scheduled for removal in version 2.0.0 currently.
  *
  * @param root               The libmonado state.
  * @param device_index       Index of device to retrieve name from.

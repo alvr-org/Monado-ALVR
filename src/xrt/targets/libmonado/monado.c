@@ -295,6 +295,92 @@ mnd_root_get_device_count(mnd_root_t *root, uint32_t *out_device_count)
 }
 
 mnd_result_t
+mnd_root_get_device_info_bool(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, bool *out_bool)
+{
+	CHECK_NOT_NULL(root);
+	CHECK_NOT_NULL(out_bool);
+
+	if (device_index >= root->ipc_c.ism->isdev_count) {
+		PE("Invalid device index (%u)", device_index);
+		return MND_ERROR_INVALID_VALUE;
+	}
+
+	PE("Is not a valid boolean property (%u)", prop);
+
+	return MND_ERROR_INVALID_PROPERTY;
+}
+
+mnd_result_t
+mnd_root_get_device_info_i32(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, uint32_t *out_i32)
+{
+	CHECK_NOT_NULL(root);
+	CHECK_NOT_NULL(out_i32);
+
+	if (device_index >= root->ipc_c.ism->isdev_count) {
+		PE("Invalid device index (%u)", device_index);
+		return MND_ERROR_INVALID_VALUE;
+	}
+
+	PE("Is not a valid i32 property (%u)", prop);
+
+	return MND_ERROR_INVALID_PROPERTY;
+}
+
+mnd_result_t
+mnd_root_get_device_info_u32(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, uint32_t *out_u32)
+{
+	CHECK_NOT_NULL(root);
+	CHECK_NOT_NULL(out_u32);
+
+	if (device_index >= root->ipc_c.ism->isdev_count) {
+		PE("Invalid device index (%u)", device_index);
+		return MND_ERROR_INVALID_VALUE;
+	}
+
+	PE("Is not a valid u32 property (%u)", prop);
+
+	return MND_ERROR_INVALID_PROPERTY;
+}
+
+mnd_result_t
+mnd_root_get_device_info_float(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, float *out_float)
+{
+	CHECK_NOT_NULL(root);
+	CHECK_NOT_NULL(out_float);
+
+	if (device_index >= root->ipc_c.ism->isdev_count) {
+		PE("Invalid device index (%u)", device_index);
+		return MND_ERROR_INVALID_VALUE;
+	}
+
+	PE("Is not a valid float property (%u)", prop);
+
+	return MND_ERROR_INVALID_PROPERTY;
+}
+
+mnd_result_t
+mnd_root_get_device_info_string(mnd_root_t *root, uint32_t device_index, mnd_property_t prop, const char **out_string)
+{
+	CHECK_NOT_NULL(root);
+	CHECK_NOT_NULL(out_string);
+
+	if (device_index >= root->ipc_c.ism->isdev_count) {
+		PE("Invalid device index (%u)", device_index);
+		return MND_ERROR_INVALID_VALUE;
+	}
+
+	const struct ipc_shared_device *shared_device = &root->ipc_c.ism->isdevs[device_index];
+
+	switch (prop) {
+	case MND_PROPERTY_NAME_STRING: *out_string = shared_device->str; break;
+	case MND_PROPERTY_SERIAL_STRING: *out_string = shared_device->serial; break;
+	default: PE("Is not a valid string property (%u)", prop); return MND_ERROR_INVALID_PROPERTY;
+	}
+
+	return MND_SUCCESS;
+}
+
+mnd_result_t
 mnd_root_get_device_info(mnd_root_t *root, uint32_t device_index, uint32_t *out_device_id, const char **out_dev_name)
 {
 	CHECK_NOT_NULL(root);
