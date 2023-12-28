@@ -232,16 +232,17 @@ mnd_root_get_device_info(mnd_root_t *root, uint32_t device_index, uint32_t *out_
 /*!
  * Get the device index associated for a given role name.
  *
- * @param root               The libmonado state.
- * @param role_name          Name of the role, one-of
- * "head","left","right"."gamepad","eyes","hand-tracking-left","hand-tracking-right"
- * @param[out] out_device_id Pointer to value to populate with the device id associated with given role name, -1 if not
- * role is set.
+ * @param root           The libmonado state.
+ * @param role_name      Name of the role, one-of: "head", "left", "right",
+ *                       "gamepad", "eyes", "hand-tracking-left", and,
+ *                       "hand-tracking-right":
+ * @param[out] out_index Pointer to value to populate with the device index
+ *                       associated with given role name, -1 if not role is set.
  *
  * @return MND_SUCCESS on success
  */
 mnd_result_t
-mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *out_device_id);
+mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *out_index);
 
 /*!
  * Trigger a recenter of the local spaces.

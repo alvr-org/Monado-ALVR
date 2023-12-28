@@ -314,11 +314,11 @@ mnd_root_get_device_info(mnd_root_t *root, uint32_t device_index, uint32_t *out_
 }
 
 mnd_result_t
-mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *out_device_id)
+mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *out_index)
 {
 	CHECK_NOT_NULL(root);
 	CHECK_NOT_NULL(role_name);
-	CHECK_NOT_NULL(out_device_id);
+	CHECK_NOT_NULL(out_index);
 
 	enum role_enum role;
 
@@ -341,10 +341,10 @@ mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *
 #undef TO_ENUM
 
 	switch (role) {
-	case ROLE_HEAD: *out_device_id = root->ipc_c.ism->roles.head; return MND_SUCCESS;
-	case ROLE_EYES: *out_device_id = root->ipc_c.ism->roles.eyes; return MND_SUCCESS;
-	case ROLE_HAND_LEFT: *out_device_id = root->ipc_c.ism->roles.hand_tracking.left; return MND_SUCCESS;
-	case ROLE_HAND_RIGHT: *out_device_id = root->ipc_c.ism->roles.hand_tracking.right; return MND_SUCCESS;
+	case ROLE_HEAD: *out_index = root->ipc_c.ism->roles.head; return MND_SUCCESS;
+	case ROLE_EYES: *out_index = root->ipc_c.ism->roles.eyes; return MND_SUCCESS;
+	case ROLE_HAND_LEFT: *out_index = root->ipc_c.ism->roles.hand_tracking.left; return MND_SUCCESS;
+	case ROLE_HAND_RIGHT: *out_index = root->ipc_c.ism->roles.hand_tracking.right; return MND_SUCCESS;
 	case ROLE_LEFT:
 	case ROLE_RIGHT:
 	case ROLE_GAMEPAD: break;
@@ -359,9 +359,9 @@ mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *
 
 	// Assumes roles index match device id.
 	switch (role) {
-	case ROLE_LEFT: *out_device_id = roles.left; return MND_SUCCESS;
-	case ROLE_RIGHT: *out_device_id = roles.right; return MND_SUCCESS;
-	case ROLE_GAMEPAD: *out_device_id = roles.gamepad; return MND_SUCCESS;
+	case ROLE_LEFT: *out_index = roles.left; return MND_SUCCESS;
+	case ROLE_RIGHT: *out_index = roles.right; return MND_SUCCESS;
+	case ROLE_GAMEPAD: *out_index = roles.gamepad; return MND_SUCCESS;
 	default: PE("Internal error, shouldn't get here"); return MND_ERROR_OPERATION_FAILED;
 	}
 }
