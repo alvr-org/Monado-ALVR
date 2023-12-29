@@ -24,6 +24,7 @@
 #include "util/u_verify.h"
 #include "util/u_process.h"
 #include "util/u_debug_gui.h"
+#include "util/u_pretty_print.h"
 
 #include "util/u_git_tag.h"
 
@@ -123,6 +124,65 @@ teardown_idevs(struct ipc_server *s)
  * Static functions.
  *
  */
+
+XRT_MAYBE_UNUSED static void
+print_linux_end_user_failed_information(enum u_logging_level log_level)
+{
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	// Print Newline
+#define PN() u_pp(dg, "\n")
+	// Print Newline, Hash, Space
+#define PNH() u_pp(dg, "\n#")
+	// Print Newline, Hash, Space
+#define PNHS(...) u_pp(dg, "\n# "__VA_ARGS__)
+	// Print Newline, 80 Hashes
+#define PN80H()                                                                                                        \
+	do {                                                                                                           \
+		PN();                                                                                                  \
+		for (uint32_t i = 0; i < 8; i++) {                                                                     \
+			u_pp(dg, "##########");                                                                        \
+		}                                                                                                      \
+	} while (false)
+
+	PN80H();
+	PNHS("                                                                             #");
+	PNHS("                 The Monado service has failed to start.                     #");
+	PNHS("                                                                             #");
+	PNHS("If you want to report please upload the logs of the service as a text file.  #");
+	PNHS("You can also capture the output the monado-cli info command to provide more  #");
+	PNHS("information about your system, that will help diagnosing your problem. The   #");
+	PNHS("below commands is how you best capture the information from the commands.    #");
+	PNHS("                                                                             #");
+	PNHS("    monado-cli info 2>&1 | tee info.txt                                      #");
+	PNHS("    monado-service 2>&1 | tee logs.txt                                       #");
+	PNHS("                                                                             #");
+	PN80H();
+
+	U_LOG_IFL_I(log_level, "%s", sink.buffer);
+}
+
+XRT_MAYBE_UNUSED static void
+print_linux_end_user_started_information(enum u_logging_level log_level)
+{
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+
+	PN80H();
+	PNHS("                                                                             #");
+	PNHS("                       The Monado service has started.                       #");
+	PNHS("                                                                             #");
+	PN80H();
+
+#undef PN
+#undef PNH
+#undef PNHS
+#undef PN80H
+
+	U_LOG_IFL_I(log_level, "%s", sink.buffer);
+}
 
 static void
 teardown_all(struct ipc_server *s)
@@ -921,6 +981,11 @@ ipc_server_main(int argc, char **argv)
 
 	int ret = init_all(s, log_level);
 	if (ret < 0) {
+#ifdef XRT_OS_LINUX
+		// Print information how to debug issues.
+		print_linux_end_user_failed_information(log_level);
+#endif
+
 		u_debug_gui_stop(&s->debug_gui);
 		free(s);
 		return ret;
@@ -929,6 +994,10 @@ ipc_server_main(int argc, char **argv)
 	// Start the debug UI now (if enabled).
 	u_debug_gui_start(s->debug_gui, s->xinst, s->xsysd);
 
+#ifdef XRT_OS_LINUX
+	// Print a very clear service started message.
+	print_linux_end_user_started_information(log_level);
+#endif
 	// Main loop.
 	ret = main_loop(s);
 
