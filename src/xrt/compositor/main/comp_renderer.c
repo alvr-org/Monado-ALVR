@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -68,6 +68,25 @@
  * Private struct(s).
  *
  */
+
+/*!
+ * What is the source of the FoV values used for the final image that the
+ * compositor produces and is sent to the hardware (or software).
+ */
+enum comp_target_fov_source
+{
+	/*!
+	 * The FoV values used for the final target is taken from the
+	 * distortion information on the @ref xrt_hmd_parts struct.
+	 */
+	COMP_TARGET_FOV_SOURCE_DISTORTION,
+
+	/*!
+	 * The FoV values used for the final target is taken from the
+	 * those returned from the device's get_views.
+	 */
+	COMP_TARGET_FOV_SOURCE_DEVICE_VIEWS,
+};
 
 /*!
  * Holds associated vulkan objects and state to render with a distortion.
@@ -244,6 +263,7 @@ calc_vertex_rot_data(struct comp_renderer *r, struct xrt_matrix_2x2 out_vertex_r
 
 static void
 calc_pose_data(struct comp_renderer *r,
+               enum comp_target_fov_source fov_source,
                struct xrt_fov out_fovs[2],
                struct xrt_pose out_world[2],
                struct xrt_pose out_eye[2])
@@ -257,8 +277,8 @@ calc_pose_data(struct comp_renderer *r,
 	};
 
 	struct xrt_space_relation head_relation = XRT_SPACE_RELATION_ZERO;
-	struct xrt_fov fovs[2] = XRT_STRUCT_INIT;
-	struct xrt_pose poses[2] = XRT_STRUCT_INIT;
+	struct xrt_fov xdev_fovs[2] = XRT_STRUCT_INIT;
+	struct xrt_pose xdev_poses[2] = XRT_STRUCT_INIT;
 
 	xrt_device_get_view_poses(                           //
 	    r->c->xdev,                                      // xdev
@@ -266,12 +286,24 @@ calc_pose_data(struct comp_renderer *r,
 	    r->c->frame.rendering.predicted_display_time_ns, // at_timestamp_ns
 	    2,                                               // view_count
 	    &head_relation,                                  // out_head_relation
-	    fovs,                                            // out_fovs
-	    poses);                                          // out_poses
+	    xdev_fovs,                                       // out_fovs
+	    xdev_poses);                                     // out_poses
+
+	struct xrt_fov dist_fov[2] = XRT_STRUCT_INIT;
+	for (uint32_t i = 0; i < 2; i++) {
+		dist_fov[i] = r->c->xdev->hmd->distortion.fov[i];
+	}
+
+	bool use_xdev = false; // Probably what we want.
+
+	switch (fov_source) {
+	case COMP_TARGET_FOV_SOURCE_DISTORTION: use_xdev = false; break;
+	case COMP_TARGET_FOV_SOURCE_DEVICE_VIEWS: use_xdev = true; break;
+	}
 
 	for (uint32_t i = 0; i < 2; i++) {
-		const struct xrt_fov fov = fovs[i];
-		const struct xrt_pose eye_pose = poses[i];
+		const struct xrt_fov fov = use_xdev ? xdev_fovs[i] : dist_fov[i];
+		const struct xrt_pose eye_pose = xdev_poses[i];
 
 		struct xrt_space_relation result = {0};
 		struct xrt_relation_chain xrc = {0};
@@ -752,7 +784,7 @@ renderer_fini(struct comp_renderer *r)
  * @pre render_gfx_init(rr, &c->nr)
  */
 static XRT_CHECK_RESULT VkResult
-dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
+dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_target_fov_source fov_source)
 {
 	COMP_TRACE_MARKER();
 
@@ -778,13 +810,12 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	struct xrt_fov fovs[2];
 	struct xrt_pose world_poses[2];
 	struct xrt_pose eye_poses[2];
-	calc_pose_data(r, fovs, world_poses, eye_poses);
-
-	// We are rendering for distortion, use their fov values.
-	struct xrt_fov target_fovs[2] = {
-	    r->c->xdev->hmd->distortion.fov[0],
-	    r->c->xdev->hmd->distortion.fov[1],
-	};
+	calc_pose_data(  //
+	    r,           // r
+	    fov_source,  // fov_source
+	    fovs,        // fovs[2]
+	    world_poses, // world_poses[2]
+	    eye_poses);  // eye_poses[2]
 
 	// Need to be begin for all paths.
 	render_gfx_begin(rr);
@@ -800,7 +831,7 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
 	    c->base.slot.layer_count, // layer_count
 	    world_poses,              // world_poses
 	    eye_poses,                // eye_poses
-	    target_fovs,              // fovs
+	    fovs,                     // fovs
 	    vertex_rots,              // vertex_rots
 	    rtr,                      // rtr
 	    viewport_datas,           // viewport_datas
@@ -831,7 +862,7 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr)
  * @pre render_compute_init(crc, &c->nr)
  */
 static XRT_CHECK_RESULT VkResult
-dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
+dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_target_fov_source fov_source)
 {
 	COMP_TRACE_MARKER();
 
@@ -847,8 +878,13 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc)
 	// Device view information.
 	struct xrt_fov fovs[2]; // Unused
 	struct xrt_pose world_poses[2];
-	struct xrt_pose eye_poses[2]; // New eye poses, unused.
-	calc_pose_data(r, fovs, world_poses, eye_poses);
+	struct xrt_pose eye_poses[2];
+	calc_pose_data(  //
+	    r,           // r
+	    fov_source,  // fov_source
+	    fovs,        // fovs[2]
+	    world_poses, // world_poses[2]
+	    eye_poses);  // eye_poses[2]
 
 	// Target Vulkan resources..
 	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
@@ -928,6 +964,9 @@ comp_renderer_draw(struct comp_renderer *r)
 
 	comp_target_update_timings(ct);
 
+	// Hardcoded for now.
+	enum comp_target_fov_source fov_source = COMP_TARGET_FOV_SOURCE_DISTORTION;
+
 	bool use_compute = r->settings->use_compute;
 	struct render_gfx rr = {0};
 	struct render_compute crc = {0};
@@ -935,10 +974,10 @@ comp_renderer_draw(struct comp_renderer *r)
 	VkResult res = VK_SUCCESS;
 	if (use_compute) {
 		render_compute_init(&crc, &c->nr);
-		res = dispatch_compute(r, &crc);
+		res = dispatch_compute(r, &crc, fov_source);
 	} else {
 		render_gfx_init(&rr, &c->nr);
-		res = dispatch_graphics(r, &rr);
+		res = dispatch_graphics(r, &rr, fov_source);
 	}
 	if (res != VK_SUCCESS) {
 		return XRT_ERROR_VULKAN;
