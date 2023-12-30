@@ -1,4 +1,4 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2023, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -28,7 +28,7 @@
  *
  */
 
-VkExternalMemoryHandleTypeFlags
+static VkExternalMemoryHandleTypeFlags
 get_image_memory_handle_type(void)
 {
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
