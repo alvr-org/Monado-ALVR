@@ -97,6 +97,13 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 		return VK_ERROR_FEATURE_NOT_PRESENT;
 	}
 
+	// Set the image create mutable flag if usage mutable is given.
+	bool has_mutable_usage = (info->bits & XRT_SWAPCHAIN_USAGE_MUTABLE_FORMAT) != 0;
+	if (has_mutable_usage) {
+		image_create_flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+	}
+
+	// Results of operations.
 	VkDeviceMemory device_memory = VK_NULL_HANDLE;
 	VkImage image = VK_NULL_HANDLE;
 	VkResult ret = VK_SUCCESS;
