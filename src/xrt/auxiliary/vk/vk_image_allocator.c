@@ -22,6 +22,28 @@
 #ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
 #include "android/android_ahardwarebuffer_allocator.h"
 #endif
+
+
+/*
+ *
+ * Struct.
+ *
+ */
+
+/*
+ * Small helper to merge the format list the app can provide with any needed
+ * workaround format list, like the one needed on Android for SRGB swapchains.
+ */
+struct format_list_helper
+{
+	// Make it slightly larger so extra formats can always fit.
+	VkFormat formats[XRT_MAX_SWAPCHAIN_CREATE_INFO_FORMAT_LIST_COUNT + 2];
+
+	// Counts the total amount of formats.
+	uint32_t format_count;
+};
+
+
 /*
  *
  * Helper functions.
@@ -40,6 +62,23 @@ get_image_memory_handle_type(void)
 #else
 #error "need port"
 #endif
+}
+
+static void
+add_format_non_dup(struct format_list_helper *flh, VkFormat format)
+{
+	for (uint32_t i = 0; i < flh->format_count; i++) {
+		if (flh->formats[i] == format) {
+			return;
+		}
+	}
+
+	if (flh->format_count >= ARRAY_SIZE(flh->formats)) {
+		U_LOG_E("Too many formats!");
+		return;
+	}
+
+	flh->formats[flh->format_count++] = format;
 }
 
 static VkResult
@@ -124,6 +163,15 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	};
 	CHAIN(external_memory_image_create_info);
 
+	// Format list helper needed for the below.
+	struct format_list_helper flh = XRT_STRUCT_INIT;
+
+	// If the format list is used add them here.
+	for (uint32_t i = 0; i < info->format_count; i++) {
+		add_format_non_dup(&flh, info->formats[i]);
+	}
+
+
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
 	VkExternalFormatANDROID format_android = {
 	    .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
@@ -131,18 +179,6 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	};
 	CHAIN(format_android);
 
-#ifdef VK_KHR_image_format_list
-	VkImageFormatListCreateInfoKHR image_format_list_create_info = {
-	    .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO_KHR,
-	    .pNext = NULL,
-	    .viewFormatCount = 2,
-	    .pViewFormats =
-	        (VkFormat[2]){
-	            VK_FORMAT_R8G8B8A8_UNORM,
-	            VK_FORMAT_R8G8B8A8_SRGB,
-	        },
-	};
-#endif
 	// Android can't allocate native sRGB.
 	// Use UNORM and correct gamma later.
 	if (image_format == VK_FORMAT_R8G8B8A8_SRGB) {
@@ -156,26 +192,23 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 		assert(a_buffer_format_props.format != VK_FORMAT_UNDEFINED); // Make sure there is a Vulkan format.
 		assert(format_android.externalFormat == 0);
 
-#ifdef VK_KHR_image_format_list
-		if (vk->has_KHR_image_format_list) {
-			CHAIN(image_format_list_create_info);
-		}
-#endif
+		add_format_non_dup(&flh, VK_FORMAT_R8G8B8A8_UNORM);
+		add_format_non_dup(&flh, VK_FORMAT_R8G8B8A8_SRGB);
 	}
 #endif
 
 #ifdef VK_KHR_image_format_list
-	if (vk->has_KHR_image_format_list && info->format_count != 0) {
-		VkImageFormatListCreateInfoKHR image_format_list_create_info = {
-		    .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO_KHR,
-		    .viewFormatCount = info->format_count,
-		    .pViewFormats = info->formats,
-		};
+	VkImageFormatListCreateInfoKHR image_format_list_create_info = {
+	    .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO_KHR,
+	    .viewFormatCount = flh.format_count,
+	    .pViewFormats = flh.formats,
+	};
 
+	if (vk->has_KHR_image_format_list && flh.format_count != 0) {
 		CHAIN(image_format_list_create_info);
 	}
 #else
-	if (info->format_count != 0) {
+	if (flh.format_count != 0) {
 		VK_WARN(vk, "VK_KHR_image_format_list not supported");
 	}
 #endif
