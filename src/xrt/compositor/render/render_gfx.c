@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -395,6 +395,11 @@ create_layer_pipeline(struct vk_bundle *vk,
 	    VK_COLOR_COMPONENT_B_BIT |               //
 	    VK_COLOR_COMPONENT_A_BIT;                //
 
+	/*
+	 * We are using VK_BLEND_FACTOR_ONE for the dst alpha write
+	 * to make sure that there is a valid value there, makes
+	 * the debug UI work when inspecting the scratch images.
+	 */
 	const VkPipelineColorBlendAttachmentState blend_attachment_state = {
 	    .blendEnable = VK_TRUE,
 	    .colorWriteMask = all_components,
@@ -402,7 +407,7 @@ create_layer_pipeline(struct vk_bundle *vk,
 	    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
 	    .colorBlendOp = VK_BLEND_OP_ADD,
 	    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-	    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+	    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
 	    .alphaBlendOp = VK_BLEND_OP_ADD,
 	};
 
