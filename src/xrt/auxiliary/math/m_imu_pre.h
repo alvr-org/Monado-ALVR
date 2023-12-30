@@ -19,7 +19,8 @@ extern "C" {
 
 /*!
  * This is a common IMU pre-filter which takes raw 'ticks' from a 3 axis IMU
- * measurement and converts it into degrees per secs and meters per floats.
+ * measurement and converts it into degrees per secs and meters per second^2
+ * floats.
  *
  * One of these is used per gyro, accelerometer and magnometer.
  *
