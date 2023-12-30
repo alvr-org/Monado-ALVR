@@ -1,4 +1,4 @@
-// Copyright 2023, Collabora, Ltd.
+// Copyright 2023-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -30,9 +30,9 @@
  */
 
 /*
- * Internal state for a single view.
+ * Internal per-view for the layer shashing render step.
  */
-struct gfx_view_state
+struct gfx_layer_view_state
 {
 	// Filled out descriptor sets.
 	VkDescriptorSet descriptor_sets[RENDER_MAX_LAYERS];
@@ -64,6 +64,43 @@ struct gfx_view_state
 	struct xrt_matrix_4x4 eye_vp_rot_only;
 };
 
+/*
+ * Internal state for the layer squashing render step.
+ */
+struct gfx_layer_state
+{
+	struct gfx_layer_view_state views[2];
+};
+
+/*
+ * Internal state for the mesh rendering step.
+ */
+struct gfx_mesh_state
+{
+	VkDescriptorSet descriptor_sets[2];
+};
+
+/*
+ * Per-view input data for the mesh rendering step.
+ */
+struct gfx_mesh_view_data
+{
+	struct xrt_pose src_pose;
+	struct xrt_fov src_fov;
+	struct xrt_normalized_rect src_norm_rect;
+	VkSampler src_sampler;
+	VkImageView src_image_view;
+};
+
+/*
+ * Input data for the mesh rendering step,
+ * combined with comp_render_dispatch_data.
+ */
+struct gfx_mesh_data
+{
+	struct gfx_mesh_view_data views[2];
+};
+
 
 /*
  *
@@ -82,12 +119,36 @@ static const VkClearColorValue background_color_active = {
 
 /*
  *
+ * Input builder functions.
+ *
+ */
+
+inline static void
+gfx_mesh_add_view(struct gfx_mesh_data *md,
+                  uint32_t view_index,
+                  const struct xrt_pose *src_pose,
+                  const struct xrt_fov *src_fov,
+                  const struct xrt_normalized_rect *src_norm_rect,
+                  VkSampler src_sampler,
+                  VkImageView src_image_view)
+{
+	md->views[view_index].src_pose = *src_pose;
+	md->views[view_index].src_fov = *src_fov;
+	md->views[view_index].src_norm_rect = *src_norm_rect;
+	md->views[view_index].src_sampler = src_sampler;
+	md->views[view_index].src_image_view = src_image_view;
+}
+
+
+
+/*
+ *
  * Model view projection helper functions.
  *
  */
 
 static inline void
-calc_mvp_full(struct gfx_view_state *state,
+calc_mvp_full(struct gfx_layer_view_state *state,
               const struct xrt_layer_data *layer_data,
               const struct xrt_pose *pose,
               const struct xrt_vec3 *scale,
@@ -104,7 +165,7 @@ calc_mvp_full(struct gfx_view_state *state,
 }
 
 static inline void
-calc_mv_inv_full(struct gfx_view_state *state,
+calc_mv_inv_full(struct gfx_layer_view_state *state,
                  const struct xrt_layer_data *layer_data,
                  const struct xrt_pose *pose,
                  const struct xrt_vec3 *scale,
@@ -127,7 +188,7 @@ calc_mv_inv_full(struct gfx_view_state *state,
 }
 
 static inline void
-calc_mvp_rot_only(struct gfx_view_state *state,
+calc_mvp_rot_only(struct gfx_layer_view_state *state,
                   const struct xrt_layer_data *data,
                   const struct xrt_pose *pose,
                   const struct xrt_vec3 *scale,
@@ -155,7 +216,7 @@ calc_mvp_rot_only(struct gfx_view_state *state,
  */
 
 static inline void
-add_layer(struct gfx_view_state *state, const struct xrt_layer_data *data, VkDescriptorSet descriptor_set)
+add_layer(struct gfx_layer_view_state *state, const struct xrt_layer_data *data, VkDescriptorSet descriptor_set)
 {
 	uint32_t cur_layer = state->layer_count++;
 	state->descriptor_sets[cur_layer] = descriptor_set;
@@ -169,7 +230,7 @@ do_cylinder_layer(struct render_gfx *rr,
                   uint32_t view_index,
                   VkSampler clamp_to_edge,
                   VkSampler clamp_to_border_black,
-                  struct gfx_view_state *state)
+                  struct gfx_layer_view_state *state)
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_cylinder_data *c = &layer_data->cylinder;
@@ -233,7 +294,7 @@ do_equirect2_layer(struct render_gfx *rr,
                    uint32_t view_index,
                    VkSampler clamp_to_edge,
                    VkSampler clamp_to_border_black,
-                   struct gfx_view_state *state)
+                   struct gfx_layer_view_state *state)
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_equirect2_data *eq2 = &layer_data->equirect2;
@@ -297,7 +358,7 @@ do_projection_layer(struct render_gfx *rr,
                     uint32_t view_index,
                     VkSampler clamp_to_edge,
                     VkSampler clamp_to_border_black,
-                    struct gfx_view_state *state)
+                    struct gfx_layer_view_state *state)
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_projection_view_data *vd = NULL;
@@ -359,7 +420,7 @@ do_quad_layer(struct render_gfx *rr,
               uint32_t view_index,
               VkSampler clamp_to_edge,
               VkSampler clamp_to_border_black,
-              struct gfx_view_state *state)
+              struct gfx_layer_view_state *state)
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_quad_data *q = &layer_data->quad;
@@ -406,13 +467,9 @@ do_quad_layer(struct render_gfx *rr,
 
 static void
 do_layers(struct render_gfx *rr,
-          struct render_gfx_target_resources rtrs[2],
-          const struct render_viewport_data viewport_datas[2],
-          const struct xrt_fov new_fovs[2],
-          const struct xrt_pose world_poses[2],
-          const struct xrt_pose eye_poses[2],
           const struct comp_layer *layers,
-          uint32_t layer_count)
+          uint32_t layer_count,
+          const struct comp_render_dispatch_data *d)
 {
 	COMP_TRACE_MARKER();
 
@@ -420,37 +477,45 @@ do_layers(struct render_gfx *rr,
 	VkResult ret;
 
 	// Hardcoded to stereo.
-	struct gfx_view_state views[2] = XRT_STRUCT_INIT;
+	struct gfx_layer_state ls = XRT_STRUCT_INIT;
 
-	for (uint32_t view = 0; view < ARRAY_SIZE(views); view++) {
+	for (uint32_t view = 0; view < d->view_count; view++) {
+
+		// Data for this view, convenience.
+		const struct xrt_pose world_pose = d->views[view].world_pose;
+		const struct xrt_pose eye_pose = d->views[view].eye_pose;
+		const struct xrt_fov new_fov = d->views[view].fov;
+
+		// Current state we are writing to.
+		struct gfx_layer_view_state *state = &ls.views[view];
 
 		// Used to go from UV to tangent space.
-		render_calc_uv_to_tangent_lengths_rect(&new_fovs[view], &views[view].to_tangent);
+		render_calc_uv_to_tangent_lengths_rect(&new_fov, &state->to_tangent);
 
 		// Projection
 		struct xrt_matrix_4x4 p;
-		math_matrix_4x4_projection_vulkan_infinite_reverse(&new_fovs[view], 0.1, &p);
+		math_matrix_4x4_projection_vulkan_infinite_reverse(&new_fov, 0.1, &p);
 
 		// Reused view matrix.
 		struct xrt_matrix_4x4 v;
 
 		// World
-		math_matrix_4x4_view_from_pose(&world_poses[view], &v);
-		math_matrix_4x4_multiply(&p, &v, &views[view].world_vp_full);
-		math_matrix_4x4_inverse(&v, &views[view].world_v_inv_full);
+		math_matrix_4x4_view_from_pose(&world_pose, &v);
+		math_matrix_4x4_multiply(&p, &v, &state->world_vp_full);
+		math_matrix_4x4_inverse(&v, &state->world_v_inv_full);
 
-		struct xrt_pose world_rot_only = {world_poses[view].orientation, XRT_VEC3_ZERO};
+		struct xrt_pose world_rot_only = {world_pose.orientation, XRT_VEC3_ZERO};
 		math_matrix_4x4_view_from_pose(&world_rot_only, &v);
-		math_matrix_4x4_multiply(&p, &v, &views[view].world_vp_rot_only);
+		math_matrix_4x4_multiply(&p, &v, &state->world_vp_rot_only);
 
 		// Eye
-		math_matrix_4x4_view_from_pose(&eye_poses[view], &v);
-		math_matrix_4x4_multiply(&p, &v, &views[view].eye_vp_full);
-		math_matrix_4x4_inverse(&v, &views[view].eye_v_inv_full);
+		math_matrix_4x4_view_from_pose(&eye_pose, &v);
+		math_matrix_4x4_multiply(&p, &v, &state->eye_vp_full);
+		math_matrix_4x4_inverse(&v, &state->eye_v_inv_full);
 
-		struct xrt_pose eye_rot_only = {eye_poses[view].orientation, XRT_VEC3_ZERO};
+		struct xrt_pose eye_rot_only = {eye_pose.orientation, XRT_VEC3_ZERO};
 		math_matrix_4x4_view_from_pose(&eye_rot_only, &v);
-		math_matrix_4x4_multiply(&p, &v, &views[view].eye_vp_rot_only);
+		math_matrix_4x4_multiply(&p, &v, &state->eye_vp_rot_only);
 	}
 
 	/*
@@ -464,7 +529,11 @@ do_layers(struct render_gfx *rr,
 	VkSampler clamp_to_edge = rr->r->samplers.clamp_to_edge;
 	VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
 
-	for (uint32_t view = 0; view < ARRAY_SIZE(views); view++) {
+	for (uint32_t view = 0; view < d->view_count; view++) {
+
+		// Source for data and written to as well, read and write.
+		struct gfx_layer_view_state *state = &ls.views[view];
+
 		for (uint32_t i = 0; i < layer_count; i++) {
 			const struct xrt_layer_data *data = &layers[i].data;
 			if (!is_layer_view_visible(data, view)) {
@@ -479,7 +548,7 @@ do_layers(struct render_gfx *rr,
 				    view,                  // view_index
 				    clamp_to_edge,         // clamp_to_edge
 				    clamp_to_border_black, // clamp_to_border_black
-				    &views[view]);         // state
+				    state);                // state
 				VK_CHK_WITH_GOTO(ret, "do_cylinder_layer", err_layer);
 				break;
 			case XRT_LAYER_EQUIRECT2:
@@ -489,7 +558,7 @@ do_layers(struct render_gfx *rr,
 				    view,                  // view_index
 				    clamp_to_edge,         // clamp_to_edge
 				    clamp_to_border_black, // clamp_to_border_black
-				    &views[view]);         // state
+				    state);                // state
 				VK_CHK_WITH_GOTO(ret, "do_equirect2_layer", err_layer);
 				break;
 			case XRT_LAYER_STEREO_PROJECTION:
@@ -500,7 +569,7 @@ do_layers(struct render_gfx *rr,
 				    view,                  // view_index
 				    clamp_to_edge,         // clamp_to_edge
 				    clamp_to_border_black, // clamp_to_border_black
-				    &views[view]);         // state
+				    state);                // state
 				VK_CHK_WITH_GOTO(ret, "do_projection_layer", err_layer);
 				break;
 			case XRT_LAYER_QUAD:
@@ -510,7 +579,7 @@ do_layers(struct render_gfx *rr,
 				    view,                  // view_index
 				    clamp_to_edge,         // clamp_to_edge
 				    clamp_to_border_black, // clamp_to_border_black
-				    &views[view]);         // state
+				    state);                // state
 				VK_CHK_WITH_GOTO(ret, "do_quad_layer", err_layer);
 				break;
 			default: break;
@@ -525,18 +594,23 @@ do_layers(struct render_gfx *rr,
 
 	const VkClearColorValue *color = layer_count == 0 ? &background_color_idle : &background_color_active;
 
-	for (uint32_t view = 0; view < ARRAY_SIZE(views); view++) {
-		render_gfx_begin_target( //
-		    rr,                  //
-		    &rtrs[view],         //
-		    color);              //
+	for (uint32_t view = 0; view < d->view_count; view++) {
 
-		render_gfx_begin_view(      //
+		// Convenience.
+		const struct render_viewport_data *viewport_data = &d->views[view].layer_viewport_data;
+
+		render_gfx_begin_target(    //
 		    rr,                     //
-		    view,                   // view_index
-		    &viewport_datas[view]); // viewport_data
+		    d->views[view].gfx.rtr, //
+		    color);                 //
 
-		struct gfx_view_state *state = &views[view];
+		render_gfx_begin_view( //
+		    rr,                //
+		    view,              // view_index
+		    viewport_data);    // viewport_data
+
+		// Only source for data here, read only.
+		const struct gfx_layer_view_state *state = &ls.views[view];
 
 		for (uint32_t i = 0; i < state->layer_count; i++) {
 			switch (state->types[i]) {
@@ -591,16 +665,9 @@ err_layer:
 
 static void
 do_mesh(struct render_gfx *rr,
-        struct render_gfx_target_resources *rtr,
-        const struct render_viewport_data viewport_datas[2],
-        const struct xrt_matrix_2x2 vertex_rots[2],
-        VkSampler src_samplers[2],
-        VkImageView src_image_views[2],
-        const struct xrt_normalized_rect src_norm_rects[2],
-        const struct xrt_pose src_poses[2],
-        const struct xrt_fov src_fovs[2],
-        const struct xrt_pose new_poses[2],
-        bool do_timewarp)
+        bool do_timewarp,
+        const struct gfx_mesh_data *md,
+        const struct comp_render_dispatch_data *d)
 {
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
@@ -611,34 +678,35 @@ do_mesh(struct render_gfx *rr,
 	 * write a copy command before the other gfx commands.
 	 */
 
-	VkDescriptorSet descriptor_sets[2] = XRT_STRUCT_INIT;
-	for (uint32_t i = 0; i < 2; i++) {
+	struct gfx_mesh_state ms = XRT_STRUCT_INIT;
+
+	for (uint32_t i = 0; i < d->view_count; i++) {
 
 		struct render_gfx_mesh_ubo_data data = {
-		    .vertex_rot = vertex_rots[i],
-		    .post_transform = src_norm_rects[i],
+		    .vertex_rot = d->views[i].gfx.vertex_rot,
+		    .post_transform = md->views[i].src_norm_rect,
 		};
 
 		// Extra arguments for timewarp.
 		if (do_timewarp) {
-			data.pre_transform = rr->r->distortion.uv_to_tanangle[i];
+			data.pre_transform = d->views[i].target_pre_transform;
 
 			render_calc_time_warp_matrix( //
-			    &src_poses[i],            //
-			    &src_fovs[i],             //
-			    &new_poses[i],            //
+			    &md->views[i].src_pose,   //
+			    &md->views[i].src_fov,    //
+			    &d->views[i].world_pose,  //
 			    &data.transform);         //
 		}
 
 		ret = render_gfx_mesh_alloc_and_write( //
 		    rr,                                //
 		    &data,                             //
-		    src_samplers[i],                   //
-		    src_image_views[i],                //
-		    &descriptor_sets[i]);              //
+		    md->views[i].src_sampler,          //
+		    md->views[i].src_image_view,       //
+		    &ms.descriptor_sets[i]);           //
 		VK_CHK_WITH_GOTO(ret, "render_gfx_mesh_alloc", err_no_memory);
 
-		VK_NAME_DESCRIPTOR_SET(vk, descriptor_sets[i], "render_gfx mesh descriptor sets");
+		VK_NAME_DESCRIPTOR_SET(vk, ms.descriptor_sets[i], "render_gfx mesh descriptor sets");
 	}
 
 
@@ -648,20 +716,23 @@ do_mesh(struct render_gfx *rr,
 
 	render_gfx_begin_target(       //
 	    rr,                        //
-	    rtr,                       //
+	    d->gfx.rtr,                //
 	    &background_color_active); //
 
-	for (uint32_t i = 0; i < 2; i++) {
-		render_gfx_begin_view(   //
-		    rr,                  //
-		    i,                   // view_index
-		    &viewport_datas[i]); // viewport_data
+	for (uint32_t i = 0; i < d->view_count; i++) {
+		// Convenience.
+		const struct render_viewport_data *viewport_data = &d->views[i].target_viewport_data;
 
-		render_gfx_mesh_draw(   //
-		    rr,                 // rr
-		    i,                  // mesh_index
-		    descriptor_sets[i], // descriptor_set
-		    do_timewarp);       // do_timewarp
+		render_gfx_begin_view( //
+		    rr,                //
+		    i,                 // view_index
+		    viewport_data);    // viewport_data
+
+		render_gfx_mesh_draw(      //
+		    rr,                    // rr
+		    i,                     // mesh_index
+		    ms.descriptor_sets[i], // descriptor_set
+		    do_timewarp);          // do_timewarp
 
 		render_gfx_end_view(rr);
 	}
@@ -677,14 +748,10 @@ err_no_memory:
 
 static void
 do_mesh_from_proj(struct render_gfx *rr,
-                  struct render_gfx_target_resources *rts,
-                  const struct render_viewport_data viewport_datas[2],
-                  const struct xrt_matrix_2x2 vertex_rots[2],
+                  const struct comp_render_dispatch_data *d,
                   const struct comp_layer *layer,
                   const struct xrt_layer_projection_view_data *lvd,
-                  const struct xrt_layer_projection_view_data *rvd,
-                  const struct xrt_pose new_poses[2],
-                  bool do_timewarp)
+                  const struct xrt_layer_projection_view_data *rvd)
 {
 	const struct xrt_layer_data *data = &layer->data;
 	const uint32_t left_array_index = lvd->sub.array_index;
@@ -692,58 +759,68 @@ do_mesh_from_proj(struct render_gfx *rr,
 	const struct comp_swapchain_image *left = &layer->sc_array[0]->images[lvd->sub.image_index];
 	const struct comp_swapchain_image *right = &layer->sc_array[1]->images[rvd->sub.image_index];
 
-	struct xrt_normalized_rect src_norm_rects[2] = {lvd->sub.norm_rect, rvd->sub.norm_rect};
-	if (data->flip_y) {
-		src_norm_rects[0].h = -src_norm_rects[0].h;
-		src_norm_rects[0].y = 1 + src_norm_rects[0].y;
-		src_norm_rects[1].h = -src_norm_rects[1].h;
-		src_norm_rects[1].y = 1 + src_norm_rects[1].y;
+	VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
+
+	struct gfx_mesh_data md = XRT_STRUCT_INIT;
+	for (uint32_t i = 0; i < d->view_count; i++) {
+
+		struct xrt_pose src_pose;
+		struct xrt_fov src_fov;
+		struct xrt_normalized_rect src_norm_rect;
+		VkImageView src_image_view;
+
+		if (!is_view_index_right(i)) {
+			// Left, aka not right.
+			src_pose = lvd->pose;
+			src_fov = lvd->fov;
+			src_norm_rect = lvd->sub.norm_rect;
+			src_image_view = get_image_view(left, data->flags, left_array_index);
+		} else {
+			// Right
+			src_pose = rvd->pose;
+			src_fov = rvd->fov;
+			src_norm_rect = rvd->sub.norm_rect;
+			src_image_view = get_image_view(right, data->flags, right_array_index);
+		}
+
+		if (data->flip_y) {
+			src_norm_rect.h = -src_norm_rect.h;
+			src_norm_rect.y = 1 + src_norm_rect.y;
+		}
+
+		gfx_mesh_add_view(         //
+		    &md,                   // md
+		    i,                     // view_index
+		    &src_pose,             // src_pose
+		    &src_fov,              // src_fov
+		    &src_norm_rect,        // src_norm_rect
+		    clamp_to_border_black, // src_sampler
+		    src_image_view);       // src_image_view
 	}
 
-	VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
-	VkSampler src_samplers[2] = {
-	    clamp_to_border_black,
-	    clamp_to_border_black,
-	};
-
-	VkImageView src_image_views[2] = {
-	    get_image_view(left, data->flags, left_array_index),
-	    get_image_view(right, data->flags, right_array_index),
-	};
-
-	const struct xrt_pose src_poses[2] = {lvd->pose, rvd->pose};
-	const struct xrt_fov src_fovs[2] = {lvd->fov, rvd->fov};
-
-	do_mesh(             //
-	    rr,              //
-	    rts,             //
-	    viewport_datas,  //
-	    vertex_rots,     //
-	    src_samplers,    //
-	    src_image_views, //
-	    src_norm_rects,  //
-	    src_poses,       //
-	    src_fovs,        //
-	    new_poses,       //
-	    do_timewarp);    //
+	do_mesh(            //
+	    rr,             //
+	    d->do_timewarp, //
+	    &md,            //
+	    d);             //
 }
 
 
+/*
+ *
+ * 'Exported' function(s).
+ *
+ */
+
 void
 comp_render_gfx_dispatch(struct render_gfx *rr,
-                         struct render_scratch_images *rsi,
-                         struct render_gfx_target_resources rsi_rtrs[2],
                          const struct comp_layer *layers,
                          const uint32_t layer_count,
-                         struct xrt_pose world_poses[2],
-                         struct xrt_pose eye_poses[2],
-                         struct xrt_fov fovs[2],
-                         struct xrt_matrix_2x2 vertex_rots[2],
-                         struct render_gfx_target_resources *rtr,
-                         const struct render_viewport_data viewport_datas[2],
-                         bool fast_path,
-                         bool do_timewarp)
+                         const struct comp_render_dispatch_data *d)
 {
+	// Convenience.
+	bool fast_path = d->fast_path;
+
 	// Only used if fast_path is true.
 	const struct comp_layer *layer = &layers[0];
 
@@ -756,16 +833,12 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
 		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
 
-		do_mesh_from_proj(  //
-		    rr,             //
-		    rtr,            //
-		    viewport_datas, //
-		    vertex_rots,    //
-		    layer,          //
-		    lvd,            //
-		    rvd,            //
-		    world_poses,    //
-		    do_timewarp);   //
+		do_mesh_from_proj( //
+		    rr,            //
+		    d,             //
+		    layer,         //
+		    lvd,           //
+		    rvd);          //
 
 	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		// Fast path.
@@ -773,102 +846,73 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
 		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
 
-		do_mesh_from_proj(  //
-		    rr,             //
-		    rtr,            //
-		    viewport_datas, //
-		    vertex_rots,    //
-		    layer,          //
-		    lvd,            //
-		    rvd,            //
-		    world_poses,    //
-		    do_timewarp);   //
+		do_mesh_from_proj( //
+		    rr,            //
+		    d,             //
+		    layer,         //
+		    lvd,           //
+		    rvd);          //
 
 	} else {
 		if (fast_path) {
 			U_LOG_W("Wanted fast path but no projection layer, falling back to layer squasher.");
 		}
 
-		struct render_viewport_data layer_viewport_datas[2] = {
-		    {.x = 0, .y = 0, .w = rsi->extent.width, .h = rsi->extent.height},
-		    {.x = 0, .y = 0, .w = rsi->extent.width, .h = rsi->extent.height},
-		};
 
-		do_layers(                //
-		    rr,                   // rr
-		    rsi_rtrs,             // rtrs
-		    layer_viewport_datas, // viewport_datas
-		    fovs,                 // new_fovs
-		    world_poses,          // world_poses
-		    eye_poses,            // eye_poses
-		    layers,               // layers
-		    layer_count);         // layer_count
+		/*
+		 * Layer squashing.
+		 */
+
+		do_layers(       //
+		    rr,          // rr
+		    layers,      // layers
+		    layer_count, // layer_count
+		    d);          // d
 
 
-		VkImageSubresourceRange first_color_level_subresource_range = {
-		    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		    .baseMipLevel = 0,
-		    .levelCount = 1,
-		    .baseArrayLayer = 0,
-		    .layerCount = 1,
-		};
+		/*
+		 * Distortion.
+		 */
 
 		VkImageLayout transition_from = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		VkImageLayout transition_to = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		vk_cmd_image_barrier_locked(                       //
+		cmd_barrier_view_images(                           //
 		    rr->r->vk,                                     //
-		    rr->r->cmd,                                    //
-		    rsi->color[0].image,                           //
-		    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          //
-		    VK_ACCESS_SHADER_READ_BIT,                     //
-		    transition_from,                               //
-		    transition_to,                                 //
-		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, //
-		    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,         //
-		    first_color_level_subresource_range);          //
+		    d,                                             //
+		    rr->r->cmd,                                    // cmd
+		    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          // src_access_mask
+		    VK_ACCESS_SHADER_READ_BIT,                     // dst_access_mask
+		    transition_from,                               // transition_from
+		    transition_to,                                 // transition_to
+		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // src_stage_mask
+		    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);        // dst_stage_mask
 
-		if (rsi->color[0].image != rsi->color[1].image) {
-			vk_cmd_image_barrier_locked(                       //
-			    rr->r->vk,                                     //
-			    rr->r->cmd,                                    //
-			    rsi->color[1].image,                           //
-			    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,          //
-			    VK_ACCESS_SHADER_READ_BIT,                     //
-			    transition_from,                               //
-			    transition_to,                                 //
-			    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, //
-			    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,         //
-			    first_color_level_subresource_range);          //
+		// Shared between all views.
+		VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
+
+		struct gfx_mesh_data md = XRT_STRUCT_INIT;
+		for (uint32_t i = 0; i < d->view_count; i++) {
+			struct xrt_pose src_pose = d->views[i].world_pose;
+			struct xrt_fov src_fov = d->views[i].fov;
+			VkImageView src_image_view = d->views[i].srgb_view;
+			struct xrt_normalized_rect src_norm_rect = d->views[i].layer_norm_rect;
+
+			gfx_mesh_add_view(         //
+			    &md,                   // md
+			    i,                     // view_index
+			    &src_pose,             // src_pose
+			    &src_fov,              // src_fov
+			    &src_norm_rect,        // src_norm_rect
+			    clamp_to_border_black, // src_sampler
+			    src_image_view);       // src_image_view
 		}
 
-		VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
-		VkSampler src_samplers[2] = {
-		    clamp_to_border_black,
-		    clamp_to_border_black,
-		};
-		VkImageView src_image_views[2] = {
-		    rsi->color[0].srgb_view,
-		    rsi->color[1].srgb_view,
-		};
-
-		struct xrt_normalized_rect src_norm_rects[2] = {
-		    {.x = 0, .y = 0, .w = 1, .h = 1},
-		    {.x = 0, .y = 0, .w = 1, .h = 1},
-		};
-
 		// We are passing in the same old and new poses.
-		do_mesh(             //
-		    rr,              //
-		    rtr,             //
-		    viewport_datas,  //
-		    vertex_rots,     //
-		    src_samplers,    //
-		    src_image_views, //
-		    src_norm_rects,  //
-		    world_poses,     //
-		    fovs,            //
-		    world_poses,     //
-		    false);          //
+		do_mesh(   //
+		    rr,    //
+		    false, // do_timewarp
+		    &md,   // md
+		    d);    // d
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright 2023, Collabora, Ltd.
+// Copyright 2023-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,6 +14,7 @@
 #include "render/render_interface.h"
 
 #include "util/comp_base.h"
+#include "util/comp_render.h"
 
 
 /*
@@ -135,4 +136,63 @@ set_post_transform_rect(const struct xrt_layer_data *data,
 	}
 
 	*out_norm_rect = rect;
+}
+
+
+/*
+ *
+ * Command helpers.
+ *
+ */
+
+static inline void
+cmd_barrier_view_images(struct vk_bundle *vk,
+                        const struct comp_render_dispatch_data *d,
+                        VkCommandBuffer cmd,
+                        VkAccessFlags src_access_mask,
+                        VkAccessFlags dst_access_mask,
+                        VkImageLayout transition_from,
+                        VkImageLayout transition_to,
+                        VkPipelineStageFlags src_stage_mask,
+                        VkPipelineStageFlags dst_stage_mask)
+{
+	VkImageSubresourceRange first_color_level_subresource_range = {
+	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	    .baseMipLevel = 0,
+	    .levelCount = 1,
+	    .baseArrayLayer = 0,
+	    .layerCount = 1,
+	};
+
+	for (uint32_t i = 0; i < d->view_count; i++) {
+		bool already_barried = false;
+
+		VkImage image = d->views[i].image;
+
+		uint32_t k = i;
+		while (k > 0) {
+			k--; // k is always greater then zero.
+
+			if (d->views[k].image == image) {
+				already_barried = true;
+				break;
+			}
+		}
+
+		if (already_barried) {
+			continue;
+		}
+
+		vk_cmd_image_barrier_locked(              //
+		    vk,                                   // vk_bundle
+		    cmd,                                  // cmd_buffer
+		    image,                                // image
+		    src_access_mask,                      // src_access_mask
+		    dst_access_mask,                      // dst_access_mask
+		    transition_from,                      // old_image_layout
+		    transition_to,                        // new_image_layout
+		    src_stage_mask,                       // src_stage_mask
+		    dst_stage_mask,                       // dst_stage_mask
+		    first_color_level_subresource_range); // subresource_range
+	}
 }

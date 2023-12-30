@@ -823,24 +823,58 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
 	    world_poses, // world_poses[2]
 	    eye_poses);  // eye_poses[2]
 
+	// Scratch image we are rendering to.
+	struct render_scratch_images *rsi = &r->scratch;
+
+	// The arguments for the dispatch function.
+	struct comp_render_dispatch_data data;
+	comp_render_gfx_initial_init( //
+	    &data,                    // data
+	    rtr,                      // rtr
+	    fast_path,                // fast_path
+	    do_timewarp);             // do_timewarp
+
+	for (uint32_t i = 0; i < 2; i++) {
+		// Scratch color image.
+		struct render_scratch_color_image *rsci = &rsi->color[i];
+
+		// The render target resources for the scratch images.
+		struct render_gfx_target_resources *rsci_rtr = &r->scratch_targets[i];
+
+		// Use the whole scratch image.
+		struct render_viewport_data layer_viewport_data = {
+		    .x = 0,
+		    .y = 0,
+		    .w = rsi->extent.width,
+		    .h = rsi->extent.height,
+		};
+
+		// Scratch image covers the whole image.
+		struct xrt_normalized_rect layer_norm_rect = {.x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f};
+
+		comp_render_gfx_add_view( //
+		    &data,                // data
+		    &world_poses[i],      // world_pose
+		    &eye_poses[i],        // eye_pose
+		    &fovs[i],             // fov
+		    rsci_rtr,             // rtr
+		    &layer_viewport_data, // layer_viewport_data
+		    &layer_norm_rect,     // layer_norm_rect
+		    rsci->image,          // image
+		    rsci->srgb_view,      // srgb_view
+		    &vertex_rots[i],      // vertex_rot
+		    &viewport_datas[i]);  // target_viewport_data
+	}
+
 	// Start the graphics pipeline.
 	render_gfx_begin(rr);
 
 	// Build the command buffer.
 	comp_render_gfx_dispatch( //
 	    rr,                   // rr
-	    &r->scratch,          // rsi
-	    r->scratch_targets,   // rsi_rtrs
 	    layers,               // layers
 	    layer_count,          // layer_count
-	    world_poses,          // world_poses
-	    eye_poses,            // eye_poses
-	    fovs,                 // fovs
-	    vertex_rots,          // vertex_rots
-	    rtr,                  // rtr
-	    viewport_datas,       // viewport_datas
-	    fast_path,            // fast_path
-	    do_timewarp);         // do_timewarp
+	    &data);               // d
 
 	// Make the command buffer submittable.
 	render_gfx_end(rr);
@@ -880,7 +914,7 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 	bool do_timewarp = !c->debug.atw_off;
 
 	// Device view information.
-	struct xrt_fov fovs[2]; // Unused
+	struct xrt_fov fovs[2];
 	struct xrt_pose world_poses[2];
 	struct xrt_pose eye_poses[2];
 	calc_pose_data(  //
@@ -898,22 +932,55 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 	struct render_viewport_data views[2];
 	calc_viewport_data(r, &views[0], &views[1]);
 
+	// Scratch image we are rendering to.
+	struct render_scratch_images *rsi = &r->scratch;
+
+	// The arguments for the dispatch function.
+	struct comp_render_dispatch_data data;
+	comp_render_cs_initial_init( //
+	    &data,                   // data
+	    target_image,            // target_image
+	    target_image_view,       // target_unorm_view
+	    fast_path,               // fast_path
+	    do_timewarp);            // do_timewarp
+
+	for (uint32_t i = 0; i < 2; i++) {
+		// Scratch color image.
+		struct render_scratch_color_image *rsci = &rsi->color[i];
+
+		// Use the whole scratch image.
+		struct render_viewport_data layer_viewport_data = {
+		    .x = 0,
+		    .y = 0,
+		    .w = rsi->extent.width,
+		    .h = rsi->extent.height,
+		};
+
+		// Scratch image covers the whole image.
+		struct xrt_normalized_rect layer_norm_rect = {.x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f};
+
+		comp_render_cs_add_view(  //
+		    &data,                // data
+		    &world_poses[i],      // world_pose
+		    &eye_poses[i],        // eye_pose
+		    &fovs[i],             // fov
+		    &layer_viewport_data, // layer_viewport_data
+		    &layer_norm_rect,     // layer_norm_rect
+		    rsci->image,          // image
+		    rsci->srgb_view,      // srgb_view
+		    rsci->unorm_view,     // unorm_view
+		    &views[i]);           // target_viewport_data
+	}
+
 	// Start the compute pipeline.
 	render_compute_begin(crc);
 
 	// Build the command buffer.
 	comp_render_cs_dispatch( //
 	    crc,                 // crc
-	    &r->scratch,         // rsi
-	    world_poses,         // world_poses
-	    eye_poses,           // eye_poses
 	    layers,              // layers
 	    layer_count,         // layer_count
-	    target_image,        // target_image
-	    target_image_view,   // target_image_view
-	    views,               // views
-	    fast_path,           // fast_path
-	    do_timewarp);        // do_timewarp
+	    &data);              // d
 
 	// Make the command buffer submittable.
 	render_compute_end(crc);

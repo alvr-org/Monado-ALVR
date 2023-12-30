@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -307,6 +307,7 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
 	*out_cur_image = cur_image;
 }
 
+
 /*
  *
  * Compute distortion helpers.
@@ -314,47 +315,87 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
  */
 
 static void
-do_cs_distortion_for_scratch(struct render_compute *crc,
-                             struct render_scratch_images *rsi,
-                             VkImage target_image,
-                             VkImageView target_image_view,
-                             const struct render_viewport_data views[2])
+do_cs_clear(struct render_compute *crc, const struct comp_render_dispatch_data *d)
 {
-	VkSampler sampler = crc->r->samplers.clamp_to_border_black;
+	// Hardcoded to two views.
+	if (d->view_count != 2) {
+		U_LOG_E("Only supports exactly 2 views!");
+		assert(d->view_count == 2);
+		return;
+	}
 
-	VkImageView src_image_views[2] = {
-	    rsi->color[0].srgb_view, // Read with gamma curve.
-	    rsi->color[1].srgb_view,
+	const struct render_viewport_data target_viewport_datas[2] = {
+	    d->views[0].target_viewport_data,
+	    d->views[1].target_viewport_data,
 	};
-	VkSampler src_samplers[2] = {sampler, sampler};
 
-	struct xrt_normalized_rect src_norm_rects[2] = {
-	    {.x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f},
-	    {.x = 0.0f, .y = 0.0f, .w = 1.0f, .h = 1.0f},
-	};
-
-	render_compute_projection( //
-	    crc,                   //
-	    src_samplers,          //
-	    src_image_views,       //
-	    src_norm_rects,        //
-	    target_image,          //
-	    target_image_view,     //
-	    views                  //
-	);
+	render_compute_clear(        //
+	    crc,                     // crc
+	    d->cs.target_image,      // target_image
+	    d->cs.target_unorm_view, // target_image_view
+	    target_viewport_datas);  // views
 }
 
 static void
-do_cs_distortion_for_layer(struct render_compute *crc,
-                           const struct xrt_pose world_poses[2],
-                           const struct comp_layer *layer,
-                           const struct xrt_layer_projection_view_data *lvd,
-                           const struct xrt_layer_projection_view_data *rvd,
-                           VkImage target_image,
-                           VkImageView target_image_view,
-                           const struct render_viewport_data views[2],
-                           bool do_timewarp)
+do_cs_distortion_from_scratch(struct render_compute *crc, const struct comp_render_dispatch_data *d)
 {
+	// Hardcoded to two views.
+	if (d->view_count != 2) {
+		U_LOG_E("Only supports exactly 2 views!");
+		assert(d->view_count == 2);
+		return;
+	}
+
+	VkSampler clamp_to_border_black = crc->r->samplers.clamp_to_border_black;
+
+	struct render_viewport_data target_viewport_datas[2];
+	VkImageView src_image_views[2];
+	VkSampler src_samplers[2];
+	struct xrt_normalized_rect src_norm_rects[2];
+
+	for (uint32_t i = 0; i < d->view_count; i++) {
+		// Data to be filled in.
+		struct render_viewport_data viewport_data;
+		VkImageView src_image_view;
+		struct xrt_normalized_rect src_norm_rect;
+
+		// Gather data.
+		viewport_data = d->views[i].target_viewport_data,
+		src_image_view = d->views[i].srgb_view; // Read with gamma curve.
+		src_norm_rect = d->views[i].layer_norm_rect;
+
+		// Fill in data.
+		target_viewport_datas[i] = viewport_data;
+		src_image_views[i] = src_image_view;
+		src_samplers[i] = clamp_to_border_black;
+		src_norm_rects[i] = src_norm_rect;
+	}
+
+	render_compute_projection(   //
+	    crc,                     // crc
+	    src_samplers,            // src_samplers
+	    src_image_views,         // src_image_views
+	    src_norm_rects,          // src_rects
+	    d->cs.target_image,      // target_image
+	    d->cs.target_unorm_view, // target_image_view
+	    target_viewport_datas);  // views
+}
+
+static void
+do_cs_distortion_from_stereo_layer(struct render_compute *crc,
+                                   const struct comp_layer *layer,
+                                   const struct xrt_layer_projection_view_data *lvd,
+                                   const struct xrt_layer_projection_view_data *rvd,
+                                   const struct comp_render_dispatch_data *d)
+{
+	// Hardcoded to two views.
+	if (d->view_count != 2) {
+		U_LOG_E("Only supports exactly 2 views!");
+		assert(d->view_count == 2);
+		return;
+	}
+
+	// Fetch from this data.
 	const struct xrt_layer_data *data = &layer->data;
 	uint32_t left_array_index = lvd->sub.array_index;
 	uint32_t right_array_index = rvd->sub.array_index;
@@ -362,44 +403,68 @@ do_cs_distortion_for_layer(struct render_compute *crc,
 	const struct comp_swapchain_image *right = &layer->sc_array[1]->images[rvd->sub.image_index];
 
 	VkSampler clamp_to_border_black = crc->r->samplers.clamp_to_border_black;
-	VkSampler src_samplers[2] = {
-	    clamp_to_border_black,
-	    clamp_to_border_black,
-	};
 
-	VkImageView src_image_views[2] = {
-	    get_image_view(left, data->flags, left_array_index),
-	    get_image_view(right, data->flags, right_array_index),
-	};
+	// Data to fill in.
+	struct xrt_pose world_poses[2];
+	struct render_viewport_data target_viewport_datas[2];
+	struct xrt_normalized_rect src_norm_rects[2];
+	struct xrt_pose src_poses[2];
+	struct xrt_fov src_fovs[2];
+	VkSampler src_samplers[2];
+	VkImageView src_image_views[2];
 
-	struct xrt_normalized_rect src_norm_rects[2] = {lvd->sub.norm_rect, rvd->sub.norm_rect};
-	if (data->flip_y) {
-		src_norm_rects[0].h = -src_norm_rects[0].h;
-		src_norm_rects[0].y = 1 + src_norm_rects[0].y;
-		src_norm_rects[1].h = -src_norm_rects[1].h;
-		src_norm_rects[1].y = 1 + src_norm_rects[1].y;
+	for (uint32_t i = 0; i < d->view_count; i++) {
+
+		struct xrt_pose world_pose;
+		struct render_viewport_data viewport_data;
+		struct xrt_pose src_pose;
+		struct xrt_fov src_fov;
+		struct xrt_normalized_rect src_norm_rect;
+		VkImageView src_image_view;
+
+		// Gather data.
+		world_pose = d->views[i].world_pose;
+		viewport_data = d->views[i].target_viewport_data;
+
+		if (!is_view_index_right(i)) {
+			// Left, aka not right.
+			src_pose = lvd->pose;
+			src_fov = lvd->fov;
+			src_norm_rect = lvd->sub.norm_rect;
+			src_image_view = get_image_view(left, data->flags, left_array_index);
+		} else {
+			// Right
+			src_pose = rvd->pose;
+			src_fov = rvd->fov;
+			src_norm_rect = rvd->sub.norm_rect;
+			src_image_view = get_image_view(right, data->flags, right_array_index);
+		}
+
+		if (data->flip_y) {
+			src_norm_rect.h = -src_norm_rect.h;
+			src_norm_rect.y = 1 + src_norm_rect.y;
+		}
+
+		// Fill in data.
+		world_poses[i] = world_pose;
+		target_viewport_datas[i] = viewport_data;
+		src_norm_rects[i] = src_norm_rect;
+		src_poses[i] = src_pose;
+		src_fovs[i] = src_fov;
+		src_samplers[i] = clamp_to_border_black;
+		src_image_views[i] = src_image_view;
 	}
 
-	if (!do_timewarp) {
-		render_compute_projection( //
-		    crc,                   //
-		    src_samplers,          //
-		    src_image_views,       //
-		    src_norm_rects,        //
-		    target_image,          //
-		    target_image_view,     //
-		    views);                //
+	if (!d->do_timewarp) {
+		render_compute_projection(   //
+		    crc,                     //
+		    src_samplers,            //
+		    src_image_views,         //
+		    src_norm_rects,          //
+		    d->cs.target_image,      //
+		    d->cs.target_unorm_view, //
+		    target_viewport_datas);  //
 	} else {
-		struct xrt_pose src_poses[2] = {
-		    lvd->pose,
-		    rvd->pose,
-		};
-
-		struct xrt_fov src_fovs[2] = {
-		    lvd->fov,
-		    rvd->fov,
-		};
-
 		render_compute_projection_timewarp( //
 		    crc,                            //
 		    src_samplers,                   //
@@ -408,9 +473,9 @@ do_cs_distortion_for_layer(struct render_compute *crc,
 		    src_poses,                      //
 		    src_fovs,                       //
 		    world_poses,                    //
-		    target_image,                   //
-		    target_image_view,              //
-		    views);                         //
+		    d->cs.target_image,             //
+		    d->cs.target_unorm_view,        //
+		    target_viewport_datas);         //
 	}
 }
 
@@ -597,150 +662,62 @@ comp_render_cs_layer(struct render_compute *crc,
 }
 
 void
-comp_render_cs_stereo_layers(struct render_compute *crc,
-                             const struct comp_layer *layers,
-                             const uint32_t layer_count,
-                             const struct xrt_normalized_rect pre_transforms[2],
-                             const struct xrt_pose world_poses[2],
-                             const struct xrt_pose eye_poses[2],
-                             const VkImage target_images[2],
-                             const VkImageView target_image_views[2],
-                             const struct render_viewport_data target_views[2],
-                             VkImageLayout transition_to,
-                             bool do_timewarp)
+comp_render_cs_layers(struct render_compute *crc,
+                      const struct comp_layer *layers,
+                      const uint32_t layer_count,
+                      const struct comp_render_dispatch_data *d,
+                      VkImageLayout transition_to)
 {
-	VkImageSubresourceRange first_color_level_subresource_range = {
-	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	    .baseMipLevel = 0,
-	    .levelCount = 1,
-	    .baseArrayLayer = 0,
-	    .layerCount = 1,
-	};
+	cmd_barrier_view_images(                   //
+	    crc->r->vk,                            //
+	    d,                                     //
+	    crc->r->cmd,                           // cmd
+	    0,                                     // src_access_mask
+	    VK_ACCESS_SHADER_WRITE_BIT,            // dst_access_mask
+	    VK_IMAGE_LAYOUT_UNDEFINED,             // transition_from
+	    VK_IMAGE_LAYOUT_GENERAL,               // transition_to
+	    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,    // src_stage_mask
+	    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT); // dst_stage_mask
 
-	vk_cmd_image_barrier_gpu_locked(          //
-	    crc->r->vk,                           //
-	    crc->r->cmd,                          //
-	    target_images[0],                     //
-	    0,                                    //
-	    VK_ACCESS_SHADER_WRITE_BIT,           //
-	    VK_IMAGE_LAYOUT_UNDEFINED,            //
-	    VK_IMAGE_LAYOUT_GENERAL,              //
-	    first_color_level_subresource_range); //
+	for (uint32_t view_index = 0; view_index < d->view_count; view_index++) {
+		const struct comp_render_view_data *view = &d->views[view_index];
 
-	if (target_images[0] != target_images[1]) {
-		vk_cmd_image_barrier_gpu_locked(          //
-		    crc->r->vk,                           //
-		    crc->r->cmd,                          //
-		    target_images[1],                     //
-		    0,                                    //
-		    VK_ACCESS_SHADER_WRITE_BIT,           //
-		    VK_IMAGE_LAYOUT_UNDEFINED,            //
-		    VK_IMAGE_LAYOUT_GENERAL,              //
-		    first_color_level_subresource_range); //
+		comp_render_cs_layer(            //
+		    crc,                         //
+		    view_index,                  //
+		    layers,                      //
+		    layer_count,                 //
+		    &view->target_pre_transform, //
+		    &view->world_pose,           //
+		    &view->eye_pose,             //
+		    view->image,                 //
+		    view->cs.unorm_view,         //
+		    &view->layer_viewport_data,  //
+		    d->do_timewarp);             //
 	}
 
-	for (uint32_t view_index = 0; view_index < 2; view_index++) {
-		comp_render_cs_layer(               //
-		    crc,                            //
-		    view_index,                     //
-		    layers,                         //
-		    layer_count,                    //
-		    &pre_transforms[view_index],    //
-		    &world_poses[view_index],       //
-		    &eye_poses[view_index],         //
-		    target_images[view_index],      //
-		    target_image_views[view_index], //
-		    &target_views[view_index],      //
-		    do_timewarp);                   //
-	}
-
-	vk_cmd_image_barrier_locked(              //
-	    crc->r->vk,                           //
-	    crc->r->cmd,                          //
-	    target_images[0],                     //
-	    VK_ACCESS_SHADER_WRITE_BIT,           //
-	    VK_ACCESS_MEMORY_READ_BIT,            //
-	    VK_IMAGE_LAYOUT_GENERAL,              //
-	    transition_to,                        //
-	    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, //
-	    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,    //
-	    first_color_level_subresource_range); //
-
-	if (target_images[0] != target_images[1]) {
-		vk_cmd_image_barrier_locked(              //
-		    crc->r->vk,                           //
-		    crc->r->cmd,                          //
-		    target_images[1],                     //
-		    VK_ACCESS_SHADER_WRITE_BIT,           //
-		    VK_ACCESS_MEMORY_READ_BIT,            //
-		    VK_IMAGE_LAYOUT_GENERAL,              //
-		    transition_to,                        //
-		    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, //
-		    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,    //
-		    first_color_level_subresource_range); //
-	}
-}
-
-void
-comp_render_cs_stereo_layers_to_scratch(struct render_compute *crc,
-                                        const struct xrt_normalized_rect pre_transforms[2],
-                                        struct xrt_pose world_poses[2],
-                                        struct xrt_pose eye_poses[2],
-                                        const struct comp_layer *layers,
-                                        const uint32_t layer_count,
-                                        struct render_scratch_images *rsi,
-                                        VkImageLayout transition_to,
-                                        bool do_timewarp)
-{
-	struct render_viewport_data target_views[2] = {
-	    {.w = rsi->extent.width, .h = rsi->extent.height},
-	    {.w = rsi->extent.width, .h = rsi->extent.height},
-	};
-
-	VkImage target_images[2] = {
-	    rsi->color[0].image,
-	    rsi->color[1].image,
-	};
-
-	VkImageView target_image_views[2] = {
-	    rsi->color[0].unorm_view, // Have to write in linear
-	    rsi->color[1].unorm_view,
-	};
-
-	comp_render_cs_stereo_layers( //
-	    crc,                      // crc
-	    layers,                   // layers
-	    layer_count,              // layer_count
-	    pre_transforms,           // pre_transforms
-	    world_poses,              // world_poses
-	    eye_poses,                // eye_poses
-	    target_images,            // target_images
-	    target_image_views,       // target_image_views
-	    target_views,             // target_views
-	    transition_to,            // transition_to
-	    do_timewarp);             // do_timewarp
+	cmd_barrier_view_images(                   //
+	    crc->r->vk,                            //
+	    d,                                     //
+	    crc->r->cmd,                           // cmd
+	    VK_ACCESS_SHADER_WRITE_BIT,            // src_access_mask
+	    VK_ACCESS_MEMORY_READ_BIT,             // dst_access_mask
+	    VK_IMAGE_LAYOUT_GENERAL,               // transition_from
+	    transition_to,                         // transition_to
+	    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // src_stage_mask
+	    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT); // dst_stage_mask
 }
 
 void
 comp_render_cs_dispatch(struct render_compute *crc,
-                        struct render_scratch_images *rsi,
-                        struct xrt_pose world_poses[2],
-                        struct xrt_pose eye_poses[2],
                         const struct comp_layer *layers,
                         const uint32_t layer_count,
-                        VkImage target_image,
-                        VkImageView target_image_view,
-                        const struct render_viewport_data views[2],
-                        bool fast_path,
-                        bool do_timewarp)
+                        const struct comp_render_dispatch_data *d)
 {
-	assert(!fast_path || layer_count > 0);
+	// Convenience.
+	bool fast_path = d->fast_path;
 
-	// We make an assumption that we will be using the distortion code.
-	const struct xrt_normalized_rect pre_transforms[2] = {
-	    crc->r->distortion.uv_to_tanangle[0],
-	    crc->r->distortion.uv_to_tanangle[1],
-	};
+	assert(!fast_path || layer_count > 0);
 
 	// We want to read from the images afterwards.
 	VkImageLayout transition_to = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -752,16 +729,12 @@ comp_render_cs_dispatch(struct render_compute *crc,
 		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
 		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
 
-		do_cs_distortion_for_layer( //
-		    crc,                    // crc
-		    world_poses,            // world_poses
-		    layer,                  // layer
-		    lvd,                    // lvd
-		    rvd,                    // rvd
-		    target_image,           // target_image
-		    target_image_view,      // target_image_view
-		    views,                  // views
-		    do_timewarp);           // do_timewarp
+		do_cs_distortion_from_stereo_layer( //
+		    crc,                            // crc
+		    layer,                          // layer
+		    lvd,                            // lvd
+		    rvd,                            // rvd
+		    d);                             // d
 	} else if (fast_path && layers[0].data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		int i = 0;
 		const struct comp_layer *layer = &layers[i];
@@ -769,39 +742,26 @@ comp_render_cs_dispatch(struct render_compute *crc,
 		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
 		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
 
-		do_cs_distortion_for_layer( //
-		    crc,                    // crc
-		    world_poses,            // world_poses
-		    layer,                  // layer
-		    lvd,                    // lvd
-		    rvd,                    // rvd
-		    target_image,           // target_image
-		    target_image_view,      // target_image_view
-		    views,                  // views
-		    do_timewarp);           // do_timewarp
+		do_cs_distortion_from_stereo_layer( //
+		    crc,                            // crc
+		    layer,                          // layer
+		    lvd,                            // lvd
+		    rvd,                            // rvd
+		    d);                             // d
 	} else if (layer_count > 0) {
-		comp_render_cs_stereo_layers_to_scratch( //
-		    crc,                                 //
-		    pre_transforms,                      //
-		    world_poses,                         //
-		    eye_poses,                           //
-		    layers,                              //
-		    layer_count,                         //
-		    rsi,                                 //
-		    transition_to,                       //
-		    do_timewarp);                        //
-
-		do_cs_distortion_for_scratch( //
-		    crc,                      //
-		    rsi,                      //
-		    target_image,             //
-		    target_image_view,        //
-		    views);                   //
-	} else {
-		render_compute_clear(  //
+		comp_render_cs_layers( //
 		    crc,               //
-		    target_image,      //
-		    target_image_view, //
-		    views);            //
+		    layers,            //
+		    layer_count,       //
+		    d,                 //
+		    transition_to);    //
+
+		do_cs_distortion_from_scratch( //
+		    crc,                       //
+		    d);                        //
+	} else {
+		do_cs_clear( //
+		    crc,     //
+		    d);      //
 	}
 }
