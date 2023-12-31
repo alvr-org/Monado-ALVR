@@ -790,10 +790,16 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
 
 	struct comp_compositor *c = r->c;
 	struct comp_target *ct = c->target;
+	VkResult ret;
 
-	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
+	// Basics
+	const struct comp_layer *layers = c->base.slot.layers;
+	uint32_t layer_count = c->base.slot.layer_count;
 	bool fast_path = c->base.slot.one_projection_layer_fast_path;
 	bool do_timewarp = !c->debug.atw_off;
+
+	// Resources for the distortion render target.
+	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
 
 	// Sanity check.
 	assert(!fast_path || c->base.slot.layer_count >= 1);
@@ -817,27 +823,24 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
 	    world_poses, // world_poses[2]
 	    eye_poses);  // eye_poses[2]
 
-	// Need to be begin for all paths.
+	// Start the graphics pipeline.
 	render_gfx_begin(rr);
 
-
-	VkResult ret = VK_SUCCESS;
-
-	comp_render_gfx_dispatch(     //
-	    rr,                       // rr
-	    &r->scratch,              // rsi
-	    r->scratch_targets,       // rsi_rtrs
-	    c->base.slot.layers,      // layers
-	    c->base.slot.layer_count, // layer_count
-	    world_poses,              // world_poses
-	    eye_poses,                // eye_poses
-	    fovs,                     // fovs
-	    vertex_rots,              // vertex_rots
-	    rtr,                      // rtr
-	    viewport_datas,           // viewport_datas
-	    fast_path,                // fast_path
-	    do_timewarp);             // do_timewarp
-
+	// Build the command buffer.
+	comp_render_gfx_dispatch( //
+	    rr,                   // rr
+	    &r->scratch,          // rsi
+	    r->scratch_targets,   // rsi_rtrs
+	    layers,               // layers
+	    layer_count,          // layer_count
+	    world_poses,          // world_poses
+	    eye_poses,            // eye_poses
+	    fovs,                 // fovs
+	    vertex_rots,          // vertex_rots
+	    rtr,                  // rtr
+	    viewport_datas,       // viewport_datas
+	    fast_path,            // fast_path
+	    do_timewarp);         // do_timewarp
 
 	// Make the command buffer submittable.
 	render_gfx_end(rr);
@@ -868,6 +871,7 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 
 	struct comp_compositor *c = r->c;
 	struct comp_target *ct = c->target;
+	VkResult ret;
 
 	// Basics
 	const struct comp_layer *layers = c->base.slot.layers;
@@ -897,6 +901,7 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 	// Start the compute pipeline.
 	render_compute_begin(crc);
 
+	// Build the command buffer.
 	comp_render_cs_dispatch( //
 	    crc,                 // crc
 	    &r->scratch,         // rsi
@@ -910,11 +915,16 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 	    fast_path,           // fast_path
 	    do_timewarp);        // do_timewarp
 
+	// Make the command buffer submittable.
 	render_compute_end(crc);
 
+	// Everything is ready, submit to the queue.
+	ret = renderer_submit_queue(r, crc->r->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+	// We mark afterwards to not include CPU time spent.
 	comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
 
-	return renderer_submit_queue(r, crc->r->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	return ret;
 }
 
 
