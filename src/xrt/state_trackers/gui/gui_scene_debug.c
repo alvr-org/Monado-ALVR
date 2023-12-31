@@ -711,6 +711,7 @@ enum search_type
 	SEARCH_READBACK,
 	SEARCH_HAND_TRACKER,
 	SEARCH_APP_TIMING,
+	SEARCH_COMPOSITOR,
 	SEARCH_COMPOSITOR_TIMING,
 };
 
@@ -729,6 +730,12 @@ struct curated_state
 		struct u_var_info *sink;
 		struct u_var_info *enable;
 	} readback; //!< Compositor readback variables.
+
+	struct
+	{
+		struct u_var_info *view_0;
+		struct u_var_info *enable;
+	} mirror; //!< Compositor mirror variables.
 
 	struct
 	{
@@ -786,8 +793,8 @@ curated_on_root_enter(struct u_var_root_info *info, void *priv)
 	CHECK_RAW("Controller emulation!", SEARCH_INVALID);
 	CHECK_RAW("Camera-based Hand Tracker", SEARCH_HAND_TRACKER);
 	CHECK_RAW("App timing info", SEARCH_APP_TIMING);
+	CHECK_RAW("Compositor", SEARCH_COMPOSITOR);
 	CHECK_RAW("Compositor timing info", SEARCH_COMPOSITOR_TIMING);
-	CHECK_RAW("Compositor", SEARCH_INVALID);
 	CHECK_RAW("Readback", SEARCH_READBACK);
 
 	// If we have too many app timing structs, ignore them.
@@ -816,6 +823,10 @@ curated_on_elem(struct u_var_info *info, void *priv)
 		CHECK("Estimate hand sizes", hand_tracking.detect)
 		CHECK("Annotated camera feeds", hand_tracking.cams)
 		CHECK("Model inputs and outputs", hand_tracking.graph)
+		break;
+	case SEARCH_COMPOSITOR: // Compositor main.
+		CHECK("Debug: Disable fast path", mirror.enable)
+		CHECK("View[0]", mirror.view_0)
 		break;
 	case SEARCH_COMPOSITOR_TIMING: // Compositor timing info
 		CHECK("Present to display offset(ms)", timing.present_to_display)
@@ -856,9 +867,9 @@ curated_render(struct debug_scene *ds, struct gui_program *p)
 	// Collect the variables.
 	u_var_visit(curated_on_root_enter, curated_on_root_exit, curated_on_elem, &cs);
 
-	// Always enable the readback sink.
-	if (cs.readback.enable != NULL) {
-		*(bool *)cs.readback.enable->ptr = true;
+	// Always enable the mirror sink.
+	if (cs.mirror.enable != NULL) {
+		*(bool *)cs.mirror.enable->ptr = true;
 	}
 
 	// Always set the clear colour.
@@ -902,9 +913,9 @@ curated_render(struct debug_scene *ds, struct gui_program *p)
 		igEndTabBar();
 	}
 
-	// If available draw the readback sink to the background.
-	if (cs.readback.sink != NULL) {
-		draw_sink_to_background(cs.readback.sink, &cs.ds);
+	// If available draw the mirror native images the background.
+	if (cs.mirror.view_0 != NULL) {
+		draw_native_images_to_background(cs.mirror.view_0, &cs.ds);
 	}
 
 	igEnd();
