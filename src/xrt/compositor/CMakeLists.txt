@@ -1,4 +1,4 @@
-# Copyright 2019-2023, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 ###
@@ -150,6 +150,8 @@ if(XRT_HAVE_VULKAN)
 		util/comp_render_cs.c
 		util/comp_render_gfx.c
 		util/comp_render_helpers.h
+		util/comp_scratch.c
+		util/comp_scratch.h
 		util/comp_semaphore.h
 		util/comp_semaphore.c
 		util/comp_swapchain.h
