@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -291,7 +291,11 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 	 * We have a fast path for single projection layer that goes directly
 	 * to the distortion shader, so no need to use the layer renderer.
 	 */
-	bool fast_path = can_do_one_projection_layer_fast_path(c) && !c->mirroring_to_debug_gui && !c->peek;
+	bool fast_path =                              //
+	    !c->peek &&                               //
+	    !c->mirroring_to_debug_gui &&             //
+	    !c->debug.disable_fast_path &&            //
+	    can_do_one_projection_layer_fast_path(c); //
 	c->base.slot.one_projection_layer_fast_path = fast_path;
 
 
@@ -344,6 +348,22 @@ compositor_destroy(struct xrt_compositor *xc)
 
 	COMP_DEBUG(c, "COMP_DESTROY");
 
+	// Need to do this as early as possible.
+	u_var_remove_root(c);
+
+	// Destroy any Vulkan resources, even if not used.
+	for (uint32_t i = 0; i < ARRAY_SIZE(c->scratch.views); i++) {
+		comp_scratch_single_images_free(&c->scratch.views[i], &c->base.vk);
+	}
+
+	// Destroy the scratch images fully, we initialized all of them.
+	for (uint32_t i = 0; i < ARRAY_SIZE(c->scratch.views); i++) {
+		comp_scratch_single_images_destroy(&c->scratch.views[i]);
+	}
+
+	// Make sure we are not holding onto any swapchains.
+	u_swapchain_debug_destroy(&c->debug.sc);
+
 	// Make sure we don't have anything to destroy.
 	comp_swapchain_shared_garbage_collect(&c->base.cscs);
 
@@ -377,8 +397,7 @@ compositor_destroy(struct xrt_compositor *xc)
 		vk->instance = VK_NULL_HANDLE;
 	}
 
-	u_var_remove_root(c);
-
+	// Can do this now.
 	u_frame_times_widget_teardown(&c->compositor_frame_times);
 
 	comp_base_fini(&c->base);
@@ -938,6 +957,14 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	// Init the settings to default.
 	comp_settings_init(&c->settings, xdev);
 
+	// Init this before the renderer.
+	u_swapchain_debug_init(&c->debug.sc);
+
+	// Init these before the renderer, not all might be used.
+	for (uint32_t i = 0; i < ARRAY_SIZE(c->scratch.views); i++) {
+		comp_scratch_single_images_init(&c->scratch.views[i]);
+	}
+
 	c->last_frame_time_ns = os_monotonic_get_ns();
 
 	double scale = c->settings.viewport_scale;
@@ -1012,6 +1039,8 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	/*
 	 * Rest of info.
 	 */
+	// Hardcoded for now.
+	uint32_t view_count = 2;
 
 	struct xrt_system_compositor_info sys_info_storage = {0};
 	struct xrt_system_compositor_info *sys_info = &sys_info_storage;
@@ -1057,8 +1086,15 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 
 	u_var_add_ro_f32(c, &c->compositor_frame_times.fps, "FPS (Compositor)");
 	u_var_add_bool(c, &c->debug.atw_off, "Debug: ATW OFF");
+	u_var_add_bool(c, &c->debug.disable_fast_path, "Debug: Disable fast path");
 	u_var_add_f32_timing(c, c->compositor_frame_times.debug_var, "Frame Times (Compositor)");
 
+	// Only add active views.
+	for (uint32_t i = 0; i < view_count; i++) {
+		char tmp[] = "View[X_XXX_XXX]";
+		snprintf(tmp, sizeof(tmp), "View[%u]", i);
+		u_var_add_native_images_debug(c, &c->scratch.views[i].unid, tmp);
+	}
 
 	//! @todo: Query all supported refresh rates of the current mode
 	sys_info->refresh_rate_count = 1;

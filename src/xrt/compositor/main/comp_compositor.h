@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -17,9 +17,11 @@
 #include "util/u_index_fifo.h"
 #include "util/u_logging.h"
 #include "util/u_frame_times_widget.h"
+#include "util/u_native_images_debug.h"
 
 #include "util/comp_base.h"
 #include "util/comp_sync.h"
+#include "util/comp_scratch.h"
 #include "util/comp_swapchain.h"
 
 #include "render/render_interface.h"
@@ -140,8 +142,19 @@ struct comp_compositor
 
 	struct
 	{
+		// Per-view scratch images.
+		struct comp_scratch_single_images views[2];
+	} scratch;
+
+	struct
+	{
 		//! Temporarily disable ATW
 		bool atw_off;
+
+		//! Should the fast path be disabled.
+		bool disable_fast_path;
+
+		struct u_swapchain_debug sc;
 	} debug;
 
 	//! If true, part of the compositor startup will be delayed until a session is started

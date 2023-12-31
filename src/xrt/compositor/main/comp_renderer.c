@@ -105,14 +105,17 @@ struct comp_renderer
 
 	struct comp_mirror_to_debug_gui mirror_to_debug_gui;
 
-	//! Scratch images used for layer squasher.
-	struct render_scratch_images scratch;
-
 	//! Render pass for graphics pipeline rendering to the scratch buffer.
 	struct render_gfx_render_pass scratch_render_pass;
 
-	//! Targets for rendering to the scratch buffer.
-	struct render_gfx_target_resources scratch_targets[2];
+	struct
+	{
+		struct
+		{
+			//! Targets for rendering to the scratch buffer.
+			struct render_gfx_target_resources targets[COMP_SCRATCH_NUM_IMAGES];
+		} views[2];
+	} scratch;
 
 	//! @}
 
@@ -151,6 +154,49 @@ struct comp_renderer
 	//! @}
 };
 
+struct comp_scratch_view_state
+{
+	uint32_t index;
+
+	bool used;
+};
+
+struct comp_render_scratch_state
+{
+	struct comp_scratch_view_state views[2];
+};
+
+
+/*
+ *
+ * Scratch helpers.
+ *
+ */
+
+static void
+scratch_get_init(struct comp_render_scratch_state *crss, struct comp_renderer *r, uint32_t view_count)
+{
+	struct comp_compositor *c = r->c;
+	U_ZERO(crss);
+
+	for (uint32_t i = 0; i < view_count; i++) {
+		comp_scratch_single_images_get(&c->scratch.views[i], &crss->views[i].index);
+	}
+}
+
+static void
+scratch_get_fini(struct comp_render_scratch_state *crss, struct comp_renderer *r, uint32_t view_count)
+{
+	struct comp_compositor *c = r->c;
+
+	for (uint32_t i = 0; i < view_count; i++) {
+		if (crss->views[i].used) {
+			comp_scratch_single_images_done(&c->scratch.views[i]);
+		} else {
+			comp_scratch_single_images_discard(&c->scratch.views[i]);
+		}
+	}
+}
 
 /*
  *
@@ -515,6 +561,9 @@ renderer_ensure_images_and_renderings(struct comp_renderer *r, bool force_recrea
 static void
 renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scratch_extent)
 {
+	COMP_TRACE_MARKER();
+	bool bret;
+
 	r->c = c;
 	r->settings = &c->settings;
 
@@ -522,12 +571,7 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 	r->fenced_buffer = -1;
 	r->rtr_array = NULL;
 
-	bool bret = render_scratch_images_ensure(&c->nr, &r->scratch, scratch_extent);
-	if (!bret) {
-		COMP_ERROR(c, "render_scratch_images_ensure: false");
-		assert(false && "Whelp, can't return an error. But should never really fail.");
-	}
-
+	// Shared render pass between all scratch images.
 	render_gfx_render_pass_init(                   //
 	    &r->scratch_render_pass,                   // rgrp
 	    &r->c->nr,                                 // r
@@ -535,13 +579,23 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 	    VK_ATTACHMENT_LOAD_OP_CLEAR,               // load_op
 	    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); // final_layout
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch_targets); i++) {
-		render_gfx_target_resources_init(  //
-		    &r->scratch_targets[i],        //
-		    &r->c->nr,                     //
-		    &r->scratch_render_pass,       //
-		    r->scratch.color[i].srgb_view, //
-		    scratch_extent);               //
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch.views); i++) {
+		bret = comp_scratch_single_images_ensure(&r->c->scratch.views[i], &r->c->base.vk, scratch_extent);
+		if (!bret) {
+			COMP_ERROR(c, "comp_scratch_single_images_ensure: false");
+			assert(false && "Whelp, can't return an error. But should never really fail.");
+		}
+
+		for (uint32_t k = 0; k < COMP_SCRATCH_NUM_IMAGES; k++) {
+			struct render_scratch_color_image *rsci = &c->scratch.views[i].images[k];
+
+			render_gfx_target_resources_init(    //
+			    &r->scratch.views[i].targets[k], //
+			    &r->c->nr,                       //
+			    &r->scratch_render_pass,         //
+			    rsci->srgb_view,                 //
+			    scratch_extent);                 //
+		}
 	}
 
 	// Try to early-allocate these, in case we can.
@@ -553,7 +607,7 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 	    &r->mirror_to_debug_gui,     //
 	    vk,                          //
 	    &c->shaders,                 //
-	    r->scratch.extent);          //
+	    scratch_extent);             //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(c, "comp_mirror_init: %s", vk_result_string(ret));
 		assert(false && "Whelp, can't return a error. But should never really fail.");
@@ -762,15 +816,14 @@ renderer_fini(struct comp_renderer *r)
 	comp_mirror_fini(&r->mirror_to_debug_gui, vk);
 
 	// Do this after the layer renderer.
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch_targets); i++) {
-		render_gfx_target_resources_close(&r->scratch_targets[i]);
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch.views); i++) {
+		for (uint32_t k = 0; k < COMP_SCRATCH_NUM_IMAGES; k++) {
+			render_gfx_target_resources_close(&r->scratch.views[i].targets[k]);
+		}
 	}
 
 	// Do this after the layer renderer and targert resources.
 	render_gfx_render_pass_close(&r->scratch_render_pass);
-
-	// Destroy any scratch images created.
-	render_scratch_images_close(&r->c->nr, &r->scratch);
 }
 
 
@@ -784,7 +837,10 @@ renderer_fini(struct comp_renderer *r)
  * @pre render_gfx_init(rr, &c->nr)
  */
 static XRT_CHECK_RESULT VkResult
-dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_target_fov_source fov_source)
+dispatch_graphics(struct comp_renderer *r,
+                  struct render_gfx *rr,
+                  struct comp_render_scratch_state *crss,
+                  enum comp_target_fov_source fov_source)
 {
 	COMP_TRACE_MARKER();
 
@@ -823,8 +879,6 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
 	    world_poses, // world_poses[2]
 	    eye_poses);  // eye_poses[2]
 
-	// Scratch image we are rendering to.
-	struct render_scratch_images *rsi = &r->scratch;
 
 	// The arguments for the dispatch function.
 	struct comp_render_dispatch_data data;
@@ -835,18 +889,24 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
 	    do_timewarp);             // do_timewarp
 
 	for (uint32_t i = 0; i < 2; i++) {
-		// Scratch color image.
-		struct render_scratch_color_image *rsci = &rsi->color[i];
+		// Which image of the scratch images for this view are we using.
+		uint32_t scratch_index = crss->views[i].index;
+
+		// The set of scratch images we are using for this view.
+		struct comp_scratch_single_images *scratch_view = &c->scratch.views[i];
 
 		// The render target resources for the scratch images.
-		struct render_gfx_target_resources *rsci_rtr = &r->scratch_targets[i];
+		struct render_gfx_target_resources *rsci_rtr = &r->scratch.views[i].targets[scratch_index];
+
+		// Scratch color image.
+		struct render_scratch_color_image *rsci = &scratch_view->images[scratch_index];
 
 		// Use the whole scratch image.
 		struct render_viewport_data layer_viewport_data = {
 		    .x = 0,
 		    .y = 0,
-		    .w = rsi->extent.width,
-		    .h = rsi->extent.height,
+		    .w = scratch_view->info.width,
+		    .h = scratch_view->info.height,
 		};
 
 		// Scratch image covers the whole image.
@@ -864,6 +924,12 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
 		    rsci->srgb_view,      // srgb_view
 		    &vertex_rots[i],      // vertex_rot
 		    &viewport_datas[i]);  // target_viewport_data
+
+		if (layer_count == 0) {
+			crss->views[i].used = false;
+		} else {
+			crss->views[i].used = !fast_path;
+		}
 	}
 
 	// Start the graphics pipeline.
@@ -899,7 +965,10 @@ dispatch_graphics(struct comp_renderer *r, struct render_gfx *rr, enum comp_targ
  * @pre render_compute_init(crc, &c->nr)
  */
 static XRT_CHECK_RESULT VkResult
-dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_target_fov_source fov_source)
+dispatch_compute(struct comp_renderer *r,
+                 struct render_compute *crc,
+                 struct comp_render_scratch_state *crss,
+                 enum comp_target_fov_source fov_source)
 {
 	COMP_TRACE_MARKER();
 
@@ -932,9 +1001,6 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 	struct render_viewport_data views[2];
 	calc_viewport_data(r, &views[0], &views[1]);
 
-	// Scratch image we are rendering to.
-	struct render_scratch_images *rsi = &r->scratch;
-
 	// The arguments for the dispatch function.
 	struct comp_render_dispatch_data data;
 	comp_render_cs_initial_init( //
@@ -945,15 +1011,21 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 	    do_timewarp);            // do_timewarp
 
 	for (uint32_t i = 0; i < 2; i++) {
+		// Which image of the scratch images for this view are we using.
+		uint32_t scratch_index = crss->views[i].index;
+
+		// The set of scratch images we are using for this view.
+		struct comp_scratch_single_images *scratch_view = &c->scratch.views[i];
+
 		// Scratch color image.
-		struct render_scratch_color_image *rsci = &rsi->color[i];
+		struct render_scratch_color_image *rsci = &scratch_view->images[scratch_index];
 
 		// Use the whole scratch image.
 		struct render_viewport_data layer_viewport_data = {
 		    .x = 0,
 		    .y = 0,
-		    .w = rsi->extent.width,
-		    .h = rsi->extent.height,
+		    .w = scratch_view->info.width,
+		    .h = scratch_view->info.height,
 		};
 
 		// Scratch image covers the whole image.
@@ -970,6 +1042,12 @@ dispatch_compute(struct comp_renderer *r, struct render_compute *crc, enum comp_
 		    rsci->srgb_view,      // srgb_view
 		    rsci->unorm_view,     // unorm_view
 		    &views[i]);           // target_viewport_data
+
+		if (layer_count == 0) {
+			crss->views[i].used = false;
+		} else {
+			crss->views[i].used = !fast_path;
+		}
 	}
 
 	// Start the compute pipeline.
@@ -1042,7 +1120,12 @@ comp_renderer_draw(struct comp_renderer *r)
 	comp_target_update_timings(ct);
 
 	// Hardcoded for now.
+	uint32_t view_count = 2;
 	enum comp_target_fov_source fov_source = COMP_TARGET_FOV_SOURCE_DISTORTION;
+
+	// For sratch image debugging.
+	struct comp_render_scratch_state crss;
+	scratch_get_init(&crss, r, view_count);
 
 	bool use_compute = r->settings->use_compute;
 	struct render_gfx rr = {0};
@@ -1051,10 +1134,10 @@ comp_renderer_draw(struct comp_renderer *r)
 	VkResult res = VK_SUCCESS;
 	if (use_compute) {
 		render_compute_init(&crc, &c->nr);
-		res = dispatch_compute(r, &crc, fov_source);
+		res = dispatch_compute(r, &crc, &crss, fov_source);
 	} else {
 		render_gfx_init(&rr, &c->nr);
-		res = dispatch_graphics(r, &rr, fov_source);
+		res = dispatch_graphics(r, &rr, &crss, fov_source);
 	}
 	if (res != VK_SUCCESS) {
 		return XRT_ERROR_VULKAN;
@@ -1063,20 +1146,22 @@ comp_renderer_draw(struct comp_renderer *r)
 #ifdef XRT_FEATURE_WINDOW_PEEK
 	if (c->peek) {
 		switch (comp_window_peek_get_eye(c->peek)) {
-		case COMP_WINDOW_PEEK_EYE_LEFT:
-			comp_window_peek_blit(         //
-			    c->peek,                   //
-			    r->scratch.color[0].image, //
-			    r->scratch.extent.width,   //
-			    r->scratch.extent.height); //
-			break;
-		case COMP_WINDOW_PEEK_EYE_RIGHT:
-			comp_window_peek_blit(         //
-			    c->peek,                   //
-			    r->scratch.color[1].image, //
-			    r->scratch.extent.width,   //
-			    r->scratch.extent.height); //
-			break;
+		case COMP_WINDOW_PEEK_EYE_LEFT: {
+			struct comp_scratch_single_images *view = &c->scratch.views[0];
+			comp_window_peek_blit(                       //
+			    c->peek,                                 //
+			    view->images[crss.views[0].index].image, //
+			    view->info.width,                        //
+			    view->info.height);                      //
+		} break;
+		case COMP_WINDOW_PEEK_EYE_RIGHT: {
+			struct comp_scratch_single_images *view = &c->scratch.views[1];
+			comp_window_peek_blit(                       //
+			    c->peek,                                 //
+			    view->images[crss.views[1].index].image, //
+			    view->info.width,                        //
+			    view->info.height);                      //
+		} break;
 		case COMP_WINDOW_PEEK_EYE_BOTH:
 			/* TODO: display the undistorted image */
 			comp_window_peek_blit(c->peek, c->target->images[r->acquired_buffer].handle, c->target->width,
@@ -1101,22 +1186,26 @@ comp_renderer_draw(struct comp_renderer *r)
 	comp_mirror_fixup_ui_state(&r->mirror_to_debug_gui, c);
 	if (comp_mirror_is_ready_and_active(&r->mirror_to_debug_gui, c, predicted_display_time_ns)) {
 
+		struct comp_scratch_single_images *view = &c->scratch.views[0];
+		struct render_scratch_color_image *rsci = &view->images[crss.views[0].index];
+		VkExtent2D extent = {view->info.width, view->info.width};
+
 		// Used for both, want clamp to edge to no bring in black.
 		VkSampler clamp_to_edge = c->nr.samplers.clamp_to_edge;
 
 		// Covers the whole view.
 		struct xrt_normalized_rect rect = {0, 0, 1.0f, 1.0f};
 
-		xret = comp_mirror_do_blit(        //
-		    &r->mirror_to_debug_gui,       //
-		    &c->base.vk,                   //
-		    frame_id,                      //
-		    predicted_display_time_ns,     //
-		    r->scratch.color[0].image,     //
-		    r->scratch.color[0].srgb_view, //
-		    clamp_to_edge,                 //
-		    r->scratch.extent,             //
-		    rect);                         //
+		xret = comp_mirror_do_blit(    //
+		    &r->mirror_to_debug_gui,   //
+		    &c->base.vk,               //
+		    frame_id,                  //
+		    predicted_display_time_ns, //
+		    rsci->image,               //
+		    rsci->srgb_view,           //
+		    clamp_to_edge,             //
+		    extent,                    //
+		    rect);                     //
 	}
 
 	/*
@@ -1128,6 +1217,10 @@ comp_renderer_draw(struct comp_renderer *r)
 	 */
 	renderer_wait_queue_idle(r);
 
+	// Finalize the scratch images, send to debug UI if active.
+	scratch_get_fini(&crss, r, view_count);
+
+	// Check timestamps.
 	if (xret == XRT_SUCCESS) {
 		/*
 		 * Get timestamps of GPU work (if available).
