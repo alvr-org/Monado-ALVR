@@ -174,6 +174,32 @@ out:
 }
 #endif
 
+#ifdef VK_KHR_swapchain
+VkResult
+vk_enumerate_swapchain_images(struct vk_bundle *vk,
+                              VkSwapchainKHR swapchain,
+                              uint32_t *out_image_count,
+                              VkImage **out_images)
+{
+	VkImage *images = NULL;
+	uint32_t image_count = 0;
+	VkResult ret;
+
+	ret = vk->vkGetSwapchainImagesKHR(vk->device, swapchain, &image_count, NULL);
+	CHECK_FIRST_CALL("vkGetSwapchainImagesKHR", ret, image_count);
+
+	images = U_TYPED_ARRAY_CALLOC(VkImage, image_count);
+	ret = vk->vkGetSwapchainImagesKHR(vk->device, swapchain, &image_count, images);
+	CHECK_SECOND_CALL("vkGetSwapchainImagesKHR", ret, images);
+
+out:
+	*out_image_count = image_count;
+	*out_images = images;
+
+	return VK_SUCCESS;
+}
+#endif
+
 #ifdef VK_USE_PLATFORM_DISPLAY_KHR
 VkResult
 vk_enumerate_physical_device_display_properties(struct vk_bundle *vk,

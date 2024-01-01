@@ -850,6 +850,19 @@ vk_enumerate_surface_present_modes(struct vk_bundle *vk,
                                    VkPresentModeKHR **out_present_modes);
 #endif
 
+#if defined(VK_KHR_swapchain) || defined(XRT_DOXYGEN)
+/*!
+ * Enumerate the images of the given @p VkSwapchainKHR.
+ *
+ * @ingroup aux_vk
+ */
+VkResult
+vk_enumerate_swapchain_images(struct vk_bundle *vk,
+                              VkSwapchainKHR swapchain,
+                              uint32_t *out_image_count,
+                              VkImage **out_images);
+#endif
+
 #if defined(VK_USE_PLATFORM_DISPLAY_KHR) || defined(XRT_DOXYGEN)
 /*!
  * Enumerate the display properties of the given @p VkPhysicalDevice.
