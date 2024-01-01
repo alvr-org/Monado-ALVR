@@ -92,24 +92,26 @@ static void
 create_image_views(struct comp_target_swapchain *cts)
 {
 	struct vk_bundle *vk = get_vk(cts);
+	uint32_t image_count = 0;
+	VkImage *images = NULL;
+	VkResult ret;
 
-	vk->vkGetSwapchainImagesKHR( //
-	    vk->device,              // device
-	    cts->swapchain.handle,   // swapchain
-	    &cts->base.image_count,  // pSwapchainImageCount
-	    NULL);                   // pSwapchainImages
-	assert(cts->base.image_count > 0);
-	COMP_DEBUG(cts->base.c, "Creating %d image views.", cts->base.image_count);
-
-	VkImage *images = U_TYPED_ARRAY_CALLOC(VkImage, cts->base.image_count);
-	vk->vkGetSwapchainImagesKHR( //
-	    vk->device,              // device
-	    cts->swapchain.handle,   // swapchain
-	    &cts->base.image_count,  // pSwapchainImageCount
-	    images);                 // pSwapchainImages
-
+	// Destroy old images first.
 	destroy_image_views(cts);
 
+	ret = vk_enumerate_swapchain_images( //
+	    vk,                              // vk_bundle
+	    cts->swapchain.handle,           // swapchain
+	    &image_count,                    // out_image_count
+	    &images);                        // out_images
+	VK_CHK_WITH_GOTO(ret, "vk_enumerate_swapchain_images", err);
+
+
+	/*
+	 * Create image views.
+	 */
+
+	cts->base.image_count = image_count;
 	cts->base.images = U_TYPED_ARRAY_CALLOC(struct comp_target_image, cts->base.image_count);
 
 	VkImageSubresourceRange subresource_range = {
@@ -135,6 +137,11 @@ create_image_views(struct comp_target_swapchain *cts)
 	}
 
 	free(images);
+
+	return;
+
+err:
+	cts->base.image_count = 0;
 }
 
 static VkExtent2D
