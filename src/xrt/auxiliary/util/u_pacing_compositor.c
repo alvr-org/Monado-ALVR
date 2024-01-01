@@ -608,7 +608,10 @@ pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_
 		f->state = STATE_BEGAN;
 		f->when_began_ns = when_ns;
 		break;
-	case U_TIMING_POINT_SUBMIT:
+	case U_TIMING_POINT_SUBMIT_BEGIN:
+		// No-op
+		break;
+	case U_TIMING_POINT_SUBMIT_END:
 		assert(f->state == STATE_BEGAN);
 		f->state = STATE_SUBMITTED;
 		f->when_submitted_ns = when_ns;

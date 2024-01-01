@@ -166,7 +166,8 @@ pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_
 	switch (point) {
 	case U_TIMING_POINT_WAKE_UP: break;
 	case U_TIMING_POINT_BEGIN: break;
-	case U_TIMING_POINT_SUBMIT: break;
+	case U_TIMING_POINT_SUBMIT_BEGIN: break;
+	case U_TIMING_POINT_SUBMIT_END: break;
 	default: assert(false);
 	}
 }

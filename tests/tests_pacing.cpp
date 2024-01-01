@@ -144,6 +144,7 @@ doFrame(SimulatedDisplayTimingQueue &display_timing_queue,
         int64_t frame_id,
         unanoseconds wake_delay,
         unanoseconds begin_delay,
+        unanoseconds draw_delay,
         unanoseconds submit_delay,
         unanoseconds gpu_time_after_submit)
 {
@@ -159,10 +160,14 @@ doFrame(SimulatedDisplayTimingQueue &display_timing_queue,
 	processDisplayTimingQueue(display_timing_queue, clock.now(), upc);
 	u_pc_mark_point(upc, U_TIMING_POINT_BEGIN, frame_id, clock.now());
 
+	// spend cpu time drawing
+	clock.advance(draw_delay);
+	u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT_BEGIN, frame_id, clock.now());
+
 	// spend cpu time before submit
 	clock.advance(submit_delay);
 	processDisplayTimingQueue(display_timing_queue, clock.now(), upc);
-	u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT, frame_id, clock.now());
+	u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT_END, frame_id, clock.now());
 
 	// spend gpu time before present
 	clock.advance(gpu_time_after_submit);
@@ -182,12 +187,13 @@ doFrame(SimulatedDisplayTimingQueue &display_timing_queue,
 static constexpr auto wakeDelay = microseconds(20);
 
 static constexpr auto shortBeginDelay = microseconds(20);
-static constexpr auto shortSubmitDelay = 200us;
+static constexpr auto shortDrawDelay = 150us;
+static constexpr auto shortSubmitDelay = 50us;
 static constexpr auto shortGpuTime = 1ms;
 
 
 static constexpr auto longBeginDelay = 1ms;
-static constexpr auto longSubmitDelay = 2ms;
+static constexpr auto longDrawDelay = 2ms;
 static constexpr auto longGpuTime = 2ms;
 
 TEST_CASE("u_pacing_compositor_display_timing")
@@ -222,9 +228,13 @@ TEST_CASE("u_pacing_compositor_display_timing")
 		clock.advance(shortBeginDelay);
 		u_pc_mark_point(upc, U_TIMING_POINT_BEGIN, frame_id, clock.now());
 
-		// spend cpu time before submit
+		// spend cpu time drawing
+		clock.advance(shortDrawDelay);
+		u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT_BEGIN, frame_id, clock.now());
+
+		// spend a little cpu time submitting the work to the GPU
 		clock.advance(shortSubmitDelay);
-		u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT, frame_id, clock.now());
+		u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT_END, frame_id, clock.now());
 
 		// spend time in gpu rendering until present
 		clock.advance(shortGpuTime);
@@ -251,7 +261,8 @@ TEST_CASE("u_pacing_compositor_display_timing")
 			INFO(clock.now());
 			basicPredictionConsistencyChecks(clock.now(), loopPred);
 			doFrame(queue, upc, clock, loopPred.wake_up_time_ns, loopPred.desired_present_time_ns,
-			        loopPred.frame_id, wakeDelay, shortBeginDelay, shortSubmitDelay, shortGpuTime);
+			        loopPred.frame_id, wakeDelay, shortBeginDelay, shortDrawDelay, shortSubmitDelay,
+			        shortGpuTime);
 		}
 		// we should now get a shorter time before present to wake up.
 		CompositorPredictions newPred;
@@ -263,7 +274,7 @@ TEST_CASE("u_pacing_compositor_display_timing")
 		CHECK(unanoseconds(newPred.desired_present_time_ns - newPred.wake_up_time_ns) <
 		      unanoseconds(predictions.desired_present_time_ns - predictions.wake_up_time_ns));
 		CHECK(unanoseconds(newPred.desired_present_time_ns - newPred.wake_up_time_ns) >
-		      unanoseconds(shortSubmitDelay + shortGpuTime));
+		      unanoseconds(shortDrawDelay + shortSubmitDelay + shortGpuTime));
 	}
 
 	SECTION("slower than desired")
@@ -277,9 +288,13 @@ TEST_CASE("u_pacing_compositor_display_timing")
 		clock.advance(longBeginDelay);
 		u_pc_mark_point(upc, U_TIMING_POINT_BEGIN, frame_id, clock.now());
 
-		// spend cpu time before submit
-		clock.advance(longSubmitDelay);
-		u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT, frame_id, clock.now());
+		// spend cpu time drawing
+		clock.advance(longDrawDelay);
+		u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT_BEGIN, frame_id, clock.now());
+
+		// spend a little cpu time submitting the work to the GPU
+		clock.advance(shortSubmitDelay);
+		u_pc_mark_point(upc, U_TIMING_POINT_SUBMIT_END, frame_id, clock.now());
 
 		// spend time in gpu rendering until present
 		clock.advance(longGpuTime);
@@ -308,7 +323,8 @@ TEST_CASE("u_pacing_compositor_display_timing")
 			INFO(clock.now());
 			basicPredictionConsistencyChecks(clock.now(), loopPred);
 			doFrame(queue, upc, clock, loopPred.wake_up_time_ns, loopPred.desired_present_time_ns,
-			        loopPred.frame_id, wakeDelay, longBeginDelay, longSubmitDelay, longGpuTime);
+			        loopPred.frame_id, wakeDelay, longBeginDelay, longDrawDelay, shortSubmitDelay,
+			        longGpuTime);
 		}
 
 		// we should now get a bigger time before present to wake up.
@@ -319,7 +335,7 @@ TEST_CASE("u_pacing_compositor_display_timing")
 		             &newPred.min_display_period_ns);
 		basicPredictionConsistencyChecks(clock.now(), newPred);
 		CHECK(unanoseconds(newPred.desired_present_time_ns - newPred.wake_up_time_ns) >
-		      unanoseconds(longBeginDelay + longSubmitDelay + longGpuTime));
+		      unanoseconds(longBeginDelay + longDrawDelay + shortSubmitDelay + longGpuTime));
 	}
 
 	u_pc_destroy(&upc);
@@ -361,7 +377,7 @@ TEST_CASE("u_pacing_compositor_fake")
 				basicPredictionConsistencyChecks(clock.now(), predictions);
 				doFrame(queue, upc, clock, predictions.wake_up_time_ns,
 				        predictions.desired_present_time_ns, predictions.frame_id, wakeDelay,
-				        shortBeginDelay, shortSubmitDelay, shortGpuTime);
+				        shortBeginDelay, shortDrawDelay, shortSubmitDelay, shortGpuTime);
 			}
 			drainDisplayTimingQueue(queue, clock.now(), upc);
 		}
@@ -379,7 +395,7 @@ TEST_CASE("u_pacing_compositor_fake")
 				basicPredictionConsistencyChecks(clock.now(), predictions);
 				doFrame(queue, upc, clock, predictions.wake_up_time_ns,
 				        predictions.desired_present_time_ns, predictions.frame_id, wakeDelay,
-				        longBeginDelay, longSubmitDelay, longGpuTime);
+				        longBeginDelay, longDrawDelay, shortSubmitDelay, longGpuTime);
 			}
 			drainDisplayTimingQueue(queue, clock.now(), upc);
 		}

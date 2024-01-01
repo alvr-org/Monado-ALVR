@@ -194,7 +194,8 @@ point_to_str(enum u_timing_point point)
 	switch (point) {
 	case U_TIMING_POINT_WAKE_UP: return "U_TIMING_POINT_WAKE_UP";
 	case U_TIMING_POINT_BEGIN: return "U_TIMING_POINT_BEGIN";
-	case U_TIMING_POINT_SUBMIT: return "U_TIMING_POINT_SUBMIT";
+	case U_TIMING_POINT_SUBMIT_BEGIN: return "U_TIMING_POINT_SUBMIT_BEGIN";
+	case U_TIMING_POINT_SUBMIT_END: return "U_TIMING_POINT_SUBMIT_END";
 	default: return "UNKNOWN";
 	}
 }
@@ -516,7 +517,8 @@ pa_mark_point(struct u_pacing_app *upa, int64_t frame_id, enum u_timing_point po
 		f->when.begin_ns = when_ns;
 		f->state = U_RT_BEGUN;
 		break;
-	case U_TIMING_POINT_SUBMIT:
+	case U_TIMING_POINT_SUBMIT_BEGIN:
+	case U_TIMING_POINT_SUBMIT_END:
 	default: assert(false);
 	}
 }

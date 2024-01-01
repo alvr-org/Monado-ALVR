@@ -443,7 +443,10 @@ null_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle
 	// When we are submitting to the GPU.
 	{
 		uint64_t now_ns = os_monotonic_get_ns();
-		u_pc_mark_point(c->upc, U_TIMING_POINT_SUBMIT, frame_id, now_ns);
+		u_pc_mark_point(c->upc, U_TIMING_POINT_SUBMIT_BEGIN, frame_id, now_ns);
+
+		now_ns = os_monotonic_get_ns();
+		u_pc_mark_point(c->upc, U_TIMING_POINT_SUBMIT_END, frame_id, now_ns);
 	}
 
 	// Now is a good point to garbage collect.

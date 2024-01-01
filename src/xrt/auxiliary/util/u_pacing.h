@@ -33,9 +33,17 @@ extern "C" {
  */
 enum u_timing_point
 {
-	U_TIMING_POINT_WAKE_UP, //!< Woke up after sleeping in wait frame.
-	U_TIMING_POINT_BEGIN,   //!< Began CPU side work for GPU.
-	U_TIMING_POINT_SUBMIT,  //!< Submitted work to the GPU.
+	//! Woke up after sleeping in "wait frame".
+	U_TIMING_POINT_WAKE_UP,
+
+	//! Began CPU side work for GPU.
+	U_TIMING_POINT_BEGIN,
+
+	//! Began submitting work to the GPU, only used by the compositor.
+	U_TIMING_POINT_SUBMIT_BEGIN,
+
+	//! Finished submitting work to the GPU, only used by the compositor.
+	U_TIMING_POINT_SUBMIT_END,
 };
 
 
