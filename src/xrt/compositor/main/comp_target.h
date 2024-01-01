@@ -24,16 +24,28 @@ extern "C" {
 
 /*!
  * For marking timepoints on a frame's lifetime, not a async event.
+ *
+ * @ingroup comp_main
  */
 enum comp_target_timing_point
 {
-	COMP_TARGET_TIMING_POINT_WAKE_UP, //!< Woke up after sleeping in wait frame.
-	COMP_TARGET_TIMING_POINT_BEGIN,   //!< Began CPU side work for GPU.
-	COMP_TARGET_TIMING_POINT_SUBMIT,  //!< Submitted work to the GPU.
+	//! Woke up after sleeping in wait frame.
+	COMP_TARGET_TIMING_POINT_WAKE_UP,
+
+	//! Began CPU side work for GPU.
+	COMP_TARGET_TIMING_POINT_BEGIN,
+
+	//! Just before submitting work to the GPU.
+	COMP_TARGET_TIMING_POINT_SUBMIT_BEGIN,
+
+	//! Just after submitting work to the GPU.
+	COMP_TARGET_TIMING_POINT_SUBMIT_END,
 };
 
 /*!
  * If the target should use the display timing information.
+ *
+ * @ingroup comp_main
  */
 enum comp_target_display_timing_usage
 {
@@ -458,18 +470,33 @@ comp_target_mark_begin(struct comp_target *ct, int64_t frame_id, uint64_t when_b
 }
 
 /*!
- * Quick helper for marking submit.
+ * Quick helper for marking submit began.
  * @copydoc comp_target::mark_timing_point
  *
  * @public @memberof comp_target
  * @ingroup comp_main
  */
 static inline void
-comp_target_mark_submit(struct comp_target *ct, int64_t frame_id, uint64_t when_submitted_ns)
+comp_target_mark_submit_begin(struct comp_target *ct, int64_t frame_id, uint64_t when_submit_began_ns)
 {
 	COMP_TRACE_MARKER();
 
-	ct->mark_timing_point(ct, COMP_TARGET_TIMING_POINT_SUBMIT, frame_id, when_submitted_ns);
+	ct->mark_timing_point(ct, COMP_TARGET_TIMING_POINT_SUBMIT_BEGIN, frame_id, when_submit_began_ns);
+}
+
+/*!
+ * Quick helper for marking submit end.
+ * @copydoc comp_target::mark_timing_point
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline void
+comp_target_mark_submit_end(struct comp_target *ct, int64_t frame_id, uint64_t when_submit_end_ns)
+{
+	COMP_TRACE_MARKER();
+
+	ct->mark_timing_point(ct, COMP_TARGET_TIMING_POINT_SUBMIT_END, frame_id, when_submit_end_ns);
 }
 
 /*!

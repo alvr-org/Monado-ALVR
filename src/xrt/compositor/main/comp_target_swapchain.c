@@ -991,7 +991,10 @@ comp_target_swapchain_mark_timing_point(struct comp_target *ct,
 	case COMP_TARGET_TIMING_POINT_BEGIN:
 		u_pc_mark_point(cts->upc, U_TIMING_POINT_BEGIN, cts->current_frame_id, when_ns);
 		break;
-	case COMP_TARGET_TIMING_POINT_SUBMIT:
+	case COMP_TARGET_TIMING_POINT_SUBMIT_BEGIN:
+		// No-op currently.
+		break;
+	case COMP_TARGET_TIMING_POINT_SUBMIT_END:
 		u_pc_mark_point(cts->upc, U_TIMING_POINT_SUBMIT, cts->current_frame_id, when_ns);
 		break;
 	default: assert(false);

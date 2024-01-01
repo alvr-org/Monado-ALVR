@@ -640,7 +640,10 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	COMP_TRACE_MARKER();
 
 	struct vk_bundle *vk = &r->c->base.vk;
+	int64_t frame_id = r->c->frame.rendering.id;
 	VkResult ret;
+
+	assert(frame_id >= 0);
 
 
 	/*
@@ -660,6 +663,7 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	 * Regular semaphore setup.
 	 */
 
+	// Convenience.
 	struct comp_target *ct = r->c->target;
 #define WAIT_SEMAPHORE_COUNT 1
 
@@ -680,7 +684,7 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 
 #ifdef VK_KHR_timeline_semaphore
 	assert(!comp_frame_is_invalid_locked(&r->c->frame.rendering));
-	uint64_t render_complete_signal_values[WAIT_SEMAPHORE_COUNT] = {(uint64_t)r->c->frame.rendering.id};
+	uint64_t render_complete_signal_values[WAIT_SEMAPHORE_COUNT] = {(uint64_t)frame_id};
 
 	VkTimelineSemaphoreSubmitInfoKHR timeline_info = {
 	    .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO_KHR,
@@ -710,6 +714,9 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	    .pSignalSemaphores = &ct->semaphores.render_complete,
 	};
 
+	// Everything prepared, now we are submitting.
+	comp_target_mark_submit_begin(ct, frame_id, os_monotonic_get_ns());
+
 	/*
 	 * The renderer command buffer pool is only accessed from one thread,
 	 * this satisfies the `_locked` requirement of the function. This lets
@@ -717,10 +724,16 @@ renderer_submit_queue(struct comp_renderer *r, VkCommandBuffer cmd, VkPipelineSt
 	 * @ref vk_cmd_submit_locked tho.
 	 */
 	ret = vk_cmd_submit_locked(vk, 1, &comp_submit_info, r->fences[r->acquired_buffer]);
+
+	// We have now completed the submit, even if we failed.
+	comp_target_mark_submit_end(ct, frame_id, os_monotonic_get_ns());
+
+	// Check after marking as submit complete.
 	VK_CHK_AND_RET(ret, "vk_cmd_submit_locked");
 
 	// This buffer now have a pending fence.
 	r->fenced_buffer = r->acquired_buffer;
+
 	return ret;
 }
 
@@ -845,7 +858,7 @@ dispatch_graphics(struct comp_renderer *r,
 	COMP_TRACE_MARKER();
 
 	struct comp_compositor *c = r->c;
-	struct comp_target *ct = c->target;
+	struct vk_bundle *vk = &c->base.vk;
 	VkResult ret;
 
 	// Basics
@@ -947,9 +960,7 @@ dispatch_graphics(struct comp_renderer *r,
 
 	// Everything is ready, submit to the queue.
 	ret = renderer_submit_queue(r, rr->r->cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-	// We mark afterwards to not include CPU time spent.
-	comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
+	VK_CHK_AND_RET(ret, "renderer_submit_queue");
 
 	return ret;
 }
@@ -973,7 +984,7 @@ dispatch_compute(struct comp_renderer *r,
 	COMP_TRACE_MARKER();
 
 	struct comp_compositor *c = r->c;
-	struct comp_target *ct = c->target;
+	struct vk_bundle *vk = &c->base.vk;
 	VkResult ret;
 
 	// Basics
@@ -1065,9 +1076,7 @@ dispatch_compute(struct comp_renderer *r,
 
 	// Everything is ready, submit to the queue.
 	ret = renderer_submit_queue(r, crc->r->cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-	// We mark afterwards to not include CPU time spent.
-	comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
+	VK_CHK_AND_RET(ret, "renderer_submit_queue");
 
 	return ret;
 }
@@ -1101,7 +1110,8 @@ comp_renderer_draw(struct comp_renderer *r)
 	if (!comp_target_check_ready(r->c->target)) {
 		// Need to emulate rendering for the timing.
 		//! @todo This should be discard.
-		comp_target_mark_submit(ct, c->frame.rendering.id, os_monotonic_get_ns());
+		comp_target_mark_submit_begin(ct, c->frame.rendering.id, os_monotonic_get_ns());
+		comp_target_mark_submit_end(ct, c->frame.rendering.id, os_monotonic_get_ns());
 
 		// Clear the rendering frame.
 		comp_frame_clear_locked(&c->frame.rendering);
