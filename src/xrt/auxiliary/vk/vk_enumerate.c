@@ -123,6 +123,57 @@ out:
 	return VK_SUCCESS;
 }
 
+#ifdef VK_KHR_surface
+VkResult
+vk_enumerate_surface_formats(struct vk_bundle *vk,
+                             VkSurfaceKHR surface,
+                             uint32_t *out_format_count,
+                             VkSurfaceFormatKHR **out_formats)
+{
+	VkSurfaceFormatKHR *formats = NULL;
+	uint32_t format_count = 0;
+	VkResult ret;
+
+	ret = vk->vkGetPhysicalDeviceSurfaceFormatsKHR(vk->physical_device, surface, &format_count, NULL);
+	CHECK_FIRST_CALL("vkGetPhysicalDeviceSurfaceFormatsKHR", ret, format_count);
+
+	formats = U_TYPED_ARRAY_CALLOC(VkSurfaceFormatKHR, format_count);
+	ret = vk->vkGetPhysicalDeviceSurfaceFormatsKHR(vk->physical_device, surface, &format_count, formats);
+	CHECK_SECOND_CALL("vkGetPhysicalDeviceSurfaceFormatsKHR", ret, formats);
+
+out:
+	*out_format_count = format_count;
+	*out_formats = formats;
+
+	return VK_SUCCESS;
+}
+
+VkResult
+vk_enumerate_surface_present_modes(struct vk_bundle *vk,
+                                   VkSurfaceKHR surface,
+                                   uint32_t *out_present_mode_count,
+                                   VkPresentModeKHR **out_present_modes)
+{
+	VkPresentModeKHR *present_modes = NULL;
+	uint32_t present_mode_count = 0;
+	VkResult ret;
+
+	ret = vk->vkGetPhysicalDeviceSurfacePresentModesKHR(vk->physical_device, surface, &present_mode_count, NULL);
+	CHECK_FIRST_CALL("vkGetPhysicalDeviceSurfacePresentModesKHR", ret, present_mode_count);
+
+	present_modes = U_TYPED_ARRAY_CALLOC(VkPresentModeKHR, present_mode_count);
+	ret = vk->vkGetPhysicalDeviceSurfacePresentModesKHR(vk->physical_device, surface, &present_mode_count,
+	                                                    present_modes);
+	CHECK_SECOND_CALL("vkGetPhysicalDeviceSurfacePresentModesKHR", ret, present_modes);
+
+out:
+	*out_present_mode_count = present_mode_count;
+	*out_present_modes = present_modes;
+
+	return VK_SUCCESS;
+}
+#endif
+
 #ifdef VK_USE_PLATFORM_DISPLAY_KHR
 VkResult
 vk_enumerate_physical_device_display_properties(struct vk_bundle *vk,

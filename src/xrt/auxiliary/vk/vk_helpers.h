@@ -825,6 +825,31 @@ vk_enumerate_physical_device_extension_properties(struct vk_bundle *vk,
                                                   uint32_t *out_prop_count,
                                                   VkExtensionProperties **out_props);
 
+#if defined(VK_KHR_surface) || defined(XRT_DOXYGEN)
+/*!
+ * Enumerate the surface formats of the given @p VkSurfaceKHR,
+ * returns a list of @p VkSurfaceFormatKHR, not @p VkFormat.
+ *
+ * @ingroup aux_vk
+ */
+VkResult
+vk_enumerate_surface_formats(struct vk_bundle *vk,
+                             VkSurfaceKHR surface,
+                             uint32_t *out_format_count,
+                             VkSurfaceFormatKHR **out_formats);
+
+/*!
+ * Enumerate the present modes of the given @p VkSurfaceKHR.
+ *
+ * @ingroup aux_vk
+ */
+VkResult
+vk_enumerate_surface_present_modes(struct vk_bundle *vk,
+                                   VkSurfaceKHR surface,
+                                   uint32_t *out_present_mode_count,
+                                   VkPresentModeKHR **out_present_modes);
+#endif
+
 #if defined(VK_USE_PLATFORM_DISPLAY_KHR) || defined(XRT_DOXYGEN)
 /*!
  * Enumerate the display properties of the given @p VkPhysicalDevice.
