@@ -668,21 +668,9 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	cts->preferred.color_space = color_space;
 
 
-	// Preliminary check of the environment
-	ret = vk->vkGetPhysicalDeviceSurfaceSupportKHR( //
-	    vk->physical_device,                        // physicalDevice
-	    vk->queue_family_index,                     // queueFamilyIndex
-	    cts->surface.handle,                        // surface
-	    &supported);                                // pSupported
-	if (ret != VK_SUCCESS) {
-		COMP_ERROR(ct->c, "vkGetPhysicalDeviceSurfaceSupportKHR: %s", vk_result_string(ret));
-		destroy_old(cts, old_swapchain_handle);
-		return;
-	} else if (!supported) {
-		COMP_ERROR(ct->c, "vkGetPhysicalDeviceSurfaceSupportKHR: Surface not supported!");
-		destroy_old(cts, old_swapchain_handle);
-		return;
-	}
+	/*
+	 * Checking for support and selecting some properties.
+	 */
 
 	// Get information.
 	struct vk_surface_info info = {0};
@@ -691,6 +679,30 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 		VK_ERROR(vk, "vk_surface_info_fill_in: %s", vk_result_string(ret));
 		destroy_old(cts, old_swapchain_handle);
 		return;
+	}
+
+	// Can we create swapchains from the surface on this device and queue.
+	ret = vk->vkGetPhysicalDeviceSurfaceSupportKHR( //
+	    vk->physical_device,                        // physicalDevice
+	    vk->queue_family_index,                     // queueFamilyIndex
+	    cts->surface.handle,                        // surface
+	    &supported);                                // pSupported
+	if (ret != VK_SUCCESS) {
+		COMP_ERROR(ct->c, "vkGetPhysicalDeviceSurfaceSupportKHR: %s", vk_result_string(ret));
+		goto error_print_and_free;
+	} else if (!supported) {
+		COMP_ERROR(ct->c, "vkGetPhysicalDeviceSurfaceSupportKHR: Surface not supported!");
+		goto error_print_and_free;
+	}
+
+	// Check that the present mode is supported.
+	if (!check_surface_present_mode(cts, &info, cts->present_mode)) {
+		goto error_print_and_free;
+	}
+
+	// Find the correct format.
+	if (!find_surface_format(cts, &info, &cts->surface.format)) {
+		goto error_print_and_free;
 	}
 
 	// Always print the first one.
@@ -703,26 +715,16 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	// Print info about the surface.
 	vk_print_surface_info(vk, &info, print_log_level);
 
-	if (!check_surface_present_mode(cts, &info, cts->present_mode)) {
-		// Free old.
-		destroy_old(cts, old_swapchain_handle);
-		vk_surface_info_destroy(&info);
-		return;
-	}
-
-	// Find the correct format.
-	if (!find_surface_format(cts, &info, &cts->surface.format)) {
-		// Free old.
-		destroy_old(cts, old_swapchain_handle);
-		vk_surface_info_destroy(&info);
-		return;
-	}
-
 	// Get the caps first.
 	VkSurfaceCapabilitiesKHR surface_caps = info.caps;
 
 	// Now we can free the info.
 	vk_surface_info_destroy(&info);
+
+
+	/*
+	 * Non-failable selections.
+	 */
 
 	// Get the extents of the swapchain.
 	VkExtent2D extent = select_extent(cts, surface_caps, preferred_width, preferred_height);
@@ -799,6 +801,7 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 
 	VK_NAME_SWAPCHAIN(vk, cts->swapchain.handle, "comp_target_swapchain swapchain");
 
+
 	/*
 	 * Set target info.
 	 */
@@ -827,6 +830,14 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 		COMP_INFO(ct->c, "Not using vblank event thread!");
 	}
 #endif
+
+	// Done now.
+	return;
+
+error_print_and_free:
+	vk_print_surface_info(vk, &info, U_LOGGING_ERROR);
+	destroy_old(cts, old_swapchain_handle);
+	vk_surface_info_destroy(&info);
 }
 
 static bool
