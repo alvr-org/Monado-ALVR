@@ -33,13 +33,19 @@ extern "C" {
 static inline timepoint_ns
 m_clock_offset_a2b(float freq, timepoint_ns a, timepoint_ns b, time_duration_ns *inout_a2b)
 {
+	// This formulation of exponential filtering uses a fixed-precision integer for the
+	// alpha value and operates on the delta between the old and new a2b to avoid
+	// precision / overflow problems.
+
 	// Totally arbitrary way of computing alpha, if you have a better one, replace it
-	const float alpha = 1.0 - 12.5 / freq; // Weight to put on accumulated a2b
+	const time_duration_ns alpha = 1000 * (1.0 - 12.5 / freq); // Weight to put on accumulated a2b
 	time_duration_ns old_a2b = *inout_a2b;
 	time_duration_ns got_a2b = b - a;
-	time_duration_ns new_a2b = old_a2b * alpha + got_a2b * (1.0 - alpha);
+	time_duration_ns new_a2b;
 	if (old_a2b == 0) { // a2b has not been set yet
 		new_a2b = got_a2b;
+	} else {
+		new_a2b = ((old_a2b - got_a2b) * alpha) / 1000 + got_a2b;
 	}
 	*inout_a2b = new_a2b;
 	return a + new_a2b;
