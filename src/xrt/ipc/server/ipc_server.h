@@ -118,7 +118,7 @@ struct ipc_client_state
 	uint32_t space_count;
 
 	//! Ptrs to the spaces.
-	struct xtr_space *xspcs[IPC_MAX_CLIENT_SPACES];
+	struct xrt_space *xspcs[IPC_MAX_CLIENT_SPACES];
 
 	//! Which of the references spaces is the client using.
 	bool ref_space_used[XRT_SPACE_REFERENCE_TYPE_COUNT];
