@@ -8,7 +8,6 @@
  * @ingroup comp_render
  */
 
-#include "xrt/xrt_config_build.h"
 #include "vk/vk_mini_helpers.h"
 
 #include "render/render_interface.h"
@@ -40,11 +39,6 @@
 #include "shaders/layer_shared.frag.h"
 #include "shaders/mesh.frag.h"
 #include "shaders/mesh.vert.h"
-
-#ifdef XRT_FEATURE_OPENXR_LAYER_CUBE
-#include "shaders/cube.frag.h"
-#include "shaders/cube.vert.h"
-#endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
