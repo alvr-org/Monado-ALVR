@@ -123,7 +123,7 @@ oxr_space_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 	// Unreference the reference space.
 	enum xrt_reference_space_type xtype = oxr_ref_space_to_xrt(spc->space_type);
 	if (xtype != XRT_SPACE_REFERENCE_TYPE_INVALID) {
-		xrt_space_overseer_ref_space_inc(spc->sess->sys->xso, xtype);
+		xrt_space_overseer_ref_space_dec(spc->sess->sys->xso, xtype);
 	}
 
 	xrt_space_reference(&spc->action.xs, NULL);
