@@ -939,7 +939,7 @@ ipc_server_main(int argc, char **argv)
 	teardown_all(s);
 	free(s);
 
-	U_LOG_I("Server exiting: '%i'!", ret);
+	U_LOG_IFL_I(log_level, "Server exiting: '%i'", ret);
 
 	return ret;
 }
