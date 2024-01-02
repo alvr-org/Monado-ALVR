@@ -926,12 +926,16 @@ ipc_server_main(int argc, char **argv)
 		return ret;
 	}
 
+	// Start the debug UI now (if enabled).
 	u_debug_gui_start(s->debug_gui, s->xinst, s->xsysd);
 
+	// Main loop.
 	ret = main_loop(s);
 
+	// Stop the UI before tearing everything down.
 	u_debug_gui_stop(&s->debug_gui);
 
+	// Done after UI stopped.
 	teardown_all(s);
 	free(s);
 
