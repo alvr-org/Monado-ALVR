@@ -16,6 +16,7 @@
 #include "util/u_pacing.h"
 #include "util/u_metrics.h"
 #include "util/u_logging.h"
+#include "util/u_live_stats.h"
 #include "util/u_trace_marker.h"
 
 #include <stdio.h>
@@ -119,6 +120,9 @@ struct fake_timing
 
 	//! Frames we keep track off.
 	struct frame frames[FRAME_COUNT];
+
+	//! Live stats we keep track off.
+	struct u_live_stats_ns cpu, draw, submit, gpu, gpu_delay, total_frame;
 };
 
 
@@ -188,6 +192,73 @@ get_percent_of_time(uint64_t time_ns, uint32_t fraction_percent)
 {
 	double fraction = (double)fraction_percent / 100.0;
 	return time_s_to_ns(time_ns_to_s(time_ns) * fraction);
+}
+
+static void
+print_and_reset(struct fake_timing *ft)
+{
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	u_pp(dg, "Compositor frame timing:\n");
+	u_ls_ns_print_header(dg);
+	u_pp(dg, "\n");
+	u_ls_ns_print_and_reset(&ft->cpu, dg);
+	u_pp(dg, "\n");
+	u_ls_ns_print_and_reset(&ft->draw, dg);
+	u_pp(dg, "\n");
+	u_ls_ns_print_and_reset(&ft->submit, dg);
+	u_pp(dg, "\n");
+	u_ls_ns_print_and_reset(&ft->gpu, dg);
+	u_pp(dg, "\n");
+	u_ls_ns_print_and_reset(&ft->gpu_delay, dg);
+	u_pp(dg, "\n");
+	u_ls_ns_print_and_reset(&ft->total_frame, dg);
+
+	U_LOG_IFL_I(U_LOGGING_INFO, "%s", sink.buffer);
+}
+
+static void
+calc_frame_stats(struct fake_timing *ft, struct frame *f)
+{
+	if (!debug_get_bool_option_live_stats()) {
+		return;
+	}
+
+	uint64_t cpu_ns = f->when_began_ns - f->when_woke_ns;
+	uint64_t draw_ns = f->when_submit_began_ns - f->when_began_ns;
+	uint64_t submit_ns = f->when_submit_end_ns - f->when_submit_began_ns;
+
+	bool full = false;
+	full |= u_ls_ns_add(&ft->cpu, cpu_ns);
+	full |= u_ls_ns_add(&ft->draw, draw_ns);
+	full |= u_ls_ns_add(&ft->submit, submit_ns);
+
+	if (full) {
+		print_and_reset(ft);
+	}
+}
+
+static void
+calc_gpu_stats(struct fake_timing *ft, struct frame *f, uint64_t gpu_start_ns, uint64_t gpu_end_ns)
+{
+	if (!debug_get_bool_option_live_stats()) {
+		return;
+	}
+
+	uint64_t then_ns = f->when_submit_began_ns;
+	uint64_t delay_ns = gpu_start_ns > then_ns ? gpu_start_ns - then_ns : 0;
+	uint64_t gpu_ns = gpu_end_ns - gpu_start_ns;
+	uint64_t frame_ns = gpu_end_ns - f->when_woke_ns;
+
+	bool full = false;
+	full |= u_ls_ns_add(&ft->gpu, gpu_ns);
+	full |= u_ls_ns_add(&ft->gpu_delay, delay_ns);
+	full |= u_ls_ns_add(&ft->total_frame, frame_ns);
+
+	if (full) {
+		print_and_reset(ft);
+	}
 }
 
 
@@ -267,7 +338,10 @@ pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_
 	case U_TIMING_POINT_WAKE_UP: f->when_woke_ns = when_ns; break;
 	case U_TIMING_POINT_BEGIN: f->when_began_ns = when_ns; break;
 	case U_TIMING_POINT_SUBMIT_BEGIN: f->when_submit_began_ns = when_ns; break;
-	case U_TIMING_POINT_SUBMIT_END: f->when_submit_end_ns = when_ns; break;
+	case U_TIMING_POINT_SUBMIT_END:
+		f->when_submit_end_ns = when_ns;
+		calc_frame_stats(ft, f);
+		break;
 	default: assert(false);
 	}
 }
@@ -291,6 +365,13 @@ static void
 pc_info_gpu(
     struct u_pacing_compositor *upc, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns)
 {
+	struct fake_timing *ft = fake_timing(upc);
+
+	struct frame *f = get_frame_or_null(ft, frame_id);
+	if (f != NULL) {
+		calc_gpu_stats(ft, f, gpu_start_ns, gpu_end_ns);
+	}
+
 	if (u_metrics_is_active()) {
 		struct u_metrics_system_gpu_info umgi = {
 		    .frame_id = frame_id,
@@ -373,6 +454,12 @@ u_pc_fake_create(uint64_t estimated_frame_period_ns, uint64_t now_ns, struct u_p
 	ft->base.destroy = pc_destroy;
 	ft->frame_period_ns = estimated_frame_period_ns;
 
+	snprintf(ft->cpu.name, ARRAY_SIZE(ft->cpu.name), "cpu");
+	snprintf(ft->draw.name, ARRAY_SIZE(ft->draw.name), "draw");
+	snprintf(ft->submit.name, ARRAY_SIZE(ft->submit.name), "submit");
+	snprintf(ft->gpu.name, ARRAY_SIZE(ft->gpu.name), "gpu");
+	snprintf(ft->gpu_delay.name, ARRAY_SIZE(ft->gpu_delay.name), "gpu_delay");
+	snprintf(ft->total_frame.name, ARRAY_SIZE(ft->total_frame.name), "total_frame");
 
 	// To make sure the code can start from a non-zero frame id.
 	ft->frame_id_generator = 5;
