@@ -775,7 +775,8 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
                               struct xrt_device **xdevs,
                               uint32_t xdev_count,
                               struct xrt_device *head,
-                              const struct xrt_pose *local_offset)
+                              const struct xrt_pose *local_offset,
+                              bool root_is_unbounded)
 {
 	struct xrt_space *root = uso->base.semantic.root; // Convenience
 
@@ -810,12 +811,19 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	assert(uso->base.semantic.view == NULL);
 	assert(uso->base.semantic.stage == NULL);
 	assert(uso->base.semantic.local == NULL);
+	assert(uso->base.semantic.unbounded == NULL);
 	xrt_space_reference(&uso->base.semantic.view, NULL);
 	xrt_space_reference(&uso->base.semantic.stage, NULL);
 	xrt_space_reference(&uso->base.semantic.local, NULL);
+	xrt_space_reference(&uso->base.semantic.unbounded, NULL);
 
 	// Assume the root space is the center of the stage space.
 	xrt_space_reference(&uso->base.semantic.stage, uso->base.semantic.root);
+
+	// If the system wants to support the space, set root as unbounded.
+	if (root_is_unbounded) {
+		xrt_space_reference(&uso->base.semantic.unbounded, uso->base.semantic.root);
+	}
 
 	// Set local to the local offset.
 	u_space_overseer_create_offset_space(uso, uso->base.semantic.root, local_offset, &uso->base.semantic.local);

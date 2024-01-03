@@ -48,7 +48,8 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
                               struct xrt_device **xdevs,
                               uint32_t xdev_count,
                               struct xrt_device *head,
-                              const struct xrt_pose *local_offset);
+                              const struct xrt_pose *local_offset,
+                              bool root_is_unbounded);
 
 /*!
  * Creates a space without any offset, this is just for optimisation over a

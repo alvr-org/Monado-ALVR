@@ -150,6 +150,7 @@ u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
                                        struct xrt_device *right,
                                        struct xrt_device **xdevs,
                                        uint32_t xdev_count,
+                                       bool root_is_unbounded,
                                        struct xrt_space_overseer **out_xso)
 {
 	/*
@@ -178,7 +179,13 @@ u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
 	struct xrt_pose T_stage_local = XRT_POSE_IDENTITY;
 	T_stage_local.position.y = 1.6;
 
-	u_space_overseer_legacy_setup(uso, xdevs, xdev_count, head, &T_stage_local);
+	u_space_overseer_legacy_setup( //
+	    uso,                       // uso
+	    xdevs,                     // xdevs
+	    xdev_count,                // xdev_count
+	    head,                      // head
+	    &T_stage_local,            // local_offset
+	    root_is_unbounded);        // root_is_unbounded
 
 	*out_xso = (struct xrt_space_overseer *)uso;
 }
@@ -240,6 +247,7 @@ u_builder_roles_helper_open_system(struct xrt_builder *xb,
 	    ubrh.right,                         // right
 	    xsysd->xdevs,                       // xdevs
 	    xsysd->xdev_count,                  // xdev_count
+	    false,                              // root_is_unbounded
 	    out_xso);                           // out_xso
 
 	return XRT_SUCCESS;

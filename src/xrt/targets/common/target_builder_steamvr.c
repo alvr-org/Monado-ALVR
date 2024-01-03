@@ -175,6 +175,7 @@ steamvr_open_system(struct xrt_builder *xb,
 	    right,                              // right
 	    xsysd->xdevs,                       // xdevs
 	    xsysd->xdev_count,                  // xdev_count
+	    false,                              // root_is_unbounded
 	    out_xso);                           // out_xso
 
 	return XRT_SUCCESS;
