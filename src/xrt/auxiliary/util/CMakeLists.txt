@@ -61,6 +61,8 @@ add_library(
 	u_json.hpp
 	u_limited_unique_id.cpp
 	u_limited_unique_id.h
+	u_live_stats.cpp
+	u_live_stats.h
 	u_logging.c
 	u_logging.h
 	u_metrics.c
