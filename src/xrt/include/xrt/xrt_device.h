@@ -293,6 +293,9 @@ struct xrt_device
 	 * @param[in] name           Some devices may have multiple poses on
 	 *                           them, select the one using this field. For
 	 *                           HMDs use @p XRT_INPUT_GENERIC_HEAD_POSE.
+	 *                           For Unbounded Reference Space you can use
+	 *                           @p XRT_INPUT_GENERIC_UNBOUNDED_SPACE_POSE
+	 *                           to get the origin of that space.
 	 * @param[in] at_timestamp_ns If the device can predict or has a history
 	 *                            of positions, this is when the caller
 	 *                            wants the pose to be from.
