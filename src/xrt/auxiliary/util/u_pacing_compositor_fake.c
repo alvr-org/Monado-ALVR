@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -31,6 +31,59 @@
 
 DEBUG_GET_ONCE_FLOAT_OPTION(present_to_display_offset_ms, "U_PACING_COMP_PRESENT_TO_DISPLAY_OFFSET_MS", 4.0f)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_comp_time_ms, "U_PACING_COMP_MIN_TIME_MS", 3.0f)
+DEBUG_GET_ONCE_BOOL_OPTION(live_stats, "U_PACING_LIVE_STATS", false)
+
+// We keep track of this number of frames.
+#define FRAME_COUNT 8
+
+/*
+ * Internal helper for keeping track of frame data.
+ */
+struct frame
+{
+	//! An arbitrary id that identifies this frame. Set in `pc_predict`.
+	int64_t frame_id;
+
+	//! When should the compositor wake up. Set in `pc_predict`.
+	uint64_t predicted_wake_up_time_ns;
+
+	//! When should the compositor present the frame.
+	uint64_t predicted_present_time_ns;
+
+	//! When should the frame be displayed.
+	uint64_t predicted_display_time_ns;
+
+	//! The period that the pacer used for this frame.
+	uint64_t predicted_display_period_ns;
+
+	//! When this frame was last used for a prediction. Set in `pc_predict`.
+	uint64_t when_predict_ns;
+
+	/*!
+	 * When the compositor woke up after its equivalent of wait_frame.
+	 * Set in `pc_mark_point` with `U_TIMING_POINT_WAKE_UP`.
+	 */
+	uint64_t when_woke_ns;
+
+	/*!
+	 * When the compositor began rendering a frame. Set in `pc_mark_point`
+	 * with `U_TIMING_POINT_BEGIN`.
+	 */
+	uint64_t when_began_ns;
+
+	/*!
+	 * When the compositor began submitting the work to the GPU, after
+	 * it completed building the command buffers. Set in `pc_mark_point`
+	 * with `U_TIMING_POINT_SUBMIT_BEGIN`.
+	 */
+	uint64_t when_submit_began_ns;
+
+	/*!
+	 * When the compositor completed submitting the work to the GPU. Set in
+	 * `pc_mark_point` with `U_TIMING_POINT_SUBMIT_END`.
+	 */
+	uint64_t when_submit_end_ns;
+};
 
 /*!
  * A very simple pacer that tries it best to pace a compositor. Used when the
@@ -63,6 +116,9 @@ struct fake_timing
 
 	//! This won't run out, trust me.
 	int64_t frame_id_generator;
+
+	//! Frames we keep track off.
+	struct frame frames[FRAME_COUNT];
 };
 
 
@@ -76,6 +132,34 @@ static inline struct fake_timing *
 fake_timing(struct u_pacing_compositor *upc)
 {
 	return (struct fake_timing *)upc;
+}
+
+static struct frame *
+get_frame_or_null(struct fake_timing *ft, int64_t frame_id)
+{
+	uint64_t index = (uint64_t)frame_id % FRAME_COUNT;
+	struct frame *f = &ft->frames[index];
+
+	if (f->frame_id == frame_id) {
+		return f;
+	}
+	// Just drop it, doesn't happen during normal operation.
+	return NULL;
+}
+
+static struct frame *
+get_new_frame(struct fake_timing *ft)
+{
+	int64_t frame_id = ft->frame_id_generator++;
+
+	uint64_t index = (uint64_t)frame_id % FRAME_COUNT;
+	struct frame *f = &ft->frames[index];
+
+	// We don't care if it has been fully finished.
+	U_ZERO(f);
+	f->frame_id = frame_id;
+
+	return f;
 }
 
 static uint64_t
@@ -126,7 +210,9 @@ pc_predict(struct u_pacing_compositor *upc,
 {
 	struct fake_timing *ft = fake_timing(upc);
 
-	int64_t frame_id = ft->frame_id_generator++;
+	struct frame *f = get_new_frame(ft);
+
+	int64_t frame_id = f->frame_id;
 	uint64_t desired_present_time_ns = predict_next_frame_present_time(ft, now_ns);
 	uint64_t predicted_display_time_ns = calc_display_time(ft, desired_present_time_ns);
 
@@ -134,6 +220,12 @@ pc_predict(struct u_pacing_compositor *upc,
 	uint64_t present_slop_ns = U_TIME_HALF_MS_IN_NS;
 	uint64_t predicted_display_period_ns = ft->frame_period_ns;
 	uint64_t min_display_period_ns = ft->frame_period_ns;
+
+	// Set the frame info.
+	f->predicted_wake_up_time_ns = wake_up_time_ns;
+	f->predicted_present_time_ns = desired_present_time_ns;
+	f->predicted_display_time_ns = predicted_display_time_ns;
+	f->predicted_display_period_ns = predicted_display_period_ns;
 
 	*out_frame_id = frame_id;
 	*out_wake_up_time_ns = wake_up_time_ns;
@@ -162,12 +254,20 @@ pc_predict(struct u_pacing_compositor *upc,
 static void
 pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_t frame_id, uint64_t when_ns)
 {
+	struct fake_timing *ft = fake_timing(upc);
+	struct frame *f = get_frame_or_null(ft, frame_id);
+
+	// Just drop info if no frame found.
+	if (f == NULL) {
+		return;
+	}
+
 	// To help validate calling code.
 	switch (point) {
-	case U_TIMING_POINT_WAKE_UP: break;
-	case U_TIMING_POINT_BEGIN: break;
-	case U_TIMING_POINT_SUBMIT_BEGIN: break;
-	case U_TIMING_POINT_SUBMIT_END: break;
+	case U_TIMING_POINT_WAKE_UP: f->when_woke_ns = when_ns; break;
+	case U_TIMING_POINT_BEGIN: f->when_began_ns = when_ns; break;
+	case U_TIMING_POINT_SUBMIT_BEGIN: f->when_submit_began_ns = when_ns; break;
+	case U_TIMING_POINT_SUBMIT_END: f->when_submit_end_ns = when_ns; break;
 	default: assert(false);
 	}
 }
