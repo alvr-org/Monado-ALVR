@@ -684,7 +684,13 @@ get_binding(struct oxr_logger *log,
 	}
 
 	size_t num = 0;
-	oxr_binding_find_bindings_from_key(log, profile, act_ref->act_key, binding_points, &num);
+	oxr_binding_find_bindings_from_key( //
+	    log,                            // log
+	    profile,                        // p
+	    act_ref->act_key,               // key
+	    ARRAY_SIZE(binding_points),     // max_bounding_count
+	    binding_points,                 // bindings
+	    &num);                          // out_binding_count
 	if (num == 0) {
 		oxr_slog(slog, "\t\t\tNo bindings!\n");
 		return;
