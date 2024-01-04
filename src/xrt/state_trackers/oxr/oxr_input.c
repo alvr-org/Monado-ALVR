@@ -683,20 +683,20 @@ get_binding(struct oxr_logger *log,
 		return;
 	}
 
-	size_t num = 0;
+	size_t binding_count = 0;
 	oxr_binding_find_bindings_from_key( //
 	    log,                            // log
 	    profile,                        // p
 	    act_ref->act_key,               // key
 	    ARRAY_SIZE(binding_points),     // max_bounding_count
 	    binding_points,                 // bindings
-	    &num);                          // out_binding_count
-	if (num == 0) {
+	    &binding_count);                // out_binding_count
+	if (binding_count == 0) {
 		oxr_slog(slog, "\t\t\tNo bindings!\n");
 		return;
 	}
 
-	for (size_t i = 0; i < num; i++) {
+	for (size_t i = 0; i < binding_count; i++) {
 		const char *str = NULL;
 		struct oxr_binding *binding_point = binding_points[i];
 

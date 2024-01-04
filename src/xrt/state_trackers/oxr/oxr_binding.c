@@ -436,7 +436,7 @@ oxr_binding_find_bindings_from_key(struct oxr_logger *log,
 	}
 
 	// How many bindings are we returning?
-	size_t num = 0;
+	size_t binding_count = 0;
 
 	/*
 	 * Loop over all app provided bindings for this profile
@@ -447,21 +447,21 @@ oxr_binding_find_bindings_from_key(struct oxr_logger *log,
 
 		for (size_t z = 0; z < b->key_count; z++) {
 			if (b->keys[z] == key) {
-				bindings[num++] = b;
+				bindings[binding_count++] = b;
 				break;
 			}
 		}
 
 		//! @todo Should return total count instead of fixed max.
-		if (num >= max_bounding_count) {
+		if (binding_count >= max_bounding_count) {
 			oxr_warn(log, "Internal limit reached, action has too many bindings!");
 			break;
 		}
 	}
 
-	assert(num <= max_bounding_count);
+	assert(binding_count <= max_bounding_count);
 
-	*out_binding_count = num;
+	*out_binding_count = binding_count;
 }
 
 struct oxr_interaction_profile *
