@@ -40,6 +40,12 @@ struct gui_remote
 	struct r_remote_data reset;
 	struct r_remote_data data;
 
+	// Was the left trigger pushed last frame?
+	bool left_trigger_was_pressed_last_frame;
+
+	// Was the right trigger pushed last frame?
+	bool right_trigger_was_pressed_last_frame;
+
 	bool cheat_menu;
 
 	char address[1024];
@@ -107,7 +113,7 @@ handle_downable_button(const char *name)
 }
 
 static void
-handle_input(struct r_remote_controller_data *d)
+handle_input(struct r_remote_controller_data *d, bool *trigger_was_pressed_last_frame)
 {
 	igText("Hover buttons and sliders to touch component.");
 	bool touched = false;
@@ -132,6 +138,13 @@ handle_input(struct r_remote_controller_data *d)
 
 	// Trigger
 	igText("Value > 0.0 causes touch, 0.7 > causes click");
+	if (handle_downable_button("Press for 1.0")) {
+		d->trigger_value.x = 1.0f;
+		*trigger_was_pressed_last_frame = true;
+	} else if (*trigger_was_pressed_last_frame) {
+		d->trigger_value.x = 0.0f;
+		*trigger_was_pressed_last_frame = false;
+	}
 	igSliderFloat("Trigger", &d->trigger_value.x, 0, 1, "%.2f", 0);
 	touched |= igIsItemHovered(ImGuiHoveredFlags_RectOnly);
 	d->trigger_click = d->trigger_value.x > 0.7;
@@ -313,7 +326,7 @@ render_cheat_menu(struct gui_remote *gr, struct gui_program *p)
 
 #define BUTTONS(prefix)                                                                                                \
 	do {                                                                                                           \
-		handle_input(&d->prefix);                                                                              \
+		handle_input(&d->prefix, &gr->prefix##_trigger_was_pressed_last_frame);                                \
 	} while (false)
 
 #define CURL(prefix, name, index) igDragFloat(#prefix "." #name, &d->prefix.hand_curl[index], 0.01, 0.0, 1.0, "%f", 0);
