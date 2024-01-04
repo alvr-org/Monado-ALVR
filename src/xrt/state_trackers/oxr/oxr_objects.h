@@ -123,7 +123,7 @@ struct oxr_action_ref;
 struct oxr_hand_tracker;
 
 #define XRT_MAX_HANDLE_CHILDREN 256
-#define OXR_MAX_BINDINGS_PER_ACTION 16
+#define OXR_MAX_BINDINGS_PER_ACTION 32
 
 struct time_state;
 
