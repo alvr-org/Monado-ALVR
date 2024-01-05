@@ -137,4 +137,14 @@ TEST_CASE("u_json")
 		CHECK(json_node["alpha"][3].asObject()["gamma"].asInt() == 5);
 		CHECK(json_node["iota"].hasKey("kappa"));
 	}
+
+	SECTION("Can make a double")
+	{
+		JSONNode stringToDouble("0.5");
+
+		constexpr float e = std::numeric_limits<float>::epsilon();
+
+		CHECK(stringToDouble.isDouble());
+		CHECK(stringToDouble.asDouble() == Approx(0.5).margin(e));
+	}
 }
