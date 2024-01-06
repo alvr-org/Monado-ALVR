@@ -35,6 +35,9 @@
 #include "vive_source.h"
 #include "xrt/xrt_tracking.h"
 
+// Used to scale the IMU range from config.
+#define VIVE_IMU_RANGE_CONVERSION_VALUE (32768.0)
+
 
 static bool
 vive_mainboard_power_off(struct vive_device *d);
@@ -377,7 +380,7 @@ update_imu(struct vive_device *d, const void *buffer)
 		    d->config.imu.acc_bias.z,
 		};
 
-		scale = (double)d->config.imu.acc_range / 32768.0f;
+		scale = (double)d->config.imu.acc_range / VIVE_IMU_RANGE_CONVERSION_VALUE;
 		struct xrt_vec3 acceleration = {
 		    scale * acc_scale[0] * acc[0] - acc_bias[0],
 		    scale * acc_scale[1] * acc[1] - acc_bias[1],
@@ -413,7 +416,7 @@ update_imu(struct vive_device *d, const void *buffer)
 		    d->config.imu.gyro_bias.z,
 		};
 
-		scale = (double)d->config.imu.gyro_range / 32768.0f;
+		scale = (double)d->config.imu.gyro_range / VIVE_IMU_RANGE_CONVERSION_VALUE;
 		struct xrt_vec3 angular_velocity = {
 		    scale * gyro_scale[0] * gyro[0] - gyro_bias[0],
 		    scale * gyro_scale[1] * gyro[1] - gyro_bias[1],
