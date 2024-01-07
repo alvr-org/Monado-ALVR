@@ -141,8 +141,13 @@ append_vk_display_entry(struct comp_window_vk_display *w, struct VkDisplayProper
 
 	U_ARRAY_REALLOC_OR_FREE(w->displays, struct vk_display, w->display_count);
 
-	if (w->displays == NULL)
+	if (w->displays == NULL) {
 		COMP_ERROR(w->base.base.c, "Unable to reallocate vk_display displays");
+
+		// Reset the count.
+		w->display_count = 0;
+		return false;
+	}
 
 	w->displays[w->display_count - 1] = d;
 

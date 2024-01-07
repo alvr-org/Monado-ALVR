@@ -177,8 +177,13 @@ append_nvidia_entry_on_match(struct comp_window_direct_nvidia *w,
 
 	U_ARRAY_REALLOC_OR_FREE(w->displays, struct comp_window_direct_nvidia_display, w->display_count);
 
-	if (w->displays == NULL)
-		COMP_ERROR(w->base.base.c, "Unable to reallocate randr_displays");
+	if (w->displays == NULL) {
+		COMP_ERROR(w->base.base.c, "Unable to reallocate NVIDIA displays");
+
+		// Reset the count.
+		w->display_count = 0;
+		return false;
+	}
 
 	w->displays[w->display_count - 1] = d;
 
