@@ -145,10 +145,7 @@ err:
 }
 
 static VkExtent2D
-select_extent(struct comp_target_swapchain *cts,
-              VkSurfaceCapabilitiesKHR caps,
-              uint32_t preferred_width,
-              uint32_t preferred_height)
+select_extent(struct comp_target_swapchain *cts, VkSurfaceCapabilitiesKHR caps, VkExtent2D preferred)
 {
 	/*
 	 * A sub-class wants us to use these extents over the ones the
@@ -156,29 +153,29 @@ select_extent(struct comp_target_swapchain *cts,
 	 * upporting this size so we better respect those wishes.
 	 */
 	if (cts->override.compositor_extent) {
-		preferred_width = cts->override.extent.width;
-		preferred_height = cts->override.extent.height;
+		preferred.width = cts->override.extent.width;
+		preferred.height = cts->override.extent.height;
 	}
 
 	// If width (and height) equals the special value 0xFFFFFFFF,
 	// the size of the surface will be set by the swapchain
 	if (caps.currentExtent.width == (uint32_t)-1) {
-		assert(preferred_width > 0 && preferred_height > 0);
+		assert(preferred.width > 0 && preferred.height > 0);
 
 		VkExtent2D extent = {
-		    .width = preferred_width,
-		    .height = preferred_height,
+		    .width = preferred.width,
+		    .height = preferred.height,
 		};
 		return extent;
 	}
 
-	if (caps.currentExtent.width != preferred_width || //
-	    caps.currentExtent.height != preferred_height) {
+	if (caps.currentExtent.width != preferred.width || //
+	    caps.currentExtent.height != preferred.height) {
 		COMP_DEBUG(cts->base.c, "Using swap chain extent dimensions %dx%d instead of requested %dx%d.",
 		           caps.currentExtent.width,  //
 		           caps.currentExtent.height, //
-		           preferred_width,           //
-		           preferred_height);         //
+		           preferred.width,           //
+		           preferred.height);         //
 	}
 
 	return caps.currentExtent;
@@ -641,13 +638,7 @@ target_init_semaphores(struct comp_target_swapchain *cts)
  */
 
 static void
-comp_target_swapchain_create_images(struct comp_target *ct,
-                                    uint32_t preferred_width,
-                                    uint32_t preferred_height,
-                                    VkFormat color_format,
-                                    VkColorSpaceKHR color_space,
-                                    VkImageUsageFlags image_usage,
-                                    VkPresentModeKHR present_mode)
+comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_target_create_images_info *create_info)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 	struct vk_bundle *vk = get_vk(cts);
@@ -673,9 +664,9 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 
 	cts->base.image_count = 0;
 	cts->swapchain.handle = VK_NULL_HANDLE;
-	cts->present_mode = present_mode;
-	cts->preferred.color_format = color_format;
-	cts->preferred.color_space = color_space;
+	cts->present_mode = create_info->present_mode;
+	cts->preferred.color_format = create_info->format;
+	cts->preferred.color_space = create_info->color_space;
 
 
 	/*
@@ -737,7 +728,7 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	 */
 
 	// Get the extents of the swapchain.
-	VkExtent2D extent = select_extent(cts, surface_caps, preferred_width, preferred_height);
+	VkExtent2D extent = select_extent(cts, surface_caps, create_info->extent);
 
 	if (surface_caps.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
 	    surface_caps.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
@@ -785,7 +776,7 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	            .height = extent.height,
 	        },
 	    .imageArrayLayers = 1,
-	    .imageUsage = image_usage,
+	    .imageUsage = create_info->image_usage,
 	    .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	    .queueFamilyIndexCount = 0,
 	    .preTransform = surface_caps.currentTransform,

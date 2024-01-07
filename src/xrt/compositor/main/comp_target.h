@@ -65,6 +65,30 @@ struct comp_target_image
 };
 
 /*!
+ * Information given in when creating the swapchain images,
+ * argument to @ref comp_target_create_images.
+ *
+ * @ingroup comp_main
+ */
+struct comp_target_create_images_info
+{
+	//! Image usage for the images, must be followed.
+	VkImageUsageFlags image_usage;
+
+	//! Preferred format for the images, can be ignored by the target.
+	VkFormat format;
+
+	//! Preferred extent, can be ignored by the target.
+	VkExtent2D extent;
+
+	//! Preferred color space, can be ignored by the target.
+	VkColorSpaceKHR color_space;
+
+	// Preferred present_mode, can be ignored by the target.
+	VkPresentModeKHR present_mode;
+};
+
+/*!
  * Collection of semaphores needed for a target.
  *
  * @ingroup comp_main
@@ -157,13 +181,7 @@ struct comp_target
 	 *
 	 * @pre @ref check_ready returns true
 	 */
-	void (*create_images)(struct comp_target *ct,
-	                      uint32_t preferred_width,
-	                      uint32_t preferred_height,
-	                      VkFormat preferred_color_format,
-	                      VkColorSpaceKHR preferred_color_space,
-	                      VkImageUsageFlags image_usage,
-	                      VkPresentModeKHR present_mode);
+	void (*create_images)(struct comp_target *ct, const struct comp_target_create_images_info *create_info);
 
 	/*!
 	 * Has this target successfully had images created?
@@ -326,24 +344,11 @@ comp_target_check_ready(struct comp_target *ct)
  * @ingroup comp_main
  */
 static inline void
-comp_target_create_images(struct comp_target *ct,
-                          uint32_t preferred_width,
-                          uint32_t preferred_height,
-                          VkFormat preferred_color_format,
-                          VkColorSpaceKHR preferred_color_space,
-                          VkImageUsageFlags image_usage,
-                          VkPresentModeKHR present_mode)
+comp_target_create_images(struct comp_target *ct, const struct comp_target_create_images_info *create_info)
 {
 	COMP_TRACE_MARKER();
 
-	ct->create_images(          //
-	    ct,                     //
-	    preferred_width,        //
-	    preferred_height,       //
-	    preferred_color_format, //
-	    preferred_color_space,  //
-	    image_usage,            //
-	    present_mode);          //
+	ct->create_images(ct, create_info);
 }
 
 /*!

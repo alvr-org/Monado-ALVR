@@ -529,14 +529,19 @@ renderer_ensure_images_and_renderings(struct comp_renderer *r, bool force_recrea
 		image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	}
 
-	comp_target_create_images(           //
-	    r->c->target,                    //
-	    r->c->settings.preferred.width,  //
-	    r->c->settings.preferred.height, //
-	    r->settings->color_format,       //
-	    r->settings->color_space,        //
-	    image_usage,                     //
-	    r->settings->present_mode);      //
+	struct comp_target_create_images_info info = {
+	    .extent =
+	        {
+	            .width = r->c->settings.preferred.width,
+	            .height = r->c->settings.preferred.height,
+	        },
+	    .format = r->settings->color_format,
+	    .image_usage = image_usage,
+	    .color_space = r->settings->color_space,
+	    .present_mode = r->settings->present_mode,
+	};
+
+	comp_target_create_images(r->c->target, &info);
 
 	bool pre_rotate = false;
 	if (r->c->target->surface_transform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||

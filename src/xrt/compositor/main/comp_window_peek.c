@@ -50,6 +50,20 @@ get_vk(struct comp_window_peek *w)
 	return &w->c->base.vk;
 }
 
+static inline void
+create_images(struct comp_window_peek *w)
+{
+	struct comp_target_create_images_info info = {
+	    .extent = {w->width, w->height},
+	    .format = w->c->settings.color_format,
+	    .color_space = w->c->settings.color_space,
+	    .image_usage = PEEK_IMAGE_USAGE,
+	    .present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
+	};
+
+	comp_target_create_images(&w->base.base, &info);
+}
+
 static void *
 window_peek_run_thread(void *ptr)
 {
@@ -204,16 +218,7 @@ comp_window_peek_create(struct comp_compositor *c)
 	 * Images
 	 */
 
-	/* TODO: present mode fallback to FIFO if MAILBOX is not available */
-	comp_target_create_images(        //
-	    &w->base.base,                //
-	    w->width,                     //
-	    w->height,                    //
-	    w->c->settings.color_format,  //
-	    w->c->settings.color_space,   //
-	    PEEK_IMAGE_USAGE,             //
-	    VK_PRESENT_MODE_MAILBOX_KHR); //
-
+	create_images(w);
 
 	/*
 	 * Thread
@@ -280,14 +285,7 @@ comp_window_peek_blit(struct comp_window_peek *w, VkImage src, int32_t width, in
 
 	if (w->width != w->base.base.width || w->height != w->base.base.height) {
 		COMP_DEBUG(w->c, "Resizing swapchain");
-		comp_target_create_images(        //
-		    &w->base.base,                //
-		    w->width,                     //
-		    w->height,                    //
-		    w->c->settings.color_format,  //
-		    w->c->settings.color_space,   //
-		    PEEK_IMAGE_USAGE,             //
-		    VK_PRESENT_MODE_MAILBOX_KHR); //
+		create_images(w);
 	}
 
 	while (!comp_target_check_ready(&w->base.base))
