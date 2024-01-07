@@ -160,8 +160,7 @@ append_nvidia_entry_on_match(struct comp_window_direct_nvidia *w,
 	 */
 
 	// Make the compositor use this size.
-	w->base.base.c->settings.preferred.width = disp->physicalResolution.width;
-	w->base.base.c->settings.preferred.height = disp->physicalResolution.height;
+	comp_target_swapchain_override_extents(&w->base, disp->physicalResolution);
 
 	// Create the entry.
 	struct comp_window_direct_nvidia_display d = {

@@ -223,8 +223,8 @@ comp_window_direct_randr_init(struct comp_target *ct)
 	struct comp_window_direct_randr_display *d = comp_window_direct_randr_current_display(w_direct);
 
 	// Make the compositor use this size.
-	ct->c->settings.preferred.width = d->primary_mode.width;
-	ct->c->settings.preferred.height = d->primary_mode.height;
+	VkExtent2D extent = {d->primary_mode.width, d->primary_mode.height};
+	comp_target_swapchain_override_extents(&w_direct->base, extent);
 
 	return true;
 }

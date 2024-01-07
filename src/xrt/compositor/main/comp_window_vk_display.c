@@ -128,8 +128,7 @@ static bool
 append_vk_display_entry(struct comp_window_vk_display *w, struct VkDisplayPropertiesKHR *disp)
 {
 	// Make the compositor use this size.
-	w->base.base.c->settings.preferred.width = disp->physicalResolution.width;
-	w->base.base.c->settings.preferred.height = disp->physicalResolution.height;
+	comp_target_swapchain_override_extents(&w->base, disp->physicalResolution);
 
 	// Create the entry.
 	struct vk_display d = {

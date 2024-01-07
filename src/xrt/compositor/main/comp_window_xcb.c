@@ -90,7 +90,7 @@ static int
 comp_window_xcb_connect(struct comp_window_xcb *w);
 
 static void
-comp_window_xcb_create_window(struct comp_window_xcb *w, uint32_t width, uint32_t height);
+comp_window_xcb_create_window(struct comp_window_xcb *w, VkExtent2D extent);
 
 static void
 comp_window_xcb_get_randr_outputs(struct comp_window_xcb *w);
@@ -237,17 +237,23 @@ comp_window_xcb_init(struct comp_target *ct)
 		}
 
 		if (d->size.width != 0 && d->size.height != 0) {
-			ct->c->settings.preferred.width = d->size.width;
-			ct->c->settings.preferred.height = d->size.height;
 			COMP_DEBUG(ct->c, "Setting window size %dx%d.", d->size.width, d->size.height);
 
-			// TODO: size cb
-			// set_size_cb(settings->width, settings->height);
+			VkExtent2D extent = {d->size.width, d->size.height};
+			comp_target_swapchain_override_extents(&w_xcb->base, extent);
 		}
 	}
 
+	// The extent of the window we are about to create.
+	VkExtent2D extent = {ct->c->settings.preferred.width, ct->c->settings.preferred.height};
+
+	// If we require a particular size, use that.
+	if (w_xcb->base.override.compositor_extent) {
+		extent = w_xcb->base.override.extent;
+	}
+
 	// We can now create the window.
-	comp_window_xcb_create_window(w_xcb, ct->c->settings.preferred.width, ct->c->settings.preferred.height);
+	comp_window_xcb_create_window(w_xcb, extent);
 
 	comp_window_xcb_connect_delete_event(w_xcb);
 
@@ -294,7 +300,7 @@ comp_window_xcb_connect(struct comp_window_xcb *w)
 }
 
 static void
-comp_window_xcb_create_window(struct comp_window_xcb *w, uint32_t width, uint32_t height)
+comp_window_xcb_create_window(struct comp_window_xcb *w, VkExtent2D extent)
 {
 	w->window = xcb_generate_id(w->connection);
 
@@ -315,8 +321,8 @@ comp_window_xcb_create_window(struct comp_window_xcb *w, uint32_t width, uint32_
 	    w->screen->root,               // parent
 	    x,                             // x
 	    y,                             // y
-	    width,                         // width
-	    height,                        // height
+	    extent.width,                  // width
+	    extent.height,                 // height
 	    0,                             // border_width
 	    XCB_WINDOW_CLASS_INPUT_OUTPUT, // _class
 	    w->screen->root_visual,        // visual

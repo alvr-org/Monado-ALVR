@@ -150,6 +150,16 @@ select_extent(struct comp_target_swapchain *cts,
               uint32_t preferred_width,
               uint32_t preferred_height)
 {
+	/*
+	 * A sub-class wants us to use these extents over the ones the
+	 * compositor preferred, this is probably due to the target only
+	 * upporting this size so we better respect those wishes.
+	 */
+	if (cts->override.compositor_extent) {
+		preferred_width = cts->override.extent.width;
+		preferred_height = cts->override.extent.height;
+	}
+
 	// If width (and height) equals the special value 0xFFFFFFFF,
 	// the size of the surface will be set by the swapchain
 	if (caps.currentExtent.width == (uint32_t)-1) {
@@ -1031,6 +1041,25 @@ comp_target_swapchain_info_gpu(
  * 'Exported' functions.
  *
  */
+
+void
+comp_target_swapchain_override_extents(struct comp_target_swapchain *cts, VkExtent2D extent)
+{
+	VkExtent2D old = cts->override.extent;
+
+	COMP_INFO(                                                                  //
+	    cts->base.c,                                                            //
+	    "Target '%s' overrides compositor extents with (%ux%u) was (%ux%u %s)", //
+	    cts->base.name,                                                         //
+	    extent.width,                                                           //
+	    extent.height,                                                          //
+	    old.width,                                                              //
+	    old.height,                                                             //
+	    cts->override.compositor_extent ? "true" : "false");                    //
+
+	cts->override.compositor_extent = true;
+	cts->override.extent = extent;
+}
 
 void
 comp_target_swapchain_cleanup(struct comp_target_swapchain *cts)

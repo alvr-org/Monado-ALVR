@@ -49,6 +49,22 @@ struct comp_target_swapchain
 
 	struct
 	{
+		/*!
+		 * Should we ignore the compositor's preferred extents. Some
+		 * targets, like the direct mode ones, requires a particular
+		 * set of dimensions.
+		 */
+		bool compositor_extent;
+
+		/*!
+		 * The extents that a sub-class wants us to use,
+		 * see @p ignore_compositor_extent above.
+		 */
+		VkExtent2D extent;
+	} override;
+
+	struct
+	{
 		VkSwapchainKHR handle;
 	} swapchain;
 
@@ -128,6 +144,17 @@ struct comp_target_swapchain
 void
 comp_target_swapchain_init_and_set_fnptrs(struct comp_target_swapchain *cts,
                                           enum comp_target_display_timing_usage timing_usage);
+
+/*!
+ * Set that any size from the compositor should be ignored and that given size
+ * must be used for the @p VkSwapchain the helper code creates.
+ *
+ * @protected @memberof comp_target_swapchain
+ *
+ * @ingroup comp_main
+ */
+void
+comp_target_swapchain_override_extents(struct comp_target_swapchain *cts, VkExtent2D extent);
 
 /*!
  * Free all managed resources on the given @ref comp_target_swapchain,
