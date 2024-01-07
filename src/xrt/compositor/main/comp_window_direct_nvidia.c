@@ -144,18 +144,31 @@ append_nvidia_entry_on_match(struct comp_window_direct_nvidia *w,
 {
 	unsigned long wl_entry_length = strlen(wl_entry);
 	unsigned long disp_entry_length = strlen(disp->displayName);
-	if (disp_entry_length < wl_entry_length)
-		return false;
 
-	if (strncmp(wl_entry, disp->displayName, wl_entry_length) != 0)
+	// If the entry is shorter then it will never match.
+	if (disp_entry_length < wl_entry_length) {
 		return false;
+	}
 
-	// we have a match with this allowlist entry.
+	// We only check the first part of the string, extra characters ignored.
+	if (strncmp(wl_entry, disp->displayName, wl_entry_length) != 0) {
+		return false;
+	}
+
+	/*
+	 * We have a match with this allow list entry.
+	 */
+
+	// Make the compositor use this size.
 	w->base.base.c->settings.preferred.width = disp->physicalResolution.width;
 	w->base.base.c->settings.preferred.height = disp->physicalResolution.height;
-	struct comp_window_direct_nvidia_display d = {.name = U_TYPED_ARRAY_CALLOC(char, disp_entry_length + 1),
-	                                              .display_properties = *disp,
-	                                              .display = disp->display};
+
+	// Create the entry.
+	struct comp_window_direct_nvidia_display d = {
+	    .name = U_TYPED_ARRAY_CALLOC(char, disp_entry_length + 1),
+	    .display_properties = *disp,
+	    .display = disp->display,
+	};
 
 	memcpy(d.name, disp->displayName, disp_entry_length);
 	d.name[disp_entry_length] = '\0';

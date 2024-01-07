@@ -246,12 +246,14 @@ comp_window_xcb_init(struct comp_target *ct)
 		}
 	}
 
+	// We can now create the window.
 	comp_window_xcb_create_window(w_xcb, ct->c->settings.preferred.width, ct->c->settings.preferred.height);
 
 	comp_window_xcb_connect_delete_event(w_xcb);
 
-	if (ct->c->settings.fullscreen)
+	if (ct->c->settings.fullscreen) {
 		comp_window_xcb_set_full_screen(w_xcb);
+	}
 
 	xcb_map_window(w_xcb->connection, w_xcb->window);
 
@@ -306,8 +308,20 @@ comp_window_xcb_create_window(struct comp_window_xcb *w, uint32_t width, uint32_
 
 	uint32_t value_list = XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
-	xcb_create_window(w->connection, XCB_COPY_FROM_PARENT, w->window, w->screen->root, x, y, width, height, 0,
-	                  XCB_WINDOW_CLASS_INPUT_OUTPUT, w->screen->root_visual, XCB_CW_EVENT_MASK, &value_list);
+	xcb_create_window(                 //
+	    w->connection,                 // conn
+	    XCB_COPY_FROM_PARENT,          // depth
+	    w->window,                     // wid
+	    w->screen->root,               // parent
+	    x,                             // x
+	    y,                             // y
+	    width,                         // width
+	    height,                        // height
+	    0,                             // border_width
+	    XCB_WINDOW_CLASS_INPUT_OUTPUT, // _class
+	    w->screen->root_visual,        // visual
+	    XCB_CW_EVENT_MASK,             // value_mask
+	    &value_list);                  // value_list
 }
 
 static void

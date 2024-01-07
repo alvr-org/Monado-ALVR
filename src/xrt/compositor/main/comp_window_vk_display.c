@@ -117,8 +117,9 @@ comp_window_vk_display_destroy(struct comp_target *ct)
 		d->display = VK_NULL_HANDLE;
 	}
 
-	if (w_direct->displays != NULL)
+	if (w_direct->displays != NULL) {
 		free(w_direct->displays);
+	}
 
 	free(ct);
 }
@@ -126,9 +127,15 @@ comp_window_vk_display_destroy(struct comp_target *ct)
 static bool
 append_vk_display_entry(struct comp_window_vk_display *w, struct VkDisplayPropertiesKHR *disp)
 {
+	// Make the compositor use this size.
 	w->base.base.c->settings.preferred.width = disp->physicalResolution.width;
 	w->base.base.c->settings.preferred.height = disp->physicalResolution.height;
-	struct vk_display d = {.display_properties = *disp, .display = disp->display};
+
+	// Create the entry.
+	struct vk_display d = {
+	    .display_properties = *disp,
+	    .display = disp->display,
+	};
 
 	w->display_count += 1;
 

@@ -149,8 +149,9 @@ comp_window_direct_randr_destroy(struct comp_target *ct)
 		free(d->name);
 	}
 
-	if (w_direct->displays != NULL)
+	if (w_direct->displays != NULL) {
 		free(w_direct->displays);
+	}
 
 	if (w_direct->dpy) {
 		XCloseDisplay(w_direct->dpy);
@@ -220,6 +221,8 @@ comp_window_direct_randr_init(struct comp_target *ct)
 	}
 
 	struct comp_window_direct_randr_display *d = comp_window_direct_randr_current_display(w_direct);
+
+	// Make the compositor use this size.
 	ct->c->settings.preferred.width = d->primary_mode.width;
 	ct->c->settings.preferred.height = d->primary_mode.height;
 
@@ -230,11 +233,13 @@ static struct comp_window_direct_randr_display *
 comp_window_direct_randr_current_display(struct comp_window_direct_randr *w)
 {
 	int index = w->base.base.c->settings.display;
-	if (index == -1)
+	if (index == -1) {
 		index = 0;
+	}
 
-	if (w->display_count <= (uint32_t)index)
+	if (w->display_count <= (uint32_t)index) {
 		return NULL;
+	}
 
 	return &w->displays[index];
 }
@@ -315,12 +320,15 @@ append_randr_display(struct comp_window_direct_randr *w,
 	int n = xcb_randr_get_screen_resources_modes_length(resources_reply);
 
 	xcb_randr_mode_info_t *mode_info = NULL;
-	for (int i = 0; i < n; i++)
-		if (mode_infos[i].id == output_modes[0])
+	for (int i = 0; i < n; i++) {
+		if (mode_infos[i].id == output_modes[0]) {
 			mode_info = &mode_infos[i];
+		}
+	}
 
-	if (mode_info == NULL)
+	if (mode_info == NULL) {
 		COMP_ERROR(w->base.base.c, "No mode with id %d found??", output_modes[0]);
+	}
 
 
 	struct comp_window_direct_randr_display d = {
