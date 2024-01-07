@@ -50,7 +50,9 @@ struct comp_settings
 
 	bool use_compute;
 
-	VkFormat color_format;
+	VkFormat formats[XRT_MAX_SWAPCHAIN_FORMATS];
+	uint32_t format_count;
+
 	VkColorSpaceKHR color_space;
 	VkPresentModeKHR present_mode;
 

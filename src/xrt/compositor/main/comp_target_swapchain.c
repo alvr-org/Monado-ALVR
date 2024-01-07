@@ -26,26 +26,6 @@
 
 /*
  *
- * Types, defines and data.
- *
- */
-
-/*!
- * These formats will be 'preferred' - we may wish to give preference
- * to higher bit depths if they are available, but most display devices we are
- * interested in should support one these.
- */
-static VkFormat preferred_color_formats[] = {
-    VK_FORMAT_B8G8R8A8_SRGB,         //
-    VK_FORMAT_R8G8B8A8_SRGB,         //
-    VK_FORMAT_B8G8R8A8_UNORM,        //
-    VK_FORMAT_R8G8B8A8_UNORM,        //
-    VK_FORMAT_A8B8G8R8_UNORM_PACK32, // Just in case.
-};
-
-
-/*
- *
  * Vulkan functions.
  *
  */
@@ -230,100 +210,95 @@ check_surface_present_mode(struct comp_target_swapchain *cts,
 }
 
 static bool
-find_surface_format(struct comp_target_swapchain *cts, const struct vk_surface_info *info, VkSurfaceFormatKHR *format)
+pick_first_matching_surface_format(const struct comp_target_create_images_info *create_info,
+                                   VkSurfaceFormatKHR *surface_formats,
+                                   uint32_t surface_format_count,
+                                   VkSurfaceFormatKHR *out_surface_format)
 {
-	VkSurfaceFormatKHR *formats_for_colorspace = NULL;
-	formats_for_colorspace = U_TYPED_ARRAY_CALLOC(VkSurfaceFormatKHR, info->format_count);
+	for (uint32_t i = 0; i < create_info->format_count; i++) {
+		// Format to check against.
+		VkFormat format = create_info->formats[i];
 
-	uint32_t format_for_colorspace_count = 0;
-	uint32_t pref_format_count = ARRAY_SIZE(preferred_color_formats);
+		for (uint32_t k = 0; k < surface_format_count; k++) {
+			if (surface_formats[k].format == format) {
+				// Perfect match.
+				*out_surface_format = surface_formats[i];
+				return true;
+			}
+		}
+	}
 
-	// Gather formats that match our color space, we will select
-	// from these in preference to others.
+	return false;
+}
+
+static bool
+find_surface_format(struct comp_target_swapchain *cts,
+                    const struct comp_target_create_images_info *create_info,
+                    const struct vk_surface_info *info,
+                    VkSurfaceFormatKHR *out_surface_format)
+{
+	VkSurfaceFormatKHR *colorspace_matches = NULL;
+	uint32_t colorspace_match_count = 0;
+	bool bret = false;
 
 
+	/*
+	 * Gather surface formats that match our color space,
+	 * we will select from these in preference to others.
+	 */
+	colorspace_matches = U_TYPED_ARRAY_CALLOC(VkSurfaceFormatKHR, info->format_count);
 	for (uint32_t i = 0; i < info->format_count; i++) {
 		if (info->formats[i].colorSpace == cts->preferred.color_space) {
-			formats_for_colorspace[format_for_colorspace_count] = info->formats[i];
-			format_for_colorspace_count++;
+			colorspace_matches[colorspace_match_count++] = info->formats[i];
 		}
 	}
 
-	if (format_for_colorspace_count > 0) {
-		// we have at least one format with our preferred colorspace
-		// if we have one that is on our preferred formats list, use it
+	/*
+	 * We first try the list of surface formats with
+	 * a matching color space, if any, to the one we want.
+	 */
+	bret = pick_first_matching_surface_format( //
+	    create_info,                           //
+	    colorspace_matches,                    //
+	    colorspace_match_count,                //
+	    out_surface_format);                   //
 
-		for (uint32_t i = 0; i < format_for_colorspace_count; i++) {
-			if (formats_for_colorspace[i].format == cts->preferred.color_format) {
-				// perfect match.
-				*format = formats_for_colorspace[i];
-				goto cleanup;
-			}
-		}
+	// Always free these formats.
+	free(colorspace_matches);
 
-		// we don't have our swapchain default format and colorspace,
-		// but we may have at least one preferred format with the
-		// correct colorspace.
-		for (uint32_t i = 0; i < format_for_colorspace_count; i++) {
-			for (uint32_t j = 0; j < pref_format_count; j++) {
-				if (formats_for_colorspace[i].format == preferred_color_formats[j]) {
-					*format = formats_for_colorspace[i];
-					goto cleanup;
-				}
-			}
-		}
-
-		// are we still here? this means we have a format with our
-		// preferred colorspace but we have no preferred color format -
-		// maybe we only have 10/12 bpc or 15/16bpp format. return the
-		// first one we have, at least its in the right color space.
-		*format = formats_for_colorspace[0];
-		COMP_ERROR(cts->base.c, "Returning unknown color format");
-		goto cleanup;
-
-	} else {
-
-		// we have nothing with the preferred colorspace? we can try to
-		// return a preferred format at least
-		for (uint32_t i = 0; i < info->format_count; i++) {
-			for (uint32_t j = 0; j < pref_format_count; j++) {
-				if (info->formats[i].format == preferred_color_formats[j]) {
-					*format = formats_for_colorspace[i];
-					COMP_ERROR(cts->base.c,
-					           "Returning known-wrong color space! Color shift may occur.");
-					goto cleanup;
-				}
-			}
-		}
-		// if we are still here, we should just return the first format
-		// we have. we know its the wrong colorspace, and its not on our
-		// list of preferred formats, but its something.
-		*format = info->formats[0];
-		COMP_ERROR(cts->base.c,
-		           "Returning fallback format! cue up some Kenny Loggins, cos we're in the DANGER ZONE!");
-		goto cleanup;
+	// Check result.
+	if (bret) {
+		// Done now.
+		goto done;
 	}
 
-	COMP_ERROR(cts->base.c, "We should not be here");
-	goto error;
+	/*
+	 * Try to find any surface format that at least has a matching
+	 * Vulkan format to one of the formats the compositor can use.
+	 */
+	bret = pick_first_matching_surface_format( //
+	    create_info,                           //
+	    info->formats,                         //
+	    info->format_count,                    //
+	    out_surface_format);                   //
+	if (!bret) {
+		COMP_ERROR(cts->base.c, "Could not find any matching surface formats!");
+		return false;
+	}
 
-cleanup:
-	free(formats_for_colorspace);
+	COMP_WARN(cts->base.c, "Returning known-wrong color space! Color shift may occur.");
 
+done:
 	COMP_DEBUG(cts->base.c,
 	           "VkSurfaceFormatKHR"
 	           "\n\tpicked: [format = %s, colorSpace = %s]"
 	           "\n\tpreferred: [format = %s, colorSpace = %s]",
-	           vk_format_string(format->format),                   //
-	           vk_color_space_string(format->colorSpace),          //
-	           vk_format_string(cts->preferred.color_format),      //
-	           vk_color_space_string(cts->preferred.color_space)); //
+	           vk_format_string(out_surface_format->format),          //
+	           vk_color_space_string(out_surface_format->colorSpace), //
+	           vk_format_string(create_info->formats[0]),             //
+	           vk_color_space_string(cts->preferred.color_space));    //
 
 	return true;
-
-error:
-	free(formats_for_colorspace);
-	return false;
 }
 
 static void
@@ -665,7 +640,6 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	cts->base.image_count = 0;
 	cts->swapchain.handle = VK_NULL_HANDLE;
 	cts->present_mode = create_info->present_mode;
-	cts->preferred.color_format = create_info->format;
 	cts->preferred.color_space = create_info->color_space;
 
 
@@ -702,7 +676,7 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	}
 
 	// Find the correct format.
-	if (!find_surface_format(cts, &info, &cts->surface.format)) {
+	if (!find_surface_format(cts, create_info, &info, &cts->surface.format)) {
 		goto error_print_and_free;
 	}
 

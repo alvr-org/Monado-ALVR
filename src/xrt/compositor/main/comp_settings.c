@@ -30,6 +30,28 @@ DEBUG_GET_ONCE_NUM_OPTION(default_framerate, "XRT_COMPOSITOR_DEFAULT_FRAMERATE",
 DEBUG_GET_ONCE_BOOL_OPTION(compute, "XRT_COMPOSITOR_COMPUTE", false)
 // clang-format on
 
+static inline void
+add_format(struct comp_settings *s, VkFormat format)
+{
+	uint32_t count = s->format_count;
+
+	// Just in case, but should never happen.
+	if (count >= ARRAY_SIZE(s->formats)) {
+		U_LOG_E("Too many formats!");
+		return;
+	}
+
+	s->formats[count++] = format;
+	s->format_count = count;
+}
+
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
+
 void
 comp_settings_init(struct comp_settings *s, struct xrt_device *xdev)
 {
@@ -43,14 +65,30 @@ comp_settings_init(struct comp_settings *s, struct xrt_device *xdev)
 	s->use_compute = debug_get_bool_option_compute();
 
 	if (s->use_compute) {
-		s->color_format = VK_FORMAT_B8G8R8A8_UNORM;
+		// This was the default before, keep it first.
+		add_format(s, VK_FORMAT_B8G8R8A8_UNORM);
+
+		// This is according to GPU info more supported.
+		add_format(s, VK_FORMAT_B8G8R8A8_UNORM);
+
+		// Seen on some NVIDIA cards.
+		add_format(s, VK_FORMAT_A8B8G8R8_UNORM_PACK32);
+
+		// Untested: 30 bit format, should we move this higher up?
+		add_format(s, VK_FORMAT_A2B10G10R10_UNORM_PACK32);
+
+		// Untested: Super constrained platforms.
+		add_format(s, VK_FORMAT_A1R5G5B5_UNORM_PACK16);
 	} else {
 #if defined(XRT_OS_ANDROID)
 		/*
 		 * On Android the most ubiquitous sRGB format is R8G8B8A8_SRGB.
 		 * https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=android
 		 */
-		s->color_format = VK_FORMAT_R8G8B8A8_SRGB;
+		add_format(s, VK_FORMAT_R8G8B8A8_SRGB);
+
+		// Fallback
+		add_format(s, VK_FORMAT_B8G8R8A8_SRGB);
 #elif defined(XRT_OS_LINUX) || defined(XRT_OS_WINDOWS)
 		/*
 		 * On Linux the most ubiquitous sRGB format is B8G8R8A8_SRGB.
@@ -59,10 +97,16 @@ comp_settings_init(struct comp_settings *s, struct xrt_device *xdev)
 		 * On Windows the most ubiquitous sRGB format is B8G8R8A8_SRGB.
 		 * https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=windows
 		 */
-		s->color_format = VK_FORMAT_B8G8R8A8_SRGB;
+		add_format(s, VK_FORMAT_B8G8R8A8_SRGB);
+
+		// Fallback
+		add_format(s, VK_FORMAT_R8G8B8A8_SRGB);
 #else
 #error "Need to pick default swapchain format for this platform!"
 #endif
+
+		// Seen as the only sRGB format on some NVIDIA cards.
+		add_format(s, VK_FORMAT_A8B8G8R8_SRGB_PACK32);
 	}
 
 	s->display = debug_get_num_option_xcb_display();

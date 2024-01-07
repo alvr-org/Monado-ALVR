@@ -535,11 +535,15 @@ renderer_ensure_images_and_renderings(struct comp_renderer *r, bool force_recrea
 	            .width = r->c->settings.preferred.width,
 	            .height = r->c->settings.preferred.height,
 	        },
-	    .format = r->settings->color_format,
 	    .image_usage = image_usage,
 	    .color_space = r->settings->color_space,
 	    .present_mode = r->settings->present_mode,
 	};
+
+	static_assert(ARRAY_SIZE(info.formats) == ARRAY_SIZE(r->c->settings.formats), "Miss-match format array sizes");
+	for (uint32_t i = 0; i < r->c->settings.format_count; i++) {
+		info.formats[info.format_count++] = r->c->settings.formats[i];
+	}
 
 	comp_target_create_images(r->c->target, &info);
 

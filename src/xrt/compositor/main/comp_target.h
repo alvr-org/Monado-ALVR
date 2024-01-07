@@ -75,8 +75,11 @@ struct comp_target_create_images_info
 	//! Image usage for the images, must be followed.
 	VkImageUsageFlags image_usage;
 
-	//! Preferred format for the images, can be ignored by the target.
-	VkFormat format;
+	//! Acceptable formats for the images, must be followed.
+	VkFormat formats[XRT_MAX_SWAPCHAIN_FORMATS];
+
+	// Number of formats.
+	uint32_t format_count;
 
 	//! Preferred extent, can be ignored by the target.
 	VkExtent2D extent;

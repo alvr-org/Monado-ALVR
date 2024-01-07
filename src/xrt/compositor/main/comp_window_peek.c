@@ -55,11 +55,15 @@ create_images(struct comp_window_peek *w)
 {
 	struct comp_target_create_images_info info = {
 	    .extent = {w->width, w->height},
-	    .format = w->c->settings.color_format,
 	    .color_space = w->c->settings.color_space,
 	    .image_usage = PEEK_IMAGE_USAGE,
 	    .present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
 	};
+
+	static_assert(ARRAY_SIZE(info.formats) == ARRAY_SIZE(w->c->settings.formats), "Miss-match format array sizes");
+	for (uint32_t i = 0; i < w->c->settings.format_count; i++) {
+		info.formats[info.format_count++] = w->c->settings.formats[i];
+	}
 
 	comp_target_create_images(&w->base.base, &info);
 }
