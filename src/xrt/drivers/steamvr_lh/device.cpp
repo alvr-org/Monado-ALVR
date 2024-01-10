@@ -604,20 +604,28 @@ Device::init_chaperone(const std::string &steam_install)
 		return;
 	}
 
-	// XXX: This may be broken if there are multiple known universes - how do we determine which to use then?
-	const JSONNode universe = lighthousedb["known_universes"][0];
-	const std::string id = universe["id"].asString();
 	JSONNode info = {};
-	for (const JSONNode &u : chap_info["universes"].asArray()) {
-		if (u["universeID"].asString() == id) {
-			DEV_INFO("Found info for universe %s", id.c_str());
-			info = u;
+	bool universe_found = false;
+
+	// XXX: This may be broken if there are multiple known universes - how do we determine which to use then?
+	auto known_universes = lighthousedb["known_universes"].asArray();
+	for (auto &universe : known_universes) {
+		const std::string id = universe["id"].asString();
+		for (const JSONNode &u : chap_info["universes"].asArray()) {
+			if (u["universeID"].asString() == id) {
+				DEV_INFO("Found info for universe %s", id.c_str());
+				info = u;
+				universe_found = true;
+				break;
+			}
+		}
+		if (universe_found) {
 			break;
 		}
 	}
 
 	if (info.isInvalid()) {
-		DEV_ERR("Couldn't find chaperone info for universe %s, playspace center will be off", id.c_str());
+		DEV_ERR("Couldn't find chaperone info for any known universe, playspace center will be off");
 		return;
 	}
 
