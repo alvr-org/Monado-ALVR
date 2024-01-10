@@ -22,6 +22,7 @@
 #include "interfaces/context.hpp"
 #include "device.hpp"
 #include "util/u_device.h"
+#include "vive/vive_bindings.h"
 
 namespace {
 
@@ -212,6 +213,22 @@ Context::setup_controller(const char *serial, vr::ITrackedDeviceServerDriver *dr
 		CTX_ERR("Activating controller failed: error %u", err);
 		return false;
 	}
+
+	enum xrt_device_name name = controller[device_idx]->name;
+	switch (name) {
+	case XRT_DEVICE_VIVE_WAND:
+		controller[device_idx]->binding_profiles = vive_binding_profiles_wand;
+		controller[device_idx]->binding_profile_count = vive_binding_profiles_wand_count;
+		break;
+
+		break;
+	case XRT_DEVICE_INDEX_CONTROLLER:
+		controller[device_idx]->binding_profiles = vive_binding_profiles_index;
+		controller[device_idx]->binding_profile_count = vive_binding_profiles_index_count;
+		break;
+	default: break;
+	}
+
 	return true;
 }
 

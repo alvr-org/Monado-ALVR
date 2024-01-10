@@ -83,7 +83,6 @@ protected:
 
 private:
 	vr::ITrackedDeviceServerDriver *driver;
-	std::vector<xrt_binding_profile> binding_profiles_vec;
 	uint64_t current_frame{0};
 
 	std::mutex frame_mutex;
