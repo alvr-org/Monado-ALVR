@@ -9,6 +9,7 @@ Conflicts=@conflicts@.socket
 [Socket]
 ListenStream=%t/@XRT_IPC_MSG_SOCK_FILENAME@
 RemoveOnStop=true
+FlushPending=true
 
 [Install]
 WantedBy=sockets.target
