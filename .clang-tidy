@@ -25,6 +25,7 @@ Checks:       |
     -misc-static-assert,-cert-dcl03-c,
     -misc-unused-using-decls,
     -misc-unused-parameters,
+    -misc-use-anonymous-namespace,
     -performance-no-int-to-ptr,
     -readability-braces-around-statements,
     -readability-function-cognitive-complexity,
