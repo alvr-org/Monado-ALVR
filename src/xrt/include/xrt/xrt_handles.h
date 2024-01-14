@@ -187,7 +187,7 @@ xrt_shmem_is_valid(xrt_shmem_handle_t handle)
  *
  */
 
-#if defined(XRT_OS_ANDROID) && (__ANDROID_API__ >= 26)
+#if defined(XRT_OS_ANDROID) && defined(XRT_OS_ANDROID_USE_AHB) && (__ANDROID_API__ >= 26)
 typedef struct AHardwareBuffer AHardwareBuffer;
 
 /*!
@@ -235,7 +235,7 @@ xrt_graphics_buffer_is_valid(xrt_graphics_buffer_handle_t handle)
  */
 #define XRT_GRAPHICS_BUFFER_HANDLE_INVALID NULL
 
-#elif defined(XRT_OS_LINUX)
+#elif defined(XRT_OS_ANDROID) && !defined(XRT_OS_ANDROID_USE_AHB) || defined(XRT_OS_LINUX)
 
 /*!
  * The type underlying buffers shared between compositor clients and the main
