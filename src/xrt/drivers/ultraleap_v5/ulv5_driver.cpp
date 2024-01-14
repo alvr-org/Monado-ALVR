@@ -151,11 +151,17 @@ ulv5_process_joint(LEAP_VECTOR joint_pos,
                    struct xrt_hand_joint_value *joint)
 {
 	joint->radius = (width / 1000) / 2;
-
 	struct xrt_space_relation *relation = &joint->relation;
+
+	relation->pose.orientation.x = joint_orientation.x;
+	relation->pose.orientation.y = joint_orientation.y;
+	relation->pose.orientation.z = joint_orientation.z;
+	relation->pose.orientation.w = joint_orientation.w;
+
 	relation->pose.position.x = joint_pos.x * -1 / 1000.0;
 	relation->pose.position.y = joint_pos.z * -1 / 1000.0;
 	relation->pose.position.z = joint_pos.y * -1 / 1000.0;
+
 	relation->relation_flags = valid_flags;
 }
 
