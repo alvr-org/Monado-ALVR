@@ -55,15 +55,15 @@ Optional (but recommended) dependencies:
 
 Truly optional dependencies, useful for some drivers, app support, etc.:
 
-* Doxygen - Debian/Ubuntu package ´doxygen´ and ´graphviz´
+* Doxygen - Debian/Ubuntu package `doxygen` and `graphviz`
 * Wayland development packages
 * Xlib development packages
-* libhidapi - Debian/Ubuntu package ´libhidapi-dev´
+* libhidapi - Debian/Ubuntu package `libhidapi-dev`
 * OpenCV
-* libuvc - Debian/Ubuntu package ´libuvc-dev´
+* libuvc - Debian/Ubuntu package `libuvc-dev`
 * libjpeg
-* libbluetooth - Debian/Ubuntu package ´libbluetooth-dev´
-* libsdl - Debian/Ubuntu package ´libsdl2-dev´
+* libbluetooth - Debian/Ubuntu package `libbluetooth-dev`
+* libsdl - Debian/Ubuntu package `libsdl2-dev`
 
 Experimental Windows support requires the Vulkan SDK and also needs or works
 best with the following vcpkg packages installed:
