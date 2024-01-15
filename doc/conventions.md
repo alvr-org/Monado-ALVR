@@ -49,7 +49,7 @@ to commit, but instead they are per change. A changelog fragment file is named
 has multiple changes for one sub-category a number is added between the MR
 number and file extension, example `mr.1234.1.md` and `mr.1234.2.md`. If a
 change spans multiple MRs, such as fixing a feature introduced in a earlier MR
-we imply the use if YAML headers to mark a changelog fragment applying to
+we imply the use of YAML headers to mark a changelog fragment applying to
 multiple MRs, can also be used to link issues.
 
 ```
