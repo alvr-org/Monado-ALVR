@@ -184,6 +184,7 @@ HmdDevice::HmdDevice(const DeviceBuilder &builder) : Device(builder)
 	this->name = XRT_DEVICE_GENERIC_HMD;
 	this->device_type = XRT_DEVICE_TYPE_HMD;
 	this->container_handle = 0;
+	this->stage_supported = true;
 
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<HmdDevice, &HmdDevice::name>
 	SETUP_MEMBER_FUNC(get_view_poses);
@@ -433,7 +434,15 @@ Device::get_pose(uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 void
 HmdDevice::get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
-	Device::get_pose(at_timestamp_ns, out_relation);
+	switch (name) {
+	case XRT_INPUT_GENERIC_HEAD_POSE: Device::get_pose(at_timestamp_ns, out_relation); break;
+	case XRT_INPUT_GENERIC_STAGE_SPACE_POSE:
+		// STAGE is implicitly defined as the space poses are returned in, therefore STAGE origin is (0, 0, 0).
+		*out_relation = XRT_SPACE_RELATION_ZERO;
+		out_relation->relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
+		break;
+	default: U_LOG_W("steamvr_lh hmd: Requested pose for unknown name %u", name); break;
+	}
 }
 
 void

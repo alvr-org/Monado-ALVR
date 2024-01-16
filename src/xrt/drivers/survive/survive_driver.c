@@ -316,7 +316,7 @@ verify_device_name(struct survive_device *survive, enum xrt_input_name name)
 {
 
 	switch (survive->device_type) {
-	case DEVICE_TYPE_HMD: return name == XRT_INPUT_GENERIC_HEAD_POSE;
+	case DEVICE_TYPE_HMD: return name == XRT_INPUT_GENERIC_HEAD_POSE || name == XRT_INPUT_GENERIC_STAGE_SPACE_POSE;
 	case DEVICE_TYPE_CONTROLLER:
 		return name == XRT_INPUT_INDEX_AIM_POSE || name == XRT_INPUT_INDEX_GRIP_POSE ||
 		       name == XRT_INPUT_VIVE_AIM_POSE || name == XRT_INPUT_VIVE_GRIP_POSE ||
@@ -334,6 +334,13 @@ survive_device_get_tracked_pose(struct xrt_device *xdev,
 	struct survive_device *survive = (struct survive_device *)xdev;
 	if (!verify_device_name(survive, name)) {
 		SURVIVE_ERROR(survive, "unknown input name");
+		return;
+	}
+
+	if (name == XRT_INPUT_GENERIC_STAGE_SPACE_POSE) {
+		// STAGE is implicitly defined as the space poses are returned in, therefore STAGE origin is (0, 0, 0).
+		*out_relation = (struct xrt_space_relation)XRT_SPACE_RELATION_ZERO;
+		out_relation->relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
 		return;
 	}
 
@@ -970,6 +977,7 @@ _create_hmd_device(struct survive_system *sys, const struct SurviveSimpleObject 
 	survive->base.orientation_tracking_supported = true;
 	survive->base.position_tracking_supported = true;
 	survive->base.device_type = XRT_DEVICE_TYPE_HMD;
+	survive->base.stage_supported = true;
 
 	survive->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 
