@@ -817,8 +817,14 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	xrt_space_reference(&uso->base.semantic.local, NULL);
 	xrt_space_reference(&uso->base.semantic.unbounded, NULL);
 
-	// Assume the root space is the center of the stage space.
-	xrt_space_reference(&uso->base.semantic.stage, uso->base.semantic.root);
+	if (head != NULL && head->stage_supported) {
+		// stage space is a pose space
+		u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_STAGE_SPACE_POSE,
+		                                   &uso->base.semantic.stage);
+	} else {
+		// Assume the root space is the center of the stage space.
+		xrt_space_reference(&uso->base.semantic.stage, uso->base.semantic.root);
+	}
 
 	// If the system wants to support the space, set root as unbounded.
 	if (root_is_unbounded) {
