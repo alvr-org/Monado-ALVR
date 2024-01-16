@@ -133,6 +133,7 @@ struct ipc_shared_device
 	bool eye_gaze_supported;
 	bool force_feedback_supported;
 	bool form_factor_check_supported;
+	bool stage_supported;
 };
 
 /*!

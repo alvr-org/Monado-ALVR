@@ -224,6 +224,7 @@ ipc_client_device_create(struct ipc_connection *ipc_c, struct xrt_tracking_origi
 	icd->base.hand_tracking_supported = isdev->hand_tracking_supported;
 	icd->base.eye_gaze_supported = isdev->eye_gaze_supported;
 	icd->base.force_feedback_supported = isdev->force_feedback_supported;
+	icd->base.stage_supported = isdev->stage_supported;
 
 	icd->base.device_type = isdev->device_type;
 	return &icd->base;

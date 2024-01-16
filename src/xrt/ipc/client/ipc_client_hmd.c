@@ -372,6 +372,7 @@ ipc_client_hmd_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *
 	ich->base.eye_gaze_supported = isdev->eye_gaze_supported;
 	ich->base.force_feedback_supported = isdev->force_feedback_supported;
 	ich->base.form_factor_check_supported = isdev->form_factor_check_supported;
+	ich->base.stage_supported = isdev->stage_supported;
 
 	return &ich->base;
 }

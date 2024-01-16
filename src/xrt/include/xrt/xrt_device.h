@@ -264,6 +264,7 @@ struct xrt_device
 	bool force_feedback_supported;
 	bool ref_space_usage_supported;
 	bool form_factor_check_supported;
+	bool stage_supported;
 
 
 	/*

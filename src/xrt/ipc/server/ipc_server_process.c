@@ -347,6 +347,7 @@ init_shm(struct ipc_server *s)
 		isdev->force_feedback_supported = xdev->force_feedback_supported;
 		isdev->form_factor_check_supported = xdev->form_factor_check_supported;
 		isdev->eye_gaze_supported = xdev->eye_gaze_supported;
+		isdev->stage_supported = xdev->stage_supported;
 
 		// Is this a HMD?
 		if (xdev->hmd != NULL) {
