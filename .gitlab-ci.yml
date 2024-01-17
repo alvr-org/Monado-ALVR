@@ -130,36 +130,36 @@ win:container_prep:
 .monado.variables.debian:bullseye:
   variables:
     FDO_DISTRIBUTION_VERSION: "bullseye"
-    FDO_DISTRIBUTION_TAG: "2023-04-07"
+    FDO_DISTRIBUTION_TAG: "2024-01-16"
 
 # Variables for build and usage of Debian bookworm-ndk image
 .monado.variables.debian:bookworm-ndk:
   variables:
     FDO_DISTRIBUTION_VERSION: "bookworm"
-    FDO_DISTRIBUTION_TAG: "2023-11-15.1"
+    FDO_DISTRIBUTION_TAG: "2024-01-16"
     FDO_REPO_SUFFIX: ndk
 
 # Variables for build and usage of Ubuntu focal image
 .monado.variables.ubuntu:focal:
   variables:
     FDO_DISTRIBUTION_VERSION: "20.04"
-    FDO_DISTRIBUTION_TAG: "2022-09-20.0"
+    FDO_DISTRIBUTION_TAG: "2024-01-16"
 
 # Variables for build and usage of Ubuntu jammy image
 .monado.variables.ubuntu:jammy:
   variables:
     FDO_DISTRIBUTION_VERSION: "22.04"
-    FDO_DISTRIBUTION_TAG: "2022-09-20.0"
+    FDO_DISTRIBUTION_TAG: "2024-01-16"
 
 # Variables for build and usage of Arch image
 .monado.variables.arch:
   variables:
-    FDO_DISTRIBUTION_TAG: "2023-11-14.0"
+    FDO_DISTRIBUTION_TAG: "2024-01-16"
 
 # Variables for build and usage of Alpine image
 .monado.variables.alpine:
   variables:
-    FDO_DISTRIBUTION_TAG: "2023-11-14.3"
+    FDO_DISTRIBUTION_TAG: "2024-01-16"
 
 
 ###

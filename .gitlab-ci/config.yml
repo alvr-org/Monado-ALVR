@@ -71,7 +71,7 @@ distributions:
       # This image does some extra work.
       - codename: bullseye
         script: i386_and_proclamation_container_prep.sh
-        tag: "2023-04-07"
+        tag: "2024-01-16"
         deb_version_suffix: bpo11
         packages:
           <<: *default_debian_packages
@@ -117,7 +117,7 @@ distributions:
         distro_version: bookworm
         repo_suffix: ndk
         script: android_container_prep.sh
-        tag: "2023-11-15.1"
+        tag: "2024-01-16"
         # This must match ext.sharedCompileSdk in build.gradle
         android_compile_sdk: 32
         # This must match buildscript.ext.buildToolsVersion in build.gradle
@@ -173,7 +173,7 @@ distributions:
       # LTS
       - codename: focal
         distro_version: "20.04"
-        tag: "2022-09-20.0"
+        tag: "2024-01-16"
         deb_version_suffix: ubuntu2004
         packages:
           <<: *default_debian_packages
@@ -183,7 +183,7 @@ distributions:
 
       - codename: jammy
         distro_version: "22.04"
-        tag: "2022-09-20.0"
+        tag: "2024-01-16"
         deb_version_suffix: ubuntu2204
         packages:
           <<: *default_debian_packages
@@ -194,7 +194,7 @@ distributions:
 
   - name: arch
     images:
-      - tag: "2023-11-14.0"
+      - tag: "2024-01-16"
         script: install-arch-additional-deps.sh
         # pipewire-jack wireplumber: Explicitly choose dependencies to avoid pacman asking interactively
         # python-setuptools glu: librealsense
@@ -252,7 +252,7 @@ distributions:
 
   - name: alpine
     images:
-      - tag: "2023-11-14.3"
+      - tag: "2024-01-16"
         packages:
           - "cmake"
           - "cmd:glslangValidator"
