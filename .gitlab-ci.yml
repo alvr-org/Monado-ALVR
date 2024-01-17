@@ -319,7 +319,7 @@ debian:cmake:
     - .monado.image.debian:bullseye
   before_script:
     - pushd doc/changes
-    - proclamation build --overwrite vNEXT
+    - proclamation build vNEXT
     - popd
 
   script:

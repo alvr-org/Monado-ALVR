@@ -87,7 +87,7 @@ distributions:
             # since this is the build that makes our docs.
             before_script:
               - pushd doc/changes
-              - proclamation build --overwrite vNEXT
+              - proclamation build vNEXT
               - popd
             artifact_path: build/doc/html/
             cmake_defines:
