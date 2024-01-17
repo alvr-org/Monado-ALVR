@@ -6,6 +6,7 @@
  * controller was in the past.
  * @author Moses Turner <moses@collabora.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup aux_math
  */
 
@@ -44,7 +45,7 @@ static constexpr size_t BufLen = 4096;
 struct m_relation_history
 {
 	HistoryBuffer<struct relation_history_entry, BufLen> impl;
-	os::Mutex mutex;
+	mutable os::Mutex mutex;
 };
 
 
@@ -80,7 +81,9 @@ m_relation_history_push(struct m_relation_history *rh, struct xrt_space_relation
 }
 
 enum m_relation_history_result
-m_relation_history_get(struct m_relation_history *rh, uint64_t at_timestamp_ns, struct xrt_space_relation *out_relation)
+m_relation_history_get(const struct m_relation_history *rh,
+                       uint64_t at_timestamp_ns,
+                       struct xrt_space_relation *out_relation)
 {
 	XRT_TRACE_MARKER();
 	std::unique_lock<os::Mutex> lock(rh->mutex);
@@ -225,7 +228,7 @@ m_relation_history_estimate_motion(struct m_relation_history *rh,
 }
 
 bool
-m_relation_history_get_latest(struct m_relation_history *rh,
+m_relation_history_get_latest(const struct m_relation_history *rh,
                               uint64_t *out_time_ns,
                               struct xrt_space_relation *out_relation)
 {
@@ -239,7 +242,7 @@ m_relation_history_get_latest(struct m_relation_history *rh,
 }
 
 uint32_t
-m_relation_history_get_size(struct m_relation_history *rh)
+m_relation_history_get_size(const struct m_relation_history *rh)
 {
 	std::unique_lock<os::Mutex> lock(rh->mutex);
 	return (uint32_t)rh->impl.size();
