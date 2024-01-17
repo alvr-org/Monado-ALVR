@@ -179,22 +179,6 @@ if(XRT_HAVE_LINUX OR MINGW)
 	pkg_check_modules(SURVIVE IMPORTED_TARGET survive)
 endif()
 
-# Find a external SLAM implementation
-set(EXTERNAL_SLAM_SYSTEMS kimera_vio basalt)
-foreach(slam_system IN LISTS EXTERNAL_SLAM_SYSTEMS)
-	if(PKGCONFIG_FOUND)
-		pkg_check_modules(${slam_system} ${slam_system})
-	endif()
-	if(${slam_system}_FOUND)
-		set(SLAM_NAME ${slam_system})
-		set(SLAM_LDFLAGS ${${slam_system}_LDFLAGS})
-		set(SLAM_LIBRARIES ${${slam_system}_LIBRARIES})
-		set(SLAM_INCLUDE_DIRS ${${slam_system}_INCLUDE_DIRS})
-		# Exit after the first we find.
-		break()
-	endif()
-endforeach()
-
 # Find openvr library
 find_library(OPENVR_LIBRARIES NAMES openvr_api)
 if(OPENVR_LIBRARIES)
@@ -249,6 +233,7 @@ option_with_deps(XRT_HAVE_XLIB "Enable xlib support" DEPENDS X11_FOUND)
 option_with_deps(XRT_HAVE_XRANDR "Enable xlib-xrandr support" DEPENDS XRANDR_FOUND)
 
 # System deps to use (sorted)
+option_with_deps(XRT_HAVE_OPENCV "Enable OpenCV backend" DEPENDS OpenCV_FOUND)
 option_with_deps(XRT_HAVE_DBUS "Enable dbus support (for BLE support)" DEPENDS DBUS_FOUND)
 option_with_deps(XRT_HAVE_LIBBSD "Enable libbsd support" DEPENDS LIBBSD_FOUND)
 option_with_deps(XRT_HAVE_LIBUDEV "Enable libudev (used for device probing on Linux)" DEPENDS UDEV_FOUND)
@@ -257,11 +242,6 @@ option_with_deps(XRT_HAVE_SYSTEMD "Enable systemd support" DEPENDS Systemd_FOUND
 
 # Only use system cJSON if it includes https://github.com/DaveGamble/cJSON/pull/377
 option_with_deps(XRT_HAVE_SYSTEM_CJSON "Enable cJSON from system, instead of bundled source" DEPENDS CJSON_FOUND "cJSON_VERSION VERSION_GREATER_EQUAL 1.7.13")
-
-# SLAM backends and deps (sorted)
-option_with_deps(XRT_HAVE_OPENCV "Enable OpenCV backend" DEPENDS OpenCV_FOUND)
-option_with_deps(XRT_HAVE_BASALT "Enable Basalt support" DEPENDS basalt_FOUND)
-option_with_deps(XRT_HAVE_KIMERA "Enable Kimera support" DEPENDS kimera_vio_FOUND)
 
 # Hand tracking deps
 option_with_deps(XRT_HAVE_ONNXRUNTIME "Enable ONNX runtime support" DEPENDS ONNXRUNTIME_FOUND)
@@ -287,7 +267,7 @@ set(XRT_FEATURE_OPENXR_DEBUG_UTILS OFF) # Has never been enabled
 option_with_deps(XRT_FEATURE_RENDERDOC "Enable RenderDoc API" DEPENDS "RT_LIBRARY OR WIN32 OR ANDROID")
 option_with_deps(XRT_FEATURE_SERVICE "Enable separate service module for OpenXR runtime" DEPENDS XRT_MODULE_IPC XRT_FEATURE_OPENXR)
 option_with_deps(XRT_FEATURE_SERVICE_SYSTEMD "Enable systemd socket activation of the service" DEPENDS XRT_HAVE_SYSTEMD XRT_FEATURE_SERVICE)
-option_with_deps(XRT_FEATURE_SLAM "Enable SLAM tracking support" DEPENDS XRT_HAVE_OPENCV "XRT_HAVE_BASALT OR XRT_HAVE_KIMERA")
+option_with_deps(XRT_FEATURE_SLAM "Enable SLAM tracking support" DEPENDS XRT_HAVE_OPENCV)
 option(XRT_FEATURE_SSE2 "Build using SSE2 instructions, if building for 32-bit x86" ON)
 option_with_deps(XRT_FEATURE_STEAMVR_PLUGIN "Build SteamVR plugin" DEPENDS "NOT ANDROID")
 option_with_deps(XRT_FEATURE_TRACING "Enable debug tracing on supported platforms" DEFAULT OFF DEPENDS "XRT_HAVE_PERCETTO OR XRT_HAVE_TRACY")
@@ -587,7 +567,6 @@ endif()
 message(STATUS "#####----- Config -----#####")
 message(STATUS "#    GIT_DESC:        ${GIT_DESC}")
 message(STATUS "#")
-message(STATUS "#    BASALT:          ${XRT_HAVE_BASALT}")
 message(STATUS "#    BLUETOOTH:       ${XRT_HAVE_BLUETOOTH}")
 message(STATUS "#    D3D11:           ${XRT_HAVE_D3D11}")
 message(STATUS "#    D3D12:           ${XRT_HAVE_D3D12}")
@@ -596,7 +575,6 @@ message(STATUS "#    EGL:             ${XRT_HAVE_EGL}")
 message(STATUS "#    GST (GStreamer): ${XRT_HAVE_GST}")
 message(STATUS "#    HIDAPI:          ${XRT_HAVE_HIDAPI}")
 message(STATUS "#    JPEG:            ${XRT_HAVE_JPEG}")
-message(STATUS "#    KIMERA:          ${XRT_HAVE_KIMERA}")
 message(STATUS "#    LIBBSD:          ${XRT_HAVE_LIBBSD}")
 message(STATUS "#    LIBUSB:          ${XRT_HAVE_LIBUSB}")
 message(STATUS "#    LIBUVC:          ${XRT_HAVE_LIBUVC}")
