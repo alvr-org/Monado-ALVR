@@ -1145,7 +1145,9 @@ wmr_hmd_get_slam_tracked_pose(struct xrt_device *xdev,
 	bool pose_tracked = out_relation->relation_flags & pose_bits;
 
 	if (pose_tracked) {
-#if defined(XRT_HAVE_BASALT)
+#ifdef XRT_FEATURE_SLAM
+		// !todo Correct pose depending on the VIT system in use, this should be done in the system itself.
+		// For now, assume that we are using Basalt.
 		wh->pose = wmr_hmd_correct_pose_from_basalt(out_relation->pose);
 #else
 		wh->pose = out_relation->pose;

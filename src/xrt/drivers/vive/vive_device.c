@@ -34,6 +34,8 @@
 #include "vive_protocol.h"
 #include "vive_source.h"
 #include "xrt/xrt_tracking.h"
+#include "xrt/xrt_config_have.h"
+#include "xrt/xrt_config_build.h"
 
 // Used to scale the IMU range from config.
 #define VIVE_IMU_RANGE_CONVERSION_VALUE (32768.0)
@@ -156,7 +158,9 @@ vive_device_get_slam_tracked_pose(struct xrt_device *xdev,
 	bool pose_tracked = out_relation->relation_flags & pose_bits;
 
 	if (pose_tracked) {
-#if defined(XRT_HAVE_BASALT)
+#ifdef XRT_FEATURE_SLAM
+		// !todo Correct pose depending on the VIT system in use, this should be done in the system itself.
+		// For now, assume that we are using Basalt.
 		d->pose = vive_device_correct_pose_from_basalt(out_relation->pose);
 #else
 		d->pose = out_relation->pose;

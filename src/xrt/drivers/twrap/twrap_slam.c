@@ -14,6 +14,8 @@
 #include "xrt/xrt_frameserver.h"
 #include "xrt/xrt_results.h"
 #include "xrt/xrt_tracking.h"
+#include "xrt/xrt_config_have.h"
+#include "xrt/xrt_config_build.h"
 
 #include "util/u_var.h"
 #include "util/u_misc.h"
@@ -171,14 +173,11 @@ twrap_slam_create_device(struct xrt_frame_context *xfctx,
 	snprintf(dx->base.serial, XRT_DEVICE_NAME_LEN, "Generic Inside-Out Head Tracker");
 
 #ifdef XRT_FEATURE_SLAM
-#ifdef XRT_HAVE_BASALT
+	// !todo Correct pose depending on the VIT system in use, this should be done in the system itself.
 	// Arrived at mostly by trial and error; seeminly does a 90-degree rotation about the X axis.
 	dx->pre_rotate_x = (struct xrt_vec3){1.0f, 0.0f, 0.0f};
 	dx->pre_rotate_z = (struct xrt_vec3){0.0f, 1.0f, 0.0f};
 	dx->pre_rotate = true;
-#else
-#pragma message "World space conversion not implemented for this SLAM system"
-#endif
 #endif
 
 	// note: we can't put this at the very end; we need u_tracked_imu_3dof, and that needs to be put on the debug

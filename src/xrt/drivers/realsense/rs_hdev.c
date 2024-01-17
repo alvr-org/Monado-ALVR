@@ -18,6 +18,7 @@
 #include "xrt/xrt_frame.h"
 #include "xrt/xrt_prober.h"
 #include "xrt/xrt_config_have.h"
+#include "xrt/xrt_config_build.h"
 
 #include "math/m_filter_fifo.h"
 #include "math/m_space.h"
@@ -288,9 +289,9 @@ rs_hdev_get_tracked_pose(struct xrt_device *xdev,
 	bool pose_tracked = out_relation->relation_flags & pose_bits;
 
 	if (pose_tracked) {
-#if defined(XRT_HAVE_KIMERA)
-		rh->pose = rs_hdev_correct_pose_from_kimera(out_relation->pose);
-#elif defined(XRT_HAVE_BASALT)
+#ifdef XRT_FEATURE_SLAM
+		// !todo Correct pose depending on the VIT system in use, this should be done in the system itself.
+		// For now, assume that we are using Basalt.
 		rh->pose = rs_hdev_correct_pose_from_basalt(out_relation->pose);
 #else
 		rh->pose = out_relation->pose;

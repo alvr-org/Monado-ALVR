@@ -36,6 +36,7 @@
 #include "util/u_trace_marker.h"
 #include "util/u_var.h"
 
+#include "xrt/xrt_config_build.h"
 #include "xrt/xrt_config_drivers.h"
 #include "xrt/xrt_device.h"
 
@@ -635,11 +636,11 @@ rift_s_tracker_get_tracked_pose(struct rift_s_tracker *t,
 
 		// Get the IMU pose from the SLAM tracker
 		xrt_tracked_slam_get_tracked_pose(t->tracking.slam, at_timestamp_ns, &imu_relation);
-
-#if defined(XRT_HAVE_BASALT)
+#ifdef XRT_FEATURE_SLAM
+		// !todo Correct pose depending on the VIT system in use, this should be done in the system itself.
+		// For now, assume that we are using Basalt.
 		rift_s_tracker_correct_pose_from_basalt(&imu_relation.pose);
 #endif
-
 		imu_relation.relation_flags = (enum xrt_space_relation_flags)(
 		    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT |
 		    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT);
