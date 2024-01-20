@@ -1,4 +1,4 @@
-// Copyright 2021-2023, Collabora, Ltd.
+// Copyright 2021-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -44,6 +44,9 @@
 #include <string>
 #include <vector>
 
+//! @todo Get preferred system from systems found at build time
+#define PREFERRED_VIT_SYSTEM_LIBRARY "libbasalt.so"
+
 #define SLAM_TRACE(...) U_LOG_IFL_T(t.log_level, __VA_ARGS__)
 #define SLAM_DEBUG(...) U_LOG_IFL_D(t.log_level, __VA_ARGS__)
 #define SLAM_INFO(...) U_LOG_IFL_I(t.log_level, __VA_ARGS__)
@@ -71,7 +74,7 @@
 
 //! @see t_slam_tracker_config
 DEBUG_GET_ONCE_LOG_OPTION(slam_log, "SLAM_LOG", U_LOGGING_INFO)
-DEBUG_GET_ONCE_OPTION(vit_system_library_path, "VIT_SYSTEM_LIBRARY_PATH", NULL)
+DEBUG_GET_ONCE_OPTION(vit_system_library_path, "VIT_SYSTEM_LIBRARY_PATH", PREFERRED_VIT_SYSTEM_LIBRARY)
 DEBUG_GET_ONCE_OPTION(slam_config, "SLAM_CONFIG", nullptr)
 DEBUG_GET_ONCE_BOOL_OPTION(slam_ui, "SLAM_UI", false)
 DEBUG_GET_ONCE_BOOL_OPTION(slam_submit_from_start, "SLAM_SUBMIT_FROM_START", false)
@@ -1494,13 +1497,7 @@ t_slam_create(struct xrt_frame_context *xfctx,
 
 	t.log_level = log_level;
 
-	if (config->vit_system_library_path == NULL) {
-		SLAM_WARN("No VIT system library set, use VIT_SYSTEM_LIBRARY_PATH to set a tracker");
-		SLAM_WARN("Attempting to load 'libbasalt.so' from system");
-		config->vit_system_library_path = "libbasalt.so";
-	}
-
-	SLAM_INFO("Loading VIT system library from '%s'", config->vit_system_library_path);
+	SLAM_INFO("Loading VIT system library from VIT_SYSTEM_LIBRARY_PATH='%s'", config->vit_system_library_path);
 
 	if (!t_vit_bundle_load(&t.vit, config->vit_system_library_path)) {
 		SLAM_ERROR("Failed to load VIT system library from '%s'", config->vit_system_library_path);
