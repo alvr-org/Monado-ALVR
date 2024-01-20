@@ -593,11 +593,23 @@ struct comp_target_factory
 	 */
 	bool is_deferred;
 
+	/*!
+	 * Vulkan version that is required or 0 if no specific
+	 * requirement, equivalent to VK_MAKE_VERSION(1, 0, 0)
+	 */
+	uint32_t required_instance_version;
+
 	//! Required instance extensions.
 	const char **required_instance_extensions;
 
 	//! Required instance extension count.
 	size_t required_instance_extension_count;
+
+	//! Optional device extensions.
+	const char **optional_device_extensions;
+
+	//! Optional device extension count.
+	size_t optional_device_extension_count;
 
 	/*!
 	 * Checks if this target can be detected, is the preferred target or

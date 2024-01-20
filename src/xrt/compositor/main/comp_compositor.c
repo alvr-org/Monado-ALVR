@@ -46,6 +46,8 @@
 #include "xrt/xrt_config_have.h"
 #include "xrt/xrt_results.h"
 
+#include "math/m_api.h"
+
 #include "os/os_time.h"
 
 #include "util/u_var.h"
@@ -614,6 +616,14 @@ compositor_init_vulkan(struct comp_compositor *c)
 	    optional_device_extensions,              //
 	    ARRAY_SIZE(optional_device_extensions)); //
 
+	// Add per target optional device extensions.
+	u_string_list_append_array(                              //
+	    optional_device_extension_list,                      //
+	    c->target_factory->optional_device_extensions,       //
+	    c->target_factory->optional_device_extension_count); //
+
+	// Select required Vulkan version, suitable for both compositor and target
+	uint32_t required_instance_version = MAX(c->target_factory->required_instance_version, VK_API_VERSION_1_0);
 
 	/*
 	 * Create the device.
@@ -621,7 +631,7 @@ compositor_init_vulkan(struct comp_compositor *c)
 
 	struct comp_vulkan_arguments vk_args = {
 	    .get_instance_proc_address = vkGetInstanceProcAddr,
-	    .required_instance_version = VK_MAKE_VERSION(1, 0, 0),
+	    .required_instance_version = required_instance_version,
 	    .required_instance_extensions = required_instance_ext_list,
 	    .optional_instance_extensions = optional_instance_ext_list,
 	    .required_device_extensions = required_device_extension_list,

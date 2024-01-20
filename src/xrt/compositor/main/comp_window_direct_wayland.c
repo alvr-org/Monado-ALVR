@@ -506,8 +506,11 @@ const struct comp_target_factory comp_target_factory_direct_wayland = {
     .identifier = "direct_wayland",
     .requires_vulkan_for_create = false,
     .is_deferred = false,
+    .required_instance_version = 0,
     .required_instance_extensions = instance_extensions,
     .required_instance_extension_count = ARRAY_SIZE(instance_extensions),
+    .optional_device_extensions = NULL,
+    .optional_device_extension_count = 0,
     .detect = detect,
     .create_target = create_target,
 };
