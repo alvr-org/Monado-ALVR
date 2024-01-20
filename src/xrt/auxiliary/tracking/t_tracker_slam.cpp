@@ -1519,13 +1519,13 @@ t_slam_create(struct xrt_frame_context *xfctx,
 
 	vit_result_t vres = t.vit.tracker_create(&system_config, &t.tracker);
 	if (vres != VIT_SUCCESS) {
-		SLAM_ERROR("Failed to create VIT tracker");
+		SLAM_ERROR("Failed to create VIT tracker (%d)", vres);
 		return -1;
 	}
 
 	vres = t.vit.tracker_get_pose_capabilities(t.tracker, &t.caps);
 	if (vres != VIT_SUCCESS) {
-		SLAM_ERROR("Failed to get VIT tracker pose capabilities");
+		SLAM_ERROR("Failed to get VIT tracker pose capabilities (%d)", vres);
 		return -1;
 	}
 

@@ -1,4 +1,4 @@
-// Copyright 2023, Collabora, Ltd.
+// Copyright 2023-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,6 +11,7 @@
 #include "xrt/xrt_config_os.h"
 #include "tracking/t_vit_loader.h"
 #include "util/u_logging.h"
+#include "vit/vit_interface.h"
 
 #include <stdlib.h>
 
@@ -59,7 +60,8 @@ t_vit_bundle_load(struct t_vit_bundle *vit, const char *path)
 
 	// Check major version.
 	if (vit->version.major != VIT_HEADER_VERSION_MAJOR) {
-		U_LOG_E("Incompatible major version (supports %u) was: %u.%u.%u", VIT_HEADER_VERSION_MAJOR,
+		U_LOG_E("Incompatible versions: expecting %u.%u.%u but got %u.%u.%u",                 //
+		        VIT_HEADER_VERSION_MAJOR, VIT_HEADER_VERSION_MINOR, VIT_HEADER_VERSION_PATCH, //
 		        vit->version.major, vit->version.minor, vit->version.patch);
 		dlclose(vit->handle);
 		return false;
