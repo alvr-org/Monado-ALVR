@@ -670,9 +670,9 @@ err_free:
 }
 
 static VkResult
-find_compute_queue_family(struct vk_bundle *vk, uint32_t *out_compute_queue_family)
+find_queue_family(struct vk_bundle *vk, VkQueueFlags required_flags, uint32_t *out_queue_family)
 {
-	/* Find the "best" compute queue (prefer compute-only queues) */
+	/* Find the "best" queue with the requested flags (prefer queues without graphics) */
 	uint32_t queue_family_count = 0;
 	uint32_t i = 0;
 	vk->vkGetPhysicalDeviceQueueFamilyProperties(vk->physical_device, &queue_family_count, NULL);
@@ -687,7 +687,7 @@ find_compute_queue_family(struct vk_bundle *vk, uint32_t *out_compute_queue_fami
 	}
 
 	for (i = 0; i < queue_family_count; i++) {
-		if (~queue_family_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+		if ((queue_family_props[i].queueFlags & required_flags) != required_flags) {
 			continue;
 		}
 
@@ -697,20 +697,20 @@ find_compute_queue_family(struct vk_bundle *vk, uint32_t *out_compute_queue_fami
 	}
 
 	if (i >= queue_family_count) {
-		/* If there's no compute-only queue, just find any queue that supports compute */
+		/* If there's no suitable queue without graphics, just find any suitabable one*/
 		for (i = 0; i < queue_family_count; i++) {
-			if (queue_family_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+			if ((queue_family_props[i].queueFlags & required_flags) == required_flags) {
 				break;
 			}
 		}
 
 		if (i >= queue_family_count) {
-			VK_DEBUG(vk, "No compatible compute queue family found");
+			VK_DEBUG(vk, "No compatible queue family found (flags: 0x%xd)", required_flags);
 			goto err_free;
 		}
 	}
 
-	*out_compute_queue_family = i;
+	*out_queue_family = i;
 
 	free(queue_family_props);
 
@@ -1129,7 +1129,7 @@ vk_create_device(struct vk_bundle *vk,
 	}
 
 	if (only_compute) {
-		ret = find_compute_queue_family(vk, &vk->queue_family_index);
+		ret = find_queue_family(vk, VK_QUEUE_COMPUTE_BIT, &vk->queue_family_index);
 	} else {
 		ret = find_graphics_queue_family(vk, &vk->queue_family_index);
 	}
