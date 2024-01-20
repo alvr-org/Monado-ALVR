@@ -57,6 +57,11 @@ struct vk_bundle
 	uint32_t queue_family_index;
 	uint32_t queue_index;
 	VkQueue queue;
+#if defined(VK_KHR_video_encode_queue)
+	uint32_t encode_queue_family_index;
+	uint32_t encode_queue_index;
+	VkQueue encode_queue;
+#endif
 
 	struct os_mutex queue_mutex;
 

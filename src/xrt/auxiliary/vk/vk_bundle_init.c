@@ -1145,13 +1145,32 @@ vk_create_device(struct vk_bundle *vk,
 	};
 
 	float queue_priority = 0.0f;
-	VkDeviceQueueCreateInfo queue_create_info = {
-	    .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-	    .pNext = NULL,
-	    .queueCount = 1,
-	    .queueFamilyIndex = vk->queue_family_index,
-	    .pQueuePriorities = &queue_priority,
-	};
+	VkDeviceQueueCreateInfo queue_create_info[2] = {0};
+	uint32_t queue_create_info_count = 1;
+
+	// Compute or Graphics queue
+	queue_create_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queue_create_info[0].pNext = NULL;
+	queue_create_info[0].queueCount = 1;
+	queue_create_info[0].queueFamilyIndex = vk->queue_family_index;
+	queue_create_info[0].pQueuePriorities = &queue_priority;
+
+#ifdef VK_KHR_video_encode_queue
+	// Video encode queue
+	vk->encode_queue_family_index = VK_QUEUE_FAMILY_IGNORED;
+	if (u_string_list_contains(device_ext_list, VK_KHR_VIDEO_ENCODE_QUEUE_EXTENSION_NAME)) {
+		ret = find_queue_family(vk, VK_QUEUE_VIDEO_ENCODE_BIT_KHR, &vk->encode_queue_family_index);
+		if (ret == VK_SUCCESS) {
+			queue_create_info[queue_create_info_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queue_create_info[queue_create_info_count].pNext = NULL;
+			queue_create_info[queue_create_info_count].queueCount = 1;
+			queue_create_info[queue_create_info_count].queueFamilyIndex = vk->encode_queue_family_index;
+			queue_create_info[queue_create_info_count].pQueuePriorities = &queue_priority;
+			queue_create_info_count++;
+			VK_DEBUG(vk, "Creating video encode queue, family index %d", vk->encode_queue_family_index);
+		}
+	}
+#endif
 
 #ifdef VK_KHR_global_priority
 	static_assert(VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_EXT ==
@@ -1161,8 +1180,8 @@ vk_create_device(struct vk_bundle *vk,
 
 	if (vk->has_EXT_global_priority || vk->has_KHR_global_priority) {
 		// This is okay, see static_assert above.
-		priority_info.pNext = queue_create_info.pNext;
-		queue_create_info.pNext = (void *)&priority_info;
+		priority_info.pNext = queue_create_info[0].pNext;
+		queue_create_info[0].pNext = (void *)&priority_info;
 	}
 
 
@@ -1193,8 +1212,8 @@ vk_create_device(struct vk_bundle *vk,
 
 	VkDeviceCreateInfo device_create_info = {
 	    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-	    .queueCreateInfoCount = 1,
-	    .pQueueCreateInfos = &queue_create_info,
+	    .queueCreateInfoCount = queue_create_info_count,
+	    .pQueueCreateInfos = queue_create_info,
 	    .enabledExtensionCount = u_string_list_get_size(device_ext_list),
 	    .ppEnabledExtensionNames = u_string_list_get_data(device_ext_list),
 	    .pEnabledFeatures = &enabled_features,
@@ -1237,6 +1256,11 @@ vk_create_device(struct vk_bundle *vk,
 		goto err_destroy;
 	}
 	vk->vkGetDeviceQueue(vk->device, vk->queue_family_index, 0, &vk->queue);
+#if defined(VK_KHR_video_encode_queue)
+	if (vk->encode_queue_family_index != VK_QUEUE_FAMILY_IGNORED) {
+		vk->vkGetDeviceQueue(vk->device, vk->encode_queue_family_index, 0, &vk->encode_queue);
+	}
+#endif
 
 	// Need to do this after functions have been gotten.
 	VK_NAME_INSTANCE(vk, vk->instance, "vk_bundle instance");
