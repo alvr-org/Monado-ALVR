@@ -281,6 +281,7 @@ DEVICE_EXTENSIONS_TO_CHECK = [
     "VK_KHR_maintenance2",
     "VK_KHR_maintenance3",
     "VK_KHR_maintenance4",
+    "VK_KHR_synchronization2",
     "VK_KHR_timeline_semaphore",
     "VK_EXT_calibrated_timestamps",
     "VK_EXT_display_control",

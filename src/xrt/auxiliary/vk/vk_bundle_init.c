@@ -748,6 +748,7 @@ fill_in_has_device_extensions(struct vk_bundle *vk, struct u_string_list *ext_li
 	vk->has_KHR_maintenance2 = false;
 	vk->has_KHR_maintenance3 = false;
 	vk->has_KHR_maintenance4 = false;
+	vk->has_KHR_synchronization2 = false;
 	vk->has_KHR_timeline_semaphore = false;
 	vk->has_EXT_calibrated_timestamps = false;
 	vk->has_EXT_display_control = false;
@@ -825,6 +826,13 @@ fill_in_has_device_extensions(struct vk_bundle *vk, struct u_string_list *ext_li
 			continue;
 		}
 #endif // defined(VK_KHR_maintenance4)
+
+#if defined(VK_KHR_synchronization2)
+		if (strcmp(ext, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0) {
+			vk->has_KHR_synchronization2 = true;
+			continue;
+		}
+#endif // defined(VK_KHR_synchronization2)
 
 #if defined(VK_KHR_timeline_semaphore)
 		if (strcmp(ext, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0) {
@@ -1015,6 +1023,13 @@ filter_device_features(struct vk_bundle *vk,
 	};
 #endif
 
+#ifdef VK_KHR_synchronization2
+	VkPhysicalDeviceSynchronization2Features synchronization_2_info = {
+	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+	    .pNext = NULL,
+	};
+#endif
+
 	VkPhysicalDeviceFeatures2 physical_device_features = {
 	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 	    .pNext = NULL,
@@ -1031,6 +1046,13 @@ filter_device_features(struct vk_bundle *vk,
 	if (vk->has_KHR_timeline_semaphore) {
 		append_to_pnext_chain((VkBaseInStructure *)&physical_device_features,
 		                      (VkBaseInStructure *)&timeline_semaphore_info);
+	}
+#endif
+
+#ifdef VK_KHR_synchronization2
+	if (vk->has_KHR_synchronization2) {
+		append_to_pnext_chain((VkBaseInStructure *)&physical_device_features,
+		                      (VkBaseInStructure *)&synchronization_2_info);
 	}
 #endif
 
@@ -1052,6 +1074,11 @@ filter_device_features(struct vk_bundle *vk,
 #ifdef VK_KHR_timeline_semaphore
 	CHECK(timeline_semaphore, timeline_semaphore_info.timelineSemaphore);
 #endif
+
+#ifdef VK_KHR_synchronization2
+	CHECK(synchronization_2, synchronization_2_info.synchronization2);
+#endif
+
 	CHECK(shader_image_gather_extended, physical_device_features.features.shaderImageGatherExtended);
 
 	CHECK(shader_storage_image_write_without_format,
@@ -1065,11 +1092,13 @@ filter_device_features(struct vk_bundle *vk,
 	         "\n\tnull_descriptor: %i"
 	         "\n\tshader_image_gather_extended: %i"
 	         "\n\tshader_storage_image_write_without_format: %i"
-	         "\n\ttimeline_semaphore: %i",                               //
+	         "\n\ttimeline_semaphore: %i"
+	         "\n\tsynchronization_2: %i",                                //
 	         device_features->null_descriptor,                           //
 	         device_features->shader_image_gather_extended,              //
 	         device_features->shader_storage_image_write_without_format, //
-	         device_features->timeline_semaphore);
+	         device_features->timeline_semaphore,                        //
+	         device_features->synchronization_2);
 }
 
 
@@ -1115,6 +1144,7 @@ vk_create_device(struct vk_bundle *vk,
 	struct vk_device_features device_features = {0};
 	filter_device_features(vk, vk->physical_device, optional_device_features, &device_features);
 	vk->features.timeline_semaphore = device_features.timeline_semaphore;
+	vk->features.synchronization_2 = device_features.synchronization_2;
 
 
 	/*
@@ -1205,6 +1235,14 @@ vk_create_device(struct vk_bundle *vk,
 	};
 #endif
 
+#ifdef VK_KHR_synchronization2
+	VkPhysicalDeviceSynchronization2FeaturesKHR synchronization_2_info = {
+	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
+	    .pNext = NULL,
+	    .synchronization2 = device_features.synchronization_2,
+	};
+#endif
+
 	VkPhysicalDeviceFeatures enabled_features = {
 	    .shaderImageGatherExtended = device_features.shader_image_gather_extended,
 	    .shaderStorageImageWriteWithoutFormat = device_features.shader_storage_image_write_without_format,
@@ -1229,6 +1267,13 @@ vk_create_device(struct vk_bundle *vk,
 	if (vk->has_KHR_timeline_semaphore) {
 		append_to_pnext_chain((VkBaseInStructure *)&device_create_info,
 		                      (VkBaseInStructure *)&timeline_semaphore_info);
+	}
+#endif
+
+#ifdef VK_KHR_synchronization2
+	if (vk->has_KHR_synchronization2) {
+		append_to_pnext_chain((VkBaseInStructure *)&device_create_info,
+		                      (VkBaseInStructure *)&synchronization_2_info);
 	}
 #endif
 

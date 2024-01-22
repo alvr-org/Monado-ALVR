@@ -134,6 +134,7 @@ struct vk_bundle
 	bool has_KHR_maintenance2;
 	bool has_KHR_maintenance3;
 	bool has_KHR_maintenance4;
+	bool has_KHR_synchronization2;
 	bool has_KHR_timeline_semaphore;
 	bool has_EXT_calibrated_timestamps;
 	bool has_EXT_display_control;
@@ -163,6 +164,9 @@ struct vk_bundle
 
 		//! Per stage limit on storage images.
 		uint32_t max_per_stage_descriptor_storage_images;
+
+		//! Was synchronization2 requested, available, and enabled?
+		bool synchronization_2;
 	} features;
 
 	//! Is the GPU a tegra device.
@@ -989,6 +993,7 @@ struct vk_device_features
 	bool shader_storage_image_write_without_format;
 	bool null_descriptor;
 	bool timeline_semaphore;
+	bool synchronization_2;
 };
 
 /*!
