@@ -730,7 +730,7 @@ static bool
 flush_poses(TrackerSlam &t)
 {
 
-	vit_pose_t *pose;
+	vit_pose_t *pose = NULL;
 	vit_result_t vres = t.vit.tracker_pop_pose(t.tracker, &pose);
 	if (vres != VIT_SUCCESS) {
 		SLAM_ERROR("Failed to get pose from VIT tracker");
