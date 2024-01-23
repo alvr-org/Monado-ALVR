@@ -295,8 +295,20 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	depthai_fs_get_stereo_calibration(the_fs, &calib);
 
 
+	struct xrt_slam_sinks *slam_sinks = NULL;
+	xret = twrap_slam_create_device(xfctx, XRT_DEVICE_DEPTHAI, &slam_sinks, out_head_device);
+	if (xret != XRT_SUCCESS) {
+		U_LOG_E("twrap_slam_create_device: %u", xret);
+		return xret;
+	}
+	if (slam_sinks == NULL) {
+		U_LOG_E("twrap_slam_create_device: Returned NULL slam_sinks!");
+		return XRT_ERROR_DEVICE_CREATION_FAILED;
+	}
+
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
 	struct xrt_slam_sinks *hand_sinks = NULL;
+	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
 
 	struct t_camera_extra_info extra_camera_info = {0};
 
@@ -311,7 +323,7 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	extra_camera_info.views[0].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 	extra_camera_info.views[1].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 
-	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = NULL};
+	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = masks_sink};
 
 	int create_status = ht_device_create( //
 	    xfctx,                            //
@@ -324,17 +336,6 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 		return XRT_ERROR_DEVICE_CREATION_FAILED;
 	}
 #endif
-
-	struct xrt_slam_sinks *slam_sinks = NULL;
-	xret = twrap_slam_create_device(xfctx, XRT_DEVICE_DEPTHAI, &slam_sinks, out_head_device);
-	if (xret != XRT_SUCCESS) {
-		U_LOG_E("twrap_slam_create_device: %u", xret);
-		return xret;
-	}
-	if (slam_sinks == NULL) {
-		U_LOG_E("twrap_slam_create_device: Returned NULL slam_sinks!");
-		return XRT_ERROR_DEVICE_CREATION_FAILED;
-	}
 
 	struct xrt_slam_sinks entry_sinks = {0};
 	struct xrt_frame_sink *entry_left_sink = NULL;

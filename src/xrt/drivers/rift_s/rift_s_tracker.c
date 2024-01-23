@@ -232,6 +232,7 @@ rift_s_create_slam_tracker(struct rift_s_tracker *t, struct xrt_frame_context *x
 static int
 rift_s_create_hand_tracker(struct rift_s_tracker *t,
                            struct xrt_frame_context *xfctx,
+                           struct xrt_hand_masks_sink *masks_sink,
                            struct xrt_slam_sinks **out_sinks,
                            struct xrt_device **out_device)
 {
@@ -252,8 +253,7 @@ rift_s_create_hand_tracker(struct rift_s_tracker *t,
 	extra_camera_info.views[0].camera_orientation = CAMERA_ORIENTATION_90;
 	extra_camera_info.views[1].camera_orientation = CAMERA_ORIENTATION_90;
 
-	// TODO@mateosss: Use proper masks_sink in all drivers and not null
-	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = NULL};
+	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = masks_sink};
 
 	int create_status = ht_device_create(xfctx,           //
 	                                     t->stereo_calib, //
@@ -404,8 +404,9 @@ rift_s_tracker_create(struct xrt_tracking_origin *origin,
 	// Initialize hand tracker
 	struct xrt_slam_sinks *hand_sinks = NULL;
 	struct xrt_device *hand_device = NULL;
+	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
 	if (t->tracking.hand_enabled) {
-		int hand_status = rift_s_create_hand_tracker(t, xfctx, &hand_sinks, &hand_device);
+		int hand_status = rift_s_create_hand_tracker(t, xfctx, masks_sink, &hand_sinks, &hand_device);
 		if (hand_status != 0 || hand_sinks == NULL || hand_device == NULL) {
 			RIFT_S_WARN("Unable to setup the hand tracker");
 			rift_s_tracker_destroy(t);

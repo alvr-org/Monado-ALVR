@@ -201,6 +201,7 @@ valve_index_hand_track(struct lighthouse_system *lhs,
                        struct xrt_frame_context *xfctx,
                        struct xrt_pose head_in_left_cam,
                        struct t_stereo_camera_calibration *stereo_calib,
+                       struct xrt_hand_masks_sink *masks_sink,
                        struct xrt_slam_sinks **out_sinks,
                        struct xrt_device **out_devices)
 {
@@ -233,7 +234,7 @@ valve_index_hand_track(struct lighthouse_system *lhs,
 	info.views[0].boundary.circle.normalized_radius = 0.55;
 	info.views[1].boundary.circle.normalized_radius = 0.55;
 
-	struct t_hand_tracking_create_info create_info = {.cams_info = info, .masks_sink = NULL};
+	struct t_hand_tracking_create_info create_info = {.cams_info = info, .masks_sink = masks_sink};
 
 	struct xrt_device *ht_device = NULL;
 	int create_status = ht_device_create( //
@@ -384,6 +385,7 @@ valve_index_setup_visual_trackers(struct lighthouse_system *lhs,
 	// Initialize hand tracker
 	struct xrt_slam_sinks *hand_sinks = NULL;
 	struct xrt_device *hand_devices[2] = {NULL};
+	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
 	if (hand_enabled) {
 		bool success = valve_index_hand_track( //
 		    lhs,                               //
@@ -391,6 +393,7 @@ valve_index_setup_visual_trackers(struct lighthouse_system *lhs,
 		    xfctx,                             //
 		    head_in_left_cam,                  //
 		    stereo_calib,                      //
+		    masks_sink,                        //
 		    &hand_sinks,                       //
 		    hand_devices);                     //
 		if (!success) {
