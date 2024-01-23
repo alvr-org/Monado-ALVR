@@ -572,12 +572,10 @@ predict_new_regions_of_interest(struct HandTracking *hgt)
 				hroi.provenance = ROIProvenance::POSE_PREDICTION;
 				hroi.found = true;
 
-				xrt_vec2 &center = hroi.center_px;
-				float &size = hroi.size_px;
-				masks_hand.rect.offset.w = int(center.x - size / 2);
-				masks_hand.rect.offset.h = int(center.y - size / 2);
-				masks_hand.rect.extent.w = int(size);
-				masks_hand.rect.extent.h = int(size);
+				const float SCALER = 1.25f;
+				float s = hroi.size_px * SCALER;
+				xrt_vec2 &c = hroi.center_px;
+				masks_hand.rect = xrt_rect_f32{c.x - s / 2, c.y - s / 2, s, s};
 				masks_hand.enabled = true;
 			} else {
 				hroi.found = false;

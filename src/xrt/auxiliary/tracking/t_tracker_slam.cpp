@@ -1380,20 +1380,29 @@ receive_frame(TrackerSlam &t, struct xrt_frame *frame, uint32_t cam_index)
 	default: SLAM_ERROR("Unknown image format"); return;
 	}
 
+	xrt_hand_masks_sample hand_masks{};
 	{
 		unique_lock lock(t.last_hand_masks_mutex);
-		for (auto &view : t.last_hand_masks.views) {
-			if (!view.enabled) {
+		hand_masks = t.last_hand_masks;
+	}
+
+	auto &view = hand_masks.views[cam_index];
+	std::vector<vit_mask_t> masks;
+	if (view.enabled) {
+		for (auto &hand : view.hands) {
+			if (!hand.enabled) {
 				continue;
 			}
+			vit_mask_t mask{};
+			mask.x = hand.rect.x;
+			mask.y = hand.rect.y;
+			mask.w = hand.rect.w;
+			mask.h = hand.rect.h;
+			masks.push_back(mask);
+		}
 
-			for (auto &hand : view.hands) {
-				if (!hand.enabled) {
-					continue;
-				}
-				// TODO@mateosss: add_mask(hand.rect);
-			}
-		};
+		sample.mask_count = masks.size();
+		sample.masks = masks.empty() ? nullptr : masks.data();
 	}
 
 	{

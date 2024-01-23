@@ -392,6 +392,18 @@ struct xrt_rect
 };
 
 /*!
+ * Image rectangle
+ *
+ * @todo Unify xrt_rect and xrt_rect_f32 field names
+ *
+ * @ingroup xrt_iface math
+ */
+struct xrt_rect_f32
+{
+	float x, y, w, h;
+};
+
+/*!
  * Normalized image rectangle, coordinates and size in 0 .. 1 range.
  *
  * @ingroup xrt_iface math

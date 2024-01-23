@@ -149,8 +149,8 @@ struct xrt_hand_masks_sample
 		bool enabled; //!< Whether any hand mask for this camera is being reported
 		struct xrt_hand_masks_sample_hand
 		{
-			bool enabled;         //!< Whether a mask for this hand is being reported
-			struct xrt_rect rect; //!< The mask itself in pixel coordinates
+			bool enabled;             //!< Whether a mask for this hand is being reported
+			struct xrt_rect_f32 rect; //!< The mask itself in pixel coordinates
 		} hands[2];
 	} views[XRT_TRACKING_MAX_SLAM_CAMS];
 };
