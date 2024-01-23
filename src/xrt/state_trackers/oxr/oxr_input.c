@@ -1667,6 +1667,7 @@ oxr_session_attach_action_sets(struct oxr_logger *log,
 	}
 
 #define POPULATE_PROFILE(X)                                                                                            \
+	sess->X = XR_NULL_PATH;                                                                                        \
 	if (profiles.X != NULL) {                                                                                      \
 		sess->X = profiles.X->path;                                                                            \
 		oxr_event_push_XrEventDataInteractionProfileChanged(log, sess);                                        \
@@ -1691,6 +1692,7 @@ oxr_session_update_action_bindings(struct oxr_logger *log, struct oxr_session *s
 	}
 
 #define POPULATE_PROFILE(X)                                                                                            \
+	sess->X = XR_NULL_PATH;                                                                                        \
 	if (profiles.X != NULL) {                                                                                      \
 		sess->X = profiles.X->path;                                                                            \
 		oxr_event_push_XrEventDataInteractionProfileChanged(log, sess);                                        \
