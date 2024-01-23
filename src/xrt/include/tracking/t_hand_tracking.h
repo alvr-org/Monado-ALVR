@@ -105,6 +105,15 @@ struct t_camera_extra_info
 };
 
 /*!
+ * Creation info for the creation of a hand tracker
+ */
+struct t_hand_tracking_create_info
+{
+	struct t_camera_extra_info cams_info;   //!< Extra camera info
+	struct xrt_hand_masks_sink *masks_sink; //!< Optional sink to stream hand bounding boxes to
+};
+
+/*!
  * Synchronously processes frames and returns two hands.
  */
 struct t_hand_tracking_sync

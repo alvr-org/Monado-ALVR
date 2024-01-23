@@ -16,6 +16,7 @@
 #include "tracking/t_tracking.h"
 #include "tracking/t_hand_tracking.h"
 #include "xrt/xrt_prober.h"
+#include "xrt/xrt_tracking.h"
 
 
 #ifdef __cplusplus
@@ -36,6 +37,7 @@ extern "C" {
  *
  * @param xfctx Frame context to attach the tracker to
  * @param calib Calibration struct for stereo camera
+ * @param create_info Additional creation options
  * @param out_sinks Sinks to stream camera data to
  * @param out_device Newly created hand tracker "device"
  * @return int 0 on success
@@ -43,7 +45,7 @@ extern "C" {
 int
 ht_device_create(struct xrt_frame_context *xfctx,
                  struct t_stereo_camera_calibration *calib,
-                 struct t_camera_extra_info extra_camera_info,
+                 struct t_hand_tracking_create_info create_info,
                  struct xrt_slam_sinks **out_sinks,
                  struct xrt_device **out_device);
 

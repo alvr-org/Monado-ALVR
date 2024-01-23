@@ -18,6 +18,7 @@
 
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_frame.h"
+#include "xrt/xrt_tracking.h"
 
 #include "math/m_api.h"
 #include "math/m_vec2.h"
@@ -253,6 +254,7 @@ public:
 
 	struct u_sink_debug debug_sink_ann = {};
 	struct u_sink_debug debug_sink_model = {};
+	struct xrt_hand_masks_sink *hand_masks_sink;
 
 	float multiply_px_coord_for_undistort;
 

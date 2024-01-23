@@ -11,11 +11,14 @@
 
 #include "hg_sync.hpp"
 #include "hg_image_math.inl"
+#include "tracking/t_hand_tracking.h"
 #include "util/u_box_iou.hpp"
 #include "util/u_hand_tracking.h"
 #include "math/m_vec2.h"
 #include "util/u_misc.h"
+#include "xrt/xrt_defines.h"
 #include "xrt/xrt_frame.h"
+#include "xrt/xrt_tracking.h"
 
 
 #include <numeric>
@@ -509,6 +512,8 @@ void
 predict_new_regions_of_interest(struct HandTracking *hgt)
 {
 
+	xrt_hand_masks_sample masks{}; // Zero initialization
+
 	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
 		// If we don't have the past two frames, this code doesn't do what we want.
 		// If we only have *one* frame, we just reuse the same bounding box and hope the hand
@@ -557,15 +562,32 @@ predict_new_regions_of_interest(struct HandTracking *hgt)
 		             num_outside);
 
 		for (int view_idx = 0; view_idx < 2; view_idx++) {
-			if (num_outside[view_idx] < hgt->tuneable_values.max_num_outside_view) {
-				hgt->views[view_idx].regions_of_interest_this_frame[hand_idx].provenance =
-				    ROIProvenance::POSE_PREDICTION;
-				hgt->views[view_idx].regions_of_interest_this_frame[hand_idx].found = true;
+			hand_region_of_interest &hroi = hgt->views[view_idx].regions_of_interest_this_frame[hand_idx];
+			auto &masks_view = masks.views[view_idx];
+			auto &masks_hand = masks_view.hands[hand_idx];
 
+			masks_view.enabled = true;
+
+			if (num_outside[view_idx] < hgt->tuneable_values.max_num_outside_view) {
+				hroi.provenance = ROIProvenance::POSE_PREDICTION;
+				hroi.found = true;
+
+				xrt_vec2 &center = hroi.center_px;
+				float &size = hroi.size_px;
+				masks_hand.rect.offset.w = int(center.x - size / 2);
+				masks_hand.rect.offset.h = int(center.y - size / 2);
+				masks_hand.rect.extent.w = int(size);
+				masks_hand.rect.extent.h = int(size);
+				masks_hand.enabled = true;
 			} else {
-				hgt->views[view_idx].regions_of_interest_this_frame[hand_idx].found = false;
+				hroi.found = false;
+				masks_hand.enabled = false;
 			}
 		}
+	}
+
+	if (hgt->hand_masks_sink != NULL) {
+		xrt_sink_push_hand_masks(hgt->hand_masks_sink, &masks);
 	}
 }
 
@@ -1070,7 +1092,7 @@ using namespace xrt::tracking::hand::mercury;
 
 extern "C" t_hand_tracking_sync *
 t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
-                                    struct t_camera_extra_info extra_camera_info,
+                                    struct t_hand_tracking_create_info create_info,
                                     const char *models_folder)
 {
 	XRT_TRACE_MARKER();
@@ -1095,6 +1117,9 @@ t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
 	hgt->views[0].hgt = hgt;
 	hgt->views[1].hgt = hgt; // :)
 
+	hgt->hand_masks_sink = create_info.masks_sink;
+
+	struct t_camera_extra_info &extra_camera_info = create_info.cams_info;
 	hgt->views[0].camera_info = extra_camera_info.views[0];
 	hgt->views[1].camera_info = extra_camera_info.views[1];
 

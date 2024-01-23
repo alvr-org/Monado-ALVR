@@ -252,10 +252,13 @@ rift_s_create_hand_tracker(struct rift_s_tracker *t,
 	extra_camera_info.views[0].camera_orientation = CAMERA_ORIENTATION_90;
 	extra_camera_info.views[1].camera_orientation = CAMERA_ORIENTATION_90;
 
+	// TODO@mateosss: Use proper masks_sink in all drivers and not null
+	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = NULL};
+
 	int create_status = ht_device_create(xfctx,           //
 	                                     t->stereo_calib, //
-	                                     extra_camera_info,
-	                                     &sinks, //
+	                                     create_info,     //
+	                                     &sinks,          //
 	                                     &device);
 	if (create_status != 0) {
 		return create_status;

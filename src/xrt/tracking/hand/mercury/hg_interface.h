@@ -23,7 +23,7 @@ extern "C" {
  */
 struct t_hand_tracking_sync *
 t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
-                                    struct t_camera_extra_info extra_camera_info,
+                                    struct t_hand_tracking_create_info create_info,
                                     const char *models_folder);
 
 #ifdef __cplusplus

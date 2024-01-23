@@ -233,11 +233,13 @@ valve_index_hand_track(struct lighthouse_system *lhs,
 	info.views[0].boundary.circle.normalized_radius = 0.55;
 	info.views[1].boundary.circle.normalized_radius = 0.55;
 
+	struct t_hand_tracking_create_info create_info = {.cams_info = info, .masks_sink = NULL};
+
 	struct xrt_device *ht_device = NULL;
 	int create_status = ht_device_create( //
 	    xfctx,                            //
 	    stereo_calib,                     //
-	    info,                             //
+	    create_info,                      //
 	    &sinks,                           //
 	    &ht_device);
 	if (create_status != 0) {

@@ -234,7 +234,7 @@ ht_device_create_common(struct t_stereo_camera_calibration *calib,
 int
 ht_device_create(struct xrt_frame_context *xfctx,
                  struct t_stereo_camera_calibration *calib,
-                 struct t_camera_extra_info extra_camera_info,
+                 struct t_hand_tracking_create_info create_info,
                  struct xrt_slam_sinks **out_sinks,
                  struct xrt_device **out_device)
 {
@@ -254,7 +254,7 @@ ht_device_create(struct xrt_frame_context *xfctx,
 		return -1;
 	}
 
-	sync = t_hand_tracking_sync_mercury_create(calib, extra_camera_info, path);
+	sync = t_hand_tracking_sync_mercury_create(calib, create_info, path);
 
 	struct ht_device *htd = ht_device_create_common(calib, false, xfctx, sync);
 

@@ -77,10 +77,12 @@ gui_scene_hand_tracking_demo(struct gui_program *p)
 	extra_camera_info.views[1].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 	extra_camera_info.views[1].camera_orientation = CAMERA_ORIENTATION_0;
 
+	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = NULL};
+
 	int create_status = ht_device_create( //
 	    &usysd->xfctx,                    //
 	    calib,                            //
-	    extra_camera_info,                //
+	    create_info,                      //
 	    &hand_sinks,                      //
 	    &ht_dev);                         //
 	t_stereo_camera_calibration_reference(&calib, NULL);

@@ -1651,6 +1651,7 @@ wmr_hmd_guess_camera_orientation(struct wmr_hmd *wh)
 static int
 wmr_hmd_hand_track(struct wmr_hmd *wh,
                    struct t_stereo_camera_calibration *stereo_calib,
+                   struct xrt_hand_masks_sink *masks_sink,
                    struct xrt_slam_sinks **out_sinks,
                    struct xrt_device **out_device)
 {
@@ -1674,12 +1675,15 @@ wmr_hmd_hand_track(struct wmr_hmd *wh,
 
 	//!@todo Turning it off is okay for now, but we should plug metric_radius (or whatever it's called) in, at some
 	//! point.
+	// TODO@mateosss: do it now
 	extra_camera_info.views[0].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 	extra_camera_info.views[1].boundary_type = HT_IMAGE_BOUNDARY_NONE;
 
+	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = masks_sink};
+
 	int create_status = ht_device_create(&wh->tracking.xfctx, //
 	                                     stereo_calib,        //
-	                                     extra_camera_info,   //
+	                                     create_info,         //
 	                                     &sinks,              //
 	                                     &device);
 	if (create_status != 0) {
@@ -1819,8 +1823,9 @@ wmr_hmd_setup_trackers(struct wmr_hmd *wh, struct xrt_slam_sinks *out_sinks, str
 	// Initialize hand tracker
 	struct xrt_slam_sinks *hand_sinks = NULL;
 	struct xrt_device *hand_device = NULL;
+	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
 	if (wh->tracking.hand_enabled) {
-		int hand_status = wmr_hmd_hand_track(wh, stereo_calib, &hand_sinks, &hand_device);
+		int hand_status = wmr_hmd_hand_track(wh, stereo_calib, masks_sink, &hand_sinks, &hand_device);
 		if (hand_status != 0 || hand_sinks == NULL || hand_device == NULL) {
 			WMR_WARN(wh, "Unable to setup the hand tracker");
 			return false;
