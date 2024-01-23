@@ -264,6 +264,8 @@ struct TrackerSlam
 	struct xrt_frame_sink cam_sinks[XRT_TRACKING_MAX_SLAM_CAMS]; //!< Sends camera frames to the SLAM system
 	struct xrt_imu_sink imu_sink = {};                           //!< Sends imu samples to the SLAM system
 	struct xrt_pose_sink gt_sink = {};                           //!< Register groundtruth trajectory for stats
+	struct xrt_hand_masks_sink hand_masks_sink = {};             //!< Register latest masks to ignore
+
 	bool submit;        //!< Whether to submit data pushed to sinks to the SLAM tracker
 	uint32_t cam_count; //!< Number of cameras used for tracking
 
@@ -275,8 +277,10 @@ struct TrackerSlam
 	struct openvr_tracker *ovr_tracker;    //!< OpenVR lighthouse tracker
 
 	// Used mainly for checking that the timestamps come in order
-	timepoint_ns last_imu_ts;         //!< Last received IMU sample timestamp
-	vector<timepoint_ns> last_cam_ts; //!< Last received image timestamp per cam
+	timepoint_ns last_imu_ts;                     //!< Last received IMU sample timestamp
+	vector<timepoint_ns> last_cam_ts;             //!< Last received image timestamp per cam
+	struct xrt_hand_masks_sample last_hand_masks; //!< Last received hand masks info
+	Mutex last_hand_masks_mutex;                  //!< Mutex for @ref last_hand_masks
 
 	// Prediction
 
@@ -1273,6 +1277,17 @@ t_slam_gt_sink_push(struct xrt_pose_sink *sink, xrt_pose_sample *sample)
 	xrt_sink_push_pose(t.euroc_recorder->gt, sample);
 }
 
+//! Receive and register masks to use in the next image
+extern "C" void
+t_slam_hand_mask_sink_push(struct xrt_hand_masks_sink *sink, struct xrt_hand_masks_sample *hand_masks)
+{
+	XRT_TRACE_MARKER();
+
+	auto &t = *container_of(sink, TrackerSlam, hand_masks_sink);
+	unique_lock lock(t.last_hand_masks_mutex);
+	t.last_hand_masks = *hand_masks;
+}
+
 //! Receive and send IMU samples to the external SLAM system
 extern "C" void
 t_slam_receive_imu(struct xrt_imu_sink *sink, struct xrt_imu_sample *s)
@@ -1365,7 +1380,21 @@ receive_frame(TrackerSlam &t, struct xrt_frame *frame, uint32_t cam_index)
 	default: SLAM_ERROR("Unknown image format"); return;
 	}
 
-	// TODO masks
+	{
+		unique_lock lock(t.last_hand_masks_mutex);
+		for (auto &view : t.last_hand_masks.views) {
+			if (!view.enabled) {
+				continue;
+			}
+
+			for (auto &hand : view.hands) {
+				if (!hand.enabled) {
+					continue;
+				}
+				// TODO@mateosss: add_mask(hand.rect);
+			}
+		};
+	}
 
 	{
 		XRT_TRACE_IDENT(slam_push);
@@ -1551,6 +1580,9 @@ t_slam_create(struct xrt_frame_context *xfctx,
 	t.gt_sink.push_pose = t_slam_gt_sink_push;
 	t.sinks.gt = &t.gt_sink;
 
+	t.hand_masks_sink.push_hand_masks = t_slam_hand_mask_sink_push;
+	t.sinks.hand_masks = &t.hand_masks_sink;
+
 	t.submit = config->submit_from_start;
 	t.cam_count = config->cam_count;
 
@@ -1563,6 +1595,7 @@ t_slam_create(struct xrt_frame_context *xfctx,
 
 	t.last_imu_ts = INT64_MIN;
 	t.last_cam_ts = vector<timepoint_ns>(t.cam_count, INT64_MIN);
+	t.last_hand_masks = xrt_hand_masks_sample{};
 
 	t.pred_type = config->prediction;
 

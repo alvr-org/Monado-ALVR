@@ -140,6 +140,22 @@ struct xrt_pose_sample
 };
 
 /*!
+ * Masks (bounding boxes) of different hands from current views
+ */
+struct xrt_hand_masks_sample
+{
+	struct xrt_hand_masks_sample_camera
+	{
+		bool enabled; //!< Whether any hand mask for this camera is being reported
+		struct xrt_hand_masks_sample_hand
+		{
+			bool enabled;         //!< Whether a mask for this hand is being reported
+			struct xrt_rect rect; //!< The mask itself in pixel coordinates
+		} hands[2];
+	} views[XRT_TRACKING_MAX_SLAM_CAMS];
+};
+
+/*!
  * @interface xrt_imu_sink
  *
  * An object to send IMU samples to.
@@ -168,6 +184,17 @@ struct xrt_pose_sink
 };
 
 /*!
+ * @interface xrt_hand_masks_sink
+ *
+ * An object to push @ref xrt_hand_masks_sample to.
+ */
+struct xrt_hand_masks_sink
+{
+	void (*push_hand_masks)(struct xrt_hand_masks_sink *, struct xrt_hand_masks_sample *hand_masks);
+};
+
+
+/*!
  * Container of pointers to sinks that could be used for a SLAM system. Sinks
  * are considered disabled if they are null.
  */
@@ -177,6 +204,7 @@ struct xrt_slam_sinks
 	struct xrt_frame_sink *cams[XRT_TRACKING_MAX_SLAM_CAMS];
 	struct xrt_imu_sink *imu;
 	struct xrt_pose_sink *gt; //!< Can receive ground truth poses if available
+	struct xrt_hand_masks_sink *hand_masks;
 };
 
 /*!
@@ -291,6 +319,13 @@ static inline void
 xrt_sink_push_pose(struct xrt_pose_sink *sink, struct xrt_pose_sample *sample)
 {
 	sink->push_pose(sink, sample);
+}
+
+//! @public @memberof xrt_hand_masks_sink
+static inline void
+xrt_sink_push_hand_masks(struct xrt_hand_masks_sink *sink, struct xrt_hand_masks_sample *hand_masks)
+{
+	sink->push_hand_masks(sink, hand_masks);
 }
 
 //! @public @memberof xrt_tracked_psmv
