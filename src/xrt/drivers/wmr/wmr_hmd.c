@@ -1415,6 +1415,48 @@ wmr_hmd_get_cam_calib(struct wmr_hmd *wh, int cam_index)
 	return res;
 }
 
+XRT_MAYBE_UNUSED static struct xrt_vec2
+wmr_hmd_camera_project(struct wmr_hmd *wh, struct xrt_vec3 p3d)
+{
+	float w = wh->config.cams[0].roi.extent.w;
+	float h = wh->config.cams[0].roi.extent.h;
+	float fx = wh->config.cams[0].distortion6KT.params.fx * w;
+	float fy = wh->config.cams[0].distortion6KT.params.fy * h;
+	float cx = wh->config.cams[0].distortion6KT.params.cx * w;
+	float cy = wh->config.cams[0].distortion6KT.params.cy * h;
+	float k1 = wh->config.cams[0].distortion6KT.params.k[0];
+	float k2 = wh->config.cams[0].distortion6KT.params.k[1];
+	float p1 = wh->config.cams[0].distortion6KT.params.p1;
+	float p2 = wh->config.cams[0].distortion6KT.params.p2;
+	float k3 = wh->config.cams[0].distortion6KT.params.k[2];
+	float k4 = wh->config.cams[0].distortion6KT.params.k[3];
+	float k5 = wh->config.cams[0].distortion6KT.params.k[4];
+	float k6 = wh->config.cams[0].distortion6KT.params.k[5];
+
+	float x = p3d.x;
+	float y = p3d.y;
+	float z = p3d.z;
+
+	float xp = x / z;
+	float yp = y / z;
+	float rp2 = xp * xp + yp * yp;
+	float cdist = (1 + rp2 * (k1 + rp2 * (k2 + rp2 * k3))) / (1 + rp2 * (k4 + rp2 * (k5 + rp2 * k6)));
+	// If we were using OpenCV's camera model we would do
+	// float deltaX = 2 * p1 * xp * yp + p2 * (rp2 + 2 * xp * xp);
+	// float deltaY = 2 * p2 * xp * yp + p1 * (rp2 + 2 * yp * yp);
+	// But instead we use Azure Kinect model (see comment in wmr_hmd_create_stereo_camera_calib)
+	float deltaX = p1 * xp * yp + p2 * (rp2 + 2 * xp * xp);
+	float deltaY = p2 * xp * yp + p1 * (rp2 + 2 * yp * yp);
+	float xpp = xp * cdist + deltaX;
+	float ypp = yp * cdist + deltaY;
+	float u = fx * xpp + cx;
+	float v = fy * ypp + cy;
+
+	struct xrt_vec2 p2d = {u, v};
+	return p2d;
+}
+
+
 /*!
  * Creates an OpenCV-compatible @ref t_stereo_camera_calibration pointer from
  * the WMR config.
@@ -1670,14 +1712,21 @@ wmr_hmd_hand_track(struct wmr_hmd *wh,
 	    wh->hmd_desc->hmd_type == WMR_HEADSET_REVERB_G2) {
 		ori_guess = wmr_hmd_guess_camera_orientation(wh);
 	}
-	extra_camera_info.views[0].camera_orientation = ori_guess;
-	extra_camera_info.views[1].camera_orientation = ori_guess;
 
-	//!@todo Turning it off is okay for now, but we should plug metric_radius (or whatever it's called) in, at some
-	//! point.
-	// TODO@mateosss: do it now
-	extra_camera_info.views[0].boundary_type = HT_IMAGE_BOUNDARY_NONE;
-	extra_camera_info.views[1].boundary_type = HT_IMAGE_BOUNDARY_NONE;
+	for (int i = 0; i < 2; i++) {
+		extra_camera_info.views[i].camera_orientation = ori_guess;
+		extra_camera_info.views[i].boundary_type = HT_IMAGE_BOUNDARY_CIRCLE;
+		float w = wh->config.cams[i].roi.extent.w;
+		float h = wh->config.cams[i].roi.extent.h;
+		float cx = wh->config.cams[i].distortion6KT.params.cx * w;
+		float cy = wh->config.cams[i].distortion6KT.params.cy * h;
+		float rpmax = wh->config.cams[i].distortion6KT.params.metric_radius;
+		struct xrt_vec3 p3d = {rpmax, 0, 1}; // Right-most border of the metric_radius circle in the Z=1 plane
+		struct xrt_vec2 p2d = wmr_hmd_camera_project(wh, p3d);
+		float radius = (p2d.x - cx) / w;
+		extra_camera_info.views[i].boundary.circle.normalized_center = (struct xrt_vec2){cx / w, cy / h};
+		extra_camera_info.views[i].boundary.circle.normalized_radius = radius;
+	}
 
 	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = masks_sink};
 
