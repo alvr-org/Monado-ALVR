@@ -68,10 +68,10 @@ simulated_hmd(struct xrt_device *xdev)
 
 DEBUG_GET_ONCE_LOG_OPTION(simulated_log, "SIMULATED_LOG", U_LOGGING_WARN)
 
-#define DH_TRACE(p, ...) U_LOG_XDEV_IFL_T(&dh->base, dh->log_level, __VA_ARGS__)
-#define DH_DEBUG(p, ...) U_LOG_XDEV_IFL_D(&dh->base, dh->log_level, __VA_ARGS__)
-#define DH_INFO(p, ...) U_LOG_XDEV_IFL_I(&dh->base, dh->log_level, __VA_ARGS__)
-#define DH_ERROR(p, ...) U_LOG_XDEV_IFL_E(&dh->base, dh->log_level, __VA_ARGS__)
+#define HMD_TRACE(hmd, ...) U_LOG_XDEV_IFL_T(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define HMD_DEBUG(hmd, ...) U_LOG_XDEV_IFL_D(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define HMD_INFO(hmd, ...) U_LOG_XDEV_IFL_I(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define HMD_ERROR(hmd, ...) U_LOG_XDEV_IFL_E(&hmd->base, hmd->log_level, __VA_ARGS__)
 
 static void
 simulated_hmd_destroy(struct xrt_device *xdev)
@@ -93,7 +93,7 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
 	struct simulated_hmd *dh = simulated_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		DH_ERROR(dh, "unknown input name");
+		HMD_ERROR(dh, "unknown input name");
 		return;
 	}
 
@@ -166,7 +166,7 @@ simulated_ref_space_usage(struct xrt_device *xdev,
 		u_pp(dg, ", not controlled by us.");
 	}
 
-	DH_INFO(dh, "%s", sink.buffer);
+	HMD_INFO(dh, "%s", sink.buffer);
 
 	return XRT_SUCCESS;
 }
@@ -224,7 +224,7 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	info.fov[1] = 85.0f * ((float)(M_PI) / 180.0f);
 
 	if (!u_device_setup_split_side_by_side(&dh->base, &info)) {
-		DH_ERROR(dh, "Failed to setup basic device info");
+		HMD_ERROR(dh, "Failed to setup basic device info");
 		simulated_hmd_destroy(&dh->base);
 		return NULL;
 	}
