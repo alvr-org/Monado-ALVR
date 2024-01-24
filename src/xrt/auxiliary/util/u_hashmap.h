@@ -4,6 +4,7 @@
  * @file
  * @brief  Hashmap for integer values header.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup aux_util
  */
 
@@ -25,6 +26,7 @@ extern "C" {
 struct u_hashmap_int;
 
 typedef void (*u_hashmap_int_callback)(void *item, void *priv);
+typedef void (*u_hashmap_int_foreach_callback)(uint64_t key, const void *value, void *priv_ctx);
 
 int
 u_hashmap_int_create(struct u_hashmap_int **out_hashmap);
@@ -46,6 +48,16 @@ u_hashmap_int_erase(struct u_hashmap_int *hmi, uint64_t key);
  */
 bool
 u_hashmap_int_empty(const struct u_hashmap_int *hmi);
+
+/*!
+ * iterators through each [key,item] pairs of hash map
+ * @param  hmi       hash map to iterate
+ * @param  cb        callback invoked for each [key,item] pair + a user context.
+ * @param  priv_ctx  user provided context, passed into `cb`
+ * @ingroup aux_util
+ */
+void
+u_hashmap_int_for_each(const struct u_hashmap_int *hmi, u_hashmap_int_foreach_callback cb, void *priv_ctx);
 
 /*!
  * First clear the hashmap and then call the given callback with each item that

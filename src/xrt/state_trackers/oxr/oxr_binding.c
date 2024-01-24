@@ -538,6 +538,10 @@ oxr_clone_profile(const struct oxr_interaction_profile *src_profile)
 		}
 	}
 
+	const struct oxr_dpad_state empty_dpad_state = {.uhi = NULL};
+	dst_profile->dpad_state = empty_dpad_state;
+	oxr_dpad_state_clone(&dst_profile->dpad_state, &src_profile->dpad_state);
+
 	return dst_profile;
 }
 

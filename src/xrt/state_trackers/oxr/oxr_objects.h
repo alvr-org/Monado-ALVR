@@ -676,6 +676,15 @@ oxr_dpad_state_get_or_add(struct oxr_dpad_state *state, uint64_t key);
 void
 oxr_dpad_state_deinit(struct oxr_dpad_state *state);
 
+/*!
+ * Clones all oxr_dpad_state
+ * @param dst_dpad_state destination of cloning
+ * @param src_dpad_state source of cloning
+ * @public @memberof oxr_dpad_state_clone
+ */
+bool
+oxr_dpad_state_clone(struct oxr_dpad_state *dst_dpad_state, const struct oxr_dpad_state *src_dpad_state);
+
 
 /*!
  * @}
