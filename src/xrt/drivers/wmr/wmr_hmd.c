@@ -1441,12 +1441,13 @@ wmr_hmd_camera_project(struct wmr_hmd *wh, struct xrt_vec3 p3d)
 	float yp = y / z;
 	float rp2 = xp * xp + yp * yp;
 	float cdist = (1 + rp2 * (k1 + rp2 * (k2 + rp2 * k3))) / (1 + rp2 * (k4 + rp2 * (k5 + rp2 * k6)));
-	// If we were using OpenCV's camera model we would do
-	// float deltaX = 2 * p1 * xp * yp + p2 * (rp2 + 2 * xp * xp);
-	// float deltaY = 2 * p2 * xp * yp + p1 * (rp2 + 2 * yp * yp);
-	// But instead we use Azure Kinect model (see comment in wmr_hmd_create_stereo_camera_calib)
+#if 0 // OpenCV model
+	float deltaX = 2 * p1 * xp * yp + p2 * (rp2 + 2 * xp * xp);
+	float deltaY = 2 * p2 * xp * yp + p1 * (rp2 + 2 * yp * yp);
+#else // Azure Kinect model (see comment in wmr_hmd_create_stereo_camera_calib)
 	float deltaX = p1 * xp * yp + p2 * (rp2 + 2 * xp * xp);
 	float deltaY = p2 * xp * yp + p1 * (rp2 + 2 * yp * yp);
+#endif
 	float xpp = xp * cdist + deltaX;
 	float ypp = yp * cdist + deltaY;
 	float u = fx * xpp + cx;
