@@ -529,7 +529,7 @@ survive_device_get_view_poses(struct xrt_device *xdev,
 
 	struct xrt_vec3 eye_relation = {0};
 
-	if (survive->hmd.use_default_ipd) {
+	if (survive->hmd.use_default_ipd || survive->hmd.ipd == 0.f) {
 		eye_relation = *default_eye_relation;
 	} else {
 		eye_relation.x = survive->hmd.ipd;
