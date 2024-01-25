@@ -167,7 +167,7 @@ os_mutex_recursive_destroy(struct os_mutex *om)
 	assert(om->initialized);
 	assert(om->recursive);
 
-	os_mutex_destroy(om);
+	pthread_mutex_destroy(&om->mutex);
 
 #ifndef NDEBUG
 	om->initialized = false;
