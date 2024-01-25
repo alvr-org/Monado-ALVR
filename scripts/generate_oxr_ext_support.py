@@ -68,6 +68,7 @@ EXTENSIONS = (
     ['XR_FB_composition_layer_alpha_blend', 'XRT_FEATURE_OPENXR_LAYER_FB_ALPHA_BLEND'],
     ['XR_FB_composition_layer_image_layout', 'XRT_FEATURE_OPENXR_LAYER_FB_IMAGE_LAYOUT'],
     ['XR_FB_composition_layer_settings', 'XRT_FEATURE_OPENXR_LAYER_FB_SETTINGS'],
+    ['XR_FB_composition_layer_depth_test', 'XRT_FEATURE_OPENXR_LAYER_FB_DEPTH_TEST'],
     ['XR_FB_display_refresh_rate', 'XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE'],
     ['XR_ML_ml2_controller_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_ML2'],
     ['XR_MND_headless', 'XRT_FEATURE_OPENXR_HEADLESS'],

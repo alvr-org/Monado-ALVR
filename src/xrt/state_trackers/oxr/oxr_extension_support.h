@@ -418,6 +418,15 @@
 #define OXR_EXTENSION_SUPPORT_FB_composition_layer_settings(_)
 #endif
 
+/*
+* XR_FB_composition_layer_depth_test
+*/
+#if defined(XR_FB_composition_layer_depth_test) && defined(XRT_FEATURE_OPENXR_LAYER_FB_DEPTH_TEST)
+#define OXR_HAVE_FB_composition_layer_depth_test
+#define OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_) _(FB_composition_layer_depth_test, FB_COMPOSITION_LAYER_DEPTH_TEST)
+#else
+#define OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_)
+#endif
 
 /*
  * XR_FB_display_refresh_rate
@@ -636,6 +645,7 @@
     OXR_EXTENSION_SUPPORT_FB_composition_layer_alpha_blend(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_settings(_) \
+    OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_)  \
     OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) \
     OXR_EXTENSION_SUPPORT_ML_ml2_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_MND_headless(_) \
