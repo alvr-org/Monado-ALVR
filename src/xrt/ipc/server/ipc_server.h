@@ -116,6 +116,10 @@ struct ipc_client_state
 
 	//! Number of spaces.
 	uint32_t space_count;
+	//! Index of localspace in ipc client.
+	uint32_t local_space_index;
+	//! Index of localspace in space overseer.
+	uint32_t local_space_overseer_index;
 
 	//! Ptrs to the spaces.
 	struct xrt_space *xspcs[IPC_MAX_CLIENT_SPACES];

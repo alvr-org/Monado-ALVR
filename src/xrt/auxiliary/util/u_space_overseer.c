@@ -802,6 +802,23 @@ err_unlock:
 	return XRT_ERROR_RECENTERING_NOT_SUPPORTED;
 }
 
+static xrt_result_t
+create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
+{
+	assert(xso->semantic.root != NULL);
+	struct xrt_space *xs = NULL;
+	struct xrt_space_relation xsr;
+	int64_t timestamp_ns = os_monotonic_get_ns();
+	xrt_device_get_tracked_pose(xso->head, XRT_INPUT_GENERIC_HEAD_POSE, timestamp_ns, &xsr);
+	xsr.pose.orientation.x = 0;
+	xsr.pose.orientation.z = 0;
+	math_quat_normalize(&xsr.pose.orientation);
+	create_offset_space(xso, xso->semantic.root, &xsr.pose, &xs);
+	*out_space = xs;
+	U_LOG_D("u_space_overseer create_local_space!");
+	return XRT_SUCCESS;
+}
+
 static void
 destroy(struct xrt_space_overseer *xso)
 {
@@ -817,6 +834,11 @@ destroy(struct xrt_space_overseer *xso)
 	// Each device has a reference to its space, make sure to unreference before creating.
 	u_hashmap_int_clear_and_call_for_each(uso->xdev_map, hashmap_unreference_space_items, uso);
 	u_hashmap_int_destroy(&uso->xdev_map);
+
+	for (int id = 0; id < XRT_MAX_CLIENT_SPACES; id++) {
+		struct xrt_space *xslocal = xso->localspace[id];
+		xrt_space_reference(&xslocal, NULL);
+	}
 
 	pthread_rwlock_destroy(&uso->lock);
 
@@ -834,6 +856,7 @@ struct u_space_overseer *
 u_space_overseer_create(struct xrt_session_event_sink *broadcast)
 {
 	struct u_space_overseer *uso = U_TYPED_CALLOC(struct u_space_overseer);
+	uso->base.create_local_space = create_local_space;
 	uso->base.create_offset_space = create_offset_space;
 	uso->base.create_pose_space = create_pose_space;
 	uso->base.locate_space = locate_space;
@@ -918,6 +941,8 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	if (root_is_unbounded) {
 		xrt_space_reference(&uso->base.semantic.unbounded, uso->base.semantic.root);
 	}
+
+	uso->base.head = head;
 
 	// Set local to the local offset.
 	u_space_overseer_create_offset_space(uso, uso->base.semantic.root, local_offset, &uso->base.semantic.local);

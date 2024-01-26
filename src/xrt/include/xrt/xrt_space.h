@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-
+#define XRT_MAX_CLIENT_SPACES 128
 struct xrt_device;
 
 /*!
@@ -106,6 +106,10 @@ struct xrt_space_overseer
 		 * Semantic spaces to be mapped to OpenXR spaces.
 		 */
 	} semantic;
+
+	//! Ptrs to the localspace
+	struct xrt_space *localspace[XRT_MAX_CLIENT_SPACES];
+	struct xrt_device *head;
 
 	/*!
 	 * Create a space with a fixed offset to the parent space.
@@ -235,6 +239,14 @@ struct xrt_space_overseer
 	 * @param[in] xso The space overseer.
 	 */
 	xrt_result_t (*recenter_local_spaces)(struct xrt_space_overseer *xso);
+
+	/*!
+	 * Create a localspace.
+	 *
+	 * @param[in] xso        Owning space overseer.
+	 * @param[out] out_space The newly created localspace.
+	 */
+	xrt_result_t (*create_local_space)(struct xrt_space_overseer *xso, struct xrt_space **out_space);
 
 	/*!
 	 * Destroy function.
@@ -371,6 +383,19 @@ static inline xrt_result_t
 xrt_space_overseer_recenter_local_spaces(struct xrt_space_overseer *xso)
 {
 	return xso->recenter_local_spaces(xso);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::create_localspace_space
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
+{
+	return xso->create_local_space(xso, out_space);
 }
 
 /*!
