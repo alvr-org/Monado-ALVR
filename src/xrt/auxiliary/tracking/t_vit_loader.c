@@ -19,7 +19,7 @@
 #include <dlfcn.h>
 #endif
 
-static inline void
+static inline bool
 vit_get_proc(void *handle, const char *name, void *proc_ptr)
 {
 #if defined(XRT_OS_LINUX) || defined(XRT_OS_ANDROID)
@@ -27,10 +27,11 @@ vit_get_proc(void *handle, const char *name, void *proc_ptr)
 	char *err = dlerror();
 	if (err != NULL) {
 		U_LOG_E("Failed to load symbol %s", err);
-		return;
+		return false;
 	}
 
 	*(void **)proc_ptr = proc;
+	return true;
 #else
 #error "Unknown platform"
 #endif
@@ -51,7 +52,9 @@ t_vit_bundle_load(struct t_vit_bundle *vit, const char *path)
 
 #define GET_PROC(SYM)                                                                                                  \
 	do {                                                                                                           \
-		vit_get_proc(vit->handle, "vit_" #SYM, &vit->SYM);                                                     \
+		if (!vit_get_proc(vit->handle, "vit_" #SYM, &vit->SYM)) {                                              \
+			return false;                                                                                  \
+		}                                                                                                      \
 	} while (0)
 
 	// Get the version first.
