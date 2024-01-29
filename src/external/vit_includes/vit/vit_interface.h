@@ -24,7 +24,7 @@ extern "C" {
 #include <stdint.h>
 
 //! Compatibility with these values should be checked against @ref vit_api_get_version.
-#define VIT_HEADER_VERSION_MAJOR 1 //!< API Breakages
+#define VIT_HEADER_VERSION_MAJOR 2 //!< API Breakages
 #define VIT_HEADER_VERSION_MINOR 0 //!< Backwards compatible API changes
 #define VIT_HEADER_VERSION_PATCH 1 //!< Backw. comp. .h-implemented changes
 
@@ -57,12 +57,12 @@ typedef enum vit_result {
 	VIT_ERROR_ALLOCATION_FAILURE = -3,
 
 	/*!
-	 * The operation requires a capability that is not supported.
+	 * The operation requires an extension that is not supported.
 	 */
 	VIT_ERROR_NOT_SUPPORTED = -4,
 
 	/*!
-	 * The operation requires a capability that is not enabled.
+	 * The operation requires an extension that is not enabled.
 	 */
 	VIT_ERROR_NOT_ENABLED = -5,
 } vit_result_t;
@@ -96,39 +96,45 @@ typedef enum vit_camera_distortion {
 } vit_camera_distortion_t;
 
 /*!
- * Capabilities of the tracker.
+ * Optional functionality a tracker can provide.
  */
-typedef enum vit_tracker_capability {
-	//! Does the tracker support per pose (frame) timing data.
-	VIT_TRACKER_CAPABILITY_CAMERA_CALIBRATION = 1 << 0,
-	//! Does the tracker support per pose (frame) and per camera features.
-	VIT_TRACKER_CAPABILITY_IMU_CALIBRATION = 1 << 1,
-} vit_tracker_capability_t;
+typedef enum vit_tracker_extension {
+	//! Allows to specify camera calibration data programatically
+	VIT_TRACKER_EXTENSION_ADD_CAMERA_CALIBRATION,
+	//! Allows to specify IMU calibration data programatically
+	VIT_TRACKER_EXTENSION_ADD_IMU_CALIBRATION,
+	//! Optionally provide timing information with the returned poses
+	VIT_TRACKER_EXTENSION_POSE_TIMING,
+	//! Optionally provide feature count information with the returned poses
+	VIT_TRACKER_EXTENSION_POSE_FEATURES,
+	//! Number of extensions
+	VIT_TRACKER_EXTENSION_COUNT,
+} vit_tracker_extension_t;
 
 /*!
- * Capabilities of the poses that this tracker produces.
+ * Set of extensions. Field order matches enumerators in @ref vit_tracker_extension.
  */
-typedef enum vit_tracker_pose_capability {
-	//! Does the tracker support per pose (frame) timing data.
-	VIT_TRACKER_POSE_CAPABILITY_TIMING = 1 << 0,
-	//! Does the tracker support per pose (frame) and per camera features.
-	VIT_TRACKER_POSE_CAPABILITY_FEATURES = 1 << 1,
-} vit_tracker_pose_capability_t;
+typedef struct vit_tracker_extension_set {
+	bool has_add_camera_calibration;
+	bool has_add_imu_calibration;
+	bool has_pose_timing;
+	bool has_pose_features;
+} vit_tracker_extension_set_t;
 
 /*!
- * @brief Visual-Inertial Tracking interface, opaque type.
+ * Visual-Inertial Tracking interface, opaque type.
  */
 struct vit_tracker;
 typedef struct vit_tracker vit_tracker_t;
 
 /*!
- * @brief Pose interface, opaque type.
+ * Pose interface, opaque type.
  */
 struct vit_pose;
 typedef struct vit_pose vit_pose_t;
 
 /*!
- * @brief Names of the timestamps returned by `vit_pose_get_timings`
+ * Names of the timestamps returned by `vit_pose_get_timings`
  */
 typedef struct vit_tracker_timing_titles {
 	uint32_t count;		 //! Number of titles
@@ -136,7 +142,7 @@ typedef struct vit_tracker_timing_titles {
 } vit_tracker_timing_titles;
 
 /*!
- * @brief Parameters for creating the system pipeline.
+ * Parameters for creating the system pipeline.
  */
 typedef struct vit_config {
 	//! Path to a implementation-specific config file. If null, use defaults.
@@ -153,7 +159,7 @@ typedef struct vit_config {
 } vit_config_t;
 
 /*!
- * @brief IMU sample type feed into VIT tracker
+ * IMU sample type feed into VIT tracker
  */
 typedef struct vit_imu_sample {
 	//! In nanoseconds
@@ -175,7 +181,7 @@ typedef struct vit_mask {
 } vit_mask_t;
 
 /*!
- * @brief Image sample type feed into VIT tracker
+ * Image sample type feed into VIT tracker
  *
  * Can easily be converted into an OpenCV Matrix for processing.
  */
@@ -302,12 +308,12 @@ typedef vit_result_t (*PFN_vit_tracker_create)(const vit_config_t *config, vit_t
 typedef void (*PFN_vit_tracker_destroy)(vit_tracker_t *tracker);
 typedef vit_result_t (*PFN_vit_tracker_has_image_format)(const vit_tracker_t *tracker, vit_image_format_t image_format,
 														 bool *out_supported);
-typedef vit_result_t (*PFN_vit_tracker_get_capabilities)(const vit_tracker_t *tracker,
-														 vit_tracker_capability_t *out_caps);
-typedef vit_result_t (*PFN_vit_tracker_get_pose_capabilities)(const vit_tracker_t *tracker,
-															  vit_tracker_pose_capability_t *out_caps);
-typedef vit_result_t (*PFN_vit_tracker_set_pose_capabilities)(vit_tracker_t *tracker,
-															  vit_tracker_pose_capability_t caps, bool value);
+typedef vit_result_t (*PFN_vit_tracker_get_supported_extensions)(const vit_tracker_t *tracker,
+																 vit_tracker_extension_set_t *out_exts);
+typedef vit_result_t (*PFN_vit_tracker_get_enabled_extensions)(const vit_tracker_t *tracker,
+															   vit_tracker_extension_set_t *out_exts);
+typedef vit_result_t (*PFN_vit_tracker_enable_extension)(vit_tracker_t *tracker, vit_tracker_extension_t ext,
+														 bool enable);
 typedef vit_result_t (*PFN_vit_tracker_start)(vit_tracker_t *tracker);
 typedef vit_result_t (*PFN_vit_tracker_stop)(vit_tracker_t *tracker);
 typedef vit_result_t (*PFN_vit_tracker_reset)(vit_tracker_t *tracker);
@@ -336,74 +342,73 @@ typedef vit_result_t (*PFN_vit_pose_get_features)(const vit_pose_t *pose, uint32
 #ifdef VIT_INTERFACE_IMPLEMENTATION
 
 /*!
- * @brief Returns the API version implemented by the VIT system.
+ * Returns the API version implemented by the VIT system.
  */
 vit_result_t vit_api_get_version(uint32_t *out_major, uint32_t *out_minor, uint32_t *out_patch);
 
 /*!
- * @brief Creates a new VIT tracker. The caller is responsible of destroying it when done.
+ * Creates a new VIT tracker. The caller is responsible of destroying it when done.
  */
 vit_result_t vit_tracker_create(const vit_config_t *config, vit_tracker_t **out_tracker);
 
 /*!
- * @brief Destroys the VIT tracker and free all resources allocated.
+ * Destroys the VIT tracker and free all resources allocated.
  */
 void vit_tracker_destroy(vit_tracker_t *tracker);
 
 /*!
- * @brief Verifies if the tracker supports a given `vit_image_format_t`.
+ * Verifies if the tracker supports a given `vit_image_format_t`.
  */
 vit_result_t vit_tracker_has_image_format(const vit_tracker_t *tracker, vit_image_format_t image_format,
 										  bool *out_supported);
 
 /*!
- * @brief Returns a bitfield of capabilities supported by the tracker.
+ * Returns a set with the extensions supported by this tracker.
  *
- * @see vit_tracker_capability_t
+ * @see vit_tracker_extension_t
  */
 
-vit_result_t vit_tracker_get_capabilities(const vit_tracker_t *tracker, vit_tracker_capability_t *out_caps);
+vit_result_t vit_tracker_get_supported_extensions(const vit_tracker_t *tracker, vit_tracker_extension_set_t *out_exts);
 
 /*!
- * @brief Returns a bitfield of pose capabilities supported by the tracker.
+ * Returns a set with the extensions enabled in this tracker.
  *
- * @see vit_tracker_pose_capability_t
+ * @see vit_tracker_extension_t
  */
-vit_result_t vit_tracker_get_pose_capabilities(const vit_tracker_t *tracker, vit_tracker_pose_capability_t *out_caps);
+
+vit_result_t vit_tracker_get_enabled_extensions(const vit_tracker_t *tracker, vit_tracker_extension_set_t *out_exts);
 
 /*!
- * @brief Enables or disables multiple tracker pose capabilities.
+ * Enables or disables a tracker extension.
  *
- * @p caps can be a bitfield of `vit_tracker_pose_capability_t`.
- *
- * @see vit_tracker_pose_capability_t
+ * @see vit_tracker_extension_t
  */
-vit_result_t vit_tracker_set_pose_capabilities(vit_tracker_t *tracker, vit_tracker_pose_capability_t caps, bool value);
+vit_result_t vit_tracker_enable_extension(vit_tracker_t *tracker, vit_tracker_extension_t ext, bool value);
 
 /*!
- * @brief Starts the VIT tracker. Image and IMU samples can be pushed and pose can be retrieved.
+ * Starts the VIT tracker. Image and IMU samples can be pushed and pose can be retrieved.
  *
  * This function must be non blocking. The VIT system implementing it is expected to start its own event loop.
  */
 vit_result_t vit_tracker_start(vit_tracker_t *tracker);
 
 /*!
- * @brief Stops the VIT tracker. The tracker wont accept image and IMU samples, and will not return poses.
+ * Stops the VIT tracker. The tracker wont accept image and IMU samples, and will not return poses.
  */
 vit_result_t vit_tracker_stop(vit_tracker_t *tracker);
 
 /*!
- * @brief Resets the VIT tracker. The tracker internal state will be set to its original state.
+ * Resets the VIT tracker. The tracker internal state will be set to its original state.
  */
 vit_result_t vit_tracker_reset(vit_tracker_t *tracker);
 
 /*!
- * @brief Verifies if the tracker is running.
+ * Verifies if the tracker is running.
  */
 vit_result_t vit_tracker_is_running(const vit_tracker_t *tracker, bool *out_bool);
 
 /*!
- * @brief Push an IMU sample into the tracker.
+ * Push an IMU sample into the tracker.
  *
  * There must be a single producer thread pushing samples.
  * Samples must have monotonically increasing timestamps.
@@ -413,7 +418,7 @@ vit_result_t vit_tracker_is_running(const vit_tracker_t *tracker, bool *out_bool
 vit_result_t vit_tracker_push_imu_sample(vit_tracker_t *tracker, const vit_imu_sample_t *sample);
 
 /*!
- * @brief Push an image sample into the tracker.
+ * Push an image sample into the tracker.
  *
  * Same conditions as @ref push_imu_sample apply.
  * When using N>1 cameras, the N frames must be pushed following @ref cam_index order.
@@ -422,27 +427,27 @@ vit_result_t vit_tracker_push_imu_sample(vit_tracker_t *tracker, const vit_imu_s
 vit_result_t vit_tracker_push_img_sample(vit_tracker_t *tracker, const vit_img_sample_t *sample);
 
 /*!
- * @brief Adds an inertial measurement unit calibration to the tracker. The tracker must not be started.
+ * Adds an inertial measurement unit calibration to the tracker. The tracker must not be started.
  *
- * Returns `VIT_ERROR_NOT_SUPPORTED` if the tracker doesn't offer the capability.
+ * Returns `VIT_ERROR_NOT_SUPPORTED` if the tracker doesn't offer the extension.
  *
- * @see vit_tracker_get_capabilities
- * @see vit_tracker_capability_t
+ * @see vit_tracker_get_supported_extensions
+ * @see vit_tracker_extension_t
  */
 vit_result_t vit_tracker_add_imu_calibration(vit_tracker_t *tracker, const vit_imu_calibration_t *calibration);
 
 /*!
- * @brief Adds a camera calibration to the tracker. The tracker must not be started.
+ * Adds a camera calibration to the tracker. The tracker must not be started.
  *
- * Returns `VIT_ERROR_NOT_SUPPORTED` if the tracker doesn't offer the capability.
+ * Returns `VIT_ERROR_NOT_SUPPORTED` if the tracker doesn't offer the extension.
  *
- * @see vit_tracker_get_capabilities
- * @see vit_tracker_capability_t
+ * @see vit_tracker_get_supported_extensions
+ * @see vit_tracker_extension_t
  */
 vit_result_t vit_tracker_add_camera_calibration(vit_tracker_t *tracker, const vit_camera_calibration_t *calibration);
 
 /*!
- * @brief Get the pose from the front of the tracking queue from the VIT tracker
+ * Get the pose from the front of the tracking queue from the VIT tracker
  *
  * This function must be non-blocking and consumed by a single consummer.
  *
@@ -453,33 +458,33 @@ vit_result_t vit_tracker_add_camera_calibration(vit_tracker_t *tracker, const vi
 vit_result_t vit_tracker_pop_pose(vit_tracker_t *tracker, vit_pose_t **out_pose);
 
 /*!
- * @brief Get the titles of the timestamps measured by the pose timings.
+ * Get the titles of the timestamps measured by the pose timings.
  *
- * Returns `VIT_ERROR_NOT_SUPPORTED` if the tracker doesn't offer the pose timing capability.
+ * Returns `VIT_ERROR_NOT_SUPPORTED` if the tracker doesn't offer the pose timing extension.
  */
 vit_result_t vit_tracker_get_timing_titles(const vit_tracker_t *tracker, vit_tracker_timing_titles *out_titles);
 
 /*!
- * @brief Destroys a pose. All of the data, timing and features associated to it will be invalidated.
+ * Destroys a pose. All of the data, timing and features associated to it will be invalidated.
  */
 void vit_pose_destroy(vit_pose_t *pose);
 
 /*!
- * @brief Gets the data form a given `vit_pose_t`.
+ * Gets the data form a given `vit_pose_t`.
  *
  * The data becomes invalid when the associated pose gets destroyed.
  */
 vit_result_t vit_pose_get_data(const vit_pose_t *pose, vit_pose_data_t *out_data);
 
 /*!
- * @brief Gets the timing form a given `vit_pose_t`.
+ * Gets the timing form a given `vit_pose_t`.
  *
  * The timing data becomes invalid when the associated pose gets destroyed.
  */
 vit_result_t vit_pose_get_timing(const vit_pose_t *pose, vit_pose_timing_t *out_timing);
 
 /*!
- * @brief Gets the features form a given `vit_pose_t`.
+ * Gets the features form a given `vit_pose_t`.
  *
  * The features data becomes invalid when the associated pose gets destroyed.
  */

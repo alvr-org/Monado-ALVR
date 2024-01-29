@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Visual-Intertial Tracking consumer helper.
+ * @brief  Visual-Inertial Tracking consumer helper.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Simon Zeni <simon.zeni@collabora.com>
  * @ingroup aux_tracking
@@ -36,9 +36,9 @@ struct t_vit_bundle
 	PFN_vit_tracker_create tracker_create;
 	PFN_vit_tracker_destroy tracker_destroy;
 	PFN_vit_tracker_has_image_format tracker_has_image_format;
-	PFN_vit_tracker_get_capabilities tracker_get_capabilities;
-	PFN_vit_tracker_get_pose_capabilities tracker_get_pose_capabilities;
-	PFN_vit_tracker_set_pose_capabilities tracker_set_pose_capabilities;
+	PFN_vit_tracker_get_supported_extensions tracker_get_supported_extensions;
+	PFN_vit_tracker_get_enabled_extensions tracker_get_enabled_extensions;
+	PFN_vit_tracker_enable_extension tracker_enable_extension;
 	PFN_vit_tracker_start tracker_start;
 	PFN_vit_tracker_stop tracker_stop;
 	PFN_vit_tracker_reset tracker_reset;

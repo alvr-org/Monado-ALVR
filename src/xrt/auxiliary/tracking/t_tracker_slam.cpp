@@ -257,7 +257,7 @@ struct TrackerSlam
 	struct xrt_tracked_slam base = {};
 	struct xrt_frame_node node = {};       //!< Will be called on destruction
 	struct t_vit_bundle vit;               //!< VIT system function pointers
-	enum vit_tracker_pose_capability caps; //!< VIT tracker bitfield capabilities
+	struct vit_tracker_extension_set exts; //!< VIT tracker supported extensions
 	struct vit_tracker *tracker;           //!< Pointer to the tracker created by the loaded VIT system;
 
 	struct xrt_slam_sinks sinks = {};                            //!< Pointers to the sinks below
@@ -416,16 +416,15 @@ timing_ui_setup(TrackerSlam &t)
 		u_var_button &btn = t->timing.enable_btn;
 		bool e = !t->timing.enabled;
 		snprintf(btn.label, sizeof(btn.label), "%s", msg[e]);
-		vit_result_t vres =
-		    t->vit.tracker_set_pose_capabilities(t->tracker, VIT_TRACKER_POSE_CAPABILITY_TIMING, e);
+		vit_result_t vres = t->vit.tracker_enable_extension(t->tracker, VIT_TRACKER_EXTENSION_POSE_TIMING, e);
 		if (vres != VIT_SUCCESS) {
-			U_LOG_IFL_E(t->log_level, "Failed to set tracker timing capability");
+			U_LOG_IFL_E(t->log_level, "Failed to set tracker timing extension");
 			return;
 		}
 		t->timing.enabled = e;
 	};
 	t.timing.enable_btn.cb = cb;
-	t.timing.enable_btn.disabled = (t.caps & VIT_TRACKER_POSE_CAPABILITY_TIMING) == 0;
+	t.timing.enable_btn.disabled = !t.exts.has_pose_timing;
 	t.timing.enable_btn.ptr = &t;
 	u_var_add_button(&t, &t.timing.enable_btn, msg[t.timing.enabled]);
 
@@ -433,7 +432,7 @@ timing_ui_setup(TrackerSlam &t)
 	t.timing.columns = {"sampled", "received_by_monado"};
 
 	// Only fill the timing columns if the tracker supports pose timing
-	if ((t.caps & VIT_TRACKER_POSE_CAPABILITY_TIMING) != 0) {
+	if (t.exts.has_pose_timing) {
 		vit_tracker_timing_titles titles = {};
 		vit_result_t vres = t.vit.tracker_get_timing_titles(t.tracker, &titles);
 		if (vres != VIT_SUCCESS) {
@@ -537,16 +536,15 @@ features_ui_setup(TrackerSlam &t)
 		u_var_button &btn = t->features.enable_btn;
 		bool e = !t->features.enabled;
 		snprintf(btn.label, sizeof(btn.label), "%s", msg[e]);
-		vit_result_t vres =
-		    t->vit.tracker_set_pose_capabilities(t->tracker, VIT_TRACKER_POSE_CAPABILITY_FEATURES, e);
+		vit_result_t vres = t->vit.tracker_enable_extension(t->tracker, VIT_TRACKER_EXTENSION_POSE_FEATURES, e);
 		if (vres != VIT_SUCCESS) {
-			U_LOG_IFL_E(t->log_level, "Failed to set tracker features capability");
+			U_LOG_IFL_E(t->log_level, "Failed to set tracker features extension");
 			return;
 		}
 		t->features.enabled = e;
 	};
 	t.features.enable_btn.cb = cb;
-	t.features.enable_btn.disabled = (t.caps & VIT_TRACKER_POSE_CAPABILITY_FEATURES) == 0;
+	t.features.enable_btn.disabled = !t.exts.has_pose_features;
 	t.features.enable_btn.ptr = &t;
 	u_var_add_button(&t, &t.features.enable_btn, msg[t.features.enabled]);
 
@@ -1193,15 +1191,8 @@ add_imu_calibration(const TrackerSlam &t, const t_slam_imu_calibration *imu_cali
 static void
 send_calibration(const TrackerSlam &t, const t_slam_calibration &c)
 {
-	vit_tracker_capability_t caps;
-	vit_result_t vres = t.vit.tracker_get_capabilities(t.tracker, &caps);
-	if (vres != VIT_SUCCESS) {
-		SLAM_ERROR("Failed to get VIT tracker capabilities");
-		return;
-	}
-
 	// Try to send camera calibration data to the SLAM system
-	if ((caps & VIT_TRACKER_CAPABILITY_CAMERA_CALIBRATION) != 0) {
+	if (t.exts.has_add_camera_calibration) {
 		for (int i = 0; i < c.cam_count; i++) {
 			SLAM_INFO("Sending Camera %d calibration from Monado", i);
 			add_camera_calibration(t, &c.cams[i], i);
@@ -1211,7 +1202,7 @@ send_calibration(const TrackerSlam &t, const t_slam_calibration &c)
 	}
 
 	// Try to send IMU calibration data to the SLAM system
-	if ((caps & VIT_TRACKER_CAPABILITY_IMU_CALIBRATION) != 0) {
+	if (t.exts.has_add_imu_calibration) {
 		SLAM_INFO("Sending IMU calibration from Monado");
 		add_imu_calibration(t, &c.imu);
 	} else {
@@ -1561,9 +1552,9 @@ t_slam_create(struct xrt_frame_context *xfctx,
 		return -1;
 	}
 
-	vres = t.vit.tracker_get_pose_capabilities(t.tracker, &t.caps);
+	vres = t.vit.tracker_get_supported_extensions(t.tracker, &t.exts);
 	if (vres != VIT_SUCCESS) {
-		SLAM_ERROR("Failed to get VIT tracker pose capabilities (%d)", vres);
+		SLAM_ERROR("Failed to get VIT tracker supported extensions (%d)", vres);
 		return -1;
 	}
 

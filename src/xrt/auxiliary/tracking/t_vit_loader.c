@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Visual-Intertial Tracking consumer helper.
+ * @brief  Visual-Inertial Tracking consumer helper.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Simon Zeni <simon.zeni@collabora.com>
  * @ingroup aux_tracking
@@ -73,9 +73,9 @@ t_vit_bundle_load(struct t_vit_bundle *vit, const char *path)
 	GET_PROC(tracker_create);
 	GET_PROC(tracker_destroy);
 	GET_PROC(tracker_has_image_format);
-	GET_PROC(tracker_get_capabilities);
-	GET_PROC(tracker_get_pose_capabilities);
-	GET_PROC(tracker_set_pose_capabilities);
+	GET_PROC(tracker_get_supported_extensions);
+	GET_PROC(tracker_get_enabled_extensions);
+	GET_PROC(tracker_enable_extension);
 	GET_PROC(tracker_start);
 	GET_PROC(tracker_stop);
 	GET_PROC(tracker_reset);
