@@ -140,6 +140,8 @@ type_to_small_string(enum xrt_reference_space_type type)
 	case XRT_SPACE_REFERENCE_TYPE_STAGE: return "stage";
 	case XRT_SPACE_REFERENCE_TYPE_UNBOUNDED: return "unbounded";
 	}
+
+	return "invalid";
 }
 
 static struct u_space *
