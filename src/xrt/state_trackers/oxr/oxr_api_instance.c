@@ -34,6 +34,7 @@
 #include <string.h>
 #include <inttypes.h>
 
+DEBUG_GET_ONCE_BOOL_OPTION(ignore_openxr_version, "OXR_IGNORE_OPENXR_VERSION", false)
 
 #define MAKE_EXTENSION_PROPERTIES(mixed_case, all_caps)                                                                \
 	{XR_TYPE_EXTENSION_PROPERTIES, NULL, XR_##all_caps##_EXTENSION_NAME, XR_##mixed_case##_SPEC_VERSION},
@@ -138,27 +139,30 @@ oxr_xrCreateInstance(const XrInstanceCreateInfo *createInfo, XrInstance *out_ins
 	struct oxr_logger log;
 	oxr_log_init(&log, "xrCreateInstance");
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, createInfo, XR_TYPE_INSTANCE_CREATE_INFO);
-	const uint32_t major = XR_VERSION_MAJOR(XR_CURRENT_API_VERSION);
-	const uint32_t minor = XR_VERSION_MINOR(XR_CURRENT_API_VERSION);
-	const uint32_t patch = XR_VERSION_PATCH(XR_CURRENT_API_VERSION);
-	(void)patch; // Not used for now.
 
+	XrVersion app_major_minor = XR_MAKE_VERSION(XR_VERSION_MAJOR(createInfo->applicationInfo.apiVersion),
+	                                            XR_VERSION_MINOR(createInfo->applicationInfo.apiVersion), 0);
 
-	if (createInfo->applicationInfo.apiVersion < XR_MAKE_VERSION(major, minor, 0)) {
+	// App must use at least 1.0.0, and app_major.app_minor.0 must be <= supported major.minor.patch.
+	// I.e. app version 1.0.99 works on runtime with 1.0.33 because 1.0.0 < 1.0.33.
+	// But app version 1.1.5 does not work on runtime with 1.0.33 because 1.1.0 > 1.0.33.
+	bool version_supported =
+	    XR_VERSION_MAJOR(createInfo->applicationInfo.apiVersion) >= 1 && app_major_minor <= XR_CURRENT_API_VERSION;
+
+	// App is allowed to use more recent OpenXR patch version, but not more recent minor or major version.
+	if (!version_supported && !debug_get_bool_option_ignore_openxr_version()) {
+		const uint32_t major = XR_VERSION_MAJOR(XR_CURRENT_API_VERSION);
+		const uint32_t minor = XR_VERSION_MINOR(XR_CURRENT_API_VERSION);
+
+		const uint32_t app_major = XR_VERSION_MAJOR(createInfo->applicationInfo.apiVersion);
+		const uint32_t app_minor = XR_VERSION_MINOR(createInfo->applicationInfo.apiVersion);
+		const uint32_t app_patch = XR_VERSION_PATCH(createInfo->applicationInfo.apiVersion);
+
 		return oxr_error(&log, XR_ERROR_API_VERSION_UNSUPPORTED,
 		                 "(createInfo->applicationInfo.apiVersion) "
-		                 "Cannot satisfy request for version less than %d.%d.%d",
-		                 major, minor, 0);
-	}
-
-	/*
-	 * This is a slight fib, to let us approximately run things between 1.0
-	 * and 2.0
-	 */
-	if (createInfo->applicationInfo.apiVersion >= XR_MAKE_VERSION(2, 0, 0)) {
-		return oxr_error(&log, XR_ERROR_API_VERSION_UNSUPPORTED,
-		                 "(createInfo->applicationInfo.apiVersion) "
-		                 "Cannot satisfy request for version: too high");
+		                 "Requested OpenXR version %d.%d.%d is not in runtime supported OpenXR version range "
+		                 "1.0.0 - %d.%d.x",
+		                 app_major, app_minor, app_patch, major, minor);
 	}
 
 	// To be passed into verify and instance creation.
