@@ -419,11 +419,12 @@
 #endif
 
 /*
-* XR_FB_composition_layer_depth_test
-*/
+ * XR_FB_composition_layer_depth_test
+ */
 #if defined(XR_FB_composition_layer_depth_test) && defined(XRT_FEATURE_OPENXR_LAYER_FB_DEPTH_TEST)
 #define OXR_HAVE_FB_composition_layer_depth_test
-#define OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_) _(FB_composition_layer_depth_test, FB_COMPOSITION_LAYER_DEPTH_TEST)
+#define OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_)                                                       \
+	_(FB_composition_layer_depth_test, FB_COMPOSITION_LAYER_DEPTH_TEST)
 #else
 #define OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_)
 #endif

@@ -124,11 +124,11 @@ enum xrt_layer_composition_flags
 	 */
 	XRT_LAYER_COMPOSITION_ADVANCED_BLENDING_BIT = 1u << 9u,
 
-    /*!
+	/*!
 	 * Depth testing is requested when composing this layer if this flag is set,
 	 * see XrCompositionLayerDepthTestFB.
 	 */
-    XRT_LAYER_COMPOSITION_DEPTH_TEST = 1u << 10u,
+	XRT_LAYER_COMPOSITION_DEPTH_TEST = 1u << 10u,
 };
 
 /*!
@@ -136,15 +136,15 @@ enum xrt_layer_composition_flags
  */
 enum xrt_compare_op_fb
 {
-    XRT_COMPARE_OP_NEVER_FB = 0,
-    XRT_COMPARE_OP_LESS_FB = 1,
-    XRT_COMPARE_OP_EQUAL_FB = 2,
-    XRT_COMPARE_OP_LESS_OR_EQUAL_FB = 3,
-    XRT_COMPARE_OP_GREATER_FB = 4,
-    XRT_COMPARE_OP_NOT_EQUAL_FB = 5,
-    XRT_COMPARE_OP_GREATER_OR_EQUAL_FB = 6,
-    XRT_COMPARE_OP_ALWAYS_FB = 7,
-    XRT_COMPARE_OP_MAX_ENUM_FB = 0x7FFFFFFF
+	XRT_COMPARE_OP_NEVER_FB = 0,
+	XRT_COMPARE_OP_LESS_FB = 1,
+	XRT_COMPARE_OP_EQUAL_FB = 2,
+	XRT_COMPARE_OP_LESS_OR_EQUAL_FB = 3,
+	XRT_COMPARE_OP_GREATER_FB = 4,
+	XRT_COMPARE_OP_NOT_EQUAL_FB = 5,
+	XRT_COMPARE_OP_GREATER_OR_EQUAL_FB = 6,
+	XRT_COMPARE_OP_ALWAYS_FB = 7,
+	XRT_COMPARE_OP_MAX_ENUM_FB = 0x7FFFFFFF
 };
 
 /*!
@@ -251,8 +251,8 @@ struct xrt_layer_depth_data
 
 struct xrt_layer_depth_test_data
 {
-    bool depth_mask;
-    enum xrt_compare_op_fb compare_op;
+	bool depth_mask;
+	enum xrt_compare_op_fb compare_op;
 };
 
 /*!
@@ -386,10 +386,10 @@ struct xrt_layer_data
 	 */
 	enum xrt_layer_composition_flags flags;
 
-    /*!
+	/*!
 	 * Depth test data
 	 */
-    struct xrt_layer_depth_test_data depth_test;
+	struct xrt_layer_depth_test_data depth_test;
 
 	/*!
 	 * Whether the main compositor should flip the direction of y when
