@@ -25,6 +25,7 @@ src/xrt/compositor/shaders/*.vert.h
 src/xrt/compositor/shaders/*.frag.h
 src/xrt/compositor/shaders/*.comp.h
 src/xrt/include/xrt/xrt_config_*.h
+!src/xrt/include/xrt/xrt_config_*os.h
 src/xrt/ipc/*_generated.*
 src/xrt/targets/cli/monado-cli
 src/xrt/targets/ctl/monado-ctl
