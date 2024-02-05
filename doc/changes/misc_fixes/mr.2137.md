@@ -1,0 +1,4 @@
+---
+- issue.261
+---
+- Update gitignore to exclude files intentionally in the repo.
