@@ -90,15 +90,15 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
                                uint64_t at_timestamp_ns,
                                struct xrt_space_relation *out_relation)
 {
-	struct simulated_hmd *dh = simulated_hmd(xdev);
+	struct simulated_hmd *hmd = simulated_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		HMD_ERROR(dh, "unknown input name");
+		HMD_ERROR(hmd, "unknown input name");
 		return;
 	}
 
-	const double time_s = time_ns_to_s(at_timestamp_ns - dh->created_ns);
-	const double d = dh->diameter_m;
+	const double time_s = time_ns_to_s(at_timestamp_ns - hmd->created_ns);
+	const double d = hmd->diameter_m;
 	const double d2 = d * 2;
 	const double t = 2.0;
 	const double t2 = t * 2;
@@ -106,7 +106,7 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
 	const double t4 = t * 4;
 	const struct xrt_vec3 up = {0, 1, 0};
 
-	switch (dh->movement) {
+	switch (hmd->movement) {
 	default:
 	case SIMULATED_MOVEMENT_WOBBLE: {
 		struct xrt_pose tmp = XRT_POSE_IDENTITY;
@@ -120,24 +120,24 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
 		math_quat_normalize(&tmp.orientation);
 
 		// Transform with center to set it.
-		math_pose_transform(&dh->center, &tmp, &dh->pose);
+		math_pose_transform(&hmd->center, &tmp, &hmd->pose);
 	} break;
 	case SIMULATED_MOVEMENT_ROTATE: {
 		struct xrt_pose tmp = XRT_POSE_IDENTITY;
 
 		// Rotate around the up vector.
-		math_quat_from_angle_vector(time_s / 4, &up, &dh->pose.orientation);
+		math_quat_from_angle_vector(time_s / 4, &up, &hmd->pose.orientation);
 
 		// Transform with center to set it.
-		math_pose_transform(&dh->center, &tmp, &dh->pose);
+		math_pose_transform(&hmd->center, &tmp, &hmd->pose);
 	} break;
 	case SIMULATED_MOVEMENT_STATIONARY:
 		// Reset pose.
-		dh->pose = dh->center;
+		hmd->pose = hmd->center;
 		break;
 	}
 
-	out_relation->pose = dh->pose;
+	out_relation->pose = hmd->pose;
 	out_relation->relation_flags = (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
 	                                                               XRT_SPACE_RELATION_POSITION_VALID_BIT |
 	                                                               XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT);
@@ -149,7 +149,7 @@ simulated_ref_space_usage(struct xrt_device *xdev,
                           enum xrt_input_name name,
                           bool used)
 {
-	struct simulated_hmd *dh = simulated_hmd(xdev);
+	struct simulated_hmd *hmd = simulated_hmd(xdev);
 
 	struct u_pp_sink_stack_only sink;
 	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
@@ -166,7 +166,7 @@ simulated_ref_space_usage(struct xrt_device *xdev,
 		u_pp(dg, ", not controlled by us.");
 	}
 
-	HMD_INFO(dh, "%s", sink.buffer);
+	HMD_INFO(hmd, "%s", sink.buffer);
 
 	return XRT_SUCCESS;
 }
@@ -189,28 +189,28 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 {
 	enum u_device_alloc_flags flags =
 	    (enum u_device_alloc_flags)(U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE);
-	struct simulated_hmd *dh = U_DEVICE_ALLOCATE(struct simulated_hmd, flags, 1, 0);
-	dh->base.update_inputs = u_device_noop_update_inputs;
-	dh->base.get_tracked_pose = simulated_hmd_get_tracked_pose;
-	dh->base.get_view_poses = u_device_get_view_poses;
-	dh->base.ref_space_usage = simulated_ref_space_usage;
-	dh->base.destroy = simulated_hmd_destroy;
-	dh->base.name = XRT_DEVICE_GENERIC_HMD;
-	dh->base.device_type = XRT_DEVICE_TYPE_HMD;
-	dh->base.ref_space_usage_supported = true;
-	dh->pose.orientation.w = 1.0f; // All other values set to zero.
-	dh->center = *center;
-	dh->created_ns = os_monotonic_get_ns();
-	dh->diameter_m = 0.05f;
-	dh->log_level = simulated_log_level();
-	dh->movement = movement;
+	struct simulated_hmd *hmd = U_DEVICE_ALLOCATE(struct simulated_hmd, flags, 1, 0);
+	hmd->base.update_inputs = u_device_noop_update_inputs;
+	hmd->base.get_tracked_pose = simulated_hmd_get_tracked_pose;
+	hmd->base.get_view_poses = u_device_get_view_poses;
+	hmd->base.ref_space_usage = simulated_ref_space_usage;
+	hmd->base.destroy = simulated_hmd_destroy;
+	hmd->base.name = XRT_DEVICE_GENERIC_HMD;
+	hmd->base.device_type = XRT_DEVICE_TYPE_HMD;
+	hmd->base.ref_space_usage_supported = true;
+	hmd->pose.orientation.w = 1.0f; // All other values set to zero.
+	hmd->center = *center;
+	hmd->created_ns = os_monotonic_get_ns();
+	hmd->diameter_m = 0.05f;
+	hmd->log_level = simulated_log_level();
+	hmd->movement = movement;
 
 	// Print name.
-	snprintf(dh->base.str, XRT_DEVICE_NAME_LEN, "Simulated HMD");
-	snprintf(dh->base.serial, XRT_DEVICE_NAME_LEN, "Simulated HMD");
+	snprintf(hmd->base.str, XRT_DEVICE_NAME_LEN, "Simulated HMD");
+	snprintf(hmd->base.serial, XRT_DEVICE_NAME_LEN, "Simulated HMD");
 
 	// Setup input.
-	dh->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
+	hmd->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 
 	// Setup info.
 	struct u_device_simple_info info;
@@ -223,21 +223,21 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	info.fov[0] = 85.0f * ((float)(M_PI) / 180.0f);
 	info.fov[1] = 85.0f * ((float)(M_PI) / 180.0f);
 
-	if (!u_device_setup_split_side_by_side(&dh->base, &info)) {
-		HMD_ERROR(dh, "Failed to setup basic device info");
-		simulated_hmd_destroy(&dh->base);
+	if (!u_device_setup_split_side_by_side(&hmd->base, &info)) {
+		HMD_ERROR(hmd, "Failed to setup basic device info");
+		simulated_hmd_destroy(&hmd->base);
 		return NULL;
 	}
 
 	// Setup variable tracker.
-	u_var_add_root(dh, "Simulated HMD", true);
-	u_var_add_pose(dh, &dh->pose, "pose");
-	u_var_add_pose(dh, &dh->center, "center");
-	u_var_add_f32(dh, &dh->diameter_m, "diameter_m");
-	u_var_add_log_level(dh, &dh->log_level, "log_level");
+	u_var_add_root(hmd, "Simulated HMD", true);
+	u_var_add_pose(hmd, &hmd->pose, "pose");
+	u_var_add_pose(hmd, &hmd->center, "center");
+	u_var_add_f32(hmd, &hmd->diameter_m, "diameter_m");
+	u_var_add_log_level(hmd, &hmd->log_level, "log_level");
 
 	// Distortion information, fills in xdev->compute_distortion().
-	u_distortion_mesh_set_none(&dh->base);
+	u_distortion_mesh_set_none(&hmd->base);
 
-	return &dh->base;
+	return &hmd->base;
 }
