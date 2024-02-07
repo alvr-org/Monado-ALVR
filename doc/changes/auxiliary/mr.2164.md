@@ -1,0 +1,1 @@
+- u/file: Changed file open mode from "r" to "rb" to ensure binary mode is used for reading the file. This resolves an issue where file size and read size were inconsistent on Windows platform.
