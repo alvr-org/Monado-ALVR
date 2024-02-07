@@ -17,6 +17,7 @@
 #include "math/m_vec2.h"
 #include "math/m_api.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -33,14 +34,14 @@ index_for(int row, int col, uint32_t stride, uint32_t offset)
 }
 
 static void
-run_func(struct xrt_device *xdev, func_calc calc, int view_count, struct xrt_hmd_parts *target, uint32_t num)
+run_func(struct xrt_device *xdev, func_calc calc, struct xrt_hmd_parts *target, uint32_t num)
 {
 	assert(calc != NULL);
-	assert(view_count == 2);
-	assert(view_count <= 2);
 
-	uint32_t vertex_offsets[2] = {0};
-	uint32_t index_offsets[2] = {0};
+	uint32_t view_count = target->view_count;
+
+	uint32_t vertex_offsets[XRT_MAX_VIEWS] = {0};
+	uint32_t index_offsets[XRT_MAX_VIEWS] = {0};
 
 	uint32_t cells_cols = num;
 	uint32_t cells_rows = num;
@@ -58,7 +59,7 @@ run_func(struct xrt_device *xdev, func_calc calc, int view_count, struct xrt_hmd
 
 	// Setup the vertices for all views.
 	uint32_t i = 0;
-	for (int view = 0; view < view_count; view++) {
+	for (uint32_t view = 0; view < view_count; view++) {
 		vertex_offsets[view] = i / stride_in_floats;
 
 		for (uint32_t r = 0; r < vert_rows; r++) {
@@ -90,7 +91,7 @@ run_func(struct xrt_device *xdev, func_calc calc, int view_count, struct xrt_hmd
 
 	// Set up indices for all views.
 	i = 0;
-	for (int view = 0; view < view_count; view++) {
+	for (uint32_t view = 0; view < view_count; view++) {
 		index_offsets[view] = i;
 
 		uint32_t off = vertex_offsets[view];
@@ -116,11 +117,11 @@ run_func(struct xrt_device *xdev, func_calc calc, int view_count, struct xrt_hmd
 	target->distortion.mesh.vertex_count = vertex_count;
 	target->distortion.mesh.uv_channels_count = uv_channels_count;
 	target->distortion.mesh.indices = indices;
-	target->distortion.mesh.index_counts[0] = index_count_per_view;
-	target->distortion.mesh.index_counts[1] = index_count_per_view;
-	target->distortion.mesh.index_offsets[0] = index_offsets[0];
-	target->distortion.mesh.index_offsets[1] = index_offsets[1];
 	target->distortion.mesh.index_count_total = index_count_total;
+	for (uint32_t view = 0; view < view_count; ++view) {
+		target->distortion.mesh.index_counts[view] = index_count_per_view;
+		target->distortion.mesh.index_offsets[view] = index_offsets[view];
+	}
 }
 
 bool
@@ -437,7 +438,7 @@ u_distortion_mesh_fill_in_none(struct xrt_device *xdev)
 	struct xrt_hmd_parts *target = xdev->hmd;
 
 	// Do the generation.
-	run_func(xdev, u_distortion_mesh_none, 2, target, 1);
+	run_func(xdev, u_distortion_mesh_none, target, 1);
 
 	// Make the target mostly usable.
 	target->distortion.models |= XRT_DISTORTION_MODEL_NONE;
@@ -481,5 +482,6 @@ u_distortion_mesh_fill_in_compute(struct xrt_device *xdev)
 	struct xrt_hmd_parts *target = xdev->hmd;
 
 	uint32_t num = (uint32_t)debug_get_num_option_mesh_size();
-	run_func(xdev, calc, 2, target, num);
+
+	run_func(xdev, calc, target, num);
 }

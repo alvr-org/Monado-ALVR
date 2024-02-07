@@ -91,7 +91,7 @@ struct u_cardboard_distortion
 	struct u_cardboard_distortion_arguments args;
 
 	//! Distortion parameters, some derived from @ref args.
-	struct u_cardboard_distortion_values values[2];
+	struct u_cardboard_distortion_values values[XRT_MAX_VIEWS];
 };
 
 /*!
