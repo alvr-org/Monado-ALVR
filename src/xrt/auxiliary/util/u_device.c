@@ -270,6 +270,8 @@ u_device_allocate(enum u_device_alloc_flags flags, size_t size, size_t input_cou
 
 	if (alloc_hmd) {
 		xdev->hmd = (struct xrt_hmd_parts *)(ptr + offset_hmd);
+		// set default view count
+		xdev->hmd->view_count = 2;
 	}
 
 	if (alloc_tracking) {

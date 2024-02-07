@@ -115,19 +115,20 @@ base_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_frame_data *d
 }
 
 static xrt_result_t
-base_layer_stereo_projection(struct xrt_compositor *xc,
-                             struct xrt_device *xdev,
-                             struct xrt_swapchain *l_xsc,
-                             struct xrt_swapchain *r_xsc,
-                             const struct xrt_layer_data *data)
+base_layer_projection(struct xrt_compositor *xc,
+                      struct xrt_device *xdev,
+                      struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                      const struct xrt_layer_data *data)
 {
 	struct comp_base *cb = comp_base(xc);
 
 	uint32_t layer_id = cb->slot.layer_count;
 
 	struct comp_layer *layer = &cb->slot.layers[layer_id];
-	layer->sc_array[0] = comp_swapchain(l_xsc);
-	layer->sc_array[1] = comp_swapchain(r_xsc);
+	assert(ARRAY_SIZE(layer->sc_array) >= data->proj.view_count);
+	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+		layer->sc_array[i] = comp_swapchain(xsc[i]);
+	}
 	layer->data = *data;
 
 	cb->slot.layer_count++;
@@ -256,7 +257,7 @@ comp_base_init(struct comp_base *cb)
 	cb->base.base.create_semaphore = base_create_semaphore;
 	cb->base.base.import_fence = base_import_fence;
 	cb->base.base.layer_begin = base_layer_begin;
-	cb->base.base.layer_stereo_projection = base_layer_stereo_projection;
+	cb->base.base.layer_projection = base_layer_projection;
 	cb->base.base.layer_stereo_projection_depth = base_layer_stereo_projection_depth;
 	cb->base.base.layer_quad = base_layer_quad;
 	cb->base.base.layer_cube = base_layer_cube;

@@ -270,18 +270,17 @@ compositor_init_sys_info(struct null_compositor *c, struct xrt_device *xdev)
 	(void)sys_info->client_vk_deviceUUID;
 	(void)sys_info->client_d3d_deviceLUID;
 	(void)sys_info->client_d3d_deviceLUID_valid;
-
+	uint32_t view_count = xdev->hmd->view_count;
 	// clang-format off
-	sys_info->views[0].recommended.width_pixels  = RECOMMENDED_VIEW_WIDTH;
-	sys_info->views[0].recommended.height_pixels = RECOMMENDED_VIEW_HEIGHT;
-	sys_info->views[0].recommended.sample_count  = 1;
-	sys_info->views[0].max.width_pixels          = MAX_VIEW_WIDTH;
-	sys_info->views[0].max.height_pixels         = MAX_VIEW_HEIGHT;
-	sys_info->views[0].max.sample_count          = 1;
+	for (uint32_t i = 0; i < view_count; ++i) {
+		sys_info->views[i].recommended.width_pixels  = RECOMMENDED_VIEW_WIDTH;
+		sys_info->views[i].recommended.height_pixels = RECOMMENDED_VIEW_HEIGHT;
+		sys_info->views[i].recommended.sample_count  = 1;
+		sys_info->views[i].max.width_pixels  = MAX_VIEW_WIDTH;
+		sys_info->views[i].max.height_pixels = MAX_VIEW_HEIGHT;
+		sys_info->views[i].max.sample_count  = 1;
+	}
 	// clang-format on
-
-	// Assumes the two views (eyes) are similarly configured
-	sys_info->views[1] = sys_info->views[0];
 
 	// Copy the list directly.
 	assert(xdev->hmd->blend_mode_count <= XRT_MAX_DEVICE_BLEND_MODES);

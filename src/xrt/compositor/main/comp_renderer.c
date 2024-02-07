@@ -114,7 +114,7 @@ struct comp_renderer
 		{
 			//! Targets for rendering to the scratch buffer.
 			struct render_gfx_target_resources targets[COMP_SCRATCH_NUM_IMAGES];
-		} views[2];
+		} views[XRT_MAX_VIEWS];
 	} scratch;
 
 	//! @}
@@ -217,8 +217,8 @@ renderer_wait_queue_idle(struct comp_renderer *r)
 
 static void
 calc_viewport_data(struct comp_renderer *r,
-                   struct render_viewport_data *out_l_viewport_data,
-                   struct render_viewport_data *out_r_viewport_data)
+                   struct render_viewport_data out_viewport_data[XRT_MAX_VIEWS],
+                   size_t view_count)
 {
 	struct comp_compositor *c = r->c;
 
@@ -235,46 +235,28 @@ calc_viewport_data(struct comp_renderer *r,
 	float scale_x = (float)r->c->target->width / (float)w_i32;
 	float scale_y = (float)r->c->target->height / (float)h_i32;
 
-	struct xrt_view *l_v = &r->c->xdev->hmd->views[0];
-	struct xrt_view *r_v = &r->c->xdev->hmd->views[1];
-
-	struct render_viewport_data l_viewport_data;
-	struct render_viewport_data r_viewport_data;
-
-	if (pre_rotate) {
-		l_viewport_data = (struct render_viewport_data){
-		    .x = (uint32_t)(l_v->viewport.y_pixels * scale_x),
-		    .y = (uint32_t)(l_v->viewport.x_pixels * scale_y),
-		    .w = (uint32_t)(l_v->viewport.h_pixels * scale_x),
-		    .h = (uint32_t)(l_v->viewport.w_pixels * scale_y),
-		};
-		r_viewport_data = (struct render_viewport_data){
-		    .x = (uint32_t)(r_v->viewport.y_pixels * scale_x),
-		    .y = (uint32_t)(r_v->viewport.x_pixels * scale_y),
-		    .w = (uint32_t)(r_v->viewport.h_pixels * scale_x),
-		    .h = (uint32_t)(r_v->viewport.w_pixels * scale_y),
-		};
-	} else {
-		l_viewport_data = (struct render_viewport_data){
-		    .x = (uint32_t)(l_v->viewport.x_pixels * scale_x),
-		    .y = (uint32_t)(l_v->viewport.y_pixels * scale_y),
-		    .w = (uint32_t)(l_v->viewport.w_pixels * scale_x),
-		    .h = (uint32_t)(l_v->viewport.h_pixels * scale_y),
-		};
-		r_viewport_data = (struct render_viewport_data){
-		    .x = (uint32_t)(r_v->viewport.x_pixels * scale_x),
-		    .y = (uint32_t)(r_v->viewport.y_pixels * scale_y),
-		    .w = (uint32_t)(r_v->viewport.w_pixels * scale_x),
-		    .h = (uint32_t)(r_v->viewport.h_pixels * scale_y),
-		};
+	for (uint32_t i = 0; i < view_count; ++i) {
+		struct xrt_view *v = &r->c->xdev->hmd->views[i];
+		if (pre_rotate) {
+			out_viewport_data[i] = (struct render_viewport_data){
+			    .x = (uint32_t)(v->viewport.y_pixels * scale_x),
+			    .y = (uint32_t)(v->viewport.x_pixels * scale_y),
+			    .w = (uint32_t)(v->viewport.h_pixels * scale_x),
+			    .h = (uint32_t)(v->viewport.w_pixels * scale_y),
+			};
+		} else {
+			out_viewport_data[i] = (struct render_viewport_data){
+			    .x = (uint32_t)(v->viewport.x_pixels * scale_x),
+			    .y = (uint32_t)(v->viewport.y_pixels * scale_y),
+			    .w = (uint32_t)(v->viewport.w_pixels * scale_x),
+			    .h = (uint32_t)(v->viewport.h_pixels * scale_y),
+			};
+		}
 	}
-
-	*out_l_viewport_data = l_viewport_data;
-	*out_r_viewport_data = r_viewport_data;
 }
 
 static void
-calc_vertex_rot_data(struct comp_renderer *r, struct xrt_matrix_2x2 out_vertex_rots[2])
+calc_vertex_rot_data(struct comp_renderer *r, struct xrt_matrix_2x2 out_vertex_rots[XRT_MAX_VIEWS], size_t view_count)
 {
 	bool pre_rotate = false;
 	if (r->c->target->surface_transform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
@@ -291,7 +273,7 @@ calc_vertex_rot_data(struct comp_renderer *r, struct xrt_matrix_2x2 out_vertex_r
 	        },
 	}};
 
-	for (uint32_t i = 0; i < 2; i++) {
+	for (uint32_t i = 0; i < view_count; i++) {
 		// Get the view.
 		struct xrt_view *v = &r->c->xdev->hmd->views[i];
 
@@ -310,9 +292,10 @@ calc_vertex_rot_data(struct comp_renderer *r, struct xrt_matrix_2x2 out_vertex_r
 static void
 calc_pose_data(struct comp_renderer *r,
                enum comp_target_fov_source fov_source,
-               struct xrt_fov out_fovs[2],
-               struct xrt_pose out_world[2],
-               struct xrt_pose out_eye[2])
+               struct xrt_fov out_fovs[XRT_MAX_VIEWS],
+               struct xrt_pose out_world[XRT_MAX_VIEWS],
+               struct xrt_pose out_eye[XRT_MAX_VIEWS],
+               uint32_t view_count)
 {
 	COMP_TRACE_MARKER();
 
@@ -323,20 +306,20 @@ calc_pose_data(struct comp_renderer *r,
 	};
 
 	struct xrt_space_relation head_relation = XRT_SPACE_RELATION_ZERO;
-	struct xrt_fov xdev_fovs[2] = XRT_STRUCT_INIT;
-	struct xrt_pose xdev_poses[2] = XRT_STRUCT_INIT;
+	struct xrt_fov xdev_fovs[XRT_MAX_VIEWS] = XRT_STRUCT_INIT;
+	struct xrt_pose xdev_poses[XRT_MAX_VIEWS] = XRT_STRUCT_INIT;
 
 	xrt_device_get_view_poses(                           //
 	    r->c->xdev,                                      // xdev
 	    &default_eye_relation,                           // default_eye_relation
 	    r->c->frame.rendering.predicted_display_time_ns, // at_timestamp_ns
-	    2,                                               // view_count
+	    view_count,                                      // view_count
 	    &head_relation,                                  // out_head_relation
 	    xdev_fovs,                                       // out_fovs
 	    xdev_poses);                                     // out_poses
 
-	struct xrt_fov dist_fov[2] = XRT_STRUCT_INIT;
-	for (uint32_t i = 0; i < 2; i++) {
+	struct xrt_fov dist_fov[XRT_MAX_VIEWS] = XRT_STRUCT_INIT;
+	for (uint32_t i = 0; i < view_count; i++) {
 		dist_fov[i] = r->c->xdev->hmd->distortion.fov[i];
 	}
 
@@ -347,7 +330,7 @@ calc_pose_data(struct comp_renderer *r,
 	case COMP_TARGET_FOV_SOURCE_DEVICE_VIEWS: use_xdev = true; break;
 	}
 
-	for (uint32_t i = 0; i < 2; i++) {
+	for (uint32_t i = 0; i < view_count; i++) {
 		const struct xrt_fov fov = use_xdev ? xdev_fovs[i] : dist_fov[i];
 		const struct xrt_pose eye_pose = xdev_poses[i];
 
@@ -588,7 +571,7 @@ renderer_init(struct comp_renderer *r, struct comp_compositor *c, VkExtent2D scr
 	    VK_ATTACHMENT_LOAD_OP_CLEAR,               // load_op
 	    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); // final_layout
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch.views); i++) {
+	for (uint32_t i = 0; i < c->nr.view_count; i++) {
 		bret = comp_scratch_single_images_ensure(&r->c->scratch.views[i], &r->c->base.vk, scratch_extent);
 		if (!bret) {
 			COMP_ERROR(c, "comp_scratch_single_images_ensure: false");
@@ -838,7 +821,7 @@ renderer_fini(struct comp_renderer *r)
 	comp_mirror_fini(&r->mirror_to_debug_gui, vk);
 
 	// Do this after the layer renderer.
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->scratch.views); i++) {
+	for (uint32_t i = 0; i < r->c->nr.view_count; i++) {
 		for (uint32_t k = 0; k < COMP_SCRATCH_NUM_IMAGES; k++) {
 			render_gfx_target_resources_close(&r->scratch.views[i].targets[k]);
 		}
@@ -883,23 +866,24 @@ dispatch_graphics(struct comp_renderer *r,
 	assert(!fast_path || c->base.slot.layer_count >= 1);
 
 	// Viewport information.
-	struct render_viewport_data viewport_datas[2];
-	calc_viewport_data(r, &viewport_datas[0], &viewport_datas[1]);
+	struct render_viewport_data viewport_datas[XRT_MAX_VIEWS];
+	calc_viewport_data(r, viewport_datas, rr->r->view_count);
 
 	// Vertex rotation information.
-	struct xrt_matrix_2x2 vertex_rots[2];
-	calc_vertex_rot_data(r, vertex_rots);
+	struct xrt_matrix_2x2 vertex_rots[XRT_MAX_VIEWS];
+	calc_vertex_rot_data(r, vertex_rots, rr->r->view_count);
 
 	// Device view information.
-	struct xrt_fov fovs[2];
-	struct xrt_pose world_poses[2];
-	struct xrt_pose eye_poses[2];
-	calc_pose_data(  //
-	    r,           // r
-	    fov_source,  // fov_source
-	    fovs,        // fovs[2]
-	    world_poses, // world_poses[2]
-	    eye_poses);  // eye_poses[2]
+	struct xrt_fov fovs[XRT_MAX_VIEWS];
+	struct xrt_pose world_poses[XRT_MAX_VIEWS];
+	struct xrt_pose eye_poses[XRT_MAX_VIEWS];
+	calc_pose_data(         //
+	    r,                  // r
+	    fov_source,         // fov_source
+	    fovs,               // fovs
+	    world_poses,        // world_poses
+	    eye_poses,          // eye_poses
+	    rr->r->view_count); // view_count
 
 
 	// The arguments for the dispatch function.
@@ -909,8 +893,7 @@ dispatch_graphics(struct comp_renderer *r,
 	    rtr,                      // rtr
 	    fast_path,                // fast_path
 	    do_timewarp);             // do_timewarp
-
-	for (uint32_t i = 0; i < 2; i++) {
+	for (uint32_t i = 0; i < rr->r->view_count; i++) {
 		// Which image of the scratch images for this view are we using.
 		uint32_t scratch_index = crss->views[i].index;
 
@@ -1003,23 +986,24 @@ dispatch_compute(struct comp_renderer *r,
 	bool do_timewarp = !c->debug.atw_off;
 
 	// Device view information.
-	struct xrt_fov fovs[2];
-	struct xrt_pose world_poses[2];
-	struct xrt_pose eye_poses[2];
-	calc_pose_data(  //
-	    r,           // r
-	    fov_source,  // fov_source
-	    fovs,        // fovs[2]
-	    world_poses, // world_poses[2]
-	    eye_poses);  // eye_poses[2]
+	struct xrt_fov fovs[XRT_MAX_VIEWS];
+	struct xrt_pose world_poses[XRT_MAX_VIEWS];
+	struct xrt_pose eye_poses[XRT_MAX_VIEWS];
+	calc_pose_data(          //
+	    r,                   // r
+	    fov_source,          // fov_source
+	    fovs,                // fovs
+	    world_poses,         // world_poses
+	    eye_poses,           // eye_poses
+	    crc->r->view_count); // view_count
 
 	// Target Vulkan resources..
 	VkImage target_image = r->c->target->images[r->acquired_buffer].handle;
 	VkImageView target_image_view = r->c->target->images[r->acquired_buffer].view;
 
 	// Target view information.
-	struct render_viewport_data views[2];
-	calc_viewport_data(r, &views[0], &views[1]);
+	struct render_viewport_data views[XRT_MAX_VIEWS];
+	calc_viewport_data(r, views, crc->r->view_count);
 
 	// The arguments for the dispatch function.
 	struct comp_render_dispatch_data data;
@@ -1030,7 +1014,7 @@ dispatch_compute(struct comp_renderer *r,
 	    fast_path,               // fast_path
 	    do_timewarp);            // do_timewarp
 
-	for (uint32_t i = 0; i < 2; i++) {
+	for (uint32_t i = 0; i < crc->r->view_count; i++) {
 		// Which image of the scratch images for this view are we using.
 		uint32_t scratch_index = crss->views[i].index;
 
@@ -1139,7 +1123,7 @@ comp_renderer_draw(struct comp_renderer *r)
 	comp_target_update_timings(ct);
 
 	// Hardcoded for now.
-	uint32_t view_count = 2;
+	const uint32_t view_count = c->nr.view_count;
 	enum comp_target_fov_source fov_source = COMP_TARGET_FOV_SOURCE_DISTORTION;
 
 	// For sratch image debugging.

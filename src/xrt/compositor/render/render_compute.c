@@ -51,11 +51,18 @@ calc_dispatch_dims_1_view(const struct render_viewport_data views, uint32_t *out
  * For dispatching compute to the view, calculate the number of groups.
  */
 static void
-calc_dispatch_dims_2_views(const struct render_viewport_data views[2], uint32_t *out_w, uint32_t *out_h)
+calc_dispatch_dims_views(const struct render_viewport_data views[XRT_MAX_VIEWS],
+                         uint32_t view_count,
+                         uint32_t *out_w,
+                         uint32_t *out_h)
 {
 #define IMAX(a, b) ((a) > (b) ? (a) : (b))
-	uint32_t w = IMAX(views[0].w, views[1].w);
-	uint32_t h = IMAX(views[0].h, views[1].h);
+	uint32_t w = 0;
+	uint32_t h = 0;
+	for (uint32_t i = 0; i < view_count; ++i) {
+		w = IMAX(w, views[i].w);
+		h = IMAX(h, views[i].h);
+	}
 #undef IMAX
 
 	// Power of two divide and round up.
@@ -76,8 +83,8 @@ calc_dispatch_dims_2_views(const struct render_viewport_data views[2], uint32_t 
 XRT_MAYBE_UNUSED static void
 update_compute_layer_descriptor_set(struct vk_bundle *vk,
                                     uint32_t src_binding,
-                                    VkSampler src_samplers[RENDER_MAX_IMAGES],
-                                    VkImageView src_image_views[RENDER_MAX_IMAGES],
+                                    VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],
+                                    VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE],
                                     uint32_t image_count,
                                     uint32_t target_binding,
                                     VkImageView target_image_view,
@@ -86,9 +93,7 @@ update_compute_layer_descriptor_set(struct vk_bundle *vk,
                                     VkDeviceSize ubo_size,
                                     VkDescriptorSet descriptor_set)
 {
-	assert(image_count <= RENDER_MAX_IMAGES);
-
-	VkDescriptorImageInfo src_image_info[RENDER_MAX_IMAGES];
+	VkDescriptorImageInfo src_image_info[RENDER_MAX_IMAGES_SIZE];
 	for (uint32_t i = 0; i < image_count; i++) {
 		src_image_info[i].sampler = src_samplers[i];
 		src_image_info[i].imageView = src_image_views[i];
@@ -144,63 +149,32 @@ update_compute_layer_descriptor_set(struct vk_bundle *vk,
 XRT_MAYBE_UNUSED static void
 update_compute_shared_descriptor_set(struct vk_bundle *vk,
                                      uint32_t src_binding,
-                                     VkSampler src_samplers[2],
-                                     VkImageView src_image_views[2],
+                                     VkSampler src_samplers[XRT_MAX_VIEWS],
+                                     VkImageView src_image_views[XRT_MAX_VIEWS],
                                      uint32_t distortion_binding,
-                                     VkSampler distortion_samplers[6],
-                                     VkImageView distortion_image_views[6],
+                                     VkSampler distortion_samplers[3 * XRT_MAX_VIEWS],
+                                     VkImageView distortion_image_views[3 * XRT_MAX_VIEWS],
                                      uint32_t target_binding,
                                      VkImageView target_image_view,
                                      uint32_t ubo_binding,
                                      VkBuffer ubo_buffer,
                                      VkDeviceSize ubo_size,
-                                     VkDescriptorSet descriptor_set)
+                                     VkDescriptorSet descriptor_set,
+                                     uint32_t view_count)
 {
-	VkDescriptorImageInfo src_image_info[2] = {
-	    {
-	        .sampler = src_samplers[0],
-	        .imageView = src_image_views[0],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	    {
-	        .sampler = src_samplers[1],
-	        .imageView = src_image_views[1],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	};
+	VkDescriptorImageInfo src_image_info[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < view_count; ++i) {
+		src_image_info[i].sampler = src_samplers[i];
+		src_image_info[i].imageView = src_image_views[i];
+		src_image_info[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
 
-	VkDescriptorImageInfo distortion_image_info[6] = {
-	    {
-	        .sampler = distortion_samplers[0],
-	        .imageView = distortion_image_views[0],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	    {
-	        .sampler = distortion_samplers[1],
-	        .imageView = distortion_image_views[1],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	    {
-	        .sampler = distortion_samplers[2],
-	        .imageView = distortion_image_views[2],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	    {
-	        .sampler = distortion_samplers[3],
-	        .imageView = distortion_image_views[3],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	    {
-	        .sampler = distortion_samplers[4],
-	        .imageView = distortion_image_views[4],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	    {
-	        .sampler = distortion_samplers[5],
-	        .imageView = distortion_image_views[5],
-	        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	    },
-	};
+	VkDescriptorImageInfo distortion_image_info[3 * XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < 3 * view_count; ++i) {
+		distortion_image_info[i].sampler = distortion_samplers[i];
+		distortion_image_info[i].imageView = distortion_image_views[i];
+		distortion_image_info[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
 
 	VkDescriptorImageInfo target_image_info = {
 	    .imageView = target_image_view,
@@ -218,7 +192,7 @@ update_compute_shared_descriptor_set(struct vk_bundle *vk,
 	        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 	        .dstSet = descriptor_set,
 	        .dstBinding = src_binding,
-	        .descriptorCount = ARRAY_SIZE(src_image_info),
+	        .descriptorCount = view_count,
 	        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 	        .pImageInfo = src_image_info,
 	    },
@@ -226,7 +200,7 @@ update_compute_shared_descriptor_set(struct vk_bundle *vk,
 	        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 	        .dstSet = descriptor_set,
 	        .dstBinding = distortion_binding,
-	        .descriptorCount = ARRAY_SIZE(distortion_image_info),
+	        .descriptorCount = 3 * view_count,
 	        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 	        .pImageInfo = distortion_image_info,
 	    },
@@ -263,7 +237,8 @@ update_compute_descriptor_set_target(struct vk_bundle *vk,
                                      uint32_t ubo_binding,
                                      VkBuffer ubo_buffer,
                                      VkDeviceSize ubo_size,
-                                     VkDescriptorSet descriptor_set)
+                                     VkDescriptorSet descriptor_set,
+                                     uint32_t view_count)
 {
 	VkDescriptorImageInfo target_image_info = {
 	    .imageView = target_image_view,
@@ -320,7 +295,7 @@ render_compute_init(struct render_compute *crc, struct render_resources *r)
 	struct vk_bundle *vk = r->vk;
 	crc->r = r;
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(crc->layer_descriptor_sets); i++) {
+	for (uint32_t i = 0; i < RENDER_MAX_LAYER_RUNS_COUNT; i++) {
 		ret = vk_create_descriptor_set(             //
 		    vk,                                     // vk_bundle
 		    r->compute.descriptor_pool,             // descriptor_pool
@@ -417,8 +392,8 @@ void
 render_compute_layers(struct render_compute *crc,
                       VkDescriptorSet descriptor_set,
                       VkBuffer ubo,
-                      VkSampler src_samplers[RENDER_MAX_IMAGES],
-                      VkImageView src_image_views[RENDER_MAX_IMAGES],
+                      VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],
+                      VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE],
                       uint32_t num_srcs,
                       VkImageView target_image_view,
                       const struct render_viewport_data *view,
@@ -477,15 +452,15 @@ render_compute_layers(struct render_compute *crc,
 
 void
 render_compute_projection_timewarp(struct render_compute *crc,
-                                   VkSampler src_samplers[2],
-                                   VkImageView src_image_views[2],
-                                   const struct xrt_normalized_rect src_norm_rects[2],
-                                   const struct xrt_pose src_poses[2],
-                                   const struct xrt_fov src_fovs[2],
-                                   const struct xrt_pose new_poses[2],
+                                   VkSampler src_samplers[XRT_MAX_VIEWS],
+                                   VkImageView src_image_views[XRT_MAX_VIEWS],
+                                   const struct xrt_normalized_rect src_norm_rects[XRT_MAX_VIEWS],
+                                   const struct xrt_pose src_poses[XRT_MAX_VIEWS],
+                                   const struct xrt_fov src_fovs[XRT_MAX_VIEWS],
+                                   const struct xrt_pose new_poses[XRT_MAX_VIEWS],
                                    VkImage target_image,
                                    VkImageView target_image_view,
-                                   const struct render_viewport_data views[2])
+                                   const struct render_viewport_data views[XRT_MAX_VIEWS])
 {
 	assert(crc->r != NULL);
 
@@ -497,29 +472,23 @@ render_compute_projection_timewarp(struct render_compute *crc,
 	 * UBO
 	 */
 
-	struct xrt_matrix_4x4 time_warp_matrix[2];
-	render_calc_time_warp_matrix( //
-	    &src_poses[0],            //
-	    &src_fovs[0],             //
-	    &new_poses[0],            //
-	    &time_warp_matrix[0]);    //
-	render_calc_time_warp_matrix( //
-	    &src_poses[1],            //
-	    &src_fovs[1],             //
-	    &new_poses[1],            //
-	    &time_warp_matrix[1]);    //
+	struct xrt_matrix_4x4 time_warp_matrix[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		render_calc_time_warp_matrix( //
+		    &src_poses[i],            //
+		    &src_fovs[i],             //
+		    &new_poses[i],            //
+		    &time_warp_matrix[i]);    //
+	}
 
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.distortion.ubo.mapped;
-	data->views[0] = views[0];
-	data->views[1] = views[1];
-	data->pre_transforms[0] = r->distortion.uv_to_tanangle[0];
-	data->pre_transforms[1] = r->distortion.uv_to_tanangle[1];
-	data->transforms[0] = time_warp_matrix[0];
-	data->transforms[1] = time_warp_matrix[1];
-	data->post_transforms[0] = src_norm_rects[0];
-	data->post_transforms[1] = src_norm_rects[1];
-
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		data->views[i] = views[i];
+		data->pre_transforms[i] = r->distortion.uv_to_tanangle[i];
+		data->transforms[i] = time_warp_matrix[i];
+		data->post_transforms[i] = src_norm_rects[i];
+	}
 
 	/*
 	 * Source, target and distortion images.
@@ -544,9 +513,12 @@ render_compute_projection_timewarp(struct render_compute *crc,
 	    subresource_range);          //
 
 	VkSampler sampler = r->samplers.clamp_to_edge;
-	VkSampler distortion_samplers[6] = {
-	    sampler, sampler, sampler, sampler, sampler, sampler,
-	};
+	VkSampler distortion_samplers[3 * XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		distortion_samplers[3 * i + 0] = sampler;
+		distortion_samplers[3 * i + 1] = sampler;
+		distortion_samplers[3 * i + 2] = sampler;
+	}
 
 	update_compute_shared_descriptor_set( //
 	    vk,                               //
@@ -561,7 +533,8 @@ render_compute_projection_timewarp(struct render_compute *crc,
 	    r->compute.ubo_binding,           //
 	    r->compute.distortion.ubo.buffer, //
 	    VK_WHOLE_SIZE,                    //
-	    crc->shared_descriptor_set);      //
+	    crc->shared_descriptor_set,       //
+	    crc->r->view_count);              //
 
 	vk->vkCmdBindPipeline(                        //
 	    r->cmd,                                   // commandBuffer
@@ -580,7 +553,7 @@ render_compute_projection_timewarp(struct render_compute *crc,
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims_2_views(views, &w, &h);
+	calc_dispatch_dims_views(views, crc->r->view_count, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //
@@ -616,12 +589,12 @@ render_compute_projection_timewarp(struct render_compute *crc,
 
 void
 render_compute_projection(struct render_compute *crc,
-                          VkSampler src_samplers[2],
-                          VkImageView src_image_views[2],
-                          const struct xrt_normalized_rect src_norm_rects[2],
+                          VkSampler src_samplers[XRT_MAX_VIEWS],
+                          VkImageView src_image_views[XRT_MAX_VIEWS],
+                          const struct xrt_normalized_rect src_norm_rects[XRT_MAX_VIEWS],
                           VkImage target_image,
                           VkImageView target_image_view,
-                          const struct render_viewport_data views[2])
+                          const struct render_viewport_data views[XRT_MAX_VIEWS])
 {
 	assert(crc->r != NULL);
 
@@ -635,10 +608,10 @@ render_compute_projection(struct render_compute *crc,
 
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.distortion.ubo.mapped;
-	data->views[0] = views[0];
-	data->views[1] = views[1];
-	data->post_transforms[0] = src_norm_rects[0];
-	data->post_transforms[1] = src_norm_rects[1];
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		data->views[i] = views[i];
+		data->post_transforms[i] = src_norm_rects[i];
+	}
 
 
 	/*
@@ -664,9 +637,12 @@ render_compute_projection(struct render_compute *crc,
 	    subresource_range);          //
 
 	VkSampler sampler = r->samplers.clamp_to_edge;
-	VkSampler distortion_samplers[6] = {
-	    sampler, sampler, sampler, sampler, sampler, sampler,
-	};
+	VkSampler distortion_samplers[3 * XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		distortion_samplers[3 * i + 0] = sampler;
+		distortion_samplers[3 * i + 1] = sampler;
+		distortion_samplers[3 * i + 2] = sampler;
+	}
 
 	update_compute_shared_descriptor_set( //
 	    vk,                               //
@@ -681,7 +657,8 @@ render_compute_projection(struct render_compute *crc,
 	    r->compute.ubo_binding,           //
 	    r->compute.distortion.ubo.buffer, //
 	    VK_WHOLE_SIZE,                    //
-	    crc->shared_descriptor_set);      //
+	    crc->shared_descriptor_set,       //
+	    crc->r->view_count);              //
 
 	vk->vkCmdBindPipeline(               //
 	    r->cmd,                          // commandBuffer
@@ -700,7 +677,7 @@ render_compute_projection(struct render_compute *crc,
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims_2_views(views, &w, &h);
+	calc_dispatch_dims_views(views, crc->r->view_count, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //
@@ -735,10 +712,10 @@ render_compute_projection(struct render_compute *crc,
 }
 
 void
-render_compute_clear(struct render_compute *crc,                 //
-                     VkImage target_image,                       //
-                     VkImageView target_image_view,              //
-                     const struct render_viewport_data views[2]) //
+render_compute_clear(struct render_compute *crc,                             //
+                     VkImage target_image,                                   //
+                     VkImageView target_image_view,                          //
+                     const struct render_viewport_data views[XRT_MAX_VIEWS]) //
 {
 	assert(crc->r != NULL);
 
@@ -751,16 +728,16 @@ render_compute_clear(struct render_compute *crc,                 //
 	 */
 
 	// Calculate transforms.
-	struct xrt_matrix_4x4 transforms[2];
-	for (uint32_t i = 0; i < 2; i++) {
+	struct xrt_matrix_4x4 transforms[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < crc->r->view_count; i++) {
 		math_matrix_4x4_identity(&transforms[i]);
 	}
 
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.clear.ubo.mapped;
-	data->views[0] = views[0];
-	data->views[1] = views[1];
-
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		data->views[i] = views[i];
+	}
 
 	/*
 	 * Source, target and distortion images.
@@ -785,9 +762,16 @@ render_compute_clear(struct render_compute *crc,                 //
 	    subresource_range);          //
 
 	VkSampler sampler = r->samplers.mock;
-	VkSampler src_samplers[2] = {sampler, sampler};
-	VkImageView src_image_views[2] = {r->mock.color.image_view, r->mock.color.image_view};
-	VkSampler distortion_samplers[6] = {sampler, sampler, sampler, sampler, sampler, sampler};
+	VkSampler src_samplers[XRT_MAX_VIEWS];
+	VkImageView src_image_views[XRT_MAX_VIEWS];
+	VkSampler distortion_samplers[3 * XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		src_samplers[i] = sampler;
+		src_image_views[i] = r->mock.color.image_view;
+		distortion_samplers[3 * i + 0] = sampler;
+		distortion_samplers[3 * i + 1] = sampler;
+		distortion_samplers[3 * i + 2] = sampler;
+	}
 
 	update_compute_shared_descriptor_set( //
 	    vk,                               // vk_bundle
@@ -802,7 +786,8 @@ render_compute_clear(struct render_compute *crc,                 //
 	    r->compute.ubo_binding,           // ubo_binding
 	    r->compute.clear.ubo.buffer,      // ubo_buffer
 	    VK_WHOLE_SIZE,                    // ubo_size
-	    crc->shared_descriptor_set);      // descriptor_set
+	    crc->shared_descriptor_set,       // descriptor_set
+	    crc->r->view_count);              // view_count
 
 	vk->vkCmdBindPipeline(              //
 	    r->cmd,                         // commandBuffer
@@ -821,7 +806,7 @@ render_compute_clear(struct render_compute *crc,                 //
 
 
 	uint32_t w = 0, h = 0;
-	calc_dispatch_dims_2_views(views, &w, &h);
+	calc_dispatch_dims_views(views, crc->r->view_count, &w, &h);
 	assert(w != 0 && h != 0);
 
 	vk->vkCmdDispatch( //

@@ -581,29 +581,24 @@ ipc_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_fra
 }
 
 static xrt_result_t
-ipc_compositor_layer_stereo_projection(struct xrt_compositor *xc,
-                                       struct xrt_device *xdev,
-                                       struct xrt_swapchain *l_xsc,
-                                       struct xrt_swapchain *r_xsc,
-                                       const struct xrt_layer_data *data)
+ipc_compositor_layer_projection(struct xrt_compositor *xc,
+                                struct xrt_device *xdev,
+                                struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                const struct xrt_layer_data *data)
 {
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
 
-	assert(data->type == XRT_LAYER_STEREO_PROJECTION);
+	assert(data->type == XRT_LAYER_PROJECTION);
 
 	struct ipc_shared_memory *ism = icc->ipc_c->ism;
 	struct ipc_layer_slot *slot = &ism->slots[icc->layers.slot_id];
 	struct ipc_layer_entry *layer = &slot->layers[icc->layers.layer_count];
-	struct ipc_client_swapchain *l = ipc_client_swapchain(l_xsc);
-	struct ipc_client_swapchain *r = ipc_client_swapchain(r_xsc);
-
 	layer->xdev_id = 0; //! @todo Real id.
-	layer->swapchain_ids[0] = l->id;
-	layer->swapchain_ids[1] = r->id;
-	layer->swapchain_ids[2] = -1;
-	layer->swapchain_ids[3] = -1;
 	layer->data = *data;
-
+	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+		struct ipc_client_swapchain *ics = ipc_client_swapchain(xsc[i]);
+		layer->swapchain_ids[i] = ics->id;
+	}
 	// Increment the number of layers.
 	icc->layers.layer_count++;
 
@@ -889,7 +884,7 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.begin_frame = ipc_compositor_begin_frame;
 	icc->base.base.discard_frame = ipc_compositor_discard_frame;
 	icc->base.base.layer_begin = ipc_compositor_layer_begin;
-	icc->base.base.layer_stereo_projection = ipc_compositor_layer_stereo_projection;
+	icc->base.base.layer_projection = ipc_compositor_layer_projection;
 	icc->base.base.layer_stereo_projection_depth = ipc_compositor_layer_stereo_projection_depth;
 	icc->base.base.layer_quad = ipc_compositor_layer_quad;
 	icc->base.base.layer_cube = ipc_compositor_layer_cube;

@@ -65,7 +65,7 @@ struct multi_layer_entry
 	 *
 	 * How many are actually used depends on the value of @p data.type
 	 */
-	struct xrt_swapchain *xscs[4];
+	struct xrt_swapchain *xscs[2 * XRT_MAX_VIEWS];
 
 	/*!
 	 * All basic (trivially-serializable) data associated with a layer,

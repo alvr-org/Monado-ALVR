@@ -645,19 +645,19 @@ multi_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_f
 }
 
 static xrt_result_t
-multi_compositor_layer_stereo_projection(struct xrt_compositor *xc,
-                                         struct xrt_device *xdev,
-                                         struct xrt_swapchain *l_xsc,
-                                         struct xrt_swapchain *r_xsc,
-                                         const struct xrt_layer_data *data)
+multi_compositor_layer_projection(struct xrt_compositor *xc,
+                                  struct xrt_device *xdev,
+                                  struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                  const struct xrt_layer_data *data)
 {
 	struct multi_compositor *mc = multi_compositor(xc);
 	(void)mc;
 
 	size_t index = mc->progress.layer_count++;
 	mc->progress.layers[index].xdev = xdev;
-	xrt_swapchain_reference(&mc->progress.layers[index].xscs[0], l_xsc);
-	xrt_swapchain_reference(&mc->progress.layers[index].xscs[1], r_xsc);
+	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+		xrt_swapchain_reference(&mc->progress.layers[index].xscs[i], xsc[i]);
+	}
 	mc->progress.layers[index].data = *data;
 
 	return XRT_SUCCESS;
@@ -969,7 +969,7 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->base.base.begin_frame = multi_compositor_begin_frame;
 	mc->base.base.discard_frame = multi_compositor_discard_frame;
 	mc->base.base.layer_begin = multi_compositor_layer_begin;
-	mc->base.base.layer_stereo_projection = multi_compositor_layer_stereo_projection;
+	mc->base.base.layer_projection = multi_compositor_layer_projection;
 	mc->base.base.layer_stereo_projection_depth = multi_compositor_layer_stereo_projection_depth;
 	mc->base.base.layer_quad = multi_compositor_layer_quad;
 	mc->base.base.layer_cube = multi_compositor_layer_cube;

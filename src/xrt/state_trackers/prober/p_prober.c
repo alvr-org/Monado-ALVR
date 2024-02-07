@@ -852,10 +852,14 @@ print_system_devices(u_pp_delegate_t dg, struct xrt_system_devices *xsysd)
 
 	u_pp(dg, "\n\tIn roles:");
 
+#define PH(IDENT)                                                                                                      \
+	u_pp(dg, "\n\t\t%s: %s, view count: %d", #IDENT,                                                               \
+	     xsysd->static_roles.IDENT ? xsysd->static_roles.IDENT->str : "<none>",                                    \
+	     xsysd->static_roles.IDENT ? xsysd->static_roles.IDENT->hmd->view_count : "<none>")
 #define P(IDENT) u_pp(dg, "\n\t\t%s: %s", #IDENT, xsysd->static_roles.IDENT ? xsysd->static_roles.IDENT->str : "<none>")
 #define PD(IDENT) u_pp(dg, "\n\t\t%s: %s", #IDENT, roles.IDENT >= 0 ? xsysd->xdevs[roles.IDENT]->str : "<none>")
 
-	P(head);
+	PH(head);
 	P(eyes);
 	P(face);
 	PD(left);

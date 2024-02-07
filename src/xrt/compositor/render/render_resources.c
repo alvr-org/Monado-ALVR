@@ -19,6 +19,9 @@
 #include "render/render_interface.h"
 
 
+#include <stdio.h>
+
+
 /*
  *
  * Gfx shared
@@ -143,7 +146,7 @@ init_mesh_vertex_buffers(struct vk_bundle *vk,
 }
 
 XRT_CHECK_RESULT static bool
-init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct render_buffer *r_ubo)
+init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer ubo[XRT_MAX_VIEWS], uint32_t view_count)
 {
 	VkResult ret;
 
@@ -154,29 +157,20 @@ init_mesh_ubo_buffers(struct vk_bundle *vk, struct render_buffer *l_ubo, struct 
 
 	// Distortion ubo size.
 	VkDeviceSize ubo_size = sizeof(struct render_gfx_mesh_ubo_data);
+	for (uint32_t i = 0; i < view_count; ++i) {
+		ret = render_buffer_init(vk,                    //
+		                         &ubo[i],               //
+		                         ubo_usage_flags,       //
+		                         memory_property_flags, //
+		                         ubo_size);             // size
+		VK_CHK_WITH_RET(ret, "render_buffer_init", false);
+		char name[20];
+		snprintf(name, sizeof(name), "mesh ubo %d", i);
+		VK_NAME_BUFFER(vk, ubo[i].buffer, name);
 
-	ret = render_buffer_init(vk,                    //
-	                         l_ubo,                 //
-	                         ubo_usage_flags,       //
-	                         memory_property_flags, //
-	                         ubo_size);             // size
-	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
-	VK_NAME_BUFFER(vk, l_ubo->buffer, "mesh l_ubo");
-
-	ret = render_buffer_map(vk, l_ubo);
-	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
-
-	ret = render_buffer_init(vk,                    //
-	                         r_ubo,                 //
-	                         ubo_usage_flags,       //
-	                         memory_property_flags, //
-	                         ubo_size);             // size
-	VK_CHK_WITH_RET(ret, "render_buffer_init", false);
-	VK_NAME_BUFFER(vk, r_ubo->buffer, "mesh r_ubo");
-
-	ret = render_buffer_map(vk, r_ubo);
-	VK_CHK_WITH_RET(ret, "render_buffer_map", false);
-
+		ret = render_buffer_map(vk, &ubo[i]);
+		VK_CHK_WITH_RET(ret, "render_buffer_map", false);
+	}
 	return true;
 }
 
@@ -532,25 +526,25 @@ render_resources_init(struct render_resources *r,
 	 * Constants
 	 */
 
+	r->view_count = xdev->hmd->view_count;
 	r->mesh.src_binding = 0;
 	r->mesh.ubo_binding = 1;
 	struct xrt_hmd_parts *parts = xdev->hmd;
 	r->mesh.vertex_count = parts->distortion.mesh.vertex_count;
 	r->mesh.stride = parts->distortion.mesh.stride;
-	r->mesh.index_counts[0] = parts->distortion.mesh.index_counts[0];
-	r->mesh.index_counts[1] = parts->distortion.mesh.index_counts[1];
 	r->mesh.index_count_total = parts->distortion.mesh.index_count_total;
-	r->mesh.index_offsets[0] = parts->distortion.mesh.index_offsets[0];
-	r->mesh.index_offsets[1] = parts->distortion.mesh.index_offsets[1];
-
+	for (uint32_t i = 0; i < r->view_count; ++i) {
+		r->mesh.index_counts[i] = parts->distortion.mesh.index_counts[i];
+		r->mesh.index_offsets[i] = parts->distortion.mesh.index_offsets[i];
+	}
 	r->compute.src_binding = 0;
 	r->compute.distortion_binding = 1;
 	r->compute.target_binding = 2;
 	r->compute.ubo_binding = 3;
 
 	r->compute.layer.image_array_size = vk->features.max_per_stage_descriptor_sampled_images;
-	if (r->compute.layer.image_array_size > RENDER_MAX_IMAGES) {
-		r->compute.layer.image_array_size = RENDER_MAX_IMAGES;
+	if (r->compute.layer.image_array_size > RENDER_MAX_IMAGES_COUNT) {
+		r->compute.layer.image_array_size = RENDER_MAX_IMAGES_COUNT;
 	}
 
 
@@ -703,10 +697,10 @@ render_resources_init(struct render_resources *r,
 
 	{
 		// Number of layer shader runs (views) times number of layers.
-		const uint32_t layer_shader_count = RENDER_MAX_LAYER_RUNS * RENDER_MAX_LAYERS;
+		const uint32_t layer_shader_count = RENDER_MAX_LAYER_RUNS_COUNT * RENDER_MAX_LAYERS;
 
 		// Two mesh distortion runs.
-		const uint32_t mesh_shader_count = 2;
+		const uint32_t mesh_shader_count = RENDER_MAX_LAYER_RUNS_COUNT;
 
 		struct vk_descriptor_pool_info mesh_pool_info = {
 		    .uniform_per_descriptor_count = 1,
@@ -737,7 +731,7 @@ render_resources_init(struct render_resources *r,
 		buffer_count += layer_shader_count;
 
 		// One UBO per mesh shader.
-		buffer_count += 2;
+		buffer_count += RENDER_MAX_LAYER_RUNS_COUNT;
 
 		// We currently use the aligmnent as max UBO size.
 		static_assert(sizeof(struct render_gfx_mesh_ubo_data) <= RENDER_ALWAYS_SAFE_UBO_ALIGNMENT, "MAX");
@@ -819,10 +813,9 @@ render_resources_init(struct render_resources *r,
 		return false;
 	}
 
-	bret = init_mesh_ubo_buffers( //
-	    vk,                       //
-	    &r->mesh.ubos[0],         //
-	    &r->mesh.ubos[1]);        //
+	bret = init_mesh_ubo_buffers(     //
+	    vk,                           //
+	    r->mesh.ubos, r->view_count); //
 	if (!bret) {
 		return false;
 	}
@@ -838,12 +831,12 @@ render_resources_init(struct render_resources *r,
 
 	const uint32_t compute_descriptor_count = //
 	    1 +                                   // Shared/distortion run(s).
-	    RENDER_MAX_LAYER_RUNS;                // Layer shader run(s).
+	    RENDER_MAX_LAYER_RUNS_COUNT;          // Layer shader run(s).
 
 	struct vk_descriptor_pool_info compute_pool_info = {
 	    .uniform_per_descriptor_count = 1,
 	    // layer images
-	    .sampler_per_descriptor_count = r->compute.layer.image_array_size + 6,
+	    .sampler_per_descriptor_count = r->compute.layer.image_array_size + RENDER_DISTORTION_IMAGES_COUNT,
 	    .storage_image_per_descriptor_count = 1,
 	    .storage_buffer_per_descriptor_count = 0,
 	    .descriptor_count = compute_descriptor_count,
@@ -921,7 +914,7 @@ render_resources_init(struct render_resources *r,
 
 	size_t layer_ubo_size = sizeof(struct render_compute_layer_ubo_data);
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->compute.layer.ubos); i++) {
+	for (uint32_t i = 0; i < r->view_count; i++) {
 		ret = render_buffer_init(      //
 		    vk,                        // vk_bundle
 		    &r->compute.layer.ubos[i], // buffer
@@ -1048,13 +1041,13 @@ render_resources_init(struct render_resources *r,
 	 * Compute distortion textures, not created until later.
 	 */
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->distortion.image_views); i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		r->distortion.image_views[i] = VK_NULL_HANDLE;
 	}
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->distortion.images); i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		r->distortion.images[i] = VK_NULL_HANDLE;
 	}
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->distortion.device_memories); i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		r->distortion.device_memories[i] = VK_NULL_HANDLE;
 	}
 
@@ -1120,8 +1113,9 @@ render_resources_close(struct render_resources *r)
 	D(QueryPool, r->query_pool);
 	render_buffer_close(vk, &r->mesh.vbo);
 	render_buffer_close(vk, &r->mesh.ibo);
-	render_buffer_close(vk, &r->mesh.ubos[0]);
-	render_buffer_close(vk, &r->mesh.ubos[1]);
+	for (uint32_t i = 0; i < r->view_count; ++i) {
+		render_buffer_close(vk, &r->mesh.ubos[i]);
+	}
 
 	D(DescriptorPool, r->compute.descriptor_pool);
 
@@ -1139,7 +1133,7 @@ render_resources_close(struct render_resources *r)
 
 	render_distortion_images_close(r);
 	render_buffer_close(vk, &r->compute.clear.ubo);
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->compute.layer.ubos); i++) {
+	for (uint32_t i = 0; i < r->view_count; i++) {
 		render_buffer_close(vk, &r->compute.layer.ubos[i]);
 	}
 	render_buffer_close(vk, &r->compute.distortion.ubo);
@@ -1263,7 +1257,7 @@ render_scratch_images_ensure(struct render_resources *r, struct render_scratch_i
 
 	render_scratch_images_close(r, rsi);
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(rsi->color); i++) {
+	for (uint32_t i = 0; i < r->view_count; i++) {
 		bret = create_scratch_image_and_view( //
 		    r->vk,                            //
 		    extent,                           //
@@ -1288,7 +1282,7 @@ render_scratch_images_close(struct render_resources *r, struct render_scratch_im
 {
 	struct vk_bundle *vk = r->vk;
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(rsi->color); i++) {
+	for (uint32_t i = 0; i < r->view_count; i++) {
 		teardown_scratch_color_image(vk, &rsi->color[i]);
 	}
 

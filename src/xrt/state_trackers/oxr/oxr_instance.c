@@ -352,8 +352,8 @@ oxr_instance_create(struct oxr_logger *log,
 		oxr_instance_destroy(log, &inst->handle);
 		return ret;
 	}
-
-	ret = oxr_system_fill_in(log, inst, XRT_SYSTEM_ID, &inst->system);
+	uint32_t view_count = dev->hmd->view_count;
+	ret = oxr_system_fill_in(log, inst, XRT_SYSTEM_ID, view_count, &inst->system);
 	if (ret != XR_SUCCESS) {
 		oxr_instance_destroy(log, &inst->handle);
 		return ret;

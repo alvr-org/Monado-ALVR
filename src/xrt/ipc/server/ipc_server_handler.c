@@ -739,29 +739,30 @@ _update_projection_layer(struct xrt_compositor *xc,
 {
 	// xdev
 	uint32_t device_id = layer->xdev_id;
-	// left
-	uint32_t lxsci = layer->swapchain_ids[0];
-	// right
-	uint32_t rxsci = layer->swapchain_ids[1];
-
 	struct xrt_device *xdev = get_xdev(ics, device_id);
-	struct xrt_swapchain *lxcs = ics->xscs[lxsci];
-	struct xrt_swapchain *rxcs = ics->xscs[rxsci];
-
-	if (lxcs == NULL || rxcs == NULL) {
-		U_LOG_E("Invalid swap chain for projection layer!");
-		return false;
-	}
 
 	if (xdev == NULL) {
 		U_LOG_E("Invalid xdev for projection layer!");
 		return false;
 	}
 
+	uint32_t view_count = xdev->hmd->view_count;
+
+	struct xrt_swapchain *xcs[XRT_MAX_VIEWS];
+	for (uint32_t k = 0; k < view_count; k++) {
+		const uint32_t xsci = layer->swapchain_ids[k];
+		xcs[k] = ics->xscs[xsci];
+		if (xcs[k] == NULL) {
+			U_LOG_E("Invalid swap chain for projection layer!");
+			return false;
+		}
+	}
+
+
 	// Cast away volatile.
 	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
 
-	xrt_comp_layer_stereo_projection(xc, xdev, lxcs, rxcs, data);
+	xrt_comp_layer_projection(xc, xdev, xcs, data);
 
 	return true;
 }
@@ -971,7 +972,7 @@ _update_layers(volatile struct ipc_client_state *ics, struct xrt_compositor *xc,
 		volatile struct ipc_layer_entry *layer = &slot->layers[i];
 
 		switch (layer->data.type) {
-		case XRT_LAYER_STEREO_PROJECTION:
+		case XRT_LAYER_PROJECTION:
 			if (!_update_projection_layer(xc, ics, layer, i)) {
 				return false;
 			}
@@ -1744,17 +1745,17 @@ ipc_handle_device_get_view_poses_2(volatile struct ipc_client_state *ics,
                                    uint32_t id,
                                    const struct xrt_vec3 *default_eye_relation,
                                    uint64_t at_timestamp_ns,
+                                   uint32_t view_count,
                                    struct ipc_info_get_view_poses_2 *out_info)
 {
 	// To make the code a bit more readable.
 	uint32_t device_id = id;
 	struct xrt_device *xdev = get_xdev(ics, device_id);
-
 	xrt_device_get_view_poses(    //
 	    xdev,                     //
 	    default_eye_relation,     //
 	    at_timestamp_ns,          //
-	    2,                        //
+	    view_count,               //
 	    &out_info->head_relation, //
 	    out_info->fovs,           //
 	    out_info->poses);         //

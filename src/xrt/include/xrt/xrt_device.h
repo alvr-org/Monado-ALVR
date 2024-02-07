@@ -13,7 +13,7 @@
 
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_visibility_mask.h"
-
+#include "xrt/xrt_limits.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,8 +107,9 @@ struct xrt_hmd_parts
 	 *
 	 * For now hardcoded display to two.
 	 */
-	struct xrt_view views[2];
+	struct xrt_view views[XRT_MAX_VIEWS];
 
+	size_t view_count;
 	/*!
 	 * Array of supported blend modes.
 	 */
@@ -139,15 +140,15 @@ struct xrt_hmd_parts
 			//! Indices, for triangle strip.
 			int *indices;
 			//! Number of indices for the triangle strips (one per view).
-			uint32_t index_counts[2];
+			uint32_t index_counts[XRT_MAX_VIEWS];
 			//! Offsets for the indices (one offset per view).
-			uint32_t index_offsets[2];
+			uint32_t index_offsets[XRT_MAX_VIEWS];
 			//! Total number of elements in mesh::indices array.
 			uint32_t index_count_total;
 		} mesh;
 
 		//! distortion is subject to the field of view
-		struct xrt_fov fov[2];
+		struct xrt_fov fov[XRT_MAX_VIEWS];
 	} distortion;
 };
 
@@ -407,6 +408,7 @@ struct xrt_device
 	                       struct xrt_space_relation *out_head_relation,
 	                       struct xrt_fov *out_fovs,
 	                       struct xrt_pose *out_poses);
+
 	/**
 	 * Compute the distortion at a single point.
 	 *

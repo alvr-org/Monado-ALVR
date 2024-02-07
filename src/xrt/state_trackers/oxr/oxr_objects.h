@@ -913,7 +913,11 @@ oxr_system_select(struct oxr_logger *log,
                   struct oxr_system **out_selected);
 
 XrResult
-oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId systemId, struct oxr_system *sys);
+oxr_system_fill_in(struct oxr_logger *log,
+                   struct oxr_instance *inst,
+                   XrSystemId systemId,
+                   uint32_t view_count,
+                   struct oxr_system *sys);
 
 XrResult
 oxr_system_verify_id(struct oxr_logger *log, const struct oxr_instance *inst, XrSystemId systemId);

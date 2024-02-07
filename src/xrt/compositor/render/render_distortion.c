@@ -285,10 +285,10 @@ render_distortion_buffer_init(struct render_resources *r,
                               struct xrt_device *xdev,
                               bool pre_rotate)
 {
-	struct render_buffer bufs[RENDER_DISTORTION_NUM_IMAGES];
-	VkDeviceMemory device_memories[RENDER_DISTORTION_NUM_IMAGES];
-	VkImage images[RENDER_DISTORTION_NUM_IMAGES];
-	VkImageView image_views[RENDER_DISTORTION_NUM_IMAGES];
+	struct render_buffer bufs[RENDER_DISTORTION_IMAGES_SIZE];
+	VkDeviceMemory device_memories[RENDER_DISTORTION_IMAGES_SIZE];
+	VkImage images[RENDER_DISTORTION_IMAGES_SIZE];
+	VkImageView image_views[RENDER_DISTORTION_IMAGES_SIZE];
 	VkCommandBuffer upload_buffer = VK_NULL_HANDLE;
 	VkResult ret;
 
@@ -297,22 +297,20 @@ render_distortion_buffer_init(struct render_resources *r,
 	 * Basics
 	 */
 
-	static_assert(RENDER_DISTORTION_NUM_IMAGES == 6, "Wrong number of distortion images!");
-
-	render_calc_uv_to_tangent_lengths_rect(&xdev->hmd->distortion.fov[0], &r->distortion.uv_to_tanangle[0]);
-	render_calc_uv_to_tangent_lengths_rect(&xdev->hmd->distortion.fov[1], &r->distortion.uv_to_tanangle[1]);
-
+	for (uint32_t i = 0; i < r->view_count; ++i) {
+		render_calc_uv_to_tangent_lengths_rect(&xdev->hmd->distortion.fov[i], &r->distortion.uv_to_tanangle[i]);
+	}
 
 	/*
 	 * Buffers with data to upload.
+	 * view_count=2,RRGGBB
+	 * view_count=3,RRRGGGBBB
 	 */
-
-	ret = create_and_fill_in_distortion_buffer_for_view(vk, xdev, &bufs[0], &bufs[2], &bufs[4], 0, pre_rotate);
-	VK_CHK_WITH_GOTO(ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
-
-	ret = create_and_fill_in_distortion_buffer_for_view(vk, xdev, &bufs[1], &bufs[3], &bufs[5], 1, pre_rotate);
-	VK_CHK_WITH_GOTO(ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
-
+	for (uint32_t i = 0; i < r->view_count; ++i) {
+		ret = create_and_fill_in_distortion_buffer_for_view(vk, xdev, &bufs[i], &bufs[r->view_count + i],
+		                                                    &bufs[2 * r->view_count + i], i, pre_rotate);
+		VK_CHK_WITH_GOTO(ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
+	}
 
 	/*
 	 * Command submission.
@@ -326,7 +324,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", err_unlock);
 	VK_NAME_COMMAND_BUFFER(vk, upload_buffer, "render_resources distortion command buffer");
 
-	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		ret = create_and_queue_upload_locked( //
 		    vk,                               // vk_bundle
 		    pool,                             // pool
@@ -349,7 +347,7 @@ render_distortion_buffer_init(struct render_resources *r,
 
 	r->distortion.pre_rotated = pre_rotate;
 
-	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		r->distortion.device_memories[i] = device_memories[i];
 		r->distortion.images[i] = images[i];
 		r->distortion.image_views[i] = image_views[i];
@@ -360,7 +358,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	 * Tidy
 	 */
 
-	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		render_buffer_close(vk, &bufs[i]);
 	}
 
@@ -374,7 +372,7 @@ err_unlock:
 	vk_cmd_pool_unlock(pool);
 
 err_resources:
-	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		D(ImageView, image_views[i]);
 		D(Image, images[i]);
 		DF(Memory, device_memories[i]);
@@ -396,12 +394,7 @@ render_distortion_images_close(struct render_resources *r)
 {
 	struct vk_bundle *vk = r->vk;
 
-	static_assert(RENDER_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.image_views), "Array size is wrong!");
-	static_assert(RENDER_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.images), "Array size is wrong!");
-	static_assert(RENDER_DISTORTION_NUM_IMAGES == ARRAY_SIZE(r->distortion.device_memories),
-	              "Array size is wrong!");
-
-	for (uint32_t i = 0; i < RENDER_DISTORTION_NUM_IMAGES; i++) {
+	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT; i++) {
 		D(ImageView, r->distortion.image_views[i]);
 		D(Image, r->distortion.images[i]);
 		DF(Memory, r->distortion.device_memories[i]);

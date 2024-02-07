@@ -554,21 +554,22 @@ client_d3d11_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_
 }
 
 static xrt_result_t
-client_d3d11_compositor_layer_stereo_projection(struct xrt_compositor *xc,
-                                                struct xrt_device *xdev,
-                                                struct xrt_swapchain *l_xsc,
-                                                struct xrt_swapchain *r_xsc,
-                                                const struct xrt_layer_data *data)
+client_d3d11_compositor_layer_projection(struct xrt_compositor *xc,
+                                         struct xrt_device *xdev,
+                                         struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                         const struct xrt_layer_data *data)
 {
 	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
 
-	assert(data->type == XRT_LAYER_STEREO_PROJECTION);
+	assert(data->type == XRT_LAYER_PROJECTION);
 
-	struct xrt_swapchain *l_xscn = as_client_d3d11_swapchain(l_xsc)->xsc.get();
-	struct xrt_swapchain *r_xscn = as_client_d3d11_swapchain(r_xsc)->xsc.get();
+	struct xrt_swapchain *xscn[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+		xscn[i] = as_client_d3d11_swapchain(xsc[i])->xsc.get();
+	}
 
 	// No flip required: D3D11 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_stereo_projection(&c->xcn->base, xdev, l_xscn, r_xscn, data);
+	return xrt_comp_layer_projection(&c->xcn->base, xdev, xscn, data);
 }
 
 static xrt_result_t
@@ -879,7 +880,7 @@ try {
 	c->base.base.begin_frame = client_d3d11_compositor_begin_frame;
 	c->base.base.discard_frame = client_d3d11_compositor_discard_frame;
 	c->base.base.layer_begin = client_d3d11_compositor_layer_begin;
-	c->base.base.layer_stereo_projection = client_d3d11_compositor_layer_stereo_projection;
+	c->base.base.layer_projection = client_d3d11_compositor_layer_projection;
 	c->base.base.layer_stereo_projection_depth = client_d3d11_compositor_layer_stereo_projection_depth;
 	c->base.base.layer_quad = client_d3d11_compositor_layer_quad;
 	c->base.base.layer_cube = client_d3d11_compositor_layer_cube;

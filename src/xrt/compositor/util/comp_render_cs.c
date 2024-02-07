@@ -44,8 +44,8 @@ do_cs_equirect2_layer(const struct xrt_layer_data *data,
                       uint32_t cur_image,
                       VkSampler clamp_to_edge,
                       VkSampler clamp_to_border_black,
-                      VkSampler src_samplers[RENDER_MAX_IMAGES],
-                      VkImageView src_image_views[RENDER_MAX_IMAGES],
+                      VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],
+                      VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE],
                       struct render_compute_layer_ubo_data *ubo_data,
                       uint32_t *out_cur_image)
 {
@@ -106,8 +106,8 @@ do_cs_projection_layer(const struct xrt_layer_data *data,
                        uint32_t cur_image,
                        VkSampler clamp_to_edge,
                        VkSampler clamp_to_border_black,
-                       VkSampler src_samplers[RENDER_MAX_IMAGES],
-                       VkImageView src_image_views[RENDER_MAX_IMAGES],
+                       VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],
+                       VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE],
                        struct render_compute_layer_ubo_data *ubo_data,
                        bool do_timewarp,
                        uint32_t *out_cur_image)
@@ -115,7 +115,7 @@ do_cs_projection_layer(const struct xrt_layer_data *data,
 	const struct xrt_layer_projection_view_data *vd = NULL;
 	const struct xrt_layer_depth_data *dvd = NULL;
 
-	if (data->type == XRT_LAYER_STEREO_PROJECTION) {
+	if (data->type == XRT_LAYER_PROJECTION) {
 		view_index_to_projection_data(view_index, data, &vd);
 	} else {
 		view_index_to_depth_data(view_index, data, &vd, &dvd);
@@ -169,8 +169,8 @@ do_cs_quad_layer(const struct xrt_layer_data *data,
                  uint32_t cur_image,
                  VkSampler clamp_to_edge,
                  VkSampler clamp_to_border_black,
-                 VkSampler src_samplers[RENDER_MAX_IMAGES],
-                 VkImageView src_image_views[RENDER_MAX_IMAGES],
+                 VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],
+                 VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE],
                  struct render_compute_layer_ubo_data *ubo_data,
                  uint32_t *out_cur_image)
 {
@@ -252,8 +252,8 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
                      uint32_t cur_image,
                      VkSampler clamp_to_edge,
                      VkSampler clamp_to_border_black,
-                     VkSampler src_samplers[RENDER_MAX_IMAGES],
-                     VkImageView src_image_views[RENDER_MAX_IMAGES],
+                     VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],
+                     VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE],
                      struct render_compute_layer_ubo_data *ubo_data,
                      uint32_t *out_cur_image)
 {
@@ -317,17 +317,17 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
 static void
 do_cs_clear(struct render_compute *crc, const struct comp_render_dispatch_data *d)
 {
-	// Hardcoded to two views.
-	if (d->view_count != 2) {
-		U_LOG_E("Only supports exactly 2 views!");
-		assert(d->view_count == 2);
+	if (d->view_count > XRT_MAX_VIEWS) {
+		U_LOG_E("Only supports max %d views!", XRT_MAX_VIEWS);
+		assert(d->view_count < XRT_MAX_VIEWS);
 		return;
 	}
 
-	const struct render_viewport_data target_viewport_datas[2] = {
-	    d->views[0].target_viewport_data,
-	    d->views[1].target_viewport_data,
-	};
+	struct render_viewport_data target_viewport_datas[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+		target_viewport_datas[i] = d->views[i].target_viewport_data;
+	}
+
 
 	render_compute_clear(        //
 	    crc,                     // crc
@@ -339,19 +339,17 @@ do_cs_clear(struct render_compute *crc, const struct comp_render_dispatch_data *
 static void
 do_cs_distortion_from_scratch(struct render_compute *crc, const struct comp_render_dispatch_data *d)
 {
-	// Hardcoded to two views.
-	if (d->view_count != 2) {
-		U_LOG_E("Only supports exactly 2 views!");
-		assert(d->view_count == 2);
+	if (d->view_count > XRT_MAX_VIEWS) {
+		U_LOG_E("Only supports max %d views!", XRT_MAX_VIEWS);
+		assert(d->view_count < XRT_MAX_VIEWS);
 		return;
 	}
-
 	VkSampler clamp_to_border_black = crc->r->samplers.clamp_to_border_black;
 
-	struct render_viewport_data target_viewport_datas[2];
-	VkImageView src_image_views[2];
-	VkSampler src_samplers[2];
-	struct xrt_normalized_rect src_norm_rects[2];
+	struct render_viewport_data target_viewport_datas[XRT_MAX_VIEWS];
+	VkImageView src_image_views[XRT_MAX_VIEWS];
+	VkSampler src_samplers[XRT_MAX_VIEWS];
+	struct xrt_normalized_rect src_norm_rects[XRT_MAX_VIEWS];
 
 	for (uint32_t i = 0; i < d->view_count; i++) {
 		// Data to be filled in.
@@ -382,63 +380,49 @@ do_cs_distortion_from_scratch(struct render_compute *crc, const struct comp_rend
 }
 
 static void
-do_cs_distortion_from_stereo_layer(struct render_compute *crc,
-                                   const struct comp_layer *layer,
-                                   const struct xrt_layer_projection_view_data *lvd,
-                                   const struct xrt_layer_projection_view_data *rvd,
-                                   const struct comp_render_dispatch_data *d)
+do_cs_distortion_for_layer(struct render_compute *crc,
+                           const struct comp_layer *layer,
+                           const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS],
+                           const struct comp_render_dispatch_data *d)
 {
-	// Hardcoded to two views.
-	if (d->view_count != 2) {
-		U_LOG_E("Only supports exactly 2 views!");
-		assert(d->view_count == 2);
+	if (d->view_count > XRT_MAX_VIEWS) {
+		U_LOG_E("Only supports max %d views!", XRT_MAX_VIEWS);
+		assert(d->view_count < XRT_MAX_VIEWS);
 		return;
 	}
 
 	// Fetch from this data.
 	const struct xrt_layer_data *data = &layer->data;
-	uint32_t left_array_index = lvd->sub.array_index;
-	uint32_t right_array_index = rvd->sub.array_index;
-	const struct comp_swapchain_image *left = &layer->sc_array[0]->images[lvd->sub.image_index];
-	const struct comp_swapchain_image *right = &layer->sc_array[1]->images[rvd->sub.image_index];
 
 	VkSampler clamp_to_border_black = crc->r->samplers.clamp_to_border_black;
 
 	// Data to fill in.
-	struct xrt_pose world_poses[2];
-	struct render_viewport_data target_viewport_datas[2];
-	struct xrt_normalized_rect src_norm_rects[2];
-	struct xrt_pose src_poses[2];
-	struct xrt_fov src_fovs[2];
-	VkSampler src_samplers[2];
-	VkImageView src_image_views[2];
+	struct xrt_pose world_poses[XRT_MAX_VIEWS];
+	struct render_viewport_data target_viewport_datas[XRT_MAX_VIEWS];
+	struct xrt_normalized_rect src_norm_rects[XRT_MAX_VIEWS];
+	struct xrt_pose src_poses[XRT_MAX_VIEWS];
+	struct xrt_fov src_fovs[XRT_MAX_VIEWS];
+	VkSampler src_samplers[XRT_MAX_VIEWS];
+	VkImageView src_image_views[XRT_MAX_VIEWS];
 
 	for (uint32_t i = 0; i < d->view_count; i++) {
-
 		struct xrt_pose world_pose;
 		struct render_viewport_data viewport_data;
 		struct xrt_pose src_pose;
 		struct xrt_fov src_fov;
 		struct xrt_normalized_rect src_norm_rect;
 		VkImageView src_image_view;
+		uint32_t array_index = vds[i]->sub.array_index;
+		const struct comp_swapchain_image *image = &layer->sc_array[i]->images[vds[i]->sub.image_index];
 
 		// Gather data.
 		world_pose = d->views[i].world_pose;
 		viewport_data = d->views[i].target_viewport_data;
 
-		if (!is_view_index_right(i)) {
-			// Left, aka not right.
-			src_pose = lvd->pose;
-			src_fov = lvd->fov;
-			src_norm_rect = lvd->sub.norm_rect;
-			src_image_view = get_image_view(left, data->flags, left_array_index);
-		} else {
-			// Right
-			src_pose = rvd->pose;
-			src_fov = rvd->fov;
-			src_norm_rect = rvd->sub.norm_rect;
-			src_image_view = get_image_view(right, data->flags, right_array_index);
-		}
+		src_pose = vds[i]->pose;
+		src_fov = vds[i]->fov;
+		src_norm_rect = vds[i]->sub.norm_rect;
+		src_image_view = get_image_view(image, data->flags, array_index);
 
 		if (data->flip_y) {
 			src_norm_rect.h = -src_norm_rect.h;
@@ -515,8 +499,8 @@ comp_render_cs_layer(struct render_compute *crc,
 
 	// Tightly pack color and optional depth images.
 	uint32_t cur_image = 0;
-	VkSampler src_samplers[RENDER_MAX_IMAGES];
-	VkImageView src_image_views[RENDER_MAX_IMAGES];
+	VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE];
+	VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE];
 
 	ubo_data->view = *target_view;
 	ubo_data->pre_transform = *pre_transform;
@@ -540,7 +524,7 @@ comp_render_cs_layer(struct render_compute *crc,
 		switch (data->type) {
 		case XRT_LAYER_CYLINDER: required_image_samplers = 1; break;
 		case XRT_LAYER_EQUIRECT2: required_image_samplers = 1; break;
-		case XRT_LAYER_STEREO_PROJECTION: required_image_samplers = 1; break;
+		case XRT_LAYER_PROJECTION: required_image_samplers = 1; break;
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH: required_image_samplers = 2; break;
 		case XRT_LAYER_QUAD: required_image_samplers = 1; break;
 		default:
@@ -587,7 +571,7 @@ comp_render_cs_layer(struct render_compute *crc,
 			    &cur_image);           // out_cur_image
 			break;
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
-		case XRT_LAYER_STEREO_PROJECTION: {
+		case XRT_LAYER_PROJECTION: {
 			do_cs_projection_layer(    //
 			    data,                  // data
 			    layer,                 // layer
@@ -722,32 +706,31 @@ comp_render_cs_dispatch(struct render_compute *crc,
 	// We want to read from the images afterwards.
 	VkImageLayout transition_to = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	if (fast_path && layers[0].data.type == XRT_LAYER_STEREO_PROJECTION) {
+	if (fast_path && layers[0].data.type == XRT_LAYER_PROJECTION) {
 		int i = 0;
 		const struct comp_layer *layer = &layers[i];
-		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
-		do_cs_distortion_from_stereo_layer( //
-		    crc,                            // crc
-		    layer,                          // layer
-		    lvd,                            // lvd
-		    rvd,                            // rvd
-		    d);                             // d
+		const struct xrt_layer_projection_data *proj = &layer->data.proj;
+		const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS];
+		for (uint32_t view = 0; view < crc->r->view_count; ++view) {
+			vds[view] = &proj->v[view];
+		}
+		do_cs_distortion_for_layer( //
+		    crc,                    // crc
+		    layer,                  // layer
+		    vds,                    // vds
+		    d);                     // d
 	} else if (fast_path && layers[0].data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		int i = 0;
 		const struct comp_layer *layer = &layers[i];
 		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
-		do_cs_distortion_from_stereo_layer( //
-		    crc,                            // crc
-		    layer,                          // layer
-		    lvd,                            // lvd
-		    rvd,                            // rvd
-		    d);                             // d
+		const struct xrt_layer_projection_view_data *vds[2];
+		vds[0] = &stereo->l;
+		vds[1] = &stereo->r;
+		do_cs_distortion_for_layer( //
+		    crc,                    // crc
+		    layer,                  // layer
+		    vds,                    // vds
+		    d);                     // d
 	} else if (layer_count > 0) {
 		comp_render_cs_layers( //
 		    crc,               //

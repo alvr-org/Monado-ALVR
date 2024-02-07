@@ -69,7 +69,7 @@ struct gfx_layer_view_state
  */
 struct gfx_layer_state
 {
-	struct gfx_layer_view_state views[2];
+	struct gfx_layer_view_state views[XRT_MAX_VIEWS];
 };
 
 /*
@@ -77,7 +77,7 @@ struct gfx_layer_state
  */
 struct gfx_mesh_state
 {
-	VkDescriptorSet descriptor_sets[2];
+	VkDescriptorSet descriptor_sets[XRT_MAX_VIEWS];
 };
 
 /*
@@ -98,7 +98,7 @@ struct gfx_mesh_view_data
  */
 struct gfx_mesh_data
 {
-	struct gfx_mesh_view_data views[2];
+	struct gfx_mesh_view_data views[XRT_MAX_VIEWS];
 };
 
 
@@ -366,7 +366,7 @@ do_projection_layer(struct render_gfx *rr,
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
 
-	if (layer_data->type == XRT_LAYER_STEREO_PROJECTION) {
+	if (layer_data->type == XRT_LAYER_PROJECTION) {
 		view_index_to_projection_data(view_index, layer_data, &vd);
 	} else {
 		view_index_to_depth_data(view_index, layer_data, &vd, &dvd);
@@ -561,7 +561,7 @@ do_layers(struct render_gfx *rr,
 				    state);                // state
 				VK_CHK_WITH_GOTO(ret, "do_equirect2_layer", err_layer);
 				break;
-			case XRT_LAYER_STEREO_PROJECTION:
+			case XRT_LAYER_PROJECTION:
 			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 				ret = do_projection_layer( //
 				    rr,                    // rr
@@ -626,7 +626,7 @@ do_layers(struct render_gfx *rr,
 				    state->premultiplied_alphas[i], //
 				    state->descriptor_sets[i]);     //
 				break;
-			case XRT_LAYER_STEREO_PROJECTION:
+			case XRT_LAYER_PROJECTION:
 			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 				render_gfx_layer_projection(        //
 				    rr,                             //
@@ -750,38 +750,25 @@ static void
 do_mesh_from_proj(struct render_gfx *rr,
                   const struct comp_render_dispatch_data *d,
                   const struct comp_layer *layer,
-                  const struct xrt_layer_projection_view_data *lvd,
-                  const struct xrt_layer_projection_view_data *rvd)
+                  const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS])
 {
 	const struct xrt_layer_data *data = &layer->data;
-	const uint32_t left_array_index = lvd->sub.array_index;
-	const uint32_t right_array_index = rvd->sub.array_index;
-	const struct comp_swapchain_image *left = &layer->sc_array[0]->images[lvd->sub.image_index];
-	const struct comp_swapchain_image *right = &layer->sc_array[1]->images[rvd->sub.image_index];
 
-	VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
+	const VkSampler clamp_to_border_black = rr->r->samplers.clamp_to_border_black;
 
 	struct gfx_mesh_data md = XRT_STRUCT_INIT;
 	for (uint32_t i = 0; i < d->view_count; i++) {
+		const uint32_t array_index = vds[i]->sub.array_index;
+		const struct comp_swapchain_image *image = &layer->sc_array[i]->images[vds[i]->sub.image_index];
 
 		struct xrt_pose src_pose;
 		struct xrt_fov src_fov;
 		struct xrt_normalized_rect src_norm_rect;
-		VkImageView src_image_view;
 
-		if (!is_view_index_right(i)) {
-			// Left, aka not right.
-			src_pose = lvd->pose;
-			src_fov = lvd->fov;
-			src_norm_rect = lvd->sub.norm_rect;
-			src_image_view = get_image_view(left, data->flags, left_array_index);
-		} else {
-			// Right
-			src_pose = rvd->pose;
-			src_fov = rvd->fov;
-			src_norm_rect = rvd->sub.norm_rect;
-			src_image_view = get_image_view(right, data->flags, right_array_index);
-		}
+		src_pose = vds[i]->pose;
+		src_fov = vds[i]->fov;
+		src_norm_rect = vds[i]->sub.norm_rect;
+		const VkImageView src_image_view = get_image_view(image, data->flags, array_index);
 
 		if (data->flip_y) {
 			src_norm_rect.h = -src_norm_rect.h;
@@ -827,31 +814,30 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 	// Sanity check.
 	assert(!fast_path || layer_count >= 1);
 
-	if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION) {
+	if (fast_path && layer->data.type == XRT_LAYER_PROJECTION) {
 		// Fast path.
-		const struct xrt_layer_stereo_projection_data *stereo = &layer->data.stereo;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
+		const struct xrt_layer_projection_data *proj = &layer->data.proj;
+		const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS];
+		for (uint32_t j = 0; j < d->view_count; ++j) {
+			vds[j] = &proj->v[j];
+		}
 		do_mesh_from_proj( //
 		    rr,            //
 		    d,             //
 		    layer,         //
-		    lvd,           //
-		    rvd);          //
+		    vds);          //
 
 	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		// Fast path.
 		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *lvd = &stereo->l;
-		const struct xrt_layer_projection_view_data *rvd = &stereo->r;
-
+		const struct xrt_layer_projection_view_data *vds[2];
+		vds[0] = &stereo->l;
+		vds[1] = &stereo->r;
 		do_mesh_from_proj( //
 		    rr,            //
 		    d,             //
 		    layer,         //
-		    lvd,           //
-		    rvd);          //
+		    vds);          //
 
 	} else {
 		if (fast_path) {

@@ -107,14 +107,22 @@ oxr_system_get_by_id(struct oxr_logger *log, struct oxr_instance *inst, XrSystem
 
 
 XrResult
-oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId systemId, struct oxr_system *sys)
+oxr_system_fill_in(
+    struct oxr_logger *log, struct oxr_instance *inst, XrSystemId systemId, uint32_t view_count, struct oxr_system *sys)
 {
 	//! @todo handle other subaction paths?
 
 	sys->inst = inst;
 	sys->systemId = systemId;
 	sys->form_factor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-	sys->view_config_type = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	if (view_count == 1) {
+		sys->view_config_type = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO;
+	} else if (view_count == 2) {
+		sys->view_config_type = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	} else {
+		assert(false && "view_count must be 1 or 2");
+	}
+	U_LOG_D("sys->view_config_type = %d", sys->view_config_type);
 	sys->dynamic_roles_cache = (struct xrt_system_roles)XRT_SYSTEM_ROLES_INIT;
 
 #ifdef XR_USE_GRAPHICS_API_VULKAN
@@ -141,40 +149,25 @@ oxr_system_fill_in(struct oxr_logger *log, struct oxr_instance *inst, XrSystemId
 
 	struct xrt_system_compositor_info *info = &sys->xsysc->info;
 
-	uint32_t w0 = (uint32_t)(info->views[0].recommended.width_pixels * scale);
-	uint32_t h0 = (uint32_t)(info->views[0].recommended.height_pixels * scale);
-	uint32_t w1 = (uint32_t)(info->views[1].recommended.width_pixels * scale);
-	uint32_t h1 = (uint32_t)(info->views[1].recommended.height_pixels * scale);
-
-	uint32_t w0_2 = info->views[0].max.width_pixels;
-	uint32_t h0_2 = info->views[0].max.height_pixels;
-	uint32_t w1_2 = info->views[1].max.width_pixels;
-	uint32_t h1_2 = info->views[1].max.height_pixels;
-
 #define imin(a, b) (a < b ? a : b)
+	for (uint32_t i = 0; i < view_count; ++i) {
+		uint32_t w = (uint32_t)(info->views[i].recommended.width_pixels * scale);
+		uint32_t h = (uint32_t)(info->views[i].recommended.height_pixels * scale);
+		uint32_t w_2 = info->views[i].max.width_pixels;
+		uint32_t h_2 = info->views[i].max.height_pixels;
 
-	w0 = imin(w0, w0_2);
-	h0 = imin(h0, h0_2);
-	w1 = imin(w1, w1_2);
-	h1 = imin(h1, h1_2);
+		w = imin(w, w_2);
+		h = imin(h, h_2);
+
+		sys->views[i].recommendedImageRectWidth = w;
+		sys->views[i].maxImageRectWidth = w_2;
+		sys->views[i].recommendedImageRectHeight = h;
+		sys->views[i].maxImageRectHeight = h_2;
+		sys->views[i].recommendedSwapchainSampleCount = info->views[i].recommended.sample_count;
+		sys->views[i].maxSwapchainSampleCount = info->views[i].max.sample_count;
+	}
 
 #undef imin
-
-	// clang-format off
-	sys->views[0].recommendedImageRectWidth       = w0;
-	sys->views[0].maxImageRectWidth               = w0_2;
-	sys->views[0].recommendedImageRectHeight      = h0;
-	sys->views[0].maxImageRectHeight              = h0_2;
-	sys->views[0].recommendedSwapchainSampleCount = info->views[0].recommended.sample_count;
-	sys->views[0].maxSwapchainSampleCount         = info->views[0].max.sample_count;
-
-	sys->views[1].recommendedImageRectWidth       = w1;
-	sys->views[1].maxImageRectWidth               = w1_2;
-	sys->views[1].recommendedImageRectHeight      = h1;
-	sys->views[1].maxImageRectHeight              = h1_2;
-	sys->views[1].recommendedSwapchainSampleCount = info->views[1].recommended.sample_count;
-	sys->views[1].maxSwapchainSampleCount         = info->views[1].max.sample_count;
-	// clang-format on
 
 
 	/*
@@ -459,7 +452,11 @@ oxr_system_enumerate_view_conf_views(struct oxr_logger *log,
 	if (viewConfigurationType != sys->view_config_type) {
 		return oxr_error(log, XR_ERROR_VIEW_CONFIGURATION_TYPE_UNSUPPORTED, "Invalid view configuration type");
 	}
-
-	OXR_TWO_CALL_FILL_IN_HELPER(log, viewCapacityInput, viewCountOutput, views, 2, view_configuration_view_fill_in,
-	                            sys->views, XR_SUCCESS);
+	if (sys->view_config_type == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO) {
+		OXR_TWO_CALL_FILL_IN_HELPER(log, viewCapacityInput, viewCountOutput, views, 1,
+		                            view_configuration_view_fill_in, sys->views, XR_SUCCESS);
+	} else {
+		OXR_TWO_CALL_FILL_IN_HELPER(log, viewCapacityInput, viewCountOutput, views, 2,
+		                            view_configuration_view_fill_in, sys->views, XR_SUCCESS);
+	}
 }

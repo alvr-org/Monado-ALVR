@@ -33,7 +33,7 @@ struct comp_layer
 	 *
 	 * Unused elements should be set to null.
 	 */
-	struct comp_swapchain *sc_array[4];
+	struct comp_swapchain *sc_array[XRT_MAX_VIEWS * 2];
 
 	/*!
 	 * All basic (trivially-serializable) data associated with a layer.
@@ -62,9 +62,9 @@ struct comp_layer_slot
 	bool one_projection_layer_fast_path;
 
 	//! fov as reported by device for the current submit.
-	struct xrt_fov fovs[2];
+	struct xrt_fov fovs[XRT_MAX_VIEWS];
 	//! absolute pose as reported by device for the current submit.
-	struct xrt_pose poses[2];
+	struct xrt_pose poses[XRT_MAX_VIEWS];
 };
 
 /*!

@@ -154,13 +154,13 @@ struct mock_compositor
 		                            enum xrt_blend_mode env_blend_mode);
 
 		/*!
-		 * Optional function pointer for mock compositor, called during @ref xrt_comp_layer_stereo_projection
+		 * Optional function pointer for mock compositor, called during @ref xrt_comp_layer_projection
 		 */
-		xrt_result_t (*layer_stereo_projection)(struct mock_compositor *mc,
-		                                        struct xrt_device *xdev,
-		                                        struct xrt_swapchain *l_xsc,
-		                                        struct xrt_swapchain *r_xsc,
-		                                        const struct xrt_layer_data *data);
+		xrt_result_t (*layer_projection)(struct mock_compositor *mc,
+		                                 struct xrt_device *xdev,
+		                                 struct xrt_swapchain *l_xsc,
+		                                 struct xrt_swapchain *r_xsc,
+		                                 const struct xrt_layer_data *data);
 
 		/*!
 		 * Optional function pointer for mock compositor, called during @ref

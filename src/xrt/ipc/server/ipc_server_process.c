@@ -358,10 +358,12 @@ init_shm(struct ipc_server *s)
 
 		// Is this a HMD?
 		if (xdev->hmd != NULL) {
-			ism->hmd.views[0].display.w_pixels = xdev->hmd->views[0].display.w_pixels;
-			ism->hmd.views[0].display.h_pixels = xdev->hmd->views[0].display.h_pixels;
-			ism->hmd.views[1].display.w_pixels = xdev->hmd->views[1].display.w_pixels;
-			ism->hmd.views[1].display.h_pixels = xdev->hmd->views[1].display.h_pixels;
+			// set view count
+			ism->hmd.view_count = xdev->hmd->view_count;
+			for (uint32_t view = 0; view < xdev->hmd->view_count; ++view) {
+				ism->hmd.views[view].display.w_pixels = xdev->hmd->views[view].display.w_pixels;
+				ism->hmd.views[view].display.h_pixels = xdev->hmd->views[view].display.h_pixels;
+			}
 
 			for (size_t i = 0; i < xdev->hmd->blend_mode_count; i++) {
 				// Not super necessary, we also do this assert in oxr_system.c

@@ -61,7 +61,8 @@ extern "C" {
  * Max number of images that can be given at a single time to the layer
  * squasher in a single dispatch.
  */
-#define RENDER_MAX_IMAGES (RENDER_MAX_LAYERS * 2)
+#define RENDER_MAX_IMAGES_SIZE (RENDER_MAX_LAYERS * XRT_MAX_VIEWS)
+#define RENDER_MAX_IMAGES_COUNT (RENDER_MAX_LAYERS * r->view_count)
 
 /*!
  * Maximum number of times that the layer squasher shader can run per
@@ -70,13 +71,15 @@ extern "C" {
  * two or more different compositions it's not the maximum number of views per
  * composition (which is this number divided by number of composition).
  */
-#define RENDER_MAX_LAYER_RUNS (2)
+#define RENDER_MAX_LAYER_RUNS_SIZE (XRT_MAX_VIEWS)
+#define RENDER_MAX_LAYER_RUNS_COUNT (r->view_count)
 
 //! How large in pixels the distortion image is.
 #define RENDER_DISTORTION_IMAGE_DIMENSIONS (128)
 
-//! How many distortion images we have, one for each channel (3 rgb) and per view, total 6.
-#define RENDER_DISTORTION_NUM_IMAGES (6)
+//! How many distortion images we have, one for each channel (3 rgb) and per view.
+#define RENDER_DISTORTION_IMAGES_SIZE (3 * XRT_MAX_VIEWS)
+#define RENDER_DISTORTION_IMAGES_COUNT (3 * r->view_count)
 
 //! Which binding does the layer projection and quad shader has it's UBO on.
 #define RENDER_BINDING_LAYER_SHARED_UBO 0
@@ -347,6 +350,9 @@ render_sub_alloc_ubo_alloc_and_write(struct vk_bundle *vk,
  */
 struct render_resources
 {
+	//! The count of views that we are rendering to.
+	uint32_t view_count;
+
 	//! Vulkan resources.
 	struct vk_bundle *vk;
 
@@ -440,13 +446,13 @@ struct render_resources
 		struct render_buffer ibo;
 
 		uint32_t vertex_count;
-		uint32_t index_counts[2];
+		uint32_t index_counts[XRT_MAX_VIEWS];
 		uint32_t stride;
-		uint32_t index_offsets[2];
+		uint32_t index_offsets[XRT_MAX_VIEWS];
 		uint32_t index_count_total;
 
 		//! Info ubos, only supports two views currently.
-		struct render_buffer ubos[2];
+		struct render_buffer ubos[XRT_MAX_VIEWS];
 	} mesh;
 
 	/*!
@@ -498,7 +504,7 @@ struct render_resources
 			uint32_t image_array_size;
 
 			//! Target info.
-			struct render_buffer ubos[RENDER_MAX_LAYER_RUNS];
+			struct render_buffer ubos[RENDER_MAX_LAYER_RUNS_SIZE];
 		} layer;
 
 		struct
@@ -534,16 +540,16 @@ struct render_resources
 	struct
 	{
 		//! Transform to go from UV to tangle angles.
-		struct xrt_normalized_rect uv_to_tanangle[2];
+		struct xrt_normalized_rect uv_to_tanangle[XRT_MAX_VIEWS];
 
 		//! Backing memory to distortion images.
-		VkDeviceMemory device_memories[RENDER_DISTORTION_NUM_IMAGES];
+		VkDeviceMemory device_memories[RENDER_DISTORTION_IMAGES_SIZE];
 
 		//! Distortion images.
-		VkImage images[RENDER_DISTORTION_NUM_IMAGES];
+		VkImage images[RENDER_DISTORTION_IMAGES_SIZE];
 
 		//! The views into the distortion images.
-		VkImageView image_views[RENDER_DISTORTION_NUM_IMAGES];
+		VkImageView image_views[RENDER_DISTORTION_IMAGES_SIZE];
 
 		//! Whether distortion images have been pre-rotated 90 degrees.
 		bool pre_rotated;
@@ -642,7 +648,7 @@ struct render_scratch_images
 {
 	VkExtent2D extent;
 
-	struct render_scratch_color_image color[2];
+	struct render_scratch_color_image color[XRT_MAX_VIEWS];
 };
 
 /*!
@@ -1096,7 +1102,7 @@ struct render_compute
 	struct render_resources *r;
 
 	//! Layer descriptor set.
-	VkDescriptorSet layer_descriptor_sets[RENDER_MAX_LAYER_RUNS];
+	VkDescriptorSet layer_descriptor_sets[RENDER_MAX_LAYER_RUNS_SIZE];
 
 	/*!
 	 * Shared descriptor set, used for the clear and distortion shaders. It
@@ -1138,15 +1144,15 @@ struct render_compute_layer_ubo_data
 	{
 		uint32_t val;
 		uint32_t unpremultiplied;
-		uint32_t padding[2];
+		uint32_t padding[XRT_MAX_VIEWS];
 	} layer_type[RENDER_MAX_LAYERS];
 
 	//! Which image/sampler(s) correspond to each layer.
 	struct
 	{
-		uint32_t images[2];
+		uint32_t images[XRT_MAX_VIEWS];
 		//! @todo Implement separated samplers and images (and change to samplers[2])
-		uint32_t padding[2];
+		uint32_t padding[XRT_MAX_VIEWS];
 	} images_samplers[RENDER_MAX_LAYERS];
 
 	//! Shared between cylinder and equirect2.
@@ -1206,7 +1212,7 @@ struct render_compute_layer_ubo_data
 	struct
 	{
 		struct xrt_vec2 val;
-		float padding[2];
+		float padding[XRT_MAX_VIEWS];
 	} quad_extent[RENDER_MAX_LAYERS];
 };
 
@@ -1217,10 +1223,10 @@ struct render_compute_layer_ubo_data
  */
 struct render_compute_distortion_ubo_data
 {
-	struct render_viewport_data views[2];
-	struct xrt_normalized_rect pre_transforms[2];
-	struct xrt_normalized_rect post_transforms[2];
-	struct xrt_matrix_4x4 transforms[2];
+	struct render_viewport_data views[XRT_MAX_VIEWS];
+	struct xrt_normalized_rect pre_transforms[XRT_MAX_VIEWS];
+	struct xrt_normalized_rect post_transforms[XRT_MAX_VIEWS];
+	struct xrt_matrix_4x4 transforms[XRT_MAX_VIEWS];
 };
 
 /*!
@@ -1270,51 +1276,51 @@ render_compute_end(struct render_compute *crc);
  * @public @memberof render_compute
  */
 void
-render_compute_layers(struct render_compute *crc,                     //
-                      VkDescriptorSet descriptor_set,                 //
-                      VkBuffer ubo,                                   //
-                      VkSampler src_samplers[RENDER_MAX_IMAGES],      //
-                      VkImageView src_image_views[RENDER_MAX_IMAGES], //
-                      uint32_t num_srcs,                              //
-                      VkImageView target_image_view,                  //
-                      const struct render_viewport_data *view,        //
-                      bool timewarp);                                 //
+render_compute_layers(struct render_compute *crc,                          //
+                      VkDescriptorSet descriptor_set,                      //
+                      VkBuffer ubo,                                        //
+                      VkSampler src_samplers[RENDER_MAX_IMAGES_SIZE],      //
+                      VkImageView src_image_views[RENDER_MAX_IMAGES_SIZE], //
+                      uint32_t num_srcs,                                   //
+                      VkImageView target_image_view,                       //
+                      const struct render_viewport_data *view,             //
+                      bool timewarp);                                      //
 
 /*!
  * @public @memberof render_compute
  */
 void
 render_compute_projection_timewarp(struct render_compute *crc,
-                                   VkSampler src_samplers[2],
-                                   VkImageView src_image_views[2],
-                                   const struct xrt_normalized_rect src_rects[2],
-                                   const struct xrt_pose src_poses[2],
-                                   const struct xrt_fov src_fovs[2],
-                                   const struct xrt_pose new_poses[2],
+                                   VkSampler src_samplers[XRT_MAX_VIEWS],
+                                   VkImageView src_image_views[XRT_MAX_VIEWS],
+                                   const struct xrt_normalized_rect src_rects[XRT_MAX_VIEWS],
+                                   const struct xrt_pose src_poses[XRT_MAX_VIEWS],
+                                   const struct xrt_fov src_fovs[XRT_MAX_VIEWS],
+                                   const struct xrt_pose new_poses[XRT_MAX_VIEWS],
                                    VkImage target_image,
                                    VkImageView target_image_view,
-                                   const struct render_viewport_data views[2]);
+                                   const struct render_viewport_data views[XRT_MAX_VIEWS]);
 
 /*!
  * @public @memberof render_compute
  */
 void
-render_compute_projection(struct render_compute *crc,                    //
-                          VkSampler src_samplers[2],                     //
-                          VkImageView src_image_views[2],                //
-                          const struct xrt_normalized_rect src_rects[2], //
-                          VkImage target_image,                          //
-                          VkImageView target_image_view,                 //
-                          const struct render_viewport_data views[2]);   //
+render_compute_projection(struct render_compute *crc,                                //
+                          VkSampler src_samplers[XRT_MAX_VIEWS],                     //
+                          VkImageView src_image_views[XRT_MAX_VIEWS],                //
+                          const struct xrt_normalized_rect src_rects[XRT_MAX_VIEWS], //
+                          VkImage target_image,                                      //
+                          VkImageView target_image_view,                             //
+                          const struct render_viewport_data views[XRT_MAX_VIEWS]);   //
 
 /*!
  * @public @memberof render_compute
  */
 void
-render_compute_clear(struct render_compute *crc,                  //
-                     VkImage target_image,                        //
-                     VkImageView target_image_view,               //
-                     const struct render_viewport_data views[2]); //
+render_compute_clear(struct render_compute *crc,                              //
+                     VkImage target_image,                                    //
+                     VkImageView target_image_view,                           //
+                     const struct render_viewport_data views[XRT_MAX_VIEWS]); //
 
 
 

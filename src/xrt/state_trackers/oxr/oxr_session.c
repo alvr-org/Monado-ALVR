@@ -455,7 +455,7 @@ oxr_session_locate_views(struct oxr_logger *log,
 	bool print = sess->sys->inst->debug_views;
 	struct xrt_device *xdev = GET_XDEV_BY_ROLE(sess->sys, head);
 	struct oxr_space *baseSpc = XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_space *, viewLocateInfo->space);
-	uint32_t view_count = 2;
+	uint32_t view_count = xdev->hmd->view_count;
 
 	// Start two call handling.
 	if (viewCountOutput != NULL) {
@@ -491,14 +491,14 @@ oxr_session_locate_views(struct oxr_logger *log,
 
 	// The head pose as in the xdev's space, aka XRT_INPUT_GENERIC_HEAD_POSE.
 	struct xrt_space_relation T_xdev_head = XRT_SPACE_RELATION_ZERO;
-	struct xrt_fov fovs[2] = {0};
-	struct xrt_pose poses[2] = {0};
+	struct xrt_fov fovs[XRT_MAX_VIEWS] = {0};
+	struct xrt_pose poses[XRT_MAX_VIEWS] = {0};
 
 	xrt_device_get_view_poses( //
 	    xdev,                  //
 	    &default_eye_relation, //
 	    xdisplay_time,         //
-	    2,                     //
+	    view_count,            //
 	    &T_xdev_head,          //
 	    fovs,                  //
 	    poses);

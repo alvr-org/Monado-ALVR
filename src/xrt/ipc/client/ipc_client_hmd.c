@@ -188,6 +188,7 @@ ipc_client_hmd_get_view_poses(struct xrt_device *xdev,
 		    ich->device_id,                      //
 		    default_eye_relation,                //
 		    at_timestamp_ns,                     //
+		    view_count,                          //
 		    &info);                              //
 		IPC_CHK_ONLY_PRINT(ich->ipc_c, xret, "ipc_call_device_get_view_poses_2");
 
@@ -352,12 +353,12 @@ ipc_client_hmd_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *
 	for (int i = 0; i < XRT_MAX_DEVICE_BLEND_MODES; i++) {
 		ich->base.hmd->blend_modes[i] = ipc_c->ism->hmd.blend_modes[i];
 	}
+	ich->base.hmd->view_count = ism->hmd.view_count;
 	ich->base.hmd->blend_mode_count = ipc_c->ism->hmd.blend_mode_count;
-
-	ich->base.hmd->views[0].display.w_pixels = ipc_c->ism->hmd.views[0].display.w_pixels;
-	ich->base.hmd->views[0].display.h_pixels = ipc_c->ism->hmd.views[0].display.h_pixels;
-	ich->base.hmd->views[1].display.w_pixels = ipc_c->ism->hmd.views[1].display.w_pixels;
-	ich->base.hmd->views[1].display.h_pixels = ipc_c->ism->hmd.views[1].display.h_pixels;
+	for (uint32_t i = 0; i < ich->base.hmd->view_count; ++i) {
+		ich->base.hmd->views[i].display.w_pixels = ipc_c->ism->hmd.views[i].display.w_pixels;
+		ich->base.hmd->views[i].display.h_pixels = ipc_c->ism->hmd.views[i].display.h_pixels;
+	}
 
 	// Distortion information, fills in xdev->compute_distortion().
 	u_distortion_mesh_set_none(&ich->base);

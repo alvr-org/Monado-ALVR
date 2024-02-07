@@ -40,7 +40,7 @@ information.
   is done with CPU work and ready to do GPU work.
 * @ref xrt_comp_discard_frame - The frame is discarded.
 * @ref xrt_comp_layer_begin - Called during transfers of layers.
-* @ref xrt_comp_layer_stereo_projection - This and other layer functions are
+* @ref xrt_comp_layer_projection - This and other layer functions are
   called to list the layers the compositor should render.
 * @ref xrt_comp_layer_commit - The compositor starts to render the frame,
   trying to finish at the **present** time.

@@ -16,6 +16,10 @@
  * @addtogroup xrt_iface
  * @{
  */
+/*
+ * Max number of views supported by a compositor, artificial limit.
+ */
+#define XRT_MAX_VIEWS 2
 
 /*!
  * Maximum number of handles sent in one call.

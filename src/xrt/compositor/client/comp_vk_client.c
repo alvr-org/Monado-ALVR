@@ -474,23 +474,22 @@ client_vk_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_lay
 }
 
 static xrt_result_t
-client_vk_compositor_layer_stereo_projection(struct xrt_compositor *xc,
-                                             struct xrt_device *xdev,
-                                             struct xrt_swapchain *l_xsc,
-                                             struct xrt_swapchain *r_xsc,
-                                             const struct xrt_layer_data *data)
+client_vk_compositor_layer_projection(struct xrt_compositor *xc,
+                                      struct xrt_device *xdev,
+                                      struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                      const struct xrt_layer_data *data)
 {
 	struct xrt_compositor *xcn;
-	struct xrt_swapchain *l_xscn;
-	struct xrt_swapchain *r_xscn;
+	struct xrt_swapchain *xscn[XRT_MAX_VIEWS];
 
-	assert(data->type == XRT_LAYER_STEREO_PROJECTION);
+	assert(data->type == XRT_LAYER_PROJECTION);
+	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+		xscn[i] = &client_vk_swapchain(xsc[i])->xscn->base;
+	}
 
 	xcn = to_native_compositor(xc);
-	l_xscn = to_native_swapchain(l_xsc);
-	r_xscn = to_native_swapchain(r_xsc);
 
-	return xrt_comp_layer_stereo_projection(xcn, xdev, l_xscn, r_xscn, data);
+	return xrt_comp_layer_projection(xcn, xdev, xscn, data);
 }
 
 
@@ -842,7 +841,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	c->base.base.begin_frame = client_vk_compositor_begin_frame;
 	c->base.base.discard_frame = client_vk_compositor_discard_frame;
 	c->base.base.layer_begin = client_vk_compositor_layer_begin;
-	c->base.base.layer_stereo_projection = client_vk_compositor_layer_stereo_projection;
+	c->base.base.layer_projection = client_vk_compositor_layer_projection;
 	c->base.base.layer_stereo_projection_depth = client_vk_compositor_layer_stereo_projection_depth;
 	c->base.base.layer_quad = client_vk_compositor_layer_quad;
 	c->base.base.layer_cube = client_vk_compositor_layer_cube;

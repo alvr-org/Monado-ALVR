@@ -188,7 +188,7 @@ mock_create_native_compositor()
 	// mc->base.base.begin_frame = mock_compositor_begin_frame;
 	// mc->base.base.discard_frame = mock_compositor_discard_frame;
 	// mc->base.base.layer_begin = mock_compositor_layer_begin;
-	// mc->base.base.layer_stereo_projection = mock_compositor_layer_stereo_projection;
+	// mc->base.base.layer_projection = mock_compositor_layer_projection;
 	// mc->base.base.layer_stereo_projection_depth = mock_compositor_layer_stereo_projection_depth;
 	// mc->base.base.layer_quad = mock_compositor_layer_quad;
 	// mc->base.base.layer_cube = mock_compositor_layer_cube;

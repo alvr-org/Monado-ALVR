@@ -272,7 +272,7 @@ can_do_one_projection_layer_fast_path(struct comp_compositor *c)
 	enum xrt_layer_type type = layer->data.type;
 
 	// Handled by the distortion shader.
-	if (type != XRT_LAYER_STEREO_PROJECTION && //
+	if (type != XRT_LAYER_PROJECTION && //
 	    type != XRT_LAYER_STEREO_PROJECTION_DEPTH) {
 		return false;
 	}
@@ -989,13 +989,6 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 
 	uint32_t w0 = (uint32_t)(xdev->hmd->views[0].display.w_pixels * scale);
 	uint32_t h0 = (uint32_t)(xdev->hmd->views[0].display.h_pixels * scale);
-	uint32_t w1 = (uint32_t)(xdev->hmd->views[1].display.w_pixels * scale);
-	uint32_t h1 = (uint32_t)(xdev->hmd->views[1].display.h_pixels * scale);
-
-	uint32_t w0_2 = xdev->hmd->views[0].display.w_pixels * 2;
-	uint32_t h0_2 = xdev->hmd->views[0].display.h_pixels * 2;
-	uint32_t w1_2 = xdev->hmd->views[1].display.w_pixels * 2;
-	uint32_t h1_2 = xdev->hmd->views[1].display.h_pixels * 2;
 
 	c->view_extents.width = w0;
 	c->view_extents.height = h0;
@@ -1052,8 +1045,6 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	/*
 	 * Rest of info.
 	 */
-	// Hardcoded for now.
-	uint32_t view_count = 2;
 
 	struct xrt_system_compositor_info sys_info_storage = {0};
 	struct xrt_system_compositor_info *sys_info = &sys_info_storage;
@@ -1066,19 +1057,20 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	sys_info->client_d3d_deviceLUID_valid = c->settings.client_gpu_deviceLUID_valid;
 
 	// clang-format off
-	sys_info->views[0].recommended.width_pixels  = w0;
-	sys_info->views[0].recommended.height_pixels = h0;
-	sys_info->views[0].recommended.sample_count  = 1;
-	sys_info->views[0].max.width_pixels          = w0_2;
-	sys_info->views[0].max.height_pixels         = h0_2;
-	sys_info->views[0].max.sample_count          = 1;
+	uint32_t view_count = xdev->hmd->view_count;
+	for (uint32_t i = 0; i < view_count; ++i) {
+		uint32_t w = (uint32_t)(xdev->hmd->views[i].display.w_pixels * scale);
+		uint32_t h = (uint32_t)(xdev->hmd->views[i].display.h_pixels * scale);
+		uint32_t w_2 = xdev->hmd->views[i].display.w_pixels * 2;
+		uint32_t h_2 = xdev->hmd->views[i].display.h_pixels * 2;
 
-	sys_info->views[1].recommended.width_pixels  = w1;
-	sys_info->views[1].recommended.height_pixels = h1;
-	sys_info->views[1].recommended.sample_count  = 1;
-	sys_info->views[1].max.width_pixels          = w1_2;
-	sys_info->views[1].max.height_pixels         = h1_2;
-	sys_info->views[1].max.sample_count          = 1;
+		sys_info->views[i].recommended.width_pixels  = w;
+		sys_info->views[i].recommended.height_pixels = h;
+		sys_info->views[i].recommended.sample_count  = 1;
+		sys_info->views[i].max.width_pixels          = w_2;
+		sys_info->views[i].max.height_pixels         = h_2;
+		sys_info->views[i].max.sample_count          = 1;
+	}
 	// clang-format on
 
 	// If we can add e.g. video pass-through capabilities, we may need to change (augment) this list.

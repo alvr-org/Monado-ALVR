@@ -51,12 +51,12 @@ view_index_to_projection_data(uint32_t view_index,
                               const struct xrt_layer_data *data,
                               const struct xrt_layer_projection_view_data **out_vd)
 {
-	const struct xrt_layer_stereo_projection_data *stereo = &data->stereo;
+	const struct xrt_layer_projection_data *proj = &data->proj;
 
 	if (is_view_index_right(view_index)) {
-		*out_vd = &stereo->r;
+		*out_vd = &proj->v[view_index];
 	} else {
-		*out_vd = &stereo->l;
+		*out_vd = &proj->v[view_index];
 	}
 }
 
@@ -94,7 +94,7 @@ is_layer_view_visible(const struct xrt_layer_data *data, uint32_t view_index)
 	case XRT_LAYER_EQUIRECT1: visibility = data->equirect1.visibility; break;
 	case XRT_LAYER_EQUIRECT2: visibility = data->equirect2.visibility; break;
 	case XRT_LAYER_QUAD: visibility = data->quad.visibility; break;
-	case XRT_LAYER_STEREO_PROJECTION:
+	case XRT_LAYER_PROJECTION:
 	case XRT_LAYER_STEREO_PROJECTION_DEPTH: return true;
 	default: return false;
 	};

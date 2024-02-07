@@ -75,7 +75,7 @@ typedef uint64_t VkDeviceMemory;
  */
 enum xrt_layer_type
 {
-	XRT_LAYER_STEREO_PROJECTION,
+	XRT_LAYER_PROJECTION,
 	XRT_LAYER_STEREO_PROJECTION_DEPTH,
 	XRT_LAYER_QUAD,
 	XRT_LAYER_CUBE,
@@ -228,9 +228,10 @@ struct xrt_layer_projection_view_data
  * The @ref xrt_swapchain references and @ref xrt_device are provided outside of
  * this struct.
  */
-struct xrt_layer_stereo_projection_data
+struct xrt_layer_projection_data
 {
-	struct xrt_layer_projection_view_data l, r;
+	uint32_t view_count;
+	struct xrt_layer_projection_view_data v[XRT_MAX_VIEWS];
 };
 
 /*!
@@ -458,7 +459,7 @@ struct xrt_layer_data
 	 * xrt_compositor::layer_commit where this data was passed.
 	 */
 	union {
-		struct xrt_layer_stereo_projection_data stereo;
+		struct xrt_layer_projection_data proj;
 		struct xrt_layer_stereo_projection_depth_data stereo_depth;
 		struct xrt_layer_quad_data quad;
 		struct xrt_layer_cube_data cube;
@@ -1204,17 +1205,15 @@ struct xrt_compositor
 	 *
 	 * @param xc          Self pointer
 	 * @param xdev        The device the layer is relative to.
-	 * @param l_xsc       Swapchain object containing left eye RGB data.
-	 * @param r_xsc       Swapchain object containing right eye RGB data.
+	 * @param xsc         Swapchain object containing eye RGB data.
 	 * @param data        All of the pure data bits (not pointers/handles),
 	 *                    including what parts of the supplied swapchain
 	 *                    objects to use for each view.
 	 */
-	xrt_result_t (*layer_stereo_projection)(struct xrt_compositor *xc,
-	                                        struct xrt_device *xdev,
-	                                        struct xrt_swapchain *l_xsc,
-	                                        struct xrt_swapchain *r_xsc,
-	                                        const struct xrt_layer_data *data);
+	xrt_result_t (*layer_projection)(struct xrt_compositor *xc,
+	                                 struct xrt_device *xdev,
+	                                 struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+	                                 const struct xrt_layer_data *data);
 
 	/*!
 	 * @brief Adds a stereo projection layer for submission, has depth information.
@@ -1680,20 +1679,19 @@ xrt_comp_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_frame_dat
 }
 
 /*!
- * @copydoc xrt_compositor::layer_stereo_projection
+ * @copydoc xrt_compositor::layer_projection
  *
  * Helper for calling through the function pointer.
  *
  * @public @memberof xrt_compositor
  */
 static inline xrt_result_t
-xrt_comp_layer_stereo_projection(struct xrt_compositor *xc,
-                                 struct xrt_device *xdev,
-                                 struct xrt_swapchain *l_xsc,
-                                 struct xrt_swapchain *r_xsc,
-                                 const struct xrt_layer_data *data)
+xrt_comp_layer_projection(struct xrt_compositor *xc,
+                          struct xrt_device *xdev,
+                          struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                          const struct xrt_layer_data *data)
 {
-	return xc->layer_stereo_projection(xc, xdev, l_xsc, r_xsc, data);
+	return xc->layer_projection(xc, xdev, xsc, data);
 }
 
 /*!
@@ -2285,8 +2283,8 @@ struct xrt_system_compositor_info
 			uint32_t width_pixels;
 			uint32_t height_pixels;
 			uint32_t sample_count;
-		} max; //!< Maximums for this view.
-	} views[2];    //!< View configuration information.
+		} max;          //!< Maximums for this view.
+	} views[XRT_MAX_VIEWS]; //!< View configuration information.
 
 	//! Maximum number of composition layers supported, never changes.
 	uint32_t max_layers;

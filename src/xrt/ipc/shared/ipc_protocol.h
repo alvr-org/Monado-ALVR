@@ -155,7 +155,7 @@ struct ipc_layer_entry
 	 *
 	 * How many are actually used depends on the value of @p data.type
 	 */
-	uint32_t swapchain_ids[4];
+	uint32_t swapchain_ids[XRT_MAX_VIEWS * 2];
 
 	/*!
 	 * All basic (trivially-serializable) data associated with a layer,
@@ -260,7 +260,8 @@ struct ipc_shared_memory
 				uint32_t h_pixels;
 			} display;
 		} views[2];
-
+		// view count
+		uint32_t view_count;
 		enum xrt_blend_mode blend_modes[XRT_MAX_DEVICE_BLEND_MODES];
 		uint32_t blend_mode_count;
 	} hmd;
@@ -328,7 +329,7 @@ struct ipc_arg_swapchain_from_native
  */
 struct ipc_info_get_view_poses_2
 {
-	struct xrt_fov fovs[2];
-	struct xrt_pose poses[2];
+	struct xrt_fov fovs[XRT_MAX_VIEWS];
+	struct xrt_pose poses[XRT_MAX_VIEWS];
 	struct xrt_space_relation head_relation;
 };

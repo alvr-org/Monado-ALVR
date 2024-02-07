@@ -9,7 +9,7 @@
 #include "srgb.inc.glsl"
 
 //! @todo should this be a spcialization const?
-#define XRT_LAYER_STEREO_PROJECTION 0
+#define XRT_LAYER_PROJECTION 0
 #define XRT_LAYER_STEREO_PROJECTION_DEPTH 1
 #define XRT_LAYER_QUAD 2
 #define XRT_LAYER_CUBE 3
@@ -464,7 +464,7 @@ vec4 do_layers(vec2 view_uv)
 		case XRT_LAYER_EQUIRECT2:
 			rgba = do_equirect2(view_uv, layer);
 			break;
-		case XRT_LAYER_STEREO_PROJECTION:
+		case XRT_LAYER_PROJECTION:
 		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
 			rgba = do_projection(view_uv, layer);
 			break;
