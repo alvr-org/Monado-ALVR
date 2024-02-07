@@ -93,7 +93,7 @@ m_relation_history_get(struct m_relation_history *rh, uint64_t at_timestamp_ns, 
 		const auto b = rh->impl.begin();
 		const auto e = rh->impl.end();
 
-		// find the first element *not less than* our value. the lambda we pass is the comparison
+		// Find the first element *not less than* our value. the lambda we pass is the comparison
 		// function, to compare against timestamps.
 		const auto it =
 		    std::lower_bound(b, e, at_timestamp_ns, [](const relation_history_entry &rhe, uint64_t timestamp) {
@@ -104,6 +104,7 @@ m_relation_history_get(struct m_relation_history *rh, uint64_t at_timestamp_ns, 
 			// lower bound is at the end:
 			// The desired timestamp is after what our buffer contains.
 			// (pose-prediction)
+			// Output flags match the most recent buffer entry.
 			int64_t diff_prediction_ns = static_cast<int64_t>(at_timestamp_ns) - rh->impl.back().timestamp;
 			double delta_s = time_ns_to_s(diff_prediction_ns);
 
@@ -113,7 +114,8 @@ m_relation_history_get(struct m_relation_history *rh, uint64_t at_timestamp_ns, 
 			return M_RELATION_HISTORY_RESULT_PREDICTED;
 		}
 		if (at_timestamp_ns == it->timestamp) {
-			// exact match
+			// exact match:
+			// Flags copied directly along with everything else.
 			U_LOG_T("Exact match in the buffer!");
 			*out_relation = it->relation;
 			return M_RELATION_HISTORY_RESULT_EXACT;
@@ -122,6 +124,7 @@ m_relation_history_get(struct m_relation_history *rh, uint64_t at_timestamp_ns, 
 			// lower bound is at the beginning (and it's not an exact match):
 			// The desired timestamp is before what our buffer contains.
 			// (an edge case where somebody asks for a really old pose and we do our best)
+			// Output flags are the same as the input flags for the history entry we use
 			int64_t diff_prediction_ns = static_cast<int64_t>(at_timestamp_ns) - rh->impl.front().timestamp;
 			double delta_s = time_ns_to_s(diff_prediction_ns);
 			U_LOG_T("Extrapolating %f s before the front of the buffer!", delta_s);
@@ -141,7 +144,7 @@ m_relation_history_get(struct m_relation_history *rh, uint64_t at_timestamp_ns, 
 
 		float amount_to_lerp = (float)diff_before / (float)(diff_before + diff_after);
 
-		// Copy relation flags
+		// Copy intersection of relation flags
 		xrt_space_relation result{};
 		result.relation_flags = (enum xrt_space_relation_flags)(predecessor.relation.relation_flags &
 		                                                        successor.relation.relation_flags);
