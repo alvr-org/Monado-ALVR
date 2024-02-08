@@ -1075,8 +1075,8 @@ setup_ui(TrackerSlam &t)
 	u_var_add_ro_ff_vec3_f32(&t, t.accel_ff, "Accelerometer");
 	u_var_add_f32(&t, &t.gravity_correction.z, "Gravity Correction");
 	for (size_t i = 0; i < t.ui_sink.size(); i++) {
-		char label[] = "Camera NNNN";
-		(void)snprintf(label, sizeof(label), "Camera %zu", i);
+		char label[64] = {0};
+		snprintf(label, sizeof(label), "Camera %zu", i);
 		u_var_add_sink_debug(&t, &t.ui_sink[i], label);
 	}
 
