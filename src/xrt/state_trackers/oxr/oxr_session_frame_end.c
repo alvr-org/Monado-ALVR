@@ -129,6 +129,7 @@ convert_layer_flags(XrSwapchainUsageFlags xr_flags)
 	return flags;
 }
 
+#ifdef OXR_HAVE_FB_composition_layer_depth_test
 static enum xrt_compare_op_fb
 convert_compare_op(XrCompareOpFB xr_compare_op)
 {
@@ -144,6 +145,7 @@ convert_compare_op(XrCompareOpFB xr_compare_op)
 	default: return XRT_COMPARE_OP_MAX_ENUM_FB;
 	}
 }
+#endif
 
 static enum xrt_layer_eye_visibility
 convert_eye_visibility(XrSwapchainUsageFlags xr_visibility)
