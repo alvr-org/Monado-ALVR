@@ -244,7 +244,9 @@ if(XRT_MODULE_COMPOSITOR_MAIN)
 
 		set(WL_PROTOS_XML ${WL_PROTOS_PKG_DIR}/stable/xdg-shell/xdg-shell.xml)
 
-		target_include_directories(comp_main SYSTEM PRIVATE ${WL_PROTOS_DIR})
+		target_include_directories(
+			comp_main SYSTEM PRIVATE ${WL_PROTOS_DIR} ${WAYLAND_INCLUDE_DIRS}
+			)
 		target_link_libraries(comp_main PRIVATE ${WAYLAND_LIBRARIES})
 
 		if(XRT_HAVE_WAYLAND_DIRECT)
