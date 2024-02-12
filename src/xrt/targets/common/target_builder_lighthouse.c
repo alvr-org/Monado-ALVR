@@ -385,7 +385,7 @@ valve_index_setup_visual_trackers(struct lighthouse_system *lhs,
 	// Initialize hand tracker
 	struct xrt_slam_sinks *hand_sinks = NULL;
 	struct xrt_device *hand_devices[2] = {NULL};
-	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
+	struct xrt_hand_masks_sink *masks_sink = (slam_enabled ? slam_sinks->hand_masks : NULL);
 	if (hand_enabled) {
 		bool success = valve_index_hand_track( //
 		    lhs,                               //
