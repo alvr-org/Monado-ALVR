@@ -353,7 +353,7 @@ comp_mirror_add_debug_vars(struct comp_mirror_to_debug_gui *m, struct comp_compo
 	// Reset state.
 	m->push_every_frame_out_of_X = 2;
 
-	// Init widigts.
+	// Init widget.
 	u_frame_times_widget_init(&m->push_frame_times, 0.f, 0.f);
 	comp_mirror_fixup_ui_state(m, c);
 
@@ -682,7 +682,7 @@ comp_mirror_fini(struct comp_mirror_to_debug_gui *m, struct vk_bundle *vk)
 	D(DescriptorPool, m->blit.descriptor_pool);
 	D(DescriptorSetLayout, m->blit.descriptor_set_layout);
 
-	// The frame timing widigt.
+	// The frame timing widget.
 	u_frame_times_widget_teardown(&m->push_frame_times);
 
 	// Destroy as late as possible.
