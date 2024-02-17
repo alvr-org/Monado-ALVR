@@ -99,11 +99,15 @@ struct vk_cmd_blit_image_info
  */
 struct vk_cmd_blit_images_side_by_side_info
 {
+	/// One each for left and right eyes/views.
+	/// Populate from the swapchain view data and the swapchain image itself
 	struct
 	{
 		VkImageLayout old_layout;
 		VkAccessFlags src_access_mask;
+		/// Depends on preceding compositor stage
 		VkPipelineStageFlags src_stage_mask;
+
 		struct xrt_rect rect;
 		struct vk_cmd_first_mip_image fm_image;
 	} src[2];
