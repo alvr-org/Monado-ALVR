@@ -32,6 +32,19 @@ struct xrt_session_info;
  *
  */
 
+#define XRT_SYSTEM_ID 1
+
+#define XRT_MAX_SYSTEM_NAME_SIZE 256
+
+/*!
+ * Properties provided by the system.
+ */
+struct xrt_system_properties
+{
+	uint32_t vendor_id;
+	char name[XRT_MAX_SYSTEM_NAME_SIZE];
+};
+
 /*!
  * A system is a collection of devices, policies and optionally a compositor
  * that is organised into a chosive group that is usable by one user, most of
@@ -69,6 +82,8 @@ struct xrt_system
 	 * @param xsys Pointer to self
 	 */
 	void (*destroy)(struct xrt_system *xsys);
+
+	struct xrt_system_properties properties;
 };
 
 /*!

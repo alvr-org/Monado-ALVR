@@ -110,6 +110,15 @@ void
 u_system_set_system_compositor(struct u_system *usys, struct xrt_system_compositor *xsysc);
 
 /*!
+ * Fill system properties.
+ *
+ * @public @memberof u_system
+ * @ingroup aux_util
+ */
+void
+u_system_fill_properties(struct u_system *usys, const char *name);
+
+/*!
  * Destroy an @ref u_system_create allocated @ref u_system - helper function.
  *
  * @param[in,out] usys_ptr A pointer to the @ref u_system_create allocated

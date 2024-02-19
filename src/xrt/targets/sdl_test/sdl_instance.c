@@ -82,6 +82,7 @@ sdl_instance_create_system(struct xrt_instance *xinst,
 
 	struct sdl_program *sp = from_xinst(xinst);
 
+	u_system_fill_properties(sp->usys, sp->xsysd_base.static_roles.head->str);
 	*out_xsys = &sp->usys->base;
 	*out_xsysd = &sp->xsysd_base;
 	*out_xso = sp->xso;

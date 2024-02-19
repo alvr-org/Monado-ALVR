@@ -86,6 +86,7 @@ t_instance_create_system(struct xrt_instance *xinst,
 	}
 
 	struct xrt_device *head = xsysd->static_roles.head;
+	u_system_fill_properties(usys, head->str);
 
 	bool use_null = debug_get_bool_option_use_null();
 

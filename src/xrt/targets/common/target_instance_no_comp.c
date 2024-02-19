@@ -56,6 +56,7 @@ t_instance_create_system(struct xrt_instance *xinst,
 		return xret;
 	}
 
+	u_system_fill_properties(usys, xsysd->static_roles.head->str);
 	*out_xsys = &usys->base;
 	*out_xsysd = xsysd;
 	*out_xso = xso;

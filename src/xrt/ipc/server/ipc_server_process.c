@@ -965,6 +965,13 @@ ipc_server_handle_client_connected(struct ipc_server *vs, xrt_ipc_handle_t ipc_h
 	os_mutex_unlock(&vs->global_state.lock);
 }
 
+xrt_result_t
+ipc_server_get_system_properties(struct ipc_server *vs, struct xrt_system_properties *out_properties)
+{
+	memcpy(out_properties, &vs->xsys->properties, sizeof(*out_properties));
+	return XRT_SUCCESS;
+}
+
 #ifndef XRT_OS_ANDROID
 int
 ipc_server_main(int argc, char **argv)

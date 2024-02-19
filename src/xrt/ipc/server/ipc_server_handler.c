@@ -1144,6 +1144,14 @@ ipc_handle_system_get_clients(volatile struct ipc_client_state *_ics, struct ipc
 }
 
 xrt_result_t
+ipc_handle_system_get_properties(volatile struct ipc_client_state *_ics, struct xrt_system_properties *out_properties)
+{
+	struct ipc_server *s = _ics->server;
+
+	return ipc_server_get_system_properties(s, out_properties);
+}
+
+xrt_result_t
 ipc_handle_system_get_client_info(volatile struct ipc_client_state *_ics,
                                   uint32_t client_id,
                                   struct ipc_app_state *out_ias)

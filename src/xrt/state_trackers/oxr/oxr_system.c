@@ -83,7 +83,7 @@ oxr_system_select(struct oxr_logger *log,
 XrResult
 oxr_system_verify_id(struct oxr_logger *log, const struct oxr_instance *inst, XrSystemId systemId)
 {
-	if (systemId != 1) {
+	if (systemId != XRT_SYSTEM_ID) {
 		return oxr_error(log, XR_ERROR_SYSTEM_INVALID, "Invalid system %" PRIu64, systemId);
 	}
 	return XR_SUCCESS;
@@ -272,13 +272,11 @@ oxr_system_get_force_feedback_support(struct oxr_logger *log, struct oxr_instanc
 XrResult
 oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSystemProperties *properties)
 {
-	properties->vendorId = 42;
 	properties->systemId = sys->systemId;
+	properties->vendorId = sys->xsys->properties.vendor_id;
+	memcpy(properties->systemName, sys->xsys->properties.name, sizeof(properties->systemName));
 
 	struct xrt_device *xdev = GET_XDEV_BY_ROLE(sys, head);
-
-	// The magical 247 number, is to silence warnings.
-	snprintf(properties->systemName, XR_MAX_SYSTEM_NAME_SIZE, "Monado: %.*s", 247, xdev->str);
 
 	// Get from compositor.
 	struct xrt_system_compositor_info *info = sys->xsysc ? &sys->xsysc->info : NULL;

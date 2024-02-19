@@ -350,7 +350,7 @@ oxr_instance_create(struct oxr_logger *log,
 		return ret;
 	}
 
-	ret = oxr_system_fill_in(log, inst, 1, &inst->system);
+	ret = oxr_system_fill_in(log, inst, XRT_SYSTEM_ID, &inst->system);
 	if (ret != XR_SUCCESS) {
 		oxr_instance_destroy(log, &inst->handle);
 		return ret;

@@ -11,6 +11,12 @@
 		]
 	},
 
+	"system_get_properties": {
+		"out": [
+			{"name": "properties", "type": "struct xrt_system_properties"}
+		]
+	},
+
 	"system_get_client_info": {
 		"in": [
 			{"name": "id", "type": "uint32_t"}

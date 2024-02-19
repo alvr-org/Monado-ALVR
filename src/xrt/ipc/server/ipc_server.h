@@ -461,6 +461,9 @@ ipc_server_handle_failure(struct ipc_server *vs);
  */
 void
 ipc_server_handle_shutdown_signal(struct ipc_server *vs);
+
+xrt_result_t
+ipc_server_get_system_properties(struct ipc_server *vs, struct xrt_system_properties *out_properties);
 //! @}
 
 /*
