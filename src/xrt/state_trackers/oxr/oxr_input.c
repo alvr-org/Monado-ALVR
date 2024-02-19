@@ -1,4 +1,4 @@
-// Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -1071,7 +1071,7 @@ oxr_action_cache_update(struct oxr_logger *log,
 	}
 
 	struct oxr_input_value_tagged combined;
-	int64_t timestamp;
+	int64_t timestamp = time;
 
 	/* a cache can only have outputs or inputs, not both */
 	if (cache->output_count > 0) {
@@ -1230,7 +1230,7 @@ oxr_action_attachment_update(struct oxr_logger *log,
 	struct oxr_action_state last = act_attached->any_state;
 	bool active = false;
 	bool changed = false;
-	XrTime timestamp = 0;
+	XrTime timestamp = time_state_monotonic_to_ts_ns(sess->sys->inst->timekeeping, time);
 
 	switch (act_attached->act_ref->action_type) {
 	case XR_ACTION_TYPE_BOOLEAN_INPUT: {
