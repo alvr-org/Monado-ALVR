@@ -1,0 +1,1 @@
+aux/debug_ui: bump the minimum gl version to 4.5
