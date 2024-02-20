@@ -40,7 +40,14 @@ getRuntimeSourceDir()
 		// dli_filename is full path of the library contains the symbol. For example:
 		// /data/app/~~sha27MVNR46wLF-96zA_LQ==/org.freedesktop.monado.openxr_runtime.out_of_process-cqs8L2Co3WfHGgvDwF12JA==/lib/arm64/libopenxr_monado.so
 		dir = info.dli_fname;
+
+		// Trim trailing lib path to .so (e.g. /lib/arm64/libopenxr_monado.so)
 		dir = dir.substr(0, dir.find("/lib/"));
+
+		// In case the SO is not extracted, trim off the base APK name and !
+		// This finishes handling cases like:
+		// /data/app/~~sha27MVNR46wLF-96zA_LQ==/org.freedesktop.monado.openxr_runtime.out_of_process-cqs8L2Co3WfHGgvDwF12JA==/base.apk!/lib/arm64/libopenxr_monado.so
+		dir = dir.substr(0, dir.find("/base.apk!"));
 	}
 
 	return dir;
