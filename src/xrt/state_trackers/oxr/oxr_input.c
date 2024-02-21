@@ -1297,8 +1297,6 @@ oxr_action_attachment_update(struct oxr_logger *log,
 		return;
 	}
 
-	//! @todo "/user" sub-action path.
-
 #define UPDATE_SELECT(X)                                                                                               \
 	struct oxr_subaction_paths subaction_paths_##X = {0};                                                          \
 	subaction_paths_##X.X = true;                                                                                  \
