@@ -571,6 +571,15 @@ oxr_xrGetDisplayRefreshRateFB(XrSession session, float *displayRefreshRate);
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrRequestDisplayRefreshRateFB(XrSession session, float displayRefreshRate);
 
+
+//! OpenXR API function @ep{xrLocateSpacesKHR}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrLocateSpacesKHR(XrSession session, const XrSpacesLocateInfoKHR *locateInfo, XrSpaceLocationsKHR *spaceLocations);
+
+//! OpenXR API function @ep{xrLocateSpaces}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrLocateSpaces(XrSession session, const XrSpacesLocateInfo *locateInfo, XrSpaceLocations *spaceLocations);
+
 /*
  *
  * oxr_api_passthrough.c

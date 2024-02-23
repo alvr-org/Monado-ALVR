@@ -7,6 +7,9 @@
  * @ingroup oxr_api
  */
 
+#include "openxr/openxr.h"
+#include "oxr_chain.h"
+#include "util/u_misc.h"
 #include "xrt/xrt_compiler.h"
 
 #include "util/u_debug.h"
@@ -243,4 +246,99 @@ oxr_xrDestroySpace(XrSpace space)
 	OXR_VERIFY_SPACE_AND_INIT_LOG(&log, space, spc, "xrDestroySpace");
 
 	return oxr_handle_destroy(&log, &spc->handle);
+}
+
+static XrResult
+locate_spaces(XrSession session, const XrSpacesLocateInfo *locateInfo, XrSpaceLocations *spaceLocations)
+{
+	struct oxr_space *spc;
+	struct oxr_space *baseSpc;
+	struct oxr_logger log;
+	OXR_VERIFY_SPACE_AND_INIT_LOG(&log, locateInfo->baseSpace, spc, "xrLocateSpacesKHR");
+	OXR_VERIFY_SESSION_NOT_LOST(&log, spc->sess);
+	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, locateInfo, XR_TYPE_SPACES_LOCATE_INFO_KHR);
+	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, spaceLocations, XR_TYPE_SPACE_LOCATIONS_KHR);
+	OXR_VERIFY_SPACE_NOT_NULL(&log, locateInfo->baseSpace, baseSpc);
+
+	OXR_VERIFY_ARG_NOT_ZERO(&log, locateInfo->spaceCount);
+	OXR_VERIFY_ARG_NOT_ZERO(&log, spaceLocations->locationCount);
+
+	if (locateInfo->spaceCount != spaceLocations->locationCount) {
+		return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE,
+		                 "(locateInfo->spaceCount == %d) must equal (spaceLocations->locationCount == %d)",
+		                 locateInfo->spaceCount, spaceLocations->locationCount);
+	}
+
+
+	if (locateInfo->time <= (XrTime)0) {
+		return oxr_error(&log, XR_ERROR_TIME_INVALID, "(time == %" PRIi64 ") is not a valid time.",
+		                 locateInfo->time);
+	}
+
+	XrSpaceVelocitiesKHR *velocities =
+	    OXR_GET_OUTPUT_FROM_CHAIN((void *)spaceLocations->next, XR_TYPE_SPACE_VELOCITIES_KHR, XrSpaceVelocitiesKHR);
+	if (velocities) {
+		if (velocities->velocityCount != locateInfo->spaceCount) {
+			return oxr_error(&log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(next->velocityCount == %d) must equal (locateInfo->spaceCount == %d)",
+			                 velocities->velocityCount, locateInfo->spaceCount);
+		}
+	}
+
+
+	for (uint32_t i = 0; i < locateInfo->spaceCount; i++) {
+		struct oxr_space *s;
+		OXR_VERIFY_SPACE_NOT_NULL(&log, locateInfo->spaces[i], s);
+
+		XrSpaceVelocity v = {
+		    .type = XR_TYPE_SPACE_VELOCITY,
+		    .next = NULL,
+		};
+
+		void *next = NULL;
+		if (velocities) {
+			next = &v;
+		}
+
+		XrSpaceLocation l = {
+		    .type = XR_TYPE_SPACE_LOCATION,
+		    .next = next,
+		};
+
+		XrResult result = oxr_space_locate(&log, s, baseSpc, locateInfo->time, &l);
+
+		if (result == XR_SUCCESS) {
+			spaceLocations->locations[i].locationFlags = l.locationFlags;
+			spaceLocations->locations[i].pose = l.pose;
+
+			if (velocities) {
+				velocities->velocities[i].angularVelocity = v.angularVelocity;
+				velocities->velocities[i].linearVelocity = v.linearVelocity;
+				velocities->velocities[i].velocityFlags = v.velocityFlags;
+			}
+
+		} else {
+			return result;
+		}
+	}
+
+	return XR_SUCCESS;
+}
+
+#ifdef OXR_HAVE_KHR_locate_spaces
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrLocateSpacesKHR(XrSession session, const XrSpacesLocateInfoKHR *locateInfo, XrSpaceLocationsKHR *spaceLocations)
+{
+	OXR_TRACE_MARKER();
+
+	return locate_spaces(session, locateInfo, spaceLocations);
+}
+#endif
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrLocateSpaces(XrSession session, const XrSpacesLocateInfo *locateInfo, XrSpaceLocations *spaceLocations)
+{
+	OXR_TRACE_MARKER();
+
+	return locate_spaces(session, locateInfo, spaceLocations);
 }

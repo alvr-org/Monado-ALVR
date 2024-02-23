@@ -180,6 +180,17 @@
 
 
 /*
+ * XR_KHR_locate_spaces
+ */
+#if defined(XR_KHR_locate_spaces)
+#define OXR_HAVE_KHR_locate_spaces
+#define OXR_EXTENSION_SUPPORT_KHR_locate_spaces(_) _(KHR_locate_spaces, KHR_LOCATE_SPACES)
+#else
+#define OXR_EXTENSION_SUPPORT_KHR_locate_spaces(_)
+#endif
+
+
+/*
  * XR_KHR_opengl_enable
  */
 #if defined(XR_KHR_opengl_enable) && defined(XR_USE_GRAPHICS_API_OPENGL)
@@ -671,6 +682,7 @@
     OXR_EXTENSION_SUPPORT_KHR_D3D12_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_loader_init(_) \
     OXR_EXTENSION_SUPPORT_KHR_loader_init_android(_) \
+    OXR_EXTENSION_SUPPORT_KHR_locate_spaces(_) \
     OXR_EXTENSION_SUPPORT_KHR_opengl_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_opengl_es_enable(_) \
     OXR_EXTENSION_SUPPORT_KHR_swapchain_usage_input_attachment_bit(_) \

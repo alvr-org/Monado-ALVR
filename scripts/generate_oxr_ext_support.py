@@ -47,6 +47,7 @@ EXTENSIONS = (
     ['XR_KHR_D3D12_enable', 'XR_USE_GRAPHICS_API_D3D12'],
     ['XR_KHR_loader_init', 'XR_USE_PLATFORM_ANDROID'],
     ['XR_KHR_loader_init_android', 'OXR_HAVE_KHR_loader_init', 'XR_USE_PLATFORM_ANDROID'],
+    ['XR_KHR_locate_spaces'],
     ['XR_KHR_opengl_enable', 'XR_USE_GRAPHICS_API_OPENGL'],
     ['XR_KHR_opengl_es_enable', 'XR_USE_GRAPHICS_API_OPENGL_ES'],
     ['XR_KHR_swapchain_usage_input_attachment_bit'],
