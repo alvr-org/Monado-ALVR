@@ -425,6 +425,36 @@ ipc_compositor_swapchain_create(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
+ipc_compositor_create_passthrough(struct xrt_compositor *xc, const struct xrt_passthrough_create_info *info)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+
+	xret = ipc_call_compositor_create_passthrough(icc->ipc_c, info);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_create_passthrough");
+}
+
+static xrt_result_t
+ipc_compositor_create_passthrough_layer(struct xrt_compositor *xc, const struct xrt_passthrough_layer_create_info *info)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+
+	xret = ipc_call_compositor_create_passthrough_layer(icc->ipc_c, info);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_create_passthrough_layer");
+}
+
+static xrt_result_t
+ipc_compositor_destroy_passthrough(struct xrt_compositor *xc)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+
+	xret = ipc_call_compositor_destroy_passthrough(icc->ipc_c);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_destroy_passthrough");
+}
+
+static xrt_result_t
 ipc_compositor_swapchain_import(struct xrt_compositor *xc,
                                 const struct xrt_swapchain_create_info *info,
                                 struct xrt_image_native *native_images,
@@ -689,6 +719,26 @@ ipc_compositor_layer_equirect2(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
+ipc_compositor_layer_passthrough(struct xrt_compositor *xc, struct xrt_device *xdev, const struct xrt_layer_data *data)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+
+	assert(data->type == XRT_LAYER_PASSTHROUGH);
+
+	struct ipc_shared_memory *ism = icc->ipc_c->ism;
+	struct ipc_layer_slot *slot = &ism->slots[icc->layers.slot_id];
+	struct ipc_layer_entry *layer = &slot->layers[icc->layers.layer_count];
+
+	layer->xdev_id = 0; //! @todo Real id.
+	layer->data = *data;
+
+	// Increment the number of layers.
+	icc->layers.layer_count++;
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
 ipc_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sync_handle)
 {
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
@@ -830,6 +880,9 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.create_swapchain = ipc_compositor_swapchain_create;
 	icc->base.base.import_swapchain = ipc_compositor_swapchain_import;
 	icc->base.base.create_semaphore = ipc_compositor_semaphore_create;
+	icc->base.base.create_passthrough = ipc_compositor_create_passthrough;
+	icc->base.base.create_passthrough_layer = ipc_compositor_create_passthrough_layer;
+	icc->base.base.destroy_passthrough = ipc_compositor_destroy_passthrough;
 	icc->base.base.begin_session = ipc_compositor_begin_session;
 	icc->base.base.end_session = ipc_compositor_end_session;
 	icc->base.base.wait_frame = ipc_compositor_wait_frame;
@@ -843,6 +896,7 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.layer_cylinder = ipc_compositor_layer_cylinder;
 	icc->base.base.layer_equirect1 = ipc_compositor_layer_equirect1;
 	icc->base.base.layer_equirect2 = ipc_compositor_layer_equirect2;
+	icc->base.base.layer_passthrough = ipc_compositor_layer_passthrough;
 	icc->base.base.layer_commit = ipc_compositor_layer_commit;
 	icc->base.base.layer_commit_with_semaphore = ipc_compositor_layer_commit_with_semaphore;
 	icc->base.base.destroy = ipc_compositor_destroy;

@@ -266,6 +266,20 @@
 		"out_handles": {"type": "xrt_graphics_buffer_handle_t"}
 	},
 
+	"compositor_create_passthrough": {
+		"in": [
+			{"name": "info", "type": "struct xrt_passthrough_create_info"}
+		]
+	},
+
+	"compositor_create_passthrough_layer": {
+		"in": [
+			{"name": "info", "type": "struct xrt_passthrough_layer_create_info"}
+		]
+	},
+
+	"compositor_destroy_passthrough": {},
+
 	"swapchain_import": {
 		"in": [
 			{"name": "info", "type": "struct xrt_swapchain_create_info"},

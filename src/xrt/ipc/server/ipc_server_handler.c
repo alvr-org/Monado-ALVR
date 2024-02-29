@@ -935,6 +935,30 @@ _update_equirect2_layer(struct xrt_compositor *xc,
 }
 
 static bool
+_update_passthrough_layer(struct xrt_compositor *xc,
+                          volatile struct ipc_client_state *ics,
+                          volatile struct ipc_layer_entry *layer,
+                          uint32_t i)
+{
+	// xdev
+	uint32_t xdevi = layer->xdev_id;
+
+	struct xrt_device *xdev = get_xdev(ics, xdevi);
+
+	if (xdev == NULL) {
+		U_LOG_E("Invalid xdev for passthrough layer #%u!", i);
+		return false;
+	}
+
+	// Cast away volatile.
+	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
+
+	xrt_comp_layer_passthrough(xc, xdev, data);
+
+	return true;
+}
+
+static bool
 _update_layers(volatile struct ipc_client_state *ics, struct xrt_compositor *xc, struct ipc_layer_slot *slot)
 {
 	IPC_TRACE_MARKER();
@@ -975,6 +999,11 @@ _update_layers(volatile struct ipc_client_state *ics, struct xrt_compositor *xc,
 			break;
 		case XRT_LAYER_EQUIRECT2:
 			if (!_update_equirect2_layer(xc, ics, layer, i)) {
+				return false;
+			}
+			break;
+		case XRT_LAYER_PASSTHROUGH:
+			if (!_update_passthrough_layer(xc, ics, layer, i)) {
 				return false;
 			}
 			break;
@@ -1095,6 +1124,46 @@ ipc_handle_compositor_layer_sync_with_semaphore(volatile struct ipc_client_state
 	ics->server->current_slot_index = *out_free_slot_id;
 
 	os_mutex_unlock(&ics->server->global_state.lock);
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
+ipc_handle_compositor_create_passthrough(volatile struct ipc_client_state *ics,
+                                         const struct xrt_passthrough_create_info *info)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_comp_create_passthrough(ics->xc, info);
+}
+
+xrt_result_t
+ipc_handle_compositor_create_passthrough_layer(volatile struct ipc_client_state *ics,
+                                               const struct xrt_passthrough_layer_create_info *info)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_comp_create_passthrough_layer(ics->xc, info);
+}
+
+xrt_result_t
+ipc_handle_compositor_destroy_passthrough(volatile struct ipc_client_state *ics)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	xrt_comp_destroy_passthrough(ics->xc);
 
 	return XRT_SUCCESS;
 }
