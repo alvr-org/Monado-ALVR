@@ -1650,6 +1650,8 @@
 			"title": "OPPO MR Controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_OPPO_MR_CONTROLLER",
+			"extension": "XR_OPPO_controller_interaction",
+			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
