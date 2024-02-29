@@ -1559,7 +1559,6 @@
 			"type": "eye_tracker",
 			"monado_device": "XRT_DEVICE_EYE_GAZE_INTERACTION",
 			"extension": "XR_EXT_eye_gaze_interaction",
-			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/eyes_ext"
 			],
