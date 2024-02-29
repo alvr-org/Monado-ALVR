@@ -357,7 +357,7 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 #ifdef OXR_HAVE_OPPO_controller_interaction
 		EXT_CHK_ENABLED(OPPO_controller_interaction);
 #else
-		EXT_NOT_SUPPORTED(EPPO_controller_interaction);
+		EXT_NOT_SUPPORTED(OPPO_controller_interaction);
 #endif
 
 		subpath_fn = oxr_verify_oppo_mr_controller_oppo_subpath;
