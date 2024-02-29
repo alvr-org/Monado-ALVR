@@ -1824,6 +1824,341 @@
 					}
 				}
 			}
+		},
+
+		"/interaction_profiles/bytedance/pico_neo3_controller": {
+			"title": "Bytedance PICO Neo 3 controller",
+			"type": "tracked_controller",
+			"extension": "BD_controller_interaction",
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
+			"monado_device": "XRT_DEVICE_PICO_NEO3_CONTROLLER",
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/x": {
+					"type": "button",
+					"localized_name": "X",
+					"components": ["click", "touch"],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_X_CLICK",
+						"touch": "XRT_INPUT_PICO_NEO3_X_TOUCH"
+					}
+				},
+				"/input/y": {
+					"type": "button",
+					"localized_name": "Y",
+					"components": ["click", "touch"],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_Y_CLICK",
+						"touch": "XRT_INPUT_PICO_NEO3_Y_TOUCH"
+					}
+				},
+				"/input/a": {
+					"type": "button",
+					"localized_name": "A",
+					"components": ["click", "touch"],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_A_CLICK",
+						"touch": "XRT_INPUT_PICO_NEO3_A_TOUCH"
+					}
+				},
+				"/input/b": {
+					"type": "button",
+					"localized_name": "B",
+					"components": ["click", "touch"],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_B_CLICK",
+						"touch": "XRT_INPUT_PICO_NEO3_B_TOUCH"
+					}
+				},
+				"/input/menu": {
+					"type": "button",
+					"localized_name": "Menu",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_MENU_CLICK"
+					}
+				},
+				"/input/system": {
+					"type": "button",
+					"localized_name": "System",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_SYSTEM_CLICK"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": ["click", "value", "touch"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_TRIGGER_CLICK",
+						"value": "XRT_INPUT_PICO_NEO3_TRIGGER_VALUE",
+						"touch": "XRT_INPUT_PICO_NEO3_TRIGGER_TOUCH"
+					}
+				},
+				"/input/thumbstick": {
+					"type": "joystick",
+					"localized_name": "Thumbstick",
+					"components": ["click", "touch", "position"],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_THUMBSTICK_CLICK",
+						"touch": "XRT_INPUT_PICO_NEO3_THUMBSTICK_TOUCH",
+						"position": "XRT_INPUT_PICO_NEO3_THUMBSTICK"
+					}
+				},
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": ["click", "value"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_NEO3_SQUEEZE_CLICK",
+						"value": "XRT_INPUT_PICO_NEO3_SQUEEZE_VALUE"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PICO_NEO3_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PICO_NEO3_AIM_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": ["haptic"],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_PICO_NEO3_HAPTIC"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/bytedance/pico4_controller": {
+			"title": "Bytedance PICO 4 controller",
+			"type": "tracked_controller",
+			"extension": "BD_controller_interaction",
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
+			"monado_device": "XRT_DEVICE_PICO4_CONTROLLER",
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/x": {
+					"type": "button",
+					"localized_name": "X",
+					"components": ["click", "touch"],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_X_CLICK",
+						"touch": "XRT_INPUT_PICO4_X_TOUCH"
+					}
+				},
+				"/input/y": {
+					"type": "button",
+					"localized_name": "Y",
+					"components": ["click", "touch"],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_Y_CLICK",
+						"touch": "XRT_INPUT_PICO4_Y_TOUCH"
+					}
+				},
+				"/input/a": {
+					"type": "button",
+					"localized_name": "A",
+					"components": ["click", "touch"],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_A_CLICK",
+						"touch": "XRT_INPUT_PICO4_A_TOUCH"
+					}
+				},
+				"/input/b": {
+					"type": "button",
+					"localized_name": "B",
+					"components": ["click", "touch"],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_B_CLICK",
+						"touch": "XRT_INPUT_PICO4_B_TOUCH"
+					}
+				},
+				"/input/menu": {
+					"type": "button",
+					"localized_name": "Menu",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_MENU_CLICK"
+					}
+				},
+				"/input/system": {
+					"type": "button",
+					"localized_name": "System",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_SYSTEM_CLICK"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": ["click", "value", "touch"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_TRIGGER_CLICK",
+						"value": "XRT_INPUT_PICO4_TRIGGER_VALUE",
+						"touch": "XRT_INPUT_PICO4_TRIGGER_TOUCH"
+					}
+				},
+				"/input/thumbstick": {
+					"type": "joystick",
+					"localized_name": "Thumbstick",
+					"components": ["click", "touch", "position"],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_THUMBSTICK_CLICK",
+						"touch": "XRT_INPUT_PICO4_THUMBSTICK_TOUCH",
+						"position": "XRT_INPUT_PICO4_THUMBSTICK"
+					}
+				},
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": ["click", "value"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO4_SQUEEZE_CLICK",
+						"value": "XRT_INPUT_PICO4_SQUEEZE_VALUE"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PICO4_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PICO4_AIM_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": ["haptic"],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_PICO4_HAPTIC"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/bytedance/pico_g3_controller": {
+			"title": "Bytedance PICO G3 controller",
+			"type": "tracked_controller",
+			"extension": "BD_controller_interaction",
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
+			"monado_device": "XRT_DEVICE_PICO_G3_CONTROLLER",
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/menu": {
+					"type": "button",
+					"localized_name": "Menu",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_G3_MENU_CLICK"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": ["click", "value"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_G3_TRIGGER_CLICK",
+						"value": "XRT_INPUT_PICO_G3_TRIGGER_VALUE"
+					}
+				},
+				"/input/thumbstick": {
+					"type": "joystick",
+					"localized_name": "Thumbstick",
+					"components": ["click", "position"],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"click": "XRT_INPUT_PICO_G3_THUMBSTICK_CLICK",
+						"position": "XRT_INPUT_PICO_G3_THUMBSTICK"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PICO_G3_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PICO_G3_AIM_POSE"
+					}
+				}
+			}
 		}
+
+
+
 	}
 }

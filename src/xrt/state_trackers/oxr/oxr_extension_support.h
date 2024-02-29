@@ -395,6 +395,17 @@
 
 
 /*
+ * XR_BD_controller_interaction
+ */
+#if defined(XR_BD_controller_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_BYTEDANCE)
+#define OXR_HAVE_BD_controller_interaction
+#define OXR_EXTENSION_SUPPORT_BD_controller_interaction(_) _(BD_controller_interaction, BD_CONTROLLER_INTERACTION)
+#else
+#define OXR_EXTENSION_SUPPORT_BD_controller_interaction(_)
+#endif
+
+
+/*
  * XR_FB_body_tracking
  */
 #if defined(XR_FB_body_tracking) && defined(XRT_FEATURE_OPENXR_BODY_TRACKING_FB)
@@ -701,6 +712,7 @@
     OXR_EXTENSION_SUPPORT_EXT_palm_pose(_) \
     OXR_EXTENSION_SUPPORT_EXT_performance_settings(_) \
     OXR_EXTENSION_SUPPORT_EXT_samsung_odyssey_controller(_) \
+    OXR_EXTENSION_SUPPORT_BD_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_FB_body_tracking(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_alpha_blend(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_image_layout(_) \
