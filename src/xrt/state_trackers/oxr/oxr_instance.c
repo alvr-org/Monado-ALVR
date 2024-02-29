@@ -193,6 +193,7 @@ apply_quirks(struct oxr_logger *log, struct oxr_instance *inst)
 XrResult
 oxr_instance_create(struct oxr_logger *log,
                     const XrInstanceCreateInfo *createInfo,
+                    XrVersion major_minor,
                     const struct oxr_extension_status *extensions,
                     struct oxr_instance **out_instance)
 {
@@ -205,6 +206,7 @@ oxr_instance_create(struct oxr_logger *log,
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, inst, OXR_XR_DEBUG_INSTANCE, oxr_instance_destroy, NULL);
 
 	inst->extensions = *extensions; // Sets the enabled extensions.
+	inst->openxr_version.major_minor = major_minor;
 	inst->lifecycle_verbose = debug_get_bool_option_lifecycle_verbose();
 	inst->debug_spaces = debug_get_bool_option_debug_spaces();
 	inst->debug_views = debug_get_bool_option_debug_views();

@@ -201,7 +201,7 @@ oxr_xrCreateInstance(const XrInstanceCreateInfo *createInfo, XrInstance *out_ins
 #endif
 	struct oxr_instance *inst = NULL;
 
-	ret = oxr_instance_create(&log, createInfo, &extensions, &inst);
+	ret = oxr_instance_create(&log, createInfo, app_major_minor, &extensions, &inst);
 	if (ret != XR_SUCCESS) {
 		return ret;
 	}
