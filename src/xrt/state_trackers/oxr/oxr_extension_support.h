@@ -439,6 +439,15 @@
 #define OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_)
 #endif
 
+/*
+ * XR_FB_passthrough
+ */
+#if defined(XR_FB_passthrough) && defined(XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH)
+#define OXR_HAVE_FB_passthrough
+#define OXR_EXTENSION_SUPPORT_FB_passthrough(_) _(FB_passthrough, FB_PASSTHROUGH)
+#else
+#define OXR_EXTENSION_SUPPORT_FB_passthrough(_)
+#endif
 
 /*
  * XR_ML_ml2_controller_interaction
@@ -648,6 +657,7 @@
     OXR_EXTENSION_SUPPORT_FB_composition_layer_settings(_) \
     OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_)  \
     OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) \
+    OXR_EXTENSION_SUPPORT_FB_passthrough(_) \
     OXR_EXTENSION_SUPPORT_ML_ml2_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_MND_headless(_) \
     OXR_EXTENSION_SUPPORT_MND_swapchain_usage_input_attachment_bit(_) \

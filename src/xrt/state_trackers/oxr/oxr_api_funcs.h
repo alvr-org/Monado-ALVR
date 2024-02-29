@@ -570,6 +570,44 @@ oxr_xrGetDisplayRefreshRateFB(XrSession session, float *displayRefreshRate);
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrRequestDisplayRefreshRateFB(XrSession session, float displayRefreshRate);
 
+/*
+ *
+ * oxr_api_passthrough.c
+ *
+ */
+#ifdef OXR_HAVE_FB_passthrough
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateGeometryInstanceFB(XrSession session,
+                               const XrGeometryInstanceCreateInfoFB *createInfo,
+                               XrGeometryInstanceFB *outGeometryInstance);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreatePassthroughFB(XrSession session,
+                          const XrPassthroughCreateInfoFB *createInfo,
+                          XrPassthroughFB *outPassthrough);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreatePassthroughLayerFB(XrSession session,
+                               const XrPassthroughLayerCreateInfoFB *createInfo,
+                               XrPassthroughLayerFB *outLayer);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyGeometryInstanceFB(XrGeometryInstanceFB instance);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyPassthroughFB(XrPassthroughFB passthrough);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyPassthroughLayerFB(XrPassthroughLayerFB layer);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGeometryInstanceSetTransformFB(XrGeometryInstanceFB instance,
+                                     const XrGeometryInstanceTransformFB *transformation);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrPassthroughLayerPauseFB(XrPassthroughLayerFB layer);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrPassthroughLayerResumeFB(XrPassthroughLayerFB layer);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrPassthroughLayerSetStyleFB(XrPassthroughLayerFB layer, const XrPassthroughStyleFB *style);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrPassthroughPauseFB(XrPassthroughFB passthrough);
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrPassthroughStartFB(XrPassthroughFB passthrough);
+#endif
 /*!
  * @}
  */

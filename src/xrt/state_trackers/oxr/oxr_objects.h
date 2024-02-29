@@ -2477,6 +2477,70 @@ struct oxr_hand_tracker
 	XrHandJointSetEXT hand_joint_set;
 };
 
+#ifdef OXR_HAVE_FB_passthrough
+
+struct oxr_passthrough
+{
+	struct oxr_handle_base handle;
+
+	struct oxr_session *sess;
+
+	XrPassthroughFlagsFB flags;
+
+	bool paused;
+};
+
+struct oxr_passthrough_layer
+{
+	struct oxr_handle_base handle;
+
+	struct oxr_session *sess;
+
+	XrPassthroughFB passthrough;
+
+	XrPassthroughFlagsFB flags;
+
+	XrPassthroughLayerPurposeFB purpose;
+
+	bool paused;
+
+	XrPassthroughStyleFB style;
+	XrPassthroughColorMapMonoToRgbaFB monoToRgba;
+	XrPassthroughColorMapMonoToMonoFB monoToMono;
+	XrPassthroughBrightnessContrastSaturationFB brightnessContrastSaturation;
+};
+
+XrResult
+oxr_passthrough_create(struct oxr_logger *log,
+                       struct oxr_session *sess,
+                       const XrPassthroughCreateInfoFB *createInfo,
+                       struct oxr_passthrough **out_passthrough);
+
+XrResult
+oxr_passthrough_layer_create(struct oxr_logger *log,
+                             struct oxr_session *sess,
+                             const XrPassthroughLayerCreateInfoFB *createInfo,
+                             struct oxr_passthrough_layer **out_layer);
+
+static inline XrPassthroughFB
+oxr_passthrough_to_openxr(struct oxr_passthrough *passthrough)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrPassthroughFB, passthrough);
+}
+
+static inline XrPassthroughLayerFB
+oxr_passthrough_layer_to_openxr(struct oxr_passthrough_layer *passthroughLayer)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrPassthroughLayerFB, passthroughLayer);
+}
+
+XrResult
+oxr_event_push_XrEventDataPassthroughStateChangedFB(struct oxr_logger *log,
+                                                    struct oxr_session *sess,
+                                                    XrPassthroughStateChangedFlagsFB flags);
+
+#endif // OXR_HAVE_FB_passthrough
+
 /*!
  * @}
  */

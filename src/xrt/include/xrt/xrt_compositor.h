@@ -82,6 +82,7 @@ enum xrt_layer_type
 	XRT_LAYER_CYLINDER,
 	XRT_LAYER_EQUIRECT1,
 	XRT_LAYER_EQUIRECT2,
+	XRT_LAYER_PASSTHROUGH
 };
 
 /*!
@@ -356,6 +357,34 @@ struct xrt_layer_equirect2_data
 };
 
 /*!
+ * @interface xrt_passthrough
+ */
+struct xrt_passthrough
+{
+	bool paused;
+};
+
+/*!
+ * @interface xrt_passthrough_layer
+ */
+struct xrt_passthrough_layer
+{
+	bool paused;
+};
+
+/*!
+ * All the pure data values associated with a passthrough layer.
+ *
+ * The @ref xrt_swapchain references and @ref xrt_device are provided outside of
+ * this struct.
+ */
+struct xrt_layer_passthrough_data
+{
+	struct xrt_passthrough xrt_pt;
+	struct xrt_passthrough_layer xrt_pl;
+};
+
+/*!
  * All the pure data values associated with a composition layer.
  *
  * The @ref xrt_swapchain references and @ref xrt_device are provided outside of
@@ -436,6 +465,7 @@ struct xrt_layer_data
 		struct xrt_layer_cylinder_data cylinder;
 		struct xrt_layer_equirect1_data equirect1;
 		struct xrt_layer_equirect2_data equirect2;
+		struct xrt_layer_passthrough_data passthrough;
 	};
 };
 
@@ -862,6 +892,23 @@ struct xrt_swapchain_create_info
 };
 
 /*!
+ * Passthrough creation info.
+ */
+struct xrt_passthrough_create_info
+{
+	enum xrt_passthrough_create_flags create;
+};
+
+/*!
+ * Passthrough layer creation info.
+ */
+struct xrt_passthrough_layer_create_info
+{
+	enum xrt_passthrough_create_flags create;
+	enum xrt_passthrough_purpose_flags purpose;
+};
+
+/*!
  * Struct used to negotiate properties of a swapchain that is created outside
  * of the compositor. Often used by a client compositor or IPC layer to allocate
  * the swapchain images and then pass them into the native compositor.
@@ -990,6 +1037,22 @@ struct xrt_compositor
 	                                 xrt_graphics_sync_handle_t *out_handle,
 	                                 struct xrt_compositor_semaphore **out_xcsem);
 	/*! @} */
+
+	/*!
+	 * Create a passthrough.
+	 */
+	xrt_result_t (*create_passthrough)(struct xrt_compositor *xc, const struct xrt_passthrough_create_info *info);
+
+
+	/*!
+	 * Create a passthrough layer.
+	 */
+	xrt_result_t (*create_passthrough_layer)(struct xrt_compositor *xc,
+	                                         const struct xrt_passthrough_layer_create_info *info);
+	/*!
+	 * Destroy a passthrough.
+	 */
+	xrt_result_t (*destroy_passthrough)(struct xrt_compositor *xc);
 
 	/*!
 	 * @name Function pointers for session functions
@@ -1257,6 +1320,19 @@ struct xrt_compositor
 	                                const struct xrt_layer_data *data);
 
 	/*!
+	 * Adds a passthrough layer for submission.
+	 *
+	 * @param xc          Self pointer
+	 * @param xdev        The device the layer is relative to.
+	 * @param data        All of the pure data bits (not pointers/handles),
+	 *                    including what part of the supplied swapchain
+	 *                    object to use.
+	 */
+	xrt_result_t (*layer_passthrough)(struct xrt_compositor *xc,
+	                                  struct xrt_device *xdev,
+	                                  const struct xrt_layer_data *data);
+
+	/*!
 	 * @brief Commits all of the submitted layers.
 	 *
 	 * Only after this call will the compositor actually use the layers.
@@ -1419,6 +1495,44 @@ xrt_comp_create_semaphore(struct xrt_compositor *xc,
 
 /*! @} */
 
+/*!
+ * @copydoc xrt_compositor::create_passthrough
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_create_passthrough(struct xrt_compositor *xc, const struct xrt_passthrough_create_info *info)
+{
+	return xc->create_passthrough(xc, info);
+}
+
+/*!
+ * @copydoc xrt_compositor::create_passthrough_layer
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_create_passthrough_layer(struct xrt_compositor *xc, const struct xrt_passthrough_layer_create_info *info)
+{
+	return xc->create_passthrough_layer(xc, info);
+}
+
+/*!
+ * @copydoc xrt_compositor::destroy_passthrough
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_destroy_passthrough(struct xrt_compositor *xc)
+{
+	return xc->destroy_passthrough(xc);
+}
 
 /*!
  * @name Session methods
@@ -1679,6 +1793,19 @@ xrt_comp_layer_equirect2(struct xrt_compositor *xc,
                          const struct xrt_layer_data *data)
 {
 	return xc->layer_equirect2(xc, xdev, xsc, data);
+}
+
+/*!
+ * @copydoc xrt_compositor::layer_passthrough
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_layer_passthrough(struct xrt_compositor *xc, struct xrt_device *xdev, const struct xrt_layer_data *data)
+{
+	return xc->layer_passthrough(xc, xdev, data);
 }
 
 /*!

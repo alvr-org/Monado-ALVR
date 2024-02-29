@@ -116,6 +116,47 @@ enum xrt_blend_mode
 #define XRT_MAX_DEVICE_BLEND_MODES 3
 
 /*!
+ * Special flags for creating passthrough.
+ */
+enum xrt_passthrough_create_flags
+{
+	//! Start the passthrough on creation
+	XRT_PASSTHROUGH_IS_RUNNING_AT_CREATION = (1 << 0),
+	//! Our compositor just ignores this bit.
+	XRT_PASSTHROUGH_LAYER_DEPTH = (1 << 1),
+};
+
+/*!
+ * Specify additional state change behavior.
+ */
+enum xrt_passthrough_state
+{
+	//! Passthrough system requires reinitialization.
+	XRT_PASSTHROUGH_STATE_CHANGED_REINIT_REQUIRED_BIT = (1 << 0),
+	//! Non-recoverable error has occurred.
+	XRT_PASSTHROUGH_STATE_CHANGED_NON_RECOVERABLE_ERROR_BIT = (1 << 1),
+	//! A recoverable error has occurred.
+	XRT_PASSTHROUGH_STATE_CHANGED_RECOVERABLE_ERROR_BIT = (1 << 2),
+	//! The runtime has recovered from a previous error and is functioning normally.
+	XRT_PASSTHROUGH_STATE_CHANGED_RESTORED_ERROR_BIT = (1 << 3),
+};
+
+/*!
+ * Specify the kind of passthrough behavior the layer provides.
+ */
+enum xrt_passthrough_purpose_flags
+{
+	//! Fullscreen layer
+	XRT_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION = (1 << 0),
+	//! Projected layer.
+	XRT_PASSTHROUGH_LAYER_PURPOSE_PROJECTED = (1 << 1),
+	//! Provided by XR_FB_passthrough_keyboard_hands
+	XRT_PASSTHROUGH_LAYER_PURPOSE_TRACKED_KEYBOARD_HANDS = 1000203001,
+	//! Provided by XR_FB_passthrough_keyboard_hands
+	XRT_PASSTHROUGH_LAYER_PURPOSE_TRACKED_KEYBOARD_MASKED_HANDS = 1000203002,
+};
+
+/*!
  * Which distortion model does the device expose,
  * used both as a bitfield and value.
  */

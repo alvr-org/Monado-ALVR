@@ -58,6 +58,9 @@ enum xrt_session_event_type
 
 	//! The performance of the session has changed
 	XRT_SESSION_EVENT_PERFORMANCE_CHANGE = 7,
+
+	//! The passthrough state of the session has changed
+	XRT_SESSION_EVENT_PASSTHRU_STATE_CHANGE = 8,
 };
 
 /*!
@@ -153,6 +156,15 @@ struct xrt_session_event_perf_change
 };
 
 /*!
+ * Passthrough state change event.
+ */
+struct xrt_session_event_passthrough_state_change
+{
+	enum xrt_session_event_type type;
+	enum xrt_passthrough_state state;
+};
+
+/*!
  * Union of all session events, used to return multiple events through one call.
  * Each event struct must start with a @ref xrt_session_event_type field.
  *
@@ -168,6 +180,7 @@ union xrt_session_event {
 	struct xrt_session_event_display_refresh_rate_change display;
 	struct xrt_session_event_reference_space_change_pending ref_change;
 	struct xrt_session_event_perf_change performance;
+	struct xrt_session_event_passthrough_state_change passthru;
 };
 
 /*!

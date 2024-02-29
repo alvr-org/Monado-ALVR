@@ -104,6 +104,10 @@ if(WIN32)
 	target_compile_definitions(st_oxr PRIVATE XR_USE_PLATFORM_WIN32)
 endif()
 
+if(XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH)
+	target_sources(st_oxr PRIVATE oxr_api_passthrough.c oxr_passthrough.c)
+endif()
+
 target_link_libraries(
 	st_oxr
 	PRIVATE

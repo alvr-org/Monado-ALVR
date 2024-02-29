@@ -25,6 +25,8 @@
 #define OXR_XR_DEBUG_SOURCESET (*(uint64_t *)"oxrsrcs\0")
 #define OXR_XR_DEBUG_SOURCE    (*(uint64_t *)"oxrsrc_\0")
 #define OXR_XR_DEBUG_HTRACKER  (*(uint64_t *)"oxrhtra\0")
+#define OXR_XR_DEBUG_PASSTHROUGH    	(*(uint64_t *)"oxrpass\0")
+#define OXR_XR_DEBUG_PASSTHROUGH_LAYER  (*(uint64_t *)"oxrptla\0")
 // clang-format on
 
 /*!

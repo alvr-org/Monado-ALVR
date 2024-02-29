@@ -67,6 +67,10 @@ extern "C" {
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_hand_tracker, HTRACKER, name, new_thing->sess->sys->inst)
 #define OXR_VERIFY_FORCE_FEEDBACK_AND_INIT_LOG(log, thing, new_thing, name) \
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_force_feedback, FFB, name, new_thing->sess->sys->inst)
+#define OXR_VERIFY_PASSTHROUGH_AND_INIT_LOG(log, thing, new_thing, name) \
+	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_passthrough, PASSTHROUGH, name, new_thing->sess->sys->inst)
+#define OXR_VERIFY_PASSTHROUGH_LAYER_AND_INIT_LOG(log, thing, new_thing, name) \
+	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_passthrough_layer, PASSTHROUGH_LAYER, name, new_thing->sess->sys->inst)
 // clang-format on
 
 #define OXR_VERIFY_INSTANCE_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_instance, INSTANCE);
@@ -229,6 +233,37 @@ extern "C" {
 		}                                                                                                      \
 	} while (false)
 
+#define OXR_VERIFY_PASSTHROUGH_FLAGS(log, flags)                                                                       \
+	if (flags == 0 ||                                                                                              \
+	    (flags & (XR_PASSTHROUGH_IS_RUNNING_AT_CREATION_BIT_FB | XR_PASSTHROUGH_LAYER_DEPTH_BIT_FB)) == 0)         \
+		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,                                                     \
+		                 "flags is not a valid combination of XrPassthroughFlagBitsFB values");
+
+#define OXR_VERIFY_PASSTHROUGH_LAYER_PURPOSE(log, purpose)                                                             \
+	if ((purpose != XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB &&                                              \
+	     purpose != XR_PASSTHROUGH_LAYER_PURPOSE_PROJECTED_FB &&                                                   \
+	     purpose != XR_PASSTHROUGH_LAYER_PURPOSE_TRACKED_KEYBOARD_HANDS_FB &&                                      \
+	     purpose != XR_PASSTHROUGH_LAYER_PURPOSE_TRACKED_KEYBOARD_MASKED_HANDS_FB))                                \
+		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,                                                     \
+		                 "purpose is not a valid XrPassthroughLayerPurposeFB value");
+
+#define OXR_VERIFY_PASSTHROUGH_LAYER_STYLE(log, style)                                                                 \
+	do {                                                                                                           \
+		uint32_t duplicate_check = 0;                                                                          \
+		const XrPassthroughStyleFB *next = style->next;                                                        \
+		while (next) {                                                                                         \
+			if (next->type != XR_TYPE_PASSTHROUGH_COLOR_MAP_MONO_TO_RGBA_FB &&                             \
+			    next->type != XR_TYPE_PASSTHROUGH_COLOR_MAP_MONO_TO_MONO_FB &&                             \
+			    next->type != XR_TYPE_PASSTHROUGH_BRIGHTNESS_CONTRAST_SATURATION_FB)                       \
+				return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,                                     \
+				                 "style next structure chain contains invalid pointers");              \
+			if ((next->type & duplicate_check) != 0)                                                       \
+				return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,                                     \
+				                 "style next structure chain contains duplicate items");               \
+			duplicate_check |= next->type;                                                                 \
+			next = (const XrPassthroughStyleFB *)next->next;                                               \
+		}                                                                                                      \
+	} while (false)
 
 /*
  *

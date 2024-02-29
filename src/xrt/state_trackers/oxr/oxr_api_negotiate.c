@@ -246,6 +246,21 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrRequestDisplayRefreshRateFB, FB_display_refresh_rate);
 #endif
 
+#ifdef OXR_HAVE_FB_passthrough
+	ENTRY_IF_EXT(xrCreateGeometryInstanceFB, FB_passthrough);
+	ENTRY_IF_EXT(xrCreatePassthroughFB, FB_passthrough);
+	ENTRY_IF_EXT(xrCreatePassthroughLayerFB, FB_passthrough);
+	ENTRY_IF_EXT(xrDestroyGeometryInstanceFB, FB_passthrough);
+	ENTRY_IF_EXT(xrDestroyPassthroughFB, FB_passthrough);
+	ENTRY_IF_EXT(xrDestroyPassthroughLayerFB, FB_passthrough);
+	ENTRY_IF_EXT(xrGeometryInstanceSetTransformFB, FB_passthrough);
+	ENTRY_IF_EXT(xrPassthroughLayerPauseFB, FB_passthrough);
+	ENTRY_IF_EXT(xrPassthroughLayerResumeFB, FB_passthrough);
+	ENTRY_IF_EXT(xrPassthroughLayerSetStyleFB, FB_passthrough);
+	ENTRY_IF_EXT(xrPassthroughPauseFB, FB_passthrough);
+	ENTRY_IF_EXT(xrPassthroughStartFB, FB_passthrough);
+#endif // OXR_HAVE_FB_passthrough
+
 #ifdef OXR_HAVE_EXT_debug_utils
 	ENTRY_IF_EXT(xrSetDebugUtilsObjectNameEXT, EXT_debug_utils);
 	ENTRY_IF_EXT(xrCreateDebugUtilsMessengerEXT, EXT_debug_utils);

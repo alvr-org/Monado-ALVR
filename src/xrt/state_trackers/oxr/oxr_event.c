@@ -296,6 +296,28 @@ oxr_event_push_XrEventDataPerfSettingsEXTX(struct oxr_logger *log,
 }
 #endif // OXR_HAVE_EXT_performance_settings
 
+#ifdef OXR_HAVE_FB_passthrough
+XrResult
+oxr_event_push_XrEventDataPassthroughStateChangedFB(struct oxr_logger *log,
+                                                    struct oxr_session *sess,
+                                                    XrPassthroughStateChangedFlagsFB flags)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrEventDataPassthroughStateChangedFB *changed;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_PASSTHROUGH_STATE_CHANGED_FB;
+	changed->flags = flags;
+	event->result = XR_SUCCESS;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_FB_passthrough
+
 XrResult
 oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess)
 {

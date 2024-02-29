@@ -314,6 +314,27 @@ oxr_session_request_exit(struct oxr_logger *log, struct oxr_session *sess)
 	return oxr_session_success_result(sess);
 }
 
+#ifdef OXR_HAVE_FB_passthrough
+static inline XrPassthroughStateChangedFlagsFB
+xrt_to_passthrough_state_flags(enum xrt_passthrough_state state)
+{
+	XrPassthroughStateChangedFlagsFB res = 0;
+	if (state & XRT_PASSTHROUGH_STATE_CHANGED_REINIT_REQUIRED_BIT) {
+		res |= XR_PASSTHROUGH_STATE_CHANGED_REINIT_REQUIRED_BIT_FB;
+	}
+	if (state & XRT_PASSTHROUGH_STATE_CHANGED_NON_RECOVERABLE_ERROR_BIT) {
+		res |= XR_PASSTHROUGH_STATE_CHANGED_NON_RECOVERABLE_ERROR_BIT_FB;
+	}
+	if (state & XRT_PASSTHROUGH_STATE_CHANGED_RECOVERABLE_ERROR_BIT) {
+		res |= XR_PASSTHROUGH_STATE_CHANGED_RECOVERABLE_ERROR_BIT_FB;
+	}
+	if (state & XRT_PASSTHROUGH_STATE_CHANGED_RESTORED_ERROR_BIT) {
+		res |= XR_PASSTHROUGH_STATE_CHANGED_RESTORED_ERROR_BIT_FB;
+	}
+	return res;
+}
+#endif
+
 XrResult
 oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 {
@@ -369,6 +390,12 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 			    log, sess, xse.performance.domain, xse.performance.sub_domain, xse.performance.from_level,
 			    xse.performance.to_level);
 #endif // OXR_HAVE_EXT_performance_settings
+			break;
+		case XRT_SESSION_EVENT_PASSTHRU_STATE_CHANGE:
+#ifdef OXR_HAVE_FB_passthrough
+			oxr_event_push_XrEventDataPassthroughStateChangedFB(
+			    log, sess, xrt_to_passthrough_state_flags(xse.passthru.state));
+#endif // OXR_HAVE_FB_passthrough
 			break;
 		default: U_LOG_W("unhandled event type! %d", xse.type); break;
 		}

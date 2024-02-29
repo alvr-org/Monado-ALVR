@@ -313,6 +313,25 @@ fill_in_depth_test(struct oxr_session *sess, const XrCompositionLayerBaseHeader 
 #endif // OXR_HAVE_FB_composition_layer_depth_test
 }
 
+static void
+fill_in_passthrough(struct oxr_session *sess, const XrCompositionLayerBaseHeader *layer, struct xrt_layer_data *data)
+{
+#ifdef OXR_HAVE_FB_passthrough
+	// Is the extension enabled?
+	if (!sess->sys->inst->extensions.FB_passthrough) {
+		return;
+	}
+	const XrCompositionLayerPassthroughFB *passthrough = OXR_GET_INPUT_FROM_CHAIN(
+	    layer, (XrStructureType)XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB, XrCompositionLayerPassthroughFB);
+	struct oxr_passthrough_layer *layer_handle =
+	    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_passthrough_layer *, passthrough->layerHandle);
+	data->passthrough.xrt_pl.paused = layer_handle->paused;
+	struct oxr_passthrough *passthrough_handle =
+	    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_passthrough *, layer_handle->passthrough);
+	data->passthrough.xrt_pt.paused = passthrough_handle->paused;
+#endif
+}
+
 /*
  *
  * Verify functions.
@@ -1066,6 +1085,45 @@ verify_equirect2_layer(struct oxr_session *sess,
 #endif // OXR_HAVE_KHR_composition_layer_equirect2
 }
 
+static XrResult
+verify_passthrough_layer(struct xrt_compositor *xc,
+                         struct oxr_logger *log,
+                         uint32_t layer_index,
+                         const XrCompositionLayerPassthroughFB *passthrough,
+                         struct xrt_device *head,
+                         uint64_t timestamp)
+{
+#ifndef OXR_HAVE_FB_passthrough
+	return oxr_error(log, XR_ERROR_LAYER_INVALID,
+	                 "(frameEndInfo->layers[%u]->type) layer type XrCompositionLayerPassthroughFB not supported",
+	                 layer_index);
+#else
+	if (passthrough->flags == 0 || (passthrough->flags & (XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT |
+	                                                      XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT |
+	                                                      XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT)) == 0) {
+		return oxr_error(log, XR_ERROR_LAYER_INVALID,
+		                 "(frameEndInfo->layers[%u]->flags) layer flags is not a valid combination of "
+		                 "XrCompositionLayerFlagBits values",
+		                 layer_index);
+	}
+
+	if (passthrough->space) {
+		XrResult ret = verify_space(log, layer_index, passthrough->space);
+		if (ret != XR_SUCCESS) {
+			return ret;
+		}
+	}
+
+	struct oxr_passthrough_layer *pl =
+	    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_passthrough_layer *, passthrough->layerHandle);
+	if (pl == NULL) {
+		return oxr_error(log, XR_ERROR_LAYER_INVALID,
+		                 "(frameEndInfo->layers[%u]->layerHandle) layerHandle is NULL!", layer_index);
+	}
+
+	return XR_SUCCESS;
+#endif
+}
 
 /*
  *
@@ -1526,6 +1584,33 @@ submit_equirect2_layer(struct oxr_session *sess,
 	return XR_SUCCESS;
 }
 
+static XrResult
+submit_passthrough_layer(struct oxr_session *sess,
+                         struct xrt_compositor *xc,
+                         struct oxr_logger *log,
+                         const XrCompositionLayerPassthroughFB *passthrough,
+                         struct xrt_device *head,
+                         struct xrt_pose *inv_offset,
+                         uint64_t oxr_timestamp,
+                         uint64_t xrt_timestamp)
+{
+	enum xrt_layer_composition_flags flags = convert_layer_flags(passthrough->flags);
+
+	struct xrt_layer_data data;
+	U_ZERO(&data);
+	data.type = XRT_LAYER_PASSTHROUGH;
+	data.name = XRT_INPUT_GENERIC_HEAD_POSE;
+	data.timestamp = xrt_timestamp;
+	data.flags = flags;
+	fill_in_passthrough(sess, (XrCompositionLayerBaseHeader *)passthrough, &data);
+	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)passthrough, &data);
+
+	xrt_result_t xret = xrt_comp_layer_passthrough(xc, head, &data);
+	OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_passthrough);
+
+	return XR_SUCCESS;
+}
+
 XrResult
 oxr_session_frame_end(struct oxr_logger *log, struct oxr_session *sess, const XrFrameEndInfo *frameEndInfo)
 {
@@ -1655,6 +1740,10 @@ oxr_session_frame_end(struct oxr_logger *log, struct oxr_session *sess, const Xr
 			res = verify_equirect2_layer(sess, xc, log, i, (XrCompositionLayerEquirect2KHR *)layer, xdev,
 			                             frameEndInfo->displayTime);
 			break;
+		case XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB:
+			res = verify_passthrough_layer(xc, log, i, (XrCompositionLayerPassthroughFB *)layer, xdev,
+			                               frameEndInfo->displayTime);
+			break;
 		default:
 			return oxr_error(log, XR_ERROR_LAYER_INVALID,
 			                 "(frameEndInfo->layers[%u]->type) layer type not supported (%u)", i,
@@ -1715,6 +1804,10 @@ oxr_session_frame_end(struct oxr_logger *log, struct oxr_session *sess, const Xr
 		case XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR:
 			submit_equirect2_layer(sess, xc, log, (XrCompositionLayerEquirect2KHR *)layer, xdev,
 			                       &inv_offset, frameEndInfo->displayTime, xrt_display_time_ns);
+			break;
+		case XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB:
+			submit_passthrough_layer(sess, xc, log, (XrCompositionLayerPassthroughFB *)layer, xdev,
+			                         &inv_offset, frameEndInfo->displayTime, xrt_display_time_ns);
 			break;
 		default: assert(false && "invalid layer type");
 		}

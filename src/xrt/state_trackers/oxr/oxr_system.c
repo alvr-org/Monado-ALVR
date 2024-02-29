@@ -329,6 +329,24 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	}
 #endif
 
+#ifdef OXR_HAVE_FB_passthrough
+	XrSystemPassthroughPropertiesFB *passthrough_props = NULL;
+	XrSystemPassthroughProperties2FB *passthrough_props2 = NULL;
+	if (sys->inst->extensions.FB_passthrough) {
+		passthrough_props = OXR_GET_OUTPUT_FROM_CHAIN(properties, XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES_FB,
+		                                              XrSystemPassthroughPropertiesFB);
+		if (passthrough_props) {
+			passthrough_props->supportsPassthrough = true;
+		}
+
+		passthrough_props2 = OXR_GET_OUTPUT_FROM_CHAIN(properties, XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES2_FB,
+		                                               XrSystemPassthroughProperties2FB);
+		if (passthrough_props2) {
+			passthrough_props2->capabilities = XR_PASSTHROUGH_CAPABILITY_BIT_FB;
+		}
+	}
+#endif
+
 	return XR_SUCCESS;
 }
 
