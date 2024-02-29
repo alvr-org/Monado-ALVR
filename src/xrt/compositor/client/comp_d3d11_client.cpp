@@ -461,6 +461,34 @@ try {
 	return XRT_ERROR_ALLOCATION;
 }
 
+static xrt_result_t
+client_d3d11_compositor_passthrough_create(struct xrt_compositor *xc, const struct xrt_passthrough_create_info *info)
+{
+	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_create_passthrough(&c->xcn->base, info);
+}
+
+static xrt_result_t
+client_d3d11_compositor_passthrough_layer_create(struct xrt_compositor *xc,
+                                                 const struct xrt_passthrough_layer_create_info *info)
+{
+	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_create_passthrough_layer(&c->xcn->base, info);
+}
+
+static xrt_result_t
+client_d3d11_compositor_passthrough_destroy(struct xrt_compositor *xc)
+{
+	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_destroy_passthrough(&c->xcn->base);
+}
+
 /*
  *
  * Compositor functions.
@@ -643,6 +671,19 @@ client_d3d11_compositor_layer_equirect2(struct xrt_compositor *xc,
 
 	// No flip required: D3D11 swapchain image convention matches Vulkan.
 	return xrt_comp_layer_equirect2(&c->xcn->base, xdev, xscfb, data);
+}
+
+static xrt_result_t
+client_d3d11_compositor_layer_passthrough(struct xrt_compositor *xc,
+                                          struct xrt_device *xdev,
+                                          const struct xrt_layer_data *data)
+{
+	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
+
+	assert(data->type == XRT_LAYER_PASSTHROUGH);
+
+	// No flip required: D3D11 swapchain image convention matches Vulkan.
+	return xrt_comp_layer_passthrough(&c->xcn->base, xdev, data);
 }
 
 static xrt_result_t
@@ -829,6 +870,9 @@ try {
 	}
 	c->base.base.get_swapchain_create_properties = client_d3d11_compositor_get_swapchain_create_properties;
 	c->base.base.create_swapchain = client_d3d11_create_swapchain;
+	c->base.base.create_passthrough = client_d3d11_compositor_passthrough_create;
+	c->base.base.create_passthrough_layer = client_d3d11_compositor_passthrough_layer_create;
+	c->base.base.destroy_passthrough = client_d3d11_compositor_passthrough_destroy;
 	c->base.base.begin_session = client_d3d11_compositor_begin_session;
 	c->base.base.end_session = client_d3d11_compositor_end_session;
 	c->base.base.wait_frame = client_d3d11_compositor_wait_frame;
@@ -842,6 +886,7 @@ try {
 	c->base.base.layer_cylinder = client_d3d11_compositor_layer_cylinder;
 	c->base.base.layer_equirect1 = client_d3d11_compositor_layer_equirect1;
 	c->base.base.layer_equirect2 = client_d3d11_compositor_layer_equirect2;
+	c->base.base.layer_passthrough = client_d3d11_compositor_layer_passthrough;
 	c->base.base.layer_commit = client_d3d11_compositor_layer_commit;
 	c->base.base.destroy = client_d3d11_compositor_destroy;
 

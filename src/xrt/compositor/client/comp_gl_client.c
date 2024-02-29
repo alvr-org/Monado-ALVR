@@ -381,6 +381,21 @@ client_gl_compositor_layer_equirect2(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
+client_gl_compositor_layer_passthrough(struct xrt_compositor *xc,
+                                       struct xrt_device *xdev,
+                                       const struct xrt_layer_data *data)
+{
+	struct client_gl_compositor *c = client_gl_compositor(xc);
+
+	assert(data->type == XRT_LAYER_PASSTHROUGH);
+
+	struct xrt_layer_data d = *data;
+	d.flip_y = !d.flip_y;
+
+	return xrt_comp_layer_passthrough(&c->xcn->base, xdev, &d);
+}
+
+static xrt_result_t
 client_gl_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sync_handle)
 {
 	COMP_TRACE_MARKER();
@@ -529,6 +544,34 @@ client_gl_swapchain_create(struct xrt_compositor *xc,
 	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+client_gl_compositor_passthrough_create(struct xrt_compositor *xc, const struct xrt_passthrough_create_info *info)
+{
+	struct client_gl_compositor *c = client_gl_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_create_passthrough(&c->xcn->base, info);
+}
+
+static xrt_result_t
+client_gl_compositor_passthrough_layer_create(struct xrt_compositor *xc,
+                                              const struct xrt_passthrough_layer_create_info *info)
+{
+	struct client_gl_compositor *c = client_gl_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_create_passthrough_layer(&c->xcn->base, info);
+}
+
+static xrt_result_t
+client_gl_compositor_passthrough_destroy(struct xrt_compositor *xc)
+{
+	struct client_gl_compositor *c = client_gl_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_destroy_passthrough(&c->xcn->base);
+}
+
 static void
 client_gl_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -561,6 +604,9 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 
 	c->base.base.get_swapchain_create_properties = client_gl_compositor_get_swapchain_create_properties;
 	c->base.base.create_swapchain = client_gl_swapchain_create;
+	c->base.base.create_passthrough = client_gl_compositor_passthrough_create;
+	c->base.base.create_passthrough_layer = client_gl_compositor_passthrough_layer_create;
+	c->base.base.destroy_passthrough = client_gl_compositor_passthrough_destroy;
 	c->base.base.begin_session = client_gl_compositor_begin_session;
 	c->base.base.end_session = client_gl_compositor_end_session;
 	c->base.base.wait_frame = client_gl_compositor_wait_frame;
@@ -574,6 +620,7 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 	c->base.base.layer_cylinder = client_gl_compositor_layer_cylinder;
 	c->base.base.layer_equirect1 = client_gl_compositor_layer_equirect1;
 	c->base.base.layer_equirect2 = client_gl_compositor_layer_equirect2;
+	c->base.base.layer_passthrough = client_gl_compositor_layer_passthrough;
 	c->base.base.layer_commit = client_gl_compositor_layer_commit;
 	c->base.base.destroy = client_gl_compositor_destroy;
 	c->context_begin_locked = context_begin_locked;

@@ -353,6 +353,33 @@ client_vk_swapchain_release_image(struct xrt_swapchain *xsc, uint32_t index)
 	return xrt_swapchain_release_image(to_native_swapchain(xsc), index);
 }
 
+static xrt_result_t
+client_vk_compositor_passthrough_create(struct xrt_compositor *xc, const struct xrt_passthrough_create_info *info)
+{
+	struct client_vk_compositor *c = client_vk_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_create_passthrough(&c->xcn->base, info);
+}
+
+static xrt_result_t
+client_vk_compositor_passthrough_layer_create(struct xrt_compositor *xc,
+                                              const struct xrt_passthrough_layer_create_info *info)
+{
+	struct client_vk_compositor *c = client_vk_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_create_passthrough_layer(&c->xcn->base, info);
+}
+
+static xrt_result_t
+client_vk_compositor_passthrough_destroy(struct xrt_compositor *xc)
+{
+	struct client_vk_compositor *c = client_vk_compositor(xc);
+
+	// Pipe down call into native compositor.
+	return xrt_comp_destroy_passthrough(&c->xcn->base);
+}
 
 /*
  *
@@ -579,6 +606,18 @@ client_vk_compositor_layer_equirect2(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
+client_vk_compositor_layer_passthrough(struct xrt_compositor *xc,
+                                       struct xrt_device *xdev,
+                                       const struct xrt_layer_data *data)
+{
+	struct client_vk_compositor *c = client_vk_compositor(xc);
+
+	assert(data->type == XRT_LAYER_PASSTHROUGH);
+
+	return xrt_comp_layer_passthrough(&c->xcn->base, xdev, data);
+}
+
+static xrt_result_t
 client_vk_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sync_handle)
 {
 	COMP_TRACE_MARKER();
@@ -794,6 +833,9 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 
 	c->base.base.get_swapchain_create_properties = client_vk_compositor_get_swapchain_create_properties;
 	c->base.base.create_swapchain = client_vk_swapchain_create;
+	c->base.base.create_passthrough = client_vk_compositor_passthrough_create;
+	c->base.base.create_passthrough_layer = client_vk_compositor_passthrough_layer_create;
+	c->base.base.destroy_passthrough = client_vk_compositor_passthrough_destroy;
 	c->base.base.begin_session = client_vk_compositor_begin_session;
 	c->base.base.end_session = client_vk_compositor_end_session;
 	c->base.base.wait_frame = client_vk_compositor_wait_frame;
@@ -807,6 +849,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	c->base.base.layer_cylinder = client_vk_compositor_layer_cylinder;
 	c->base.base.layer_equirect1 = client_vk_compositor_layer_equirect1;
 	c->base.base.layer_equirect2 = client_vk_compositor_layer_equirect2;
+	c->base.base.layer_passthrough = client_vk_compositor_layer_passthrough;
 	c->base.base.layer_commit = client_vk_compositor_layer_commit;
 	c->base.base.destroy = client_vk_compositor_destroy;
 
