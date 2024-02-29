@@ -44,11 +44,6 @@ if(XRT_BUILD_DRIVER_SIMULAVR)
 	target_sources(target_lists PRIVATE target_builder_simulavr.c)
 endif()
 
-if(XRT_BUILD_DRIVER_NA)
-	target_sources(target_lists PRIVATE target_builder_nreal_air.c)
-	target_link_libraries(target_lists PRIVATE drv_na)
-endif()
-
 if(XRT_BUILD_DRIVER_NS)
 	target_sources(target_lists PRIVATE target_builder_north_star.c)
 	target_link_libraries(target_lists PRIVATE drv_ns)
@@ -62,6 +57,11 @@ endif()
 if(XRT_BUILD_DRIVER_QWERTY)
 	target_sources(target_lists PRIVATE target_builder_qwerty.c)
 	target_link_libraries(target_lists PRIVATE drv_qwerty)
+endif()
+
+if(XRT_BUILD_DRIVER_XREAL_AIR)
+	target_sources(target_lists PRIVATE target_builder_xreal_air.c)
+	target_link_libraries(target_lists PRIVATE drv_xreal_air)
 endif()
 
 ###
@@ -92,10 +92,6 @@ endif()
 
 if(XRT_BUILD_DRIVER_HYDRA)
 	target_link_libraries(target_lists PRIVATE drv_hydra)
-endif()
-
-if(XRT_BUILD_DRIVER_NA)
-	target_link_libraries(target_lists PRIVATE drv_na)
 endif()
 
 if(XRT_BUILD_DRIVER_NS)
@@ -191,6 +187,10 @@ endif()
 
 if(XRT_BUILD_DRIVER_WMR)
 	target_link_libraries(target_lists PRIVATE drv_wmr)
+endif()
+
+if(XRT_BUILD_DRIVER_XREAL_AIR)
+	target_link_libraries(target_lists PRIVATE drv_xreal_air)
 endif()
 
 if(XRT_BUILD_DRIVER_EUROC)

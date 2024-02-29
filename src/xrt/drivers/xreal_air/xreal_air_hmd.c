@@ -1,10 +1,10 @@
-// Copyright 2023, Tobias Frisch
+// Copyright 2023-2024, Tobias Frisch
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Nreal Air packet parsing implementation.
+ * @brief  Xreal Air packet parsing implementation.
  * @author Tobias Frisch <thejackimonster@gmail.com>
- * @ingroup drv_na
+ * @ingroup drv_xreal_air
  */
 
 #include "xrt/xrt_compiler.h"
@@ -21,7 +21,7 @@
 #include "util/u_trace_marker.h"
 #include "util/u_var.h"
 
-#include "na_hmd.h"
+#include "xreal_air_hmd.h"
 
 #include "math/m_mathinclude.h"
 #include "math/m_relation_history.h"
@@ -31,8 +31,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define NA_DEBUG(hmd, ...) U_LOG_XDEV_IFL_D(&hmd->base, hmd->log_level, __VA_ARGS__)
-#define NA_ERROR(hmd, ...) U_LOG_XDEV_IFL_E(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define XREAL_AIR_DEBUG(hmd, ...) U_LOG_XDEV_IFL_D(&hmd->base, hmd->log_level, __VA_ARGS__)
+#define XREAL_AIR_ERROR(hmd, ...) U_LOG_XDEV_IFL_E(&hmd->base, hmd->log_level, __VA_ARGS__)
 
 #define SENSOR_BUFFER_SIZE 64
 #define CONTROL_BUFFER_SIZE 64
@@ -41,12 +41,12 @@
 #define CONTROL_HEAD 0xFD
 
 /*!
- * Private struct for the nreal_air device.
+ * Private struct for the xreal_air device.
  *
- * @ingroup drv_na
+ * @ingroup drv_xreal_air
  * @implements xrt_device
  */
-struct na_hmd
+struct xreal_air_hmd
 {
 	struct xrt_device base;
 
@@ -63,7 +63,7 @@ struct na_hmd
 	//! Only touched from the sensor thread.
 	timepoint_ns last_sensor_time;
 
-	struct na_parsed_sensor last;
+	struct xreal_air_parsed_sensor last;
 
 	struct
 	{
@@ -97,7 +97,7 @@ struct na_hmd
 	char *calibration_buffer;
 	bool calibration_valid;
 
-	struct na_parsed_calibration calibration;
+	struct xreal_air_parsed_calibration calibration;
 
 	struct
 	{
@@ -115,10 +115,10 @@ struct na_hmd
  *
  */
 
-static inline struct na_hmd *
-na_hmd(struct xrt_device *dev)
+static inline struct xreal_air_hmd *
+xreal_air_hmd(struct xrt_device *dev)
 {
-	return (struct na_hmd *)dev;
+	return (struct xreal_air_hmd *)dev;
 }
 
 const uint32_t crc32_table[256] = {
@@ -167,7 +167,8 @@ crc32_checksum(const uint8_t *buf, uint32_t len)
 static uint8_t
 scale_brightness(uint8_t brightness)
 {
-	float relative = ((float)brightness - NA_BRIGHTNESS_MIN) / (NA_BRIGHTNESS_MAX - NA_BRIGHTNESS_MIN);
+	float relative =
+	    ((float)brightness - XREAL_AIR_BRIGHTNESS_MIN) / (XREAL_AIR_BRIGHTNESS_MAX - XREAL_AIR_BRIGHTNESS_MIN);
 	relative = CLAMP(relative, 0.0f, 1.0f);
 	return (uint8_t)(relative * 100.0f);
 }
@@ -177,7 +178,7 @@ unscale_brightness(uint8_t scaled_brightness)
 {
 	float relative = ((float)scaled_brightness) / 100.0f;
 	relative = CLAMP(relative, 0.0f, 1.0f);
-	return (uint8_t)(relative * (NA_BRIGHTNESS_MAX - NA_BRIGHTNESS_MIN)) + NA_BRIGHTNESS_MIN;
+	return (uint8_t)(relative * (XREAL_AIR_BRIGHTNESS_MAX - XREAL_AIR_BRIGHTNESS_MIN)) + XREAL_AIR_BRIGHTNESS_MIN;
 }
 
 /*
@@ -187,7 +188,7 @@ unscale_brightness(uint8_t scaled_brightness)
  */
 
 static bool
-send_payload_to_sensor(struct na_hmd *hmd, uint8_t msgid, const uint8_t *data, uint8_t len)
+send_payload_to_sensor(struct xreal_air_hmd *hmd, uint8_t msgid, const uint8_t *data, uint8_t len)
 {
 	uint8_t payload[SENSOR_BUFFER_SIZE];
 
@@ -229,8 +230,8 @@ post_biased_coordinate_system(const struct xrt_vec3 *in, struct xrt_vec3 *out)
 }
 
 static void
-read_sample_and_apply_calibration(struct na_hmd *hmd,
-                                  struct na_parsed_sample *sample,
+read_sample_and_apply_calibration(struct xreal_air_hmd *hmd,
+                                  struct xreal_air_parsed_sample *sample,
                                   struct xrt_vec3 *out_accel,
                                   struct xrt_vec3 *out_gyro,
                                   struct xrt_vec3 *out_mag)
@@ -302,14 +303,14 @@ read_sample_and_apply_calibration(struct na_hmd *hmd,
 }
 
 static void
-update_fusion_locked(struct na_hmd *hmd, struct na_parsed_sample *sample, uint64_t timestamp_ns)
+update_fusion_locked(struct xreal_air_hmd *hmd, struct xreal_air_parsed_sample *sample, uint64_t timestamp_ns)
 {
 	read_sample_and_apply_calibration(hmd, sample, &hmd->read.accel, &hmd->read.gyro, &hmd->read.mag);
 	m_imu_3dof_update(&hmd->fusion, timestamp_ns, &hmd->read.accel, &hmd->read.gyro);
 }
 
 static void
-update_fusion(struct na_hmd *hmd, struct na_parsed_sample *sample, uint64_t timestamp_ns)
+update_fusion(struct xreal_air_hmd *hmd, struct xreal_air_parsed_sample *sample, uint64_t timestamp_ns)
 {
 	struct xrt_space_relation rel;
 	U_ZERO(&rel); // Clear out the relation.
@@ -339,7 +340,7 @@ calc_delta_and_handle_rollover(uint32_t next, uint32_t last)
 }
 
 static timepoint_ns
-ensure_forward_progress_timestamps(struct na_hmd *hmd, timepoint_ns timestamp_ns)
+ensure_forward_progress_timestamps(struct xreal_air_hmd *hmd, timepoint_ns timestamp_ns)
 {
 	timepoint_ns t = timestamp_ns;
 
@@ -356,48 +357,49 @@ ensure_forward_progress_timestamps(struct na_hmd *hmd, timepoint_ns timestamp_ns
 }
 
 static void
-request_sensor_control_get_cal_data_length(struct na_hmd *hmd)
+request_sensor_control_get_cal_data_length(struct xreal_air_hmd *hmd)
 {
 	// Request calibration data length.
 
-	if (!send_payload_to_sensor(hmd, NA_MSG_GET_CAL_DATA_LENGTH, NULL, 0)) {
-		NA_ERROR(hmd, "Failed to send payload for receiving calibration data length!");
+	if (!send_payload_to_sensor(hmd, XREAL_AIR_MSG_GET_CAL_DATA_LENGTH, NULL, 0)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload for receiving calibration data length!");
 	}
 }
 
 static void
-request_sensor_control_cal_data_get_next_segment(struct na_hmd *hmd)
+request_sensor_control_cal_data_get_next_segment(struct xreal_air_hmd *hmd)
 {
 	// Request next segment of calibration data.
 
-	if (!send_payload_to_sensor(hmd, NA_MSG_CAL_DATA_GET_NEXT_SEGMENT, NULL, 0)) {
-		NA_ERROR(hmd, "Failed to send payload for receiving next calibration data segment! %d / %d",
-		         hmd->calibration_buffer_pos, hmd->calibration_buffer_len);
+	if (!send_payload_to_sensor(hmd, XREAL_AIR_MSG_CAL_DATA_GET_NEXT_SEGMENT, NULL, 0)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload for receiving next calibration data segment! %d / %d",
+		                hmd->calibration_buffer_pos, hmd->calibration_buffer_len);
 	}
 }
 
 static void
-request_sensor_control_get_static_id(struct na_hmd *hmd)
+request_sensor_control_get_static_id(struct xreal_air_hmd *hmd)
 {
 	// Request the static id.
 
-	if (!send_payload_to_sensor(hmd, NA_MSG_GET_STATIC_ID, NULL, 0)) {
-		NA_ERROR(hmd, "Failed to send payload for receiving static id!");
+	if (!send_payload_to_sensor(hmd, XREAL_AIR_MSG_GET_STATIC_ID, NULL, 0)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload for receiving static id!");
 	}
 }
 
 static void
-request_sensor_control_start_imu_data(struct na_hmd *hmd, uint8_t imu_stream_state)
+request_sensor_control_start_imu_data(struct xreal_air_hmd *hmd, uint8_t imu_stream_state)
 {
 	// Request to change the imu stream state.
 
-	if (!send_payload_to_sensor(hmd, NA_MSG_START_IMU_DATA, &imu_stream_state, 1)) {
-		NA_ERROR(hmd, "Failed to send payload for changing the imu stream state! %d", imu_stream_state);
+	if (!send_payload_to_sensor(hmd, XREAL_AIR_MSG_START_IMU_DATA, &imu_stream_state, 1)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload for changing the imu stream state! %d", imu_stream_state);
 	}
 }
 
 static void
-handle_sensor_control_get_cal_data_length(struct na_hmd *hmd, const struct na_parsed_sensor_control_data *data)
+handle_sensor_control_get_cal_data_length(struct xreal_air_hmd *hmd,
+                                          const struct xreal_air_parsed_sensor_control_data *data)
 {
 	// Read calibration data length.
 	const uint32_t calibration_data_length =
@@ -421,7 +423,8 @@ handle_sensor_control_get_cal_data_length(struct na_hmd *hmd, const struct na_pa
 }
 
 static void
-handle_sensor_control_cal_data_get_next_segment(struct na_hmd *hmd, const struct na_parsed_sensor_control_data *data)
+handle_sensor_control_cal_data_get_next_segment(struct xreal_air_hmd *hmd,
+                                                const struct xreal_air_parsed_sensor_control_data *data)
 {
 	if (hmd->calibration_buffer_len == 0) {
 		request_sensor_control_get_cal_data_length(hmd);
@@ -429,8 +432,8 @@ handle_sensor_control_cal_data_get_next_segment(struct na_hmd *hmd, const struct
 	}
 
 	if (hmd->calibration_buffer_len <= hmd->calibration_buffer_pos) {
-		NA_ERROR(hmd, "Failed to receive next calibration data segment! %d / %d", hmd->calibration_buffer_pos,
-		         hmd->calibration_buffer_len);
+		XREAL_AIR_ERROR(hmd, "Failed to receive next calibration data segment! %d / %d",
+		                hmd->calibration_buffer_pos, hmd->calibration_buffer_len);
 		return;
 	}
 
@@ -448,9 +451,9 @@ handle_sensor_control_cal_data_get_next_segment(struct na_hmd *hmd, const struct
 
 	if (hmd->calibration_buffer_pos == hmd->calibration_buffer_len) {
 		// Parse calibration data from raw json.
-		if (!na_parse_calibration_buffer(&hmd->calibration, hmd->calibration_buffer,
-		                                 hmd->calibration_buffer_len)) {
-			NA_ERROR(hmd, "Failed parse calibration data!");
+		if (!xreal_air_parse_calibration_buffer(&hmd->calibration, hmd->calibration_buffer,
+		                                        hmd->calibration_buffer_len)) {
+			XREAL_AIR_ERROR(hmd, "Failed parse calibration data!");
 		} else {
 			hmd->calibration_valid = true;
 
@@ -469,7 +472,7 @@ handle_sensor_control_cal_data_get_next_segment(struct na_hmd *hmd, const struct
 }
 
 static void
-handle_sensor_control_start_imu_data(struct na_hmd *hmd, const struct na_parsed_sensor_control_data *data)
+handle_sensor_control_start_imu_data(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_sensor_control_data *data)
 {
 	// Read the imu stream state.
 	const uint8_t imu_stream_state = data->data[0];
@@ -484,7 +487,7 @@ handle_sensor_control_start_imu_data(struct na_hmd *hmd, const struct na_parsed_
 }
 
 static void
-handle_sensor_control_get_static_id(struct na_hmd *hmd, const struct na_parsed_sensor_control_data *data)
+handle_sensor_control_get_static_id(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_sensor_control_data *data)
 {
 	// Read the static id.
 	const uint32_t static_id =
@@ -498,30 +501,32 @@ handle_sensor_control_get_static_id(struct na_hmd *hmd, const struct na_parsed_s
 }
 
 static void
-handle_sensor_control_data_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
+handle_sensor_control_data_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
 {
-	struct na_parsed_sensor_control_data data;
+	struct xreal_air_parsed_sensor_control_data data;
 
-	if (!na_parse_sensor_control_data_packet(&data, buffer, size)) {
-		NA_ERROR(hmd, "Could not decode sensor control data packet");
+	if (!xreal_air_parse_sensor_control_data_packet(&data, buffer, size)) {
+		XREAL_AIR_ERROR(hmd, "Could not decode sensor control data packet");
 	}
 
 	hmd->imu_stream_state = 0xAA;
 
 	switch (data.msgid) {
-	case NA_MSG_GET_CAL_DATA_LENGTH: handle_sensor_control_get_cal_data_length(hmd, &data); break;
-	case NA_MSG_CAL_DATA_GET_NEXT_SEGMENT: handle_sensor_control_cal_data_get_next_segment(hmd, &data); break;
-	case NA_MSG_ALLOCATE_CAL_DATA_BUFFER: break;
-	case NA_MSG_WRITE_CAL_DATA_SEGMENT: break;
-	case NA_MSG_FREE_CAL_BUFFER: break;
-	case NA_MSG_START_IMU_DATA: handle_sensor_control_start_imu_data(hmd, &data); break;
-	case NA_MSG_GET_STATIC_ID: handle_sensor_control_get_static_id(hmd, &data); break;
-	default: NA_ERROR(hmd, "Got unknown sensor control data msgid, 0x%02x", data.msgid); break;
+	case XREAL_AIR_MSG_GET_CAL_DATA_LENGTH: handle_sensor_control_get_cal_data_length(hmd, &data); break;
+	case XREAL_AIR_MSG_CAL_DATA_GET_NEXT_SEGMENT:
+		handle_sensor_control_cal_data_get_next_segment(hmd, &data);
+		break;
+	case XREAL_AIR_MSG_ALLOCATE_CAL_DATA_BUFFER: break;
+	case XREAL_AIR_MSG_WRITE_CAL_DATA_SEGMENT: break;
+	case XREAL_AIR_MSG_FREE_CAL_BUFFER: break;
+	case XREAL_AIR_MSG_START_IMU_DATA: handle_sensor_control_start_imu_data(hmd, &data); break;
+	case XREAL_AIR_MSG_GET_STATIC_ID: handle_sensor_control_get_static_id(hmd, &data); break;
+	default: XREAL_AIR_ERROR(hmd, "Got unknown sensor control data msgid, 0x%02x", data.msgid); break;
 	}
 }
 
 static void
-handle_sensor_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
+handle_sensor_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
 {
 	if (buffer[0] == 0xAA) {
 		handle_sensor_control_data_msg(hmd, buffer, size);
@@ -531,8 +536,8 @@ handle_sensor_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
 	timepoint_ns now_ns = (timepoint_ns)os_monotonic_get_ns();
 	uint64_t last_timestamp = hmd->last.timestamp;
 
-	if (!na_parse_sensor_packet(&hmd->last, buffer, size)) {
-		NA_ERROR(hmd, "Could not decode sensor packet");
+	if (!xreal_air_parse_sensor_packet(&hmd->last, buffer, size)) {
+		XREAL_AIR_ERROR(hmd, "Could not decode sensor packet");
 	} else {
 		hmd->imu_stream_state = 0x1;
 	}
@@ -541,7 +546,7 @@ handle_sensor_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
 		request_sensor_control_start_imu_data(hmd, 0xAA);
 	}
 
-	struct na_parsed_sensor *s = &hmd->last;
+	struct xreal_air_parsed_sensor *s = &hmd->last;
 
 	// According to the ICM-42688-P datasheet: (offset: 25 °C, sensitivity: 132.48 LSB/°C)
 	hmd->read.temperature = ((float)s->temperature) / 132.48f + 25.0f;
@@ -553,7 +558,7 @@ handle_sensor_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
 	// If this is larger then one second something bad is going on.
 	if (hmd->fusion.state != M_IMU_3DOF_STATE_START &&
 	    inter_sample_duration_ns >= (time_duration_ns)U_TIME_1S_IN_NS) {
-		NA_ERROR(hmd, "Drop packet (sensor too slow): %lu", inter_sample_duration_ns);
+		XREAL_AIR_ERROR(hmd, "Drop packet (sensor too slow): %lu", inter_sample_duration_ns);
 		return;
 	}
 
@@ -568,7 +573,7 @@ handle_sensor_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
 }
 
 static void
-sensor_clear_queue(struct na_hmd *hmd)
+sensor_clear_queue(struct xreal_air_hmd *hmd)
 {
 	uint8_t buffer[SENSOR_BUFFER_SIZE];
 
@@ -578,7 +583,7 @@ sensor_clear_queue(struct na_hmd *hmd)
 }
 
 static int
-sensor_read_one_packet(struct na_hmd *hmd)
+sensor_read_one_packet(struct xreal_air_hmd *hmd)
 {
 	uint8_t buffer[SENSOR_BUFFER_SIZE];
 
@@ -592,14 +597,14 @@ sensor_read_one_packet(struct na_hmd *hmd)
 }
 
 static int
-read_one_control_packet(struct na_hmd *hmd);
+read_one_control_packet(struct xreal_air_hmd *hmd);
 
 static void *
 read_thread(void *ptr)
 {
-	U_TRACE_SET_THREAD_NAME("Nreal Air");
+	U_TRACE_SET_THREAD_NAME("Xreal Air");
 
-	struct na_hmd *hmd = (struct na_hmd *)ptr;
+	struct xreal_air_hmd *hmd = (struct xreal_air_hmd *)ptr;
 	int ret = 0;
 
 	os_thread_helper_lock(&hmd->oth);
@@ -637,7 +642,7 @@ read_thread(void *ptr)
  *
  */
 static bool
-send_payload_to_control(struct na_hmd *hmd, uint16_t msgid, const uint8_t *data, uint8_t len)
+send_payload_to_control(struct xreal_air_hmd *hmd, uint16_t msgid, const uint8_t *data, uint8_t len)
 {
 	uint8_t payload[CONTROL_BUFFER_SIZE];
 
@@ -670,7 +675,7 @@ send_payload_to_control(struct na_hmd *hmd, uint16_t msgid, const uint8_t *data,
 }
 
 static void
-handle_control_brightness(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_brightness(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// Check status
 	if (control->data[0] != 0) {
@@ -685,7 +690,7 @@ handle_control_brightness(struct na_hmd *hmd, const struct na_parsed_control *co
 }
 
 static void
-handle_control_display_mode(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_display_mode(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// Check status
 	if (control->data[0] != 0) {
@@ -700,13 +705,13 @@ handle_control_display_mode(struct na_hmd *hmd, const struct na_parsed_control *
 }
 
 static void
-handle_control_heartbeat_start(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_heartbeat_start(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// TODO
 }
 
 static void
-handle_control_button(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_button(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// Physical button
 	const uint8_t phys_button = control->data[0];
@@ -718,82 +723,82 @@ handle_control_button(struct na_hmd *hmd, const struct na_parsed_control *contro
 	const uint8_t value = control->data[8];
 
 	switch (virt_button) {
-	case NA_BUTTON_VIRT_DISPLAY_TOGGLE: {
+	case XREAL_AIR_BUTTON_VIRT_DISPLAY_TOGGLE: {
 		hmd->display_on = value;
 		break;
 	}
-	case NA_BUTTON_VIRT_MENU_TOGGLE: break;
-	case NA_BUTTON_VIRT_BRIGHTNESS_UP:
-	case NA_BUTTON_VIRT_BRIGHTNESS_DOWN: {
+	case XREAL_AIR_BUTTON_VIRT_MENU_TOGGLE: break;
+	case XREAL_AIR_BUTTON_VIRT_BRIGHTNESS_UP:
+	case XREAL_AIR_BUTTON_VIRT_BRIGHTNESS_DOWN: {
 		const uint8_t brightness = scale_brightness(value);
 
 		hmd->state.brightness = brightness;
 		hmd->wants.brightness = brightness;
 		break;
 	}
-	case NA_BUTTON_VIRT_MODE_UP: {
+	case XREAL_AIR_BUTTON_VIRT_MODE_UP: {
 		const uint8_t display_mode = hmd->state.display_mode;
 
-		if (display_mode == NA_DISPLAY_MODE_2D) {
-			hmd->wants.display_mode = NA_DISPLAY_MODE_3D;
+		if (display_mode == XREAL_AIR_DISPLAY_MODE_2D) {
+			hmd->wants.display_mode = XREAL_AIR_DISPLAY_MODE_3D;
 		}
 
 		break;
 	}
-	case NA_BUTTON_VIRT_MODE_DOWN: {
+	case XREAL_AIR_BUTTON_VIRT_MODE_DOWN: {
 		const uint8_t display_mode = hmd->state.display_mode;
 
-		if (display_mode == NA_DISPLAY_MODE_3D) {
-			hmd->wants.display_mode = NA_DISPLAY_MODE_2D;
+		if (display_mode == XREAL_AIR_DISPLAY_MODE_3D) {
+			hmd->wants.display_mode = XREAL_AIR_DISPLAY_MODE_2D;
 		}
 
 		break;
 	}
 	default: {
-		NA_ERROR(hmd, "Got unknown button pressed, 0x%02x (0x%02x)", virt_button, phys_button);
+		XREAL_AIR_ERROR(hmd, "Got unknown button pressed, 0x%02x (0x%02x)", virt_button, phys_button);
 		break;
 	}
 	}
 }
 
 static void
-handle_control_async_text(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_async_text(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// Event only appears if the display is active!
 	hmd->display_on = true;
 
-	NA_DEBUG(hmd, "Control message: %s", (const char *)control->data);
+	XREAL_AIR_DEBUG(hmd, "Control message: %s", (const char *)control->data);
 }
 
 static void
-handle_control_heartbeat_end(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_heartbeat_end(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// TODO
 }
 
 static void
-handle_control_action_locked(struct na_hmd *hmd, const struct na_parsed_control *control)
+handle_control_action_locked(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	switch (control->action) {
-	case NA_MSG_R_BRIGHTNESS: handle_control_brightness(hmd, control); break;
-	case NA_MSG_W_BRIGHTNESS: break;
-	case NA_MSG_R_DISP_MODE: handle_control_display_mode(hmd, control); break;
-	case NA_MSG_W_DISP_MODE: break;
-	case NA_MSG_P_START_HEARTBEAT: handle_control_heartbeat_start(hmd, control); break;
-	case NA_MSG_P_BUTTON_PRESSED: handle_control_button(hmd, control); break;
-	case NA_MSG_P_ASYNC_TEXT_LOG: handle_control_async_text(hmd, control); break;
-	case NA_MSG_P_END_HEARTBEAT: handle_control_heartbeat_end(hmd, control); break;
-	default: NA_ERROR(hmd, "Got unknown control action, 0x%02x", control->action); break;
+	case XREAL_AIR_MSG_R_BRIGHTNESS: handle_control_brightness(hmd, control); break;
+	case XREAL_AIR_MSG_W_BRIGHTNESS: break;
+	case XREAL_AIR_MSG_R_DISP_MODE: handle_control_display_mode(hmd, control); break;
+	case XREAL_AIR_MSG_W_DISP_MODE: break;
+	case XREAL_AIR_MSG_P_START_HEARTBEAT: handle_control_heartbeat_start(hmd, control); break;
+	case XREAL_AIR_MSG_P_BUTTON_PRESSED: handle_control_button(hmd, control); break;
+	case XREAL_AIR_MSG_P_ASYNC_TEXT_LOG: handle_control_async_text(hmd, control); break;
+	case XREAL_AIR_MSG_P_END_HEARTBEAT: handle_control_heartbeat_end(hmd, control); break;
+	default: XREAL_AIR_ERROR(hmd, "Got unknown control action, 0x%02x", control->action); break;
 	}
 }
 
 static void
-handle_control_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
+handle_control_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
 {
-	struct na_parsed_control control;
+	struct xreal_air_parsed_control control;
 
-	if (!na_parse_control_packet(&control, buffer, size)) {
-		NA_ERROR(hmd, "Could not decode control packet");
+	if (!xreal_air_parse_control_packet(&control, buffer, size)) {
+		XREAL_AIR_ERROR(hmd, "Could not decode control packet");
 	}
 
 	os_mutex_lock(&hmd->device_mutex);
@@ -802,7 +807,7 @@ handle_control_msg(struct na_hmd *hmd, unsigned char *buffer, int size)
 }
 
 static void
-control_clear_queue(struct na_hmd *hmd)
+control_clear_queue(struct xreal_air_hmd *hmd)
 {
 	uint8_t buffer[CONTROL_BUFFER_SIZE];
 
@@ -812,7 +817,7 @@ control_clear_queue(struct na_hmd *hmd)
 }
 
 static int
-read_one_control_packet(struct na_hmd *hmd)
+read_one_control_packet(struct xreal_air_hmd *hmd)
 {
 	static uint8_t buffer[CONTROL_BUFFER_SIZE];
 	int size = 0;
@@ -830,7 +835,7 @@ read_one_control_packet(struct na_hmd *hmd)
 }
 
 static bool
-wait_for_brightness(struct na_hmd *hmd)
+wait_for_brightness(struct xreal_air_hmd *hmd)
 {
 	for (int i = 0; i < 5000; i++) {
 		read_one_control_packet(hmd);
@@ -846,13 +851,13 @@ wait_for_brightness(struct na_hmd *hmd)
 }
 
 static bool
-wait_for_display_mode(struct na_hmd *hmd)
+wait_for_display_mode(struct xreal_air_hmd *hmd)
 {
 	for (int i = 0; i < 5000; i++) {
 		read_one_control_packet(hmd);
 
-		if ((hmd->state.display_mode == NA_DISPLAY_MODE_2D) ||
-		    (hmd->state.display_mode == NA_DISPLAY_MODE_3D)) {
+		if ((hmd->state.display_mode == XREAL_AIR_DISPLAY_MODE_2D) ||
+		    (hmd->state.display_mode == XREAL_AIR_DISPLAY_MODE_3D)) {
 			return true;
 		}
 
@@ -863,15 +868,15 @@ wait_for_display_mode(struct na_hmd *hmd)
 }
 
 static bool
-control_brightness(struct na_hmd *hmd)
+control_brightness(struct xreal_air_hmd *hmd)
 {
-	if (!send_payload_to_control(hmd, NA_MSG_R_BRIGHTNESS, NULL, 0)) {
-		NA_ERROR(hmd, "Failed to send payload for initial brightness value!");
+	if (!send_payload_to_control(hmd, XREAL_AIR_MSG_R_BRIGHTNESS, NULL, 0)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload for initial brightness value!");
 		return false;
 	}
 
 	if (!wait_for_brightness(hmd)) {
-		NA_ERROR(hmd, "Failed to wait for valid brightness value!");
+		XREAL_AIR_ERROR(hmd, "Failed to wait for valid brightness value!");
 		return false;
 	}
 
@@ -879,15 +884,15 @@ control_brightness(struct na_hmd *hmd)
 }
 
 static bool
-control_display_mode(struct na_hmd *hmd)
+control_display_mode(struct xreal_air_hmd *hmd)
 {
-	if (!send_payload_to_control(hmd, NA_MSG_R_DISP_MODE, NULL, 0)) {
-		NA_ERROR(hmd, "Failed to send payload for initial display mode!");
+	if (!send_payload_to_control(hmd, XREAL_AIR_MSG_R_DISP_MODE, NULL, 0)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload for initial display mode!");
 		return false;
 	}
 
 	if (!wait_for_display_mode(hmd)) {
-		NA_ERROR(hmd, "Failed to wait for valid display mode!");
+		XREAL_AIR_ERROR(hmd, "Failed to wait for valid display mode!");
 		return false;
 	}
 
@@ -895,9 +900,9 @@ control_display_mode(struct na_hmd *hmd)
 }
 
 static bool
-switch_display_mode(struct na_hmd *hmd, uint8_t display_mode)
+switch_display_mode(struct xreal_air_hmd *hmd, uint8_t display_mode)
 {
-	if ((display_mode != NA_DISPLAY_MODE_2D) && (display_mode > NA_DISPLAY_MODE_3D)) {
+	if ((display_mode != XREAL_AIR_DISPLAY_MODE_2D) && (display_mode > XREAL_AIR_DISPLAY_MODE_3D)) {
 		return false;
 	}
 
@@ -912,7 +917,7 @@ switch_display_mode(struct na_hmd *hmd, uint8_t display_mode)
 	info.display.w_meters *= 2.0f;
 	info.lens_horizontal_separation_meters *= 2.0f;
 
-	if (display_mode == NA_DISPLAY_MODE_3D) {
+	if (display_mode == XREAL_AIR_DISPLAY_MODE_3D) {
 		info.display.w_pixels *= 2;
 	}
 
@@ -920,11 +925,11 @@ switch_display_mode(struct na_hmd *hmd, uint8_t display_mode)
 	info.fov[1] = (float)(46.0 * (M_PI / 180.0));
 
 	if (!u_device_setup_split_side_by_side(&hmd->base, &info)) {
-		NA_ERROR(hmd, "Failed to setup basic device info");
+		XREAL_AIR_ERROR(hmd, "Failed to setup basic device info");
 		return false;
 	}
 
-	if (display_mode == NA_DISPLAY_MODE_2D) {
+	if (display_mode == XREAL_AIR_DISPLAY_MODE_2D) {
 		hmd->base.hmd->views[0].display.w_pixels = info.display.w_pixels;
 		hmd->base.hmd->views[0].viewport.w_pixels = info.display.w_pixels;
 
@@ -945,7 +950,7 @@ switch_display_mode(struct na_hmd *hmd, uint8_t display_mode)
  */
 
 static void
-teardown(struct na_hmd *hmd)
+teardown(struct xreal_air_hmd *hmd)
 {
 	// Stop the variable tracking.
 	u_var_remove_root(hmd);
@@ -973,7 +978,7 @@ teardown(struct na_hmd *hmd)
 }
 
 static void
-adjust_brightness(struct na_hmd *hmd)
+adjust_brightness(struct xreal_air_hmd *hmd)
 {
 	if (hmd->wants.brightness > 100) {
 		return;
@@ -990,8 +995,8 @@ adjust_brightness(struct na_hmd *hmd)
 		return;
 	}
 
-	if (!send_payload_to_control(hmd, NA_MSG_W_BRIGHTNESS, &raw_brightness, 1)) {
-		NA_ERROR(hmd, "Failed to send payload setting custom brightness value!");
+	if (!send_payload_to_control(hmd, XREAL_AIR_MSG_W_BRIGHTNESS, &raw_brightness, 1)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload setting custom brightness value!");
 		return;
 	}
 
@@ -999,9 +1004,10 @@ adjust_brightness(struct na_hmd *hmd)
 }
 
 static void
-adjust_display_mode(struct na_hmd *hmd)
+adjust_display_mode(struct xreal_air_hmd *hmd)
 {
-	if ((hmd->wants.display_mode != NA_DISPLAY_MODE_2D) && (hmd->wants.display_mode != NA_DISPLAY_MODE_3D)) {
+	if ((hmd->wants.display_mode != XREAL_AIR_DISPLAY_MODE_2D) &&
+	    (hmd->wants.display_mode != XREAL_AIR_DISPLAY_MODE_3D)) {
 		return;
 	}
 
@@ -1011,8 +1017,8 @@ adjust_display_mode(struct na_hmd *hmd)
 
 	const uint8_t display_mode = hmd->wants.display_mode;
 
-	if (!send_payload_to_control(hmd, NA_MSG_W_DISP_MODE, &display_mode, 1)) {
-		NA_ERROR(hmd, "Failed to send payload setting custom display mode!");
+	if (!send_payload_to_control(hmd, XREAL_AIR_MSG_W_DISP_MODE, &display_mode, 1)) {
+		XREAL_AIR_ERROR(hmd, "Failed to send payload setting custom display mode!");
 		return;
 	}
 
@@ -1026,9 +1032,9 @@ adjust_display_mode(struct na_hmd *hmd)
  */
 
 static void
-na_hmd_update_inputs(struct xrt_device *xdev)
+xreal_air_hmd_update_inputs(struct xrt_device *xdev)
 {
-	struct na_hmd *hmd = na_hmd(xdev);
+	struct xreal_air_hmd *hmd = xreal_air_hmd(xdev);
 
 	os_mutex_lock(&hmd->device_mutex);
 
@@ -1042,15 +1048,15 @@ na_hmd_update_inputs(struct xrt_device *xdev)
 }
 
 static void
-na_hmd_get_tracked_pose(struct xrt_device *xdev,
-                        enum xrt_input_name name,
-                        uint64_t at_timestamp_ns,
-                        struct xrt_space_relation *out_relation)
+xreal_air_hmd_get_tracked_pose(struct xrt_device *xdev,
+                               enum xrt_input_name name,
+                               uint64_t at_timestamp_ns,
+                               struct xrt_space_relation *out_relation)
 {
-	struct na_hmd *hmd = na_hmd(xdev);
+	struct xreal_air_hmd *hmd = xreal_air_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		NA_ERROR(hmd, "unknown input name");
+		XREAL_AIR_ERROR(hmd, "unknown input name");
 		return;
 	}
 
@@ -1071,16 +1077,17 @@ na_hmd_get_tracked_pose(struct xrt_device *xdev,
 }
 
 static void
-na_hmd_destroy(struct xrt_device *xdev)
+xreal_air_hmd_destroy(struct xrt_device *xdev)
 {
-	struct na_hmd *hmd = na_hmd(xdev);
+	struct xreal_air_hmd *hmd = xreal_air_hmd(xdev);
 	teardown(hmd);
 
 	u_device_free(&hmd->base);
 }
 
 static bool
-na_hmd_compute_distortion(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
+xreal_air_hmd_compute_distortion(
+    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
 {
 	return u_compute_distortion_none(u, v, result);
 }
@@ -1092,21 +1099,21 @@ na_hmd_compute_distortion(struct xrt_device *xdev, uint32_t view, float u, float
  */
 
 struct xrt_device *
-na_hmd_create_device(struct os_hid_device *sensor_device,
-                     struct os_hid_device *control_device,
-                     enum u_logging_level log_level)
+xreal_air_hmd_create_device(struct os_hid_device *sensor_device,
+                            struct os_hid_device *control_device,
+                            enum u_logging_level log_level)
 {
 	enum u_device_alloc_flags flags =
 	    (enum u_device_alloc_flags)(U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE);
-	struct na_hmd *hmd = U_DEVICE_ALLOCATE(struct na_hmd, flags, 1, 0);
+	struct xreal_air_hmd *hmd = U_DEVICE_ALLOCATE(struct xreal_air_hmd, flags, 1, 0);
 	int ret;
 
 	hmd->log_level = log_level;
-	hmd->base.update_inputs = na_hmd_update_inputs;
-	hmd->base.get_tracked_pose = na_hmd_get_tracked_pose;
+	hmd->base.update_inputs = xreal_air_hmd_update_inputs;
+	hmd->base.get_tracked_pose = xreal_air_hmd_get_tracked_pose;
 	hmd->base.get_view_poses = u_device_get_view_poses;
-	hmd->base.compute_distortion = na_hmd_compute_distortion;
-	hmd->base.destroy = na_hmd_destroy;
+	hmd->base.compute_distortion = xreal_air_hmd_compute_distortion;
+	hmd->base.destroy = xreal_air_hmd_destroy;
 	hmd->base.name = XRT_DEVICE_GENERIC_HMD;
 	hmd->base.device_type = XRT_DEVICE_TYPE_HMD;
 	hmd->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
@@ -1140,8 +1147,8 @@ na_hmd_create_device(struct os_hid_device *sensor_device,
 	hmd->last.timestamp = 0xFFFFFFFF;
 
 	// Print name
-	snprintf(hmd->base.str, XRT_DEVICE_NAME_LEN, "Nreal Air Glasses");
-	snprintf(hmd->base.serial, XRT_DEVICE_NAME_LEN, "Nreal Air Glasses");
+	snprintf(hmd->base.str, XRT_DEVICE_NAME_LEN, "Xreal Air Glasses");
+	snprintf(hmd->base.serial, XRT_DEVICE_NAME_LEN, "Xreal Air Glasses");
 
 	// Do mutex and thread init before any call to teardown happens.
 	os_mutex_init(&hmd->device_mutex);
@@ -1186,7 +1193,7 @@ na_hmd_create_device(struct os_hid_device *sensor_device,
 	 * Setup variable.
 	 */
 
-	u_var_add_root(hmd, "Nreal Air Glasses", true);
+	u_var_add_root(hmd, "Xreal Air Glasses", true);
 	u_var_add_u8(hmd, &hmd->wants.brightness, "Brightness");
 	u_var_add_u8(hmd, &hmd->wants.display_mode, "Display mode");
 	u_var_add_gui_header(hmd, &hmd->gui.last_frame, "Last data");
@@ -1208,15 +1215,15 @@ na_hmd_create_device(struct os_hid_device *sensor_device,
 	 */
 
 	if (hmd->log_level <= U_LOGGING_DEBUG) {
-		u_device_dump_config(&hmd->base, __func__, "Nreal Air");
+		u_device_dump_config(&hmd->base, __func__, "Xreal Air");
 	}
 
-	NA_DEBUG(hmd, "YES!");
+	XREAL_AIR_DEBUG(hmd, "YES!");
 
 	return &hmd->base;
 
 cleanup:
-	NA_DEBUG(hmd, "NO! :(");
+	XREAL_AIR_DEBUG(hmd, "NO! :(");
 
 	if (hmd->calibration_buffer) {
 		free(hmd->calibration_buffer);

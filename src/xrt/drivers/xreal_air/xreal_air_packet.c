@@ -1,15 +1,15 @@
-// Copyright 2023, Tobias Frisch
+// Copyright 2023-2024, Tobias Frisch
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Nreal Air packet parsing implementation.
+ * @brief  Xreal Air packet parsing implementation.
  * @author Tobias Frisch <thejackimonster@gmail.com>
- * @ingroup drv_na
+ * @ingroup drv_xreal_air
  */
 
 #include "xrt/xrt_compiler.h"
 
-#include "na_hmd.h"
+#include "xreal_air_hmd.h"
 
 #include <cjson/cJSON.h>
 #include <string.h>
@@ -203,7 +203,7 @@ read_json_array(cJSON *object, const char *const string, int size, float *out_ar
  */
 
 static void
-read_sample(const uint8_t **buffer, struct na_parsed_sample *sample)
+read_sample(const uint8_t **buffer, struct xreal_air_parsed_sample *sample)
 {
 	read_i16(buffer, &sample->gyro_multiplier);
 	read_i32(buffer, &sample->gyro_divisor);
@@ -235,7 +235,7 @@ read_sample(const uint8_t **buffer, struct na_parsed_sample *sample)
  */
 
 bool
-na_parse_calibration_buffer(struct na_parsed_calibration *calibration, const char *buffer, size_t size)
+xreal_air_parse_calibration_buffer(struct xreal_air_parsed_calibration *calibration, const char *buffer, size_t size)
 {
 	cJSON *root = cJSON_ParseWithLength(buffer, size);
 
@@ -259,7 +259,7 @@ na_parse_calibration_buffer(struct na_parsed_calibration *calibration, const cha
 }
 
 bool
-na_parse_sensor_packet(struct na_parsed_sensor *sensor, const uint8_t *buffer, int size)
+xreal_air_parse_sensor_packet(struct xreal_air_parsed_sensor *sensor, const uint8_t *buffer, int size)
 {
 	const uint8_t *start = buffer;
 
@@ -293,7 +293,9 @@ na_parse_sensor_packet(struct na_parsed_sensor *sensor, const uint8_t *buffer, i
 }
 
 bool
-na_parse_sensor_control_data_packet(struct na_parsed_sensor_control_data *data, const uint8_t *buffer, int size)
+xreal_air_parse_sensor_control_data_packet(struct xreal_air_parsed_sensor_control_data *data,
+                                           const uint8_t *buffer,
+                                           int size)
 {
 	const uint8_t *start = buffer;
 
@@ -320,7 +322,7 @@ na_parse_sensor_control_data_packet(struct na_parsed_sensor_control_data *data, 
 }
 
 bool
-na_parse_control_packet(struct na_parsed_control *control, const uint8_t *buffer, int size)
+xreal_air_parse_control_packet(struct xreal_air_parsed_control *control, const uint8_t *buffer, int size)
 {
 	const uint8_t *start = buffer;
 

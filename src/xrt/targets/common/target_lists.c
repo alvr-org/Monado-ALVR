@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -80,13 +80,13 @@
 #include "depthai/depthai_interface.h"
 #endif
 
-#ifdef XRT_BUILD_DRIVER_NA
-#include "nreal_air/na_interface.h"
-#endif
-
 #ifdef XRT_BUILD_DRIVER_WMR
 #include "wmr/wmr_interface.h"
 #include "wmr/wmr_common.h"
+#endif
+
+#ifdef XRT_BUILD_DRIVER_XREAL_AIR
+#include "xreal_air/xreal_air_interface.h"
 #endif
 
 #ifdef XRT_BUILD_DRIVER_EUROC
@@ -136,10 +136,6 @@ xrt_builder_create_func_t target_builder_list[] = {
     t_builder_lighthouse_create,
 #endif // T_BUILDER_LIGHTHOUSE
 
-#ifdef XRT_BUILD_DRIVER_NA
-    nreal_air_builder_create,
-#endif // T_BUILDER_NA
-
 #ifdef T_BUILDER_NS
     t_builder_north_star_create,
 #endif // T_BUILDER_NS
@@ -147,6 +143,10 @@ xrt_builder_create_func_t target_builder_list[] = {
 #ifdef T_BUILDER_WMR
     t_builder_wmr_create,
 #endif // T_BUILDER_WMR
+
+#ifdef XRT_BUILD_DRIVER_XREAL_AIR
+    xreal_air_builder_create,
+#endif // T_BUILDER_XREAL_AIR
 
 #ifdef T_BUILDER_LEGACY
     t_builder_legacy_create,
