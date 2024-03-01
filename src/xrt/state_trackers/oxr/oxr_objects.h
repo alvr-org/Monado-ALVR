@@ -1653,25 +1653,6 @@ struct oxr_instance
 		OXR_FOR_EACH_SUBACTION_PATH(SUBACTION_PATH_MEMBER)
 
 #undef SUBACTION_PATH_MEMBER
-
-
-		XrPath khr_simple_controller;
-		XrPath google_daydream_controller;
-		XrPath htc_vive_controller;
-		XrPath htc_vive_pro;
-		XrPath microsoft_motion_controller;
-		XrPath microsoft_xbox_controller;
-		XrPath oculus_go_controller;
-		XrPath oculus_touch_controller;
-		XrPath valve_index_controller;
-		XrPath hp_mixed_reality_controller;
-		XrPath samsung_odyssey_controller;
-		XrPath ml_ml2_controller;
-		XrPath mndx_ball_on_a_stick_controller;
-		XrPath msft_hand_interaction;
-		XrPath ext_eye_gaze_interaction;
-		XrPath ext_hand_interaction;
-		XrPath oppo_mr_controller;
 	} path_cache;
 
 	struct

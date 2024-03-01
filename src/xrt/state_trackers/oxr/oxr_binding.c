@@ -72,19 +72,22 @@ interaction_profile_find_in_instance(struct oxr_logger *log,
                                      XrPath path,
                                      struct oxr_interaction_profile **out_p)
 {
-	return interaction_profile_find_in_array( //
-	    log,                                  //
-	    inst->profile_count,                  //
-	    inst->profiles,                       //
-	    path,                                 //
-	    out_p);                               //
+	if (interaction_profile_find_in_array( //
+	        log,                           //
+	        inst->profile_count,           //
+	        inst->profiles,                //
+	        path,                          //
+	        out_p)) {
+		return true;
+	}
+	return false;
 }
 
 static inline bool
-internaction_profile_find_in_session(struct oxr_logger *log,
-                                     struct oxr_session *sess,
-                                     XrPath path,
-                                     struct oxr_interaction_profile **out_p)
+interaction_profile_find_in_session(struct oxr_logger *log,
+                                    struct oxr_session *sess,
+                                    XrPath path,
+                                    struct oxr_interaction_profile **out_p)
 {
 	return interaction_profile_find_in_array( //
 	    log,                                  //
@@ -348,45 +351,16 @@ oxr_get_profile_for_device_name(struct oxr_logger *log,
                                 enum xrt_device_name name,
                                 struct oxr_interaction_profile **out_p)
 {
-	struct oxr_instance *inst = sess->sys->inst;
 	/*
 	 * Map xrt_device_name to an interaction profile XrPath.
 	 * Set *out_p to an oxr_interaction_profile if bindings for that interaction profile XrPath have been suggested.
 	 */
-#define FIND_PROFILE(PATH) internaction_profile_find_in_session(log, sess, inst->path_cache.PATH, out_p)
-
-	switch (name) {
-	case XRT_DEVICE_PSMV: FIND_PROFILE(mndx_ball_on_a_stick_controller); return;
-	case XRT_DEVICE_SIMPLE_CONTROLLER: FIND_PROFILE(khr_simple_controller); return;
-	case XRT_DEVICE_INDEX_CONTROLLER: FIND_PROFILE(valve_index_controller); return;
-	case XRT_DEVICE_VIVE_WAND: FIND_PROFILE(htc_vive_controller); return;
-	case XRT_DEVICE_TOUCH_CONTROLLER: FIND_PROFILE(oculus_touch_controller); return;
-	case XRT_DEVICE_WMR_CONTROLLER: FIND_PROFILE(microsoft_motion_controller); return;
-	case XRT_DEVICE_GO_CONTROLLER: FIND_PROFILE(oculus_go_controller); return;
-	case XRT_DEVICE_VIVE_PRO: FIND_PROFILE(htc_vive_pro); return;
-	case XRT_DEVICE_XBOX_CONTROLLER: FIND_PROFILE(microsoft_xbox_controller); return;
-	case XRT_DEVICE_HP_REVERB_G2_CONTROLLER: FIND_PROFILE(hp_mixed_reality_controller); return;
-	case XRT_DEVICE_SAMSUNG_ODYSSEY_CONTROLLER: FIND_PROFILE(samsung_odyssey_controller); return;
-	case XRT_DEVICE_ML2_CONTROLLER: FIND_PROFILE(ml_ml2_controller); return;
-	case XRT_DEVICE_HAND_INTERACTION: FIND_PROFILE(msft_hand_interaction); return;
-	case XRT_DEVICE_EYE_GAZE_INTERACTION: FIND_PROFILE(ext_eye_gaze_interaction); return;
-	case XRT_DEVICE_OPPO_MR_CONTROLLER: FIND_PROFILE(oppo_mr_controller); return;
-	case XRT_DEVICE_EXT_HAND_INTERACTION: FIND_PROFILE(ext_hand_interaction); return;
-
-	// no interaction
-	default:
-	case XRT_DEVICE_HYDRA:
-	case XRT_DEVICE_DAYDREAM:
-	case XRT_DEVICE_GENERIC_HMD:
-	case XRT_DEVICE_REALSENSE:
-	case XRT_DEVICE_HAND_TRACKER:
-	case XRT_DEVICE_VIVE_TRACKER_GEN1:
-	case XRT_DEVICE_VIVE_TRACKER_GEN2:
-	case XRT_DEVICE_VIVE_TRACKER_GEN3:
-	case XRT_DEVICE_VIVE_TRACKER_TUNDRA: return;
+	for (uint32_t i = 0; i < ARRAY_SIZE(profile_templates); i++) {
+		if (name == profile_templates[i].name) {
+			interaction_profile_find_in_session(log, sess, profile_templates[i].path_cache, out_p);
+			return;
+		}
 	}
-
-#undef FIND_PROFILE
 }
 
 
@@ -695,7 +669,7 @@ oxr_action_get_input_source_localized_name(struct oxr_logger *log,
 	// Find the interaction profile.
 	struct oxr_interaction_profile *oip = NULL;
 	//! @todo: If we ever rebind a profile that has not been suggested by the client, it will not be found.
-	internaction_profile_find_in_session(log, sess, path, &oip);
+	interaction_profile_find_in_session(log, sess, path, &oip);
 	if (oip == NULL) {
 		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "no interaction profile found");
 	}

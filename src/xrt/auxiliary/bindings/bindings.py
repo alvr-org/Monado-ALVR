@@ -285,6 +285,17 @@ class Profile:
         self.extended_by = json_profile.get("extended_by")
         if self.extended_by is None:
             self.extended_by = []
+
+        ov = json_profile.get("openxr_version")
+        if ov is None:
+            self.openxr_version_promoted = { "major" : "0", "minor" : "0" }
+        else:
+            promoted = ov.get("promoted")
+            if promoted is None:
+                self.openxr_version_promoted = { "major" : "0", "minor" : "0" }
+            else:
+                self.openxr_version_promoted = { "major" : promoted.get("major"), "minor" : promoted.get("minor") }
+
         self.is_virtual = profile_name.startswith("/virtual_profiles/")
         self.identifiers = Identifier.parse_identifiers(json_profile)
 
@@ -416,21 +427,6 @@ class Bindings:
                 return True
         return False
 
-    def make_oxr_verify_extension_status_struct_str(self):
-        struct_str: str = f"struct {oxr_verify_extension_status_struct_name}{{\n"
-        ext_set = set()
-        for profile in itertools.chain(self.virtual_profiles, self.profiles):
-            ext_name = profile.extension_name
-            if ext_name is None or len(ext_name) == 0:
-                continue
-            if ext_name in ext_set:
-                continue
-            ext_set.add(ext_name)
-            struct_str += f"\tbool {ext_name};\n"
-        struct_str += "};\n"
-        return struct_str
-
-
 header = '''// Copyright 2020-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -445,7 +441,7 @@ header = '''// Copyright 2020-2022, Collabora, Ltd.
 
 func_start = '''
 bool
-{name}(const struct {ext_status_struct_name}* exts, const char *str, size_t length)
+{name}(const struct oxr_extension_status *exts, const char *str, size_t length)
 {{
 '''
 
@@ -464,12 +460,15 @@ if_strcmp = '''{exttab}if (strcmp(str, "{check}") == 0) {{
 {exttab}\t\t}} else '''
 
 
-def write_verify_func_switch(f, dict_of_lists, profile_name, ext_name):
+def write_verify_func_switch(f, dict_of_lists, profile, profile_name, ext_name):
     """Generate function to check if a string is in a set of strings.
     Input is a file to write the code into, a dict where keys are length and
     the values are lists of strings of that length. And a suffix if any."""
     if len(dict_of_lists) == 0:
         return
+
+    if profile.extension_name is not None:
+        f.write(f'#ifdef OXR_HAVE_{profile.extension_name}\n')
 
     f.write(f"\t// generated from: {profile_name}\n")
     is_ext = ext_name is not None and len(ext_name) > 0
@@ -489,12 +488,14 @@ def write_verify_func_switch(f, dict_of_lists, profile_name, ext_name):
     if is_ext:
         f.write("\t}\n")
 
+    if profile.extension_name is not None:
+        f.write(f'#endif // OXR_HAVE_{profile.extension_name}\n')
 
 def write_verify_func_body(f, profile, dict_name):
     if profile is None or dict_name is None or len(dict_name) == 0:
         return
     write_verify_func_switch(f, getattr(
-        profile, dict_name), profile.name, profile.extension_name)
+        profile, dict_name), profile, profile.name, profile.extension_name)
     if profile.parent_profiles is None:
         return
     for pp in profile.parent_profiles:
@@ -513,24 +514,49 @@ def generate_verify_functions(f, profile):
     write_verify_func(f, profile, "dpad_paths_by_length", "_dpad_path")
     write_verify_func(f, profile, "dpad_emulators_by_length", "_dpad_emulator")
 
+    f.write(f'''
+void
+oxr_verify_{profile.validation_func_name}_ext(const struct oxr_extension_status *extensions, bool *out_supported, bool *out_enabled)
+{{''')
+    if profile.extension_name is not None:
+        f.write(f'''
+#ifdef OXR_HAVE_{profile.extension_name}
+\t*out_supported = true;
+\t*out_enabled = extensions->{profile.extension_name};
+#else
+\t*out_supported = false;
+\t*out_enabled = false;
+#endif // OXR_HAVE_{profile.extension_name}
+''')
 
-def generate_bindings_c(file, p):
+    else:
+        f.write(f'''
+\t*out_supported = true;
+\t*out_enabled = true;
+''')
+
+    f.write(f'''}}
+''')
+
+
+def generate_bindings_c(file, b):
     """Generate the file to verify subpaths on a interaction profile."""
     f = open(file, "w")
     f.write(header.format(brief='Generated bindings data', group='oxr_main'))
     f.write('''
 #include "b_generated_bindings.h"
 #include <string.h>
+#include <oxr_objects.h>
 
 // clang-format off
 ''')
 
-    for profile in p.profiles:
+    for profile in b.profiles:
         generate_verify_functions(f, profile)
 
     f.write(
-        f'\n\nstruct profile_template profile_templates[{len(p.profiles)}] = {{ // array of profile_template\n')
-    for profile in p.profiles:
+        f'\n\nstruct profile_template profile_templates[{len(b.profiles)}] = {{ // array of profile_template\n')
+    for profile in b.profiles:
         hw_name = str(profile.name.split("/")[-1])
         vendor_name = str(profile.name.split("/")[-2])
         fname = vendor_name + "_" + hw_name + "_profile.json"
@@ -594,7 +620,6 @@ def generate_bindings_c(file, p):
                     f.write(f'\t\t\t\t.output = {monado_binding},\n')
                 else:
                     f.write(f'\t\t\t\t.output = 0,\n')
-
             f.write(f'\t\t\t}}, // /binding_template {idx}\n')
 
         f.write('\t\t}, // /array of binding_template\n')
@@ -630,13 +655,24 @@ def generate_bindings_c(file, p):
                 f.write('\t\t\t},\n')
             f.write('\t\t}, // /array of dpad_emulation\n')
 
+        f.write(f'\t\t.openxr_version.promoted.major = {profile.openxr_version_promoted["major"]},\n')
+        f.write(f'\t\t.openxr_version.promoted.minor = {profile.openxr_version_promoted["minor"]},\n')
+
+        fn_prefixes = ["subpath", "dpad_path", "dpad_emulator"]
+        for prefix in fn_prefixes:
+            f.write(f'\t\t.{prefix}_fn = oxr_verify_{profile.validation_func_name}_{prefix},\n')
+        f.write(f'\t\t.ext_verify_fn = oxr_verify_{profile.validation_func_name}_ext,\n')
+        if profile.extension_name is None:
+            f.write(f'\t\t.extension_name = NULL,\n')
+        else:
+            f.write(f'\t\t.extension_name = "{profile.extension_name}",\n')
         f.write('\t}, // /profile_template\n')
 
     f.write('}; // /array of profile_template\n\n')
 
     inputs = set()
     outputs = set()
-    for profile in p.profiles:
+    for profile in b.profiles:
         component: Component
         for idx, component in enumerate(profile.components):
 
@@ -693,34 +729,71 @@ def generate_bindings_c(file, p):
     f.write(f'\treturn XRT_OUTPUT_NAME_SIMPLE_VIBRATION;\n')
     f.write('}\n')
 
+    f.write(f'''
+// Array of pointers to XrPath variables contained in each profile template
+static XrPath *path_cache[{len(b.profiles)}] =
+{{
+''')
+    for profile_index, _ in enumerate(b.profiles):
+        f.write(f'\t&profile_templates[{profile_index}].path_cache,\n')
+        profile_index += 1
+    f.write(f'''}};
+
+// Array of pointers to the location of the path cache name in each profile template.
+// The name string itself is not a compile time constant.
+static const char **path_cache_names[{len(b.profiles)}] =
+{{
+''')
+    for profile_index, _ in enumerate(b.profiles):
+        f.write(f'\t&profile_templates[{profile_index}].path,\n')
+        profile_index += 1
+    f.write(f'''}};
+
+static uint64_t path_cache_count = {len(b.profiles)};
+
+void oxr_get_interaction_profile_path_cache(XrPath **out_path_cache[{len(b.profiles)}], const char ***out_path_cache_names[''' + str(len(b.profiles)) + '''], uint64_t *out_path_cache_count)
+{
+    *out_path_cache = path_cache;
+    *out_path_cache_names = path_cache_names;
+    *out_path_cache_count = path_cache_count;
+}
+''')
     f.write("\n// clang-format on\n")
 
     f.close()
 
 
-def generate_bindings_h(file, p):
+def generate_bindings_h(file, b):
     """Generate header for the verify subpaths functions."""
     f = open(file, "w")
     f.write(header.format(brief='Generated bindings data header',
                           group='oxr_api'))
-    f.write('''
+    f.write(f'''
 #pragma once
 
 #include <stddef.h>
 
 #include "xrt/xrt_defines.h"
 
+typedef uint64_t XrPath; // OpenXR typedef
+struct oxr_extension_status;
+
+/**
+  * @p out_path_cache Pointer to Array of XrPath pointers.
+  * @p out_path_cache_names Pointer to Array of string (char*) locations.
+  * @p out_path_cache_count Number of entries in the out_path_cache[_names] arrays.
+  */
+void oxr_get_interaction_profile_path_cache(XrPath **out_path_cache[{len(b.profiles)}], const char ***out_path_cache_names[''' + str(len(b.profiles)) + '''], uint64_t *out_path_cache_count);
+
 // clang-format off
 ''')
 
-    oxr_verify_struct_str = p.make_oxr_verify_extension_status_struct_str()
-    f.write(oxr_verify_struct_str)
-
     fn_prefixes = ["_subpath", "_dpad_path", "_dpad_emulator"]
-    for profile in p.profiles:
+    for profile in b.profiles:
         for fn_suffix in fn_prefixes:
             f.write(
-                f"\nbool\noxr_verify_{profile.validation_func_name}{fn_suffix}(const struct {oxr_verify_extension_status_struct_name}* extensions, const char *str, size_t length);\n")
+                f"\nbool\noxr_verify_{profile.validation_func_name}{fn_suffix}(const struct oxr_extension_status *extensions, const char *str, size_t length);\n")
+        f.write(f'''\nvoid\noxr_verify_{profile.validation_func_name}_ext(const struct oxr_extension_status *extensions, bool *out_supported, bool *out_enabled);\n''')
 
     f.write(f'''
 #define PATHS_PER_BINDING_TEMPLATE 16
@@ -753,6 +826,9 @@ struct binding_template
 \tenum xrt_output_name output;
 }};
 
+typedef bool (*path_verify_fn_t)(const struct oxr_extension_status *extensions, const char *, size_t);
+typedef void (*ext_verify_fn_t)(const struct oxr_extension_status *extensions, bool *out_supported, bool *out_enabled);
+
 struct profile_template
 {{
 \tenum xrt_device_name name;
@@ -764,9 +840,23 @@ struct profile_template
 \tsize_t binding_count;
 \tstruct dpad_emulation *dpads;
 \tsize_t dpad_count;
+\tstruct {{
+\t\tstruct {{
+\t\t\tuint32_t major;
+\t\t\tuint32_t minor;
+\t\t}} promoted;
+\t}} openxr_version;
+\t// Only valid after path cache entries are initialized via oxr_get_interaction_profile_path_cache.
+\tXrPath path_cache;
+
+\tpath_verify_fn_t subpath_fn;
+\tpath_verify_fn_t dpad_path_fn;
+\tpath_verify_fn_t dpad_emulator_fn;
+\text_verify_fn_t ext_verify_fn;
+\tconst char *extension_name;
 }};
 
-#define NUM_PROFILE_TEMPLATES {len(p.profiles)}
+#define NUM_PROFILE_TEMPLATES {len(b.profiles)}
 extern struct profile_template profile_templates[NUM_PROFILE_TEMPLATES];
 
 ''')

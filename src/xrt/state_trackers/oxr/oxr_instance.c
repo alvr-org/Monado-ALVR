@@ -8,6 +8,7 @@
  * @ingroup oxr_main
  */
 
+#include "bindings/b_generated_bindings.h"
 #include "xrt/xrt_config_os.h"
 #include "xrt/xrt_config_build.h"
 #include "xrt/xrt_instance.h"
@@ -253,27 +254,14 @@ oxr_instance_create(struct oxr_logger *log,
 	OXR_FOR_EACH_SUBACTION_PATH_DETAILED(CACHE_SUBACTION_PATHS)
 
 #undef CACHE_SUBACTION_PATHS
-	// clang-format off
 
-	cache_path(log, inst, "/interaction_profiles/khr/simple_controller", &inst->path_cache.khr_simple_controller);
-	cache_path(log, inst, "/interaction_profiles/google/daydream_controller", &inst->path_cache.google_daydream_controller);
-	cache_path(log, inst, "/interaction_profiles/htc/vive_controller", &inst->path_cache.htc_vive_controller);
-	cache_path(log, inst, "/interaction_profiles/htc/vive_pro", &inst->path_cache.htc_vive_pro);
-	cache_path(log, inst, "/interaction_profiles/microsoft/motion_controller", &inst->path_cache.microsoft_motion_controller);
-	cache_path(log, inst, "/interaction_profiles/microsoft/xbox_controller", &inst->path_cache.microsoft_xbox_controller);
-	cache_path(log, inst, "/interaction_profiles/oculus/go_controller", &inst->path_cache.oculus_go_controller);
-	cache_path(log, inst, "/interaction_profiles/oculus/touch_controller", &inst->path_cache.oculus_touch_controller);
-	cache_path(log, inst, "/interaction_profiles/valve/index_controller", &inst->path_cache.valve_index_controller);
-	cache_path(log, inst, "/interaction_profiles/hp/mixed_reality_controller", &inst->path_cache.hp_mixed_reality_controller);
-	cache_path(log, inst, "/interaction_profiles/samsung/odyssey_controller", &inst->path_cache.samsung_odyssey_controller);
-	cache_path(log, inst, "/interaction_profiles/ml/ml2_controller", &inst->path_cache.ml_ml2_controller);
-	cache_path(log, inst, "/interaction_profiles/mndx/ball_on_a_stick_controller", &inst->path_cache.mndx_ball_on_a_stick_controller);
-	cache_path(log, inst, "/interaction_profiles/microsoft/hand_interaction", &inst->path_cache.msft_hand_interaction);
-	cache_path(log, inst, "/interaction_profiles/ext/eye_gaze_interaction", &inst->path_cache.ext_eye_gaze_interaction);
-	cache_path(log, inst, "/interaction_profiles/ext/hand_interaction_ext", &inst->path_cache.ext_hand_interaction);
-	cache_path(log, inst, "/interaction_profiles/oppo/mr_controller_oppo", &inst->path_cache.oppo_mr_controller);
-
-	// clang-format on
+	XrPath **path_cache;
+	const char ***path_cache_names;
+	uint64_t path_cache_count;
+	oxr_get_interaction_profile_path_cache(&path_cache, &path_cache_names, &path_cache_count);
+	for (uint32_t i = 0; i < path_cache_count; i++) {
+		cache_path(log, inst, *path_cache_names[i], path_cache[i]);
+	}
 
 	// fill in our application info - @todo - replicate all createInfo
 	// fields?
