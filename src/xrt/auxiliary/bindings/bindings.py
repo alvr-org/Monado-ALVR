@@ -426,7 +426,6 @@ class Bindings:
             if ext_name in ext_set:
                 continue
             ext_set.add(ext_name)
-            ext_name = ext_name.replace("XR_", "")
             struct_str += f"\tbool {ext_name};\n"
         struct_str += "};\n"
         return struct_str
@@ -476,7 +475,6 @@ def write_verify_func_switch(f, dict_of_lists, profile_name, ext_name):
     is_ext = ext_name is not None and len(ext_name) > 0
     ext_tab = ""
     if is_ext:
-        ext_name = ext_name.replace("XR_", "")
         f.write(f"\tif (exts->{ext_name}) {{\n")
         ext_tab = "\t"
 

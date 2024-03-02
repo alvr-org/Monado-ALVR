@@ -4,7 +4,7 @@
 		"/virtual_profiles/ext/palm_pose": {
 			"title": "Ext Palm Pose",
 			"type": "tracked_controller",
-			"extension": "XR_EXT_palm_pose",
+			"extension": "EXT_palm_pose",
 			"monado_device": "XRT_DEVICE_SIMPLE_CONTROLLER",
 			"subaction_paths": [
 				"/user/hand/left",
@@ -26,7 +26,7 @@
 			"title": "Ext Hand Interaction Poses",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_EXT_HAND_INTERACTION",
-			"extension": "XR_EXT_hand_interaction",
+			"extension": "EXT_hand_interaction",
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
@@ -55,7 +55,7 @@
 			"title": "WinMR system button",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_WMR_CONTROLLER",
-			"extension": "XR_MNDX_system_buttons",
+			"extension": "MNDX_system_buttons",
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
@@ -76,7 +76,7 @@
 			"title": "Samsung Odyssey system button",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_SAMSUNG_ODYSSEY_CONTROLLER",
-			"extension": "XR_MNDX_system_buttons",
+			"extension": "MNDX_system_buttons",
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
@@ -97,7 +97,7 @@
 			"title": "HP Reverb G2 system button",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_HP_REVERB_G2_CONTROLLER",
-			"extension": "XR_MNDX_system_buttons",
+			"extension": "MNDX_system_buttons",
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
@@ -118,7 +118,7 @@
 			"title": "Ext Hand Interaction",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_EXT_HAND_INTERACTION",
-			"extension": "XR_EXT_hand_interaction",
+			"extension": "EXT_hand_interaction",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
@@ -1007,7 +1007,7 @@
 			"title": "HP Reverb G2 Controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_HP_REVERB_G2_CONTROLLER",
-			"extension": "XR_EXT_hp_mixed_reality_controller",
+			"extension": "EXT_hp_mixed_reality_controller",
 			"extended_by": [
 				"ext/palm_pose",
 				"ext/hand_interaction_poses",
@@ -1122,7 +1122,7 @@
 			"title": "Samsung Odyssey Controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_SAMSUNG_ODYSSEY_CONTROLLER",
-			"extension": "XR_EXT_samsung_odyssey_controller",
+			"extension": "EXT_samsung_odyssey_controller",
 			"extended_by": [
 				"ext/palm_pose",
 				"ext/hand_interaction_poses",
@@ -1216,7 +1216,7 @@
 			"title": "Magic Leap 2 Controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_ML2_CONTROLLER",
-			"extension": "XR_ML_ml2_controller_interaction",
+			"extension": "ML_ml2_controller_interaction",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
@@ -1303,7 +1303,7 @@
 			"title": "Microsoft hand interaction",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_HAND_INTERACTION",
-			"extension": "XR_MSFT_hand_interaction",
+			"extension": "MSFT_hand_interaction",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
@@ -1349,7 +1349,7 @@
 			"title": "Monado ball on a stick controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_PSMV",
-			"extension": "XR_MNDX_ball_on_a_stick_controller",
+			"extension": "MNDX_ball_on_a_stick_controller",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
@@ -1475,7 +1475,7 @@
 			"title": "Monado Hydra Controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_HYDRA",
-			"extension": "XR_MNDX_hydra",
+			"extension": "MNDX_hydra",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
@@ -1558,7 +1558,7 @@
 			"title": "Extension Eye Gaze Interaction",
 			"type": "eye_tracker",
 			"monado_device": "XRT_DEVICE_EYE_GAZE_INTERACTION",
-			"extension": "XR_EXT_eye_gaze_interaction",
+			"extension": "EXT_eye_gaze_interaction",
 			"subaction_paths": [
 				"/user/eyes_ext"
 			],
@@ -1577,7 +1577,7 @@
 			"title": "HTC Vive Tracker",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_VIVE_TRACKER",
-			"extension": "XR_HTCX_vive_tracker_interaction",
+			"extension": "HTCX_vive_tracker_interaction",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
@@ -1649,7 +1649,7 @@
 			"title": "OPPO MR Controller",
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_OPPO_MR_CONTROLLER",
-			"extension": "XR_OPPO_controller_interaction",
+			"extension": "OPPO_controller_interaction",
 			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
