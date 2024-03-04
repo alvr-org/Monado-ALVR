@@ -404,6 +404,7 @@ r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
 
 xrt_result_t
 r_create_devices(uint16_t port,
+                 uint32_t view_count,
                  struct xrt_session_event_sink *broadcast,
                  struct xrt_system_devices **out_xsysd,
                  struct xrt_space_overseer **out_xso)
@@ -436,6 +437,7 @@ r_create_devices(uint16_t port,
 	r->gui.left = true;
 	r->gui.right = true;
 	r->port = port;
+	r->view_count = view_count;
 	r->accept_fd = -1;
 	r->rc.fd = -1;
 

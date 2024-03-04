@@ -100,7 +100,7 @@ u_config_json_get_tracking_overrides(struct u_config_json *json,
  * @ingroup aux_util
  */
 bool
-u_config_json_get_remote_port(struct u_config_json *json, int *out_port);
+u_config_json_get_remote_settings(struct u_config_json *json, int *out_port, uint32_t *out_view_count);
 
 
 enum u_gui_state_scene

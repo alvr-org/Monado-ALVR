@@ -34,12 +34,12 @@
  */
 
 static bool
-get_settings(cJSON *json, int *port)
+get_settings(cJSON *json, int *port, uint32_t *view_count)
 {
 	struct u_config_json config_json = {0};
 	u_config_json_open_or_create_main_file(&config_json);
 
-	bool bret = u_config_json_get_remote_port(&config_json, port);
+	bool bret = u_config_json_get_remote_settings(&config_json, port, view_count);
 
 	u_config_json_close(&config_json);
 
@@ -84,11 +84,13 @@ remote_open_system(struct xrt_builder *xb,
 
 
 	int port = 4242;
-	if (!get_settings(config, &port)) {
+	uint32_t view_count = 1;
+	if (!get_settings(config, &port, &view_count)) {
 		port = 4242;
+		view_count = 1;
 	}
 
-	return r_create_devices(port, broadcast, out_xsysd, out_xso);
+	return r_create_devices(port, view_count, broadcast, out_xsysd, out_xso);
 }
 
 static void

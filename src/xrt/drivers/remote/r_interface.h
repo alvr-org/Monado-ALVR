@@ -165,6 +165,7 @@ struct r_remote_connection
  */
 xrt_result_t
 r_create_devices(uint16_t port,
+                 uint32_t view_count,
                  struct xrt_session_event_sink *broadcast,
                  struct xrt_system_devices **out_xsysd,
                  struct xrt_space_overseer **out_xso);

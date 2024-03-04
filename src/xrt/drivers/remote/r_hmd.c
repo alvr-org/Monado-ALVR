@@ -159,6 +159,7 @@ r_hmd_create(struct r_hub *r)
 	rh->base.device_type = XRT_DEVICE_TYPE_HMD;
 	rh->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 	rh->base.inputs[0].active = true;
+	rh->base.hmd->view_count = r->view_count;
 	rh->r = r;
 
 	// Print name.
@@ -166,6 +167,7 @@ r_hmd_create(struct r_hub *r)
 	snprintf(rh->base.serial, sizeof(rh->base.serial), "Remote HMD");
 
 	// Setup info.
+	bool ret = true;
 	struct u_device_simple_info info;
 	info.display.w_pixels = 1920;
 	info.display.h_pixels = 1080;
@@ -173,10 +175,19 @@ r_hmd_create(struct r_hub *r)
 	info.display.h_meters = 0.07f;
 	info.lens_horizontal_separation_meters = 0.13f / 2.0f;
 	info.lens_vertical_position_meters = 0.07f / 2.0f;
-	info.fov[0] = 85.0f * (M_PI / 180.0f);
-	info.fov[1] = 85.0f * (M_PI / 180.0f);
 
-	if (!u_device_setup_split_side_by_side(&rh->base, &info)) {
+	if (rh->r->view_count == 1) {
+		info.fov[0] = 120.0f * (M_PI / 180.0f);
+		ret = u_device_setup_one_eye(&rh->base, &info);
+	} else if (rh->r->view_count == 2) {
+		info.fov[0] = 85.0f * (M_PI / 180.0f);
+		info.fov[1] = 85.0f * (M_PI / 180.0f);
+		ret = u_device_setup_split_side_by_side(&rh->base, &info);
+	} else {
+		U_LOG_E("Invalid view count");
+		ret = false;
+	}
+	if (!ret) {
 		U_LOG_E("Failed to setup basic device info");
 		r_hmd_destroy(&rh->base);
 		return NULL;

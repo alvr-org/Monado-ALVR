@@ -1,0 +1,9 @@
+{
+    "$schema": "https://monado.pages.freedesktop.org/monado/config_v0.schema.json",
+    "active": "remote",
+    "remote": {
+        "version": 0,
+        "port": 4242,
+        "view_count": 1
+    }
+}

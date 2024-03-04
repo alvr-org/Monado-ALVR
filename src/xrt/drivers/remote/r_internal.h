@@ -50,6 +50,7 @@ struct r_hub
 	r_socket_t accept_fd;
 
 	uint16_t port;
+	uint32_t view_count;
 
 	struct os_thread_helper oth;
 
