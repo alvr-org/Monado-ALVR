@@ -564,7 +564,7 @@ client_d3d11_compositor_layer_projection(struct xrt_compositor *xc,
 	assert(data->type == XRT_LAYER_PROJECTION);
 
 	struct xrt_swapchain *xscn[XRT_MAX_VIEWS];
-	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+	for (uint32_t i = 0; i < data->view_count; ++i) {
 		xscn[i] = as_client_d3d11_swapchain(xsc[i])->xsc.get();
 	}
 
@@ -573,25 +573,24 @@ client_d3d11_compositor_layer_projection(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
-client_d3d11_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
-                                                      struct xrt_device *xdev,
-                                                      struct xrt_swapchain *l_xsc,
-                                                      struct xrt_swapchain *r_xsc,
-                                                      struct xrt_swapchain *l_d_xsc,
-                                                      struct xrt_swapchain *r_d_xsc,
-                                                      const struct xrt_layer_data *data)
+client_d3d11_compositor_layer_projection_depth(struct xrt_compositor *xc,
+                                               struct xrt_device *xdev,
+                                               struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                               struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
+                                               const struct xrt_layer_data *data)
 {
 	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
 
-	assert(data->type == XRT_LAYER_STEREO_PROJECTION_DEPTH);
-
-	struct xrt_swapchain *l_xscn = as_client_d3d11_swapchain(l_xsc)->xsc.get();
-	struct xrt_swapchain *r_xscn = as_client_d3d11_swapchain(r_xsc)->xsc.get();
-	struct xrt_swapchain *l_d_xscn = as_client_d3d11_swapchain(l_d_xsc)->xsc.get();
-	struct xrt_swapchain *r_d_xscn = as_client_d3d11_swapchain(r_d_xsc)->xsc.get();
+	assert(data->type == XRT_LAYER_PROJECTION_DEPTH);
+	struct xrt_swapchain *xscn[XRT_MAX_VIEWS];
+	struct xrt_swapchain *d_xscn[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < data->view_count; ++i) {
+		xscn[i] = as_client_d3d11_swapchain(xsc[i])->xsc.get();
+		d_xscn[i] = as_client_d3d11_swapchain(d_xsc[i])->xsc.get();
+	}
 
 	// No flip required: D3D11 swapchain image convention matches Vulkan.
-	return xrt_comp_layer_stereo_projection_depth(&c->xcn->base, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, data);
+	return xrt_comp_layer_projection_depth(&c->xcn->base, xdev, xscn, d_xscn, data);
 }
 
 static xrt_result_t
@@ -881,7 +880,7 @@ try {
 	c->base.base.discard_frame = client_d3d11_compositor_discard_frame;
 	c->base.base.layer_begin = client_d3d11_compositor_layer_begin;
 	c->base.base.layer_projection = client_d3d11_compositor_layer_projection;
-	c->base.base.layer_stereo_projection_depth = client_d3d11_compositor_layer_stereo_projection_depth;
+	c->base.base.layer_projection_depth = client_d3d11_compositor_layer_projection_depth;
 	c->base.base.layer_quad = client_d3d11_compositor_layer_quad;
 	c->base.base.layer_cube = client_d3d11_compositor_layer_cube;
 	c->base.base.layer_cylinder = client_d3d11_compositor_layer_cylinder;

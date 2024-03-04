@@ -483,7 +483,7 @@ client_vk_compositor_layer_projection(struct xrt_compositor *xc,
 	struct xrt_swapchain *xscn[XRT_MAX_VIEWS];
 
 	assert(data->type == XRT_LAYER_PROJECTION);
-	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+	for (uint32_t i = 0; i < data->view_count; ++i) {
 		xscn[i] = &client_vk_swapchain(xsc[i])->xscn->base;
 	}
 
@@ -496,27 +496,24 @@ client_vk_compositor_layer_projection(struct xrt_compositor *xc,
 static xrt_result_t
 client_vk_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
                                                    struct xrt_device *xdev,
-                                                   struct xrt_swapchain *l_xsc,
-                                                   struct xrt_swapchain *r_xsc,
-                                                   struct xrt_swapchain *l_d_xsc,
-                                                   struct xrt_swapchain *r_d_xsc,
+                                                   struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                                   struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
                                                    const struct xrt_layer_data *data)
 {
 	struct xrt_compositor *xcn;
-	struct xrt_swapchain *l_xscn;
-	struct xrt_swapchain *r_xscn;
-	struct xrt_swapchain *l_d_xscn;
-	struct xrt_swapchain *r_d_xscn;
 
-	assert(data->type == XRT_LAYER_STEREO_PROJECTION_DEPTH);
+	struct xrt_swapchain *xscn[XRT_MAX_VIEWS];
+	struct xrt_swapchain *d_xscn[XRT_MAX_VIEWS];
+
+	assert(data->type == XRT_LAYER_PROJECTION_DEPTH);
 
 	xcn = to_native_compositor(xc);
-	l_xscn = to_native_swapchain(l_xsc);
-	r_xscn = to_native_swapchain(r_xsc);
-	l_d_xscn = to_native_swapchain(l_d_xsc);
-	r_d_xscn = to_native_swapchain(r_d_xsc);
+	for (uint32_t i = 0; i < data->view_count; ++i) {
+		xscn[i] = to_native_swapchain(xsc[i]);
+		d_xscn[i] = to_native_swapchain(d_xsc[i]);
+	}
 
-	return xrt_comp_layer_stereo_projection_depth(xcn, xdev, l_xscn, r_xscn, l_d_xscn, r_d_xscn, data);
+	return xrt_comp_layer_projection_depth(xcn, xdev, xscn, d_xscn, data);
 }
 
 static xrt_result_t
@@ -842,7 +839,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	c->base.base.discard_frame = client_vk_compositor_discard_frame;
 	c->base.base.layer_begin = client_vk_compositor_layer_begin;
 	c->base.base.layer_projection = client_vk_compositor_layer_projection;
-	c->base.base.layer_stereo_projection_depth = client_vk_compositor_layer_stereo_projection_depth;
+	c->base.base.layer_projection_depth = client_vk_compositor_layer_stereo_projection_depth;
 	c->base.base.layer_quad = client_vk_compositor_layer_quad;
 	c->base.base.layer_cube = client_vk_compositor_layer_cube;
 	c->base.base.layer_cylinder = client_vk_compositor_layer_cylinder;

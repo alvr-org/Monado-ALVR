@@ -76,7 +76,7 @@ typedef uint64_t VkDeviceMemory;
 enum xrt_layer_type
 {
 	XRT_LAYER_PROJECTION,
-	XRT_LAYER_STEREO_PROJECTION_DEPTH,
+	XRT_LAYER_PROJECTION_DEPTH,
 	XRT_LAYER_QUAD,
 	XRT_LAYER_CUBE,
 	XRT_LAYER_CYLINDER,
@@ -223,14 +223,13 @@ struct xrt_layer_projection_view_data
 };
 
 /*!
- * All the pure data values associated with a stereo projection layer.
+ * All the pure data values associated with a projection layer.
  *
  * The @ref xrt_swapchain references and @ref xrt_device are provided outside of
  * this struct.
  */
 struct xrt_layer_projection_data
 {
-	uint32_t view_count;
 	struct xrt_layer_projection_view_data v[XRT_MAX_VIEWS];
 };
 
@@ -258,17 +257,17 @@ struct xrt_layer_depth_test_data
 };
 
 /*!
- * All the pure data values associated with a stereo projection layer with depth
+ * All the pure data values associated with a projection layer with depth
  * swapchain attached.
  *
  * The @ref xrt_swapchain references and @ref xrt_device are provided outside of
  * this struct.
  */
-struct xrt_layer_stereo_projection_depth_data
+struct xrt_layer_projection_depth_data
 {
-	struct xrt_layer_projection_view_data l, r;
+	struct xrt_layer_projection_view_data v[XRT_MAX_VIEWS];
 
-	struct xrt_layer_depth_data l_d, r_d;
+	struct xrt_layer_depth_data d[XRT_MAX_VIEWS];
 };
 
 /*!
@@ -460,7 +459,7 @@ struct xrt_layer_data
 	 */
 	union {
 		struct xrt_layer_projection_data proj;
-		struct xrt_layer_stereo_projection_depth_data stereo_depth;
+		struct xrt_layer_projection_depth_data depth;
 		struct xrt_layer_quad_data quad;
 		struct xrt_layer_cube_data cube;
 		struct xrt_layer_cylinder_data cylinder;
@@ -468,6 +467,7 @@ struct xrt_layer_data
 		struct xrt_layer_equirect2_data equirect2;
 		struct xrt_layer_passthrough_data passthrough;
 	};
+	uint32_t view_count;
 };
 
 /*!
@@ -1197,7 +1197,7 @@ struct xrt_compositor
 	xrt_result_t (*layer_begin)(struct xrt_compositor *xc, const struct xrt_layer_frame_data *data);
 
 	/*!
-	 * @brief Adds a stereo projection layer for submissions.
+	 * @brief Adds a projection layer for submissions.
 	 *
 	 * Note that e.g. the same swapchain object may be passed as both
 	 * @p l_xsc and @p r_xsc - the parameters in @p data identify
@@ -1216,7 +1216,7 @@ struct xrt_compositor
 	                                 const struct xrt_layer_data *data);
 
 	/*!
-	 * @brief Adds a stereo projection layer for submission, has depth information.
+	 * @brief Adds a projection layer for submission, has depth information.
 	 *
 	 * Note that e.g. the same swapchain object may be passed as both
 	 * @p l_xsc and @p r_xsc - the parameters in @p data identify
@@ -1234,13 +1234,11 @@ struct xrt_compositor
 	 *                    including what parts of the supplied swapchain
 	 *                    objects to use for each view.
 	 */
-	xrt_result_t (*layer_stereo_projection_depth)(struct xrt_compositor *xc,
-	                                              struct xrt_device *xdev,
-	                                              struct xrt_swapchain *l_xsc,
-	                                              struct xrt_swapchain *r_xsc,
-	                                              struct xrt_swapchain *l_d_xsc,
-	                                              struct xrt_swapchain *r_d_xsc,
-	                                              const struct xrt_layer_data *data);
+	xrt_result_t (*layer_projection_depth)(struct xrt_compositor *xc,
+	                                       struct xrt_device *xdev,
+	                                       struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+	                                       struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
+	                                       const struct xrt_layer_data *data);
 
 	/*!
 	 * Adds a quad layer for submission, the center of the quad is specified
@@ -1695,22 +1693,20 @@ xrt_comp_layer_projection(struct xrt_compositor *xc,
 }
 
 /*!
- * @copydoc xrt_compositor::layer_stereo_projection_depth
+ * @copydoc xrt_compositor::layer_projection_depth
  *
  * Helper for calling through the function pointer.
  *
  * @public @memberof xrt_compositor
  */
 static inline xrt_result_t
-xrt_comp_layer_stereo_projection_depth(struct xrt_compositor *xc,
-                                       struct xrt_device *xdev,
-                                       struct xrt_swapchain *l_xsc,
-                                       struct xrt_swapchain *r_xsc,
-                                       struct xrt_swapchain *l_d_xsc,
-                                       struct xrt_swapchain *r_d_xsc,
-                                       const struct xrt_layer_data *data)
+xrt_comp_layer_projection_depth(struct xrt_compositor *xc,
+                                struct xrt_device *xdev,
+                                struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
+                                const struct xrt_layer_data *data)
 {
-	return xc->layer_stereo_projection_depth(xc, xdev, l_xsc, r_xsc, l_d_xsc, r_d_xsc, data);
+	return xc->layer_projection_depth(xc, xdev, xsc, d_xsc, data);
 }
 
 /*!

@@ -10,7 +10,7 @@
 
 //! @todo should this be a spcialization const?
 #define XRT_LAYER_PROJECTION 0
-#define XRT_LAYER_STEREO_PROJECTION_DEPTH 1
+#define XRT_LAYER_PROJECTION_DEPTH 1
 #define XRT_LAYER_QUAD 2
 #define XRT_LAYER_CUBE 3
 #define XRT_LAYER_CYLINDER 4
@@ -465,7 +465,7 @@ vec4 do_layers(vec2 view_uv)
 			rgba = do_equirect2(view_uv, layer);
 			break;
 		case XRT_LAYER_PROJECTION:
-		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
+		case XRT_LAYER_PROJECTION_DEPTH:
 			rgba = do_projection(view_uv, layer);
 			break;
 		case XRT_LAYER_QUAD:

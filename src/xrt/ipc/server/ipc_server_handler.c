@@ -775,35 +775,32 @@ _update_projection_layer_depth(struct xrt_compositor *xc,
 {
 	// xdev
 	uint32_t xdevi = layer->xdev_id;
-	// left
-	uint32_t l_xsci = layer->swapchain_ids[0];
-	// right
-	uint32_t r_xsci = layer->swapchain_ids[1];
-	// left
-	uint32_t l_d_xsci = layer->swapchain_ids[2];
-	// right
-	uint32_t r_d_xsci = layer->swapchain_ids[3];
+
+	// Cast away volatile.
+	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
 
 	struct xrt_device *xdev = get_xdev(ics, xdevi);
-	struct xrt_swapchain *l_xcs = ics->xscs[l_xsci];
-	struct xrt_swapchain *r_xcs = ics->xscs[r_xsci];
-	struct xrt_swapchain *l_d_xcs = ics->xscs[l_d_xsci];
-	struct xrt_swapchain *r_d_xcs = ics->xscs[r_d_xsci];
-
-	if (l_xcs == NULL || r_xcs == NULL || l_d_xcs == NULL || r_d_xcs == NULL) {
-		U_LOG_E("Invalid swap chain for projection layer #%u!", i);
-		return false;
-	}
-
 	if (xdev == NULL) {
 		U_LOG_E("Invalid xdev for projection layer #%u!", i);
 		return false;
 	}
 
-	// Cast away volatile.
-	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
+	struct xrt_swapchain *xcs[XRT_MAX_VIEWS];
+	struct xrt_swapchain *d_xcs[XRT_MAX_VIEWS];
 
-	xrt_comp_layer_stereo_projection_depth(xc, xdev, l_xcs, r_xcs, l_d_xcs, r_d_xcs, data);
+	for (uint32_t j = 0; j < data->view_count; j++) {
+		int xsci = layer->swapchain_ids[j];
+		int d_xsci = layer->swapchain_ids[j + data->view_count];
+
+		xcs[j] = ics->xscs[xsci];
+		d_xcs[j] = ics->xscs[d_xsci];
+		if (xcs[j] == NULL || d_xcs[j] == NULL) {
+			U_LOG_E("Invalid swap chain for projection layer #%u!", i);
+			return false;
+		}
+	}
+
+	xrt_comp_layer_projection_depth(xc, xdev, xcs, d_xcs, data);
 
 	return true;
 }
@@ -977,7 +974,7 @@ _update_layers(volatile struct ipc_client_state *ics, struct xrt_compositor *xc,
 				return false;
 			}
 			break;
-		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
+		case XRT_LAYER_PROJECTION_DEPTH:
 			if (!_update_projection_layer_depth(xc, ics, layer, i)) {
 				return false;
 			}

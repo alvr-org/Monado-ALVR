@@ -164,15 +164,15 @@ struct mock_compositor
 
 		/*!
 		 * Optional function pointer for mock compositor, called during @ref
-		 * xrt_comp_layer_stereo_projection_depth
+		 * xrt_comp_layer_projection_depth
 		 */
-		xrt_result_t (*layer_stereo_projection_depth)(struct mock_compositor *mc,
-		                                              struct xrt_device *xdev,
-		                                              struct xrt_swapchain *l_xsc,
-		                                              struct xrt_swapchain *r_xsc,
-		                                              struct xrt_swapchain *l_d_xsc,
-		                                              struct xrt_swapchain *r_d_xsc,
-		                                              const struct xrt_layer_data *data);
+		xrt_result_t (*layer_projection_depth)(struct mock_compositor *mc,
+		                                       struct xrt_device *xdev,
+		                                       struct xrt_swapchain *l_xsc,
+		                                       struct xrt_swapchain *r_xsc,
+		                                       struct xrt_swapchain *l_d_xsc,
+		                                       struct xrt_swapchain *r_d_xsc,
+		                                       const struct xrt_layer_data *data);
 
 		/*!
 		 * Optional function pointer for mock compositor, called during @ref xrt_comp_layer_quad

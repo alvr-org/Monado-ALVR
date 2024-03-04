@@ -57,7 +57,7 @@ do_projection_layer(struct xrt_compositor *xc, struct multi_compositor *mc, stru
 	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
 
 	// Do not need to copy the reference, but should verify the pointers for consistency
-	for (uint32_t j = 0; j < data->proj.view_count; j++) {
+	for (uint32_t j = 0; j < data->view_count; j++) {
 		if (layer->xscs[j] == NULL) {
 			U_LOG_E("Invalid swap chain for projection layer #%u!", i);
 			return;
@@ -79,14 +79,20 @@ do_projection_layer_depth(struct xrt_compositor *xc,
                           uint32_t i)
 {
 	struct xrt_device *xdev = layer->xdev;
-	struct xrt_swapchain *l_xcs = layer->xscs[0];
-	struct xrt_swapchain *r_xcs = layer->xscs[1];
-	struct xrt_swapchain *l_d_xcs = layer->xscs[2];
-	struct xrt_swapchain *r_d_xcs = layer->xscs[3];
 
-	if (l_xcs == NULL || r_xcs == NULL || l_d_xcs == NULL || r_d_xcs == NULL) {
-		U_LOG_E("Invalid swap chain for projection layer #%u!", i);
-		return;
+	struct xrt_swapchain *xsc[XRT_MAX_VIEWS];
+	struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS];
+	// Cast away
+	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
+
+	for (uint32_t j = 0; j < data->view_count; j++) {
+		xsc[j] = layer->xscs[j];
+		d_xsc[j] = layer->xscs[j + data->view_count];
+
+		if (xsc[j] == NULL || d_xsc[j] == NULL) {
+			U_LOG_E("Invalid swap chain for projection layer #%u!", i);
+			return;
+		}
 	}
 
 	if (xdev == NULL) {
@@ -94,10 +100,8 @@ do_projection_layer_depth(struct xrt_compositor *xc,
 		return;
 	}
 
-	// Cast away
-	struct xrt_layer_data *data = (struct xrt_layer_data *)&layer->data;
 
-	xrt_comp_layer_stereo_projection_depth(xc, xdev, l_xcs, r_xcs, l_d_xcs, r_d_xcs, data);
+	xrt_comp_layer_projection_depth(xc, xdev, xsc, d_xsc, data);
 }
 
 static bool
@@ -284,7 +288,7 @@ transfer_layers_locked(struct multi_system_compositor *msc, uint64_t display_tim
 
 			switch (layer->data.type) {
 			case XRT_LAYER_PROJECTION: do_projection_layer(xc, mc, layer, i); break;
-			case XRT_LAYER_STEREO_PROJECTION_DEPTH: do_projection_layer_depth(xc, mc, layer, i); break;
+			case XRT_LAYER_PROJECTION_DEPTH: do_projection_layer_depth(xc, mc, layer, i); break;
 			case XRT_LAYER_QUAD: do_quad_layer(xc, mc, layer, i); break;
 			case XRT_LAYER_CUBE: do_cube_layer(xc, mc, layer, i); break;
 			case XRT_LAYER_CYLINDER: do_cylinder_layer(xc, mc, layer, i); break;

@@ -131,7 +131,7 @@ do_cs_projection_layer(const struct xrt_layer_data *data,
 	ubo_data->images_samplers[cur_layer + 0].images[0] = cur_image++;
 
 	// Depth
-	if (data->type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+	if (data->type == XRT_LAYER_PROJECTION_DEPTH) {
 		uint32_t d_array_index = dvd->sub.array_index;
 		const struct comp_swapchain_image *d_image =
 		    &layer->sc_array[sc_array_index + 2]->images[dvd->sub.image_index];
@@ -324,7 +324,7 @@ do_cs_clear(struct render_compute *crc, const struct comp_render_dispatch_data *
 	}
 
 	struct render_viewport_data target_viewport_datas[XRT_MAX_VIEWS];
-	for (uint32_t i = 0; i < crc->r->view_count; ++i) {
+	for (uint32_t i = 0; i < d->view_count; ++i) {
 		target_viewport_datas[i] = d->views[i].target_viewport_data;
 	}
 
@@ -525,7 +525,7 @@ comp_render_cs_layer(struct render_compute *crc,
 		case XRT_LAYER_CYLINDER: required_image_samplers = 1; break;
 		case XRT_LAYER_EQUIRECT2: required_image_samplers = 1; break;
 		case XRT_LAYER_PROJECTION: required_image_samplers = 1; break;
-		case XRT_LAYER_STEREO_PROJECTION_DEPTH: required_image_samplers = 2; break;
+		case XRT_LAYER_PROJECTION_DEPTH: required_image_samplers = 2; break;
 		case XRT_LAYER_QUAD: required_image_samplers = 1; break;
 		default:
 			VK_ERROR(crc->r->vk, "Skipping layer #%u, unknown type: %u", c_layer_i, data->type);
@@ -570,7 +570,7 @@ comp_render_cs_layer(struct render_compute *crc,
 			    ubo_data,              // ubo_data
 			    &cur_image);           // out_cur_image
 			break;
-		case XRT_LAYER_STEREO_PROJECTION_DEPTH:
+		case XRT_LAYER_PROJECTION_DEPTH:
 		case XRT_LAYER_PROJECTION: {
 			do_cs_projection_layer(    //
 			    data,                  // data
@@ -711,7 +711,7 @@ comp_render_cs_dispatch(struct render_compute *crc,
 		const struct comp_layer *layer = &layers[i];
 		const struct xrt_layer_projection_data *proj = &layer->data.proj;
 		const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS];
-		for (uint32_t view = 0; view < crc->r->view_count; ++view) {
+		for (uint32_t view = 0; view < d->view_count; ++view) {
 			vds[view] = &proj->v[view];
 		}
 		do_cs_distortion_for_layer( //
@@ -719,13 +719,14 @@ comp_render_cs_dispatch(struct render_compute *crc,
 		    layer,                  // layer
 		    vds,                    // vds
 		    d);                     // d
-	} else if (fast_path && layers[0].data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+	} else if (fast_path && layers[0].data.type == XRT_LAYER_PROJECTION_DEPTH) {
 		int i = 0;
 		const struct comp_layer *layer = &layers[i];
-		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *vds[2];
-		vds[0] = &stereo->l;
-		vds[1] = &stereo->r;
+		const struct xrt_layer_projection_depth_data *depth = &layer->data.depth;
+		const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS];
+		for (uint32_t view = 0; view < d->view_count; ++view) {
+			vds[view] = &depth->v[view];
+		}
 		do_cs_distortion_for_layer( //
 		    crc,                    // crc
 		    layer,                  // layer

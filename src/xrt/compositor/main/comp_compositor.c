@@ -273,7 +273,7 @@ can_do_one_projection_layer_fast_path(struct comp_compositor *c)
 
 	// Handled by the distortion shader.
 	if (type != XRT_LAYER_PROJECTION && //
-	    type != XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+	    type != XRT_LAYER_PROJECTION_DEPTH) {
 		return false;
 	}
 

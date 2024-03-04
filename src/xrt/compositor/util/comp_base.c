@@ -125,8 +125,8 @@ base_layer_projection(struct xrt_compositor *xc,
 	uint32_t layer_id = cb->slot.layer_count;
 
 	struct comp_layer *layer = &cb->slot.layers[layer_id];
-	assert(ARRAY_SIZE(layer->sc_array) >= data->proj.view_count);
-	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+	assert(ARRAY_SIZE(layer->sc_array) >= data->view_count);
+	for (uint32_t i = 0; i < data->view_count; ++i) {
 		layer->sc_array[i] = comp_swapchain(xsc[i]);
 	}
 	layer->data = *data;
@@ -137,23 +137,21 @@ base_layer_projection(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
-base_layer_stereo_projection_depth(struct xrt_compositor *xc,
-                                   struct xrt_device *xdev,
-                                   struct xrt_swapchain *l_xsc,
-                                   struct xrt_swapchain *r_xsc,
-                                   struct xrt_swapchain *l_d_xsc,
-                                   struct xrt_swapchain *r_d_xsc,
-                                   const struct xrt_layer_data *data)
+base_layer_projection_depth(struct xrt_compositor *xc,
+                            struct xrt_device *xdev,
+                            struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                            struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
+                            const struct xrt_layer_data *data)
 {
 	struct comp_base *cb = comp_base(xc);
 
 	uint32_t layer_id = cb->slot.layer_count;
 
 	struct comp_layer *layer = &cb->slot.layers[layer_id];
-	layer->sc_array[0] = comp_swapchain(l_xsc);
-	layer->sc_array[1] = comp_swapchain(r_xsc);
-	layer->sc_array[2] = comp_swapchain(l_d_xsc);
-	layer->sc_array[3] = comp_swapchain(r_d_xsc);
+	for (uint32_t i = 0; i < data->view_count; ++i) {
+		layer->sc_array[i] = comp_swapchain(xsc[i]);
+		layer->sc_array[i + data->view_count] = comp_swapchain(d_xsc[i]);
+	}
 	layer->data = *data;
 
 	cb->slot.layer_count++;
@@ -258,7 +256,7 @@ comp_base_init(struct comp_base *cb)
 	cb->base.base.import_fence = base_import_fence;
 	cb->base.base.layer_begin = base_layer_begin;
 	cb->base.base.layer_projection = base_layer_projection;
-	cb->base.base.layer_stereo_projection_depth = base_layer_stereo_projection_depth;
+	cb->base.base.layer_projection_depth = base_layer_projection_depth;
 	cb->base.base.layer_quad = base_layer_quad;
 	cb->base.base.layer_cube = base_layer_cube;
 	cb->base.base.layer_cylinder = base_layer_cylinder;

@@ -562,7 +562,7 @@ do_layers(struct render_gfx *rr,
 				VK_CHK_WITH_GOTO(ret, "do_equirect2_layer", err_layer);
 				break;
 			case XRT_LAYER_PROJECTION:
-			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
+			case XRT_LAYER_PROJECTION_DEPTH:
 				ret = do_projection_layer( //
 				    rr,                    // rr
 				    &layers[i],            // layer
@@ -627,7 +627,7 @@ do_layers(struct render_gfx *rr,
 				    state->descriptor_sets[i]);     //
 				break;
 			case XRT_LAYER_PROJECTION:
-			case XRT_LAYER_STEREO_PROJECTION_DEPTH:
+			case XRT_LAYER_PROJECTION_DEPTH:
 				render_gfx_layer_projection(        //
 				    rr,                             //
 				    state->premultiplied_alphas[i], //
@@ -827,12 +827,13 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 		    layer,         //
 		    vds);          //
 
-	} else if (fast_path && layer->data.type == XRT_LAYER_STEREO_PROJECTION_DEPTH) {
+	} else if (fast_path && layer->data.type == XRT_LAYER_PROJECTION_DEPTH) {
 		// Fast path.
-		const struct xrt_layer_stereo_projection_depth_data *stereo = &layer->data.stereo_depth;
-		const struct xrt_layer_projection_view_data *vds[2];
-		vds[0] = &stereo->l;
-		vds[1] = &stereo->r;
+		const struct xrt_layer_projection_depth_data *depth = &layer->data.depth;
+		const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS];
+		for (uint32_t view = 0; view < d->view_count; ++view) {
+			vds[view] = &depth->v[view];
+		}
 		do_mesh_from_proj( //
 		    rr,            //
 		    d,             //

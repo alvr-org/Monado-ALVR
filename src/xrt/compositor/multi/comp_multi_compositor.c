@@ -655,7 +655,7 @@ multi_compositor_layer_projection(struct xrt_compositor *xc,
 
 	size_t index = mc->progress.layer_count++;
 	mc->progress.layers[index].xdev = xdev;
-	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+	for (uint32_t i = 0; i < data->view_count; ++i) {
 		xrt_swapchain_reference(&mc->progress.layers[index].xscs[i], xsc[i]);
 	}
 	mc->progress.layers[index].data = *data;
@@ -664,22 +664,21 @@ multi_compositor_layer_projection(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
-multi_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
-                                               struct xrt_device *xdev,
-                                               struct xrt_swapchain *l_xsc,
-                                               struct xrt_swapchain *r_xsc,
-                                               struct xrt_swapchain *l_d_xsc,
-                                               struct xrt_swapchain *r_d_xsc,
-                                               const struct xrt_layer_data *data)
+multi_compositor_layer_projection_depth(struct xrt_compositor *xc,
+                                        struct xrt_device *xdev,
+                                        struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                        struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
+                                        const struct xrt_layer_data *data)
 {
 	struct multi_compositor *mc = multi_compositor(xc);
 
 	size_t index = mc->progress.layer_count++;
 	mc->progress.layers[index].xdev = xdev;
-	xrt_swapchain_reference(&mc->progress.layers[index].xscs[0], l_xsc);
-	xrt_swapchain_reference(&mc->progress.layers[index].xscs[1], r_xsc);
-	xrt_swapchain_reference(&mc->progress.layers[index].xscs[2], l_d_xsc);
-	xrt_swapchain_reference(&mc->progress.layers[index].xscs[3], r_d_xsc);
+
+	for (uint32_t i = 0; i < data->view_count; ++i) {
+		xrt_swapchain_reference(&mc->progress.layers[index].xscs[i], xsc[i]);
+		xrt_swapchain_reference(&mc->progress.layers[index].xscs[i + data->view_count], d_xsc[i]);
+	}
 	mc->progress.layers[index].data = *data;
 
 	return XRT_SUCCESS;
@@ -970,7 +969,7 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	mc->base.base.discard_frame = multi_compositor_discard_frame;
 	mc->base.base.layer_begin = multi_compositor_layer_begin;
 	mc->base.base.layer_projection = multi_compositor_layer_projection;
-	mc->base.base.layer_stereo_projection_depth = multi_compositor_layer_stereo_projection_depth;
+	mc->base.base.layer_projection_depth = multi_compositor_layer_projection_depth;
 	mc->base.base.layer_quad = multi_compositor_layer_quad;
 	mc->base.base.layer_cube = multi_compositor_layer_cube;
 	mc->base.base.layer_cylinder = multi_compositor_layer_cylinder;

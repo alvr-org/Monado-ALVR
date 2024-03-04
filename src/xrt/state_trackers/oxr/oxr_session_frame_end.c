@@ -694,7 +694,7 @@ verify_projection_layer(struct oxr_session *sess,
 	}
 
 #ifdef OXR_HAVE_KHR_composition_layer_depth
-	if (depth_layer_count > 0 && depth_layer_count != proj->viewCount && proj->viewCount != 2) {
+	if (depth_layer_count > 0 && depth_layer_count != proj->viewCount) {
 		return oxr_error(
 		    log, XR_ERROR_VALIDATION_FAILURE,
 		    "(frameEndInfo->layers[%u] projection layer must have %u depth layers or none, but has: %u)",
@@ -1258,11 +1258,12 @@ submit_projection_layer(struct oxr_session *sess,
                         uint64_t xrt_timestamp)
 {
 	struct oxr_space *spc = XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_space *, proj->space);
-	struct oxr_swapchain *d_scs[2] = {NULL, NULL};
+	struct oxr_swapchain *d_scs[XRT_MAX_VIEWS];
 	struct oxr_swapchain *scs[XRT_MAX_VIEWS];
 	struct xrt_pose *pose_ptr;
 	struct xrt_pose pose[XRT_MAX_VIEWS];
 	struct xrt_swapchain *swapchains[XRT_MAX_VIEWS];
+	struct xrt_swapchain *d_swapchains[XRT_MAX_VIEWS];
 
 	enum xrt_layer_composition_flags flags = convert_layer_flags(proj->layerFlags);
 
@@ -1286,7 +1287,7 @@ submit_projection_layer(struct oxr_session *sess,
 	data.name = XRT_INPUT_GENERIC_HEAD_POSE;
 	data.timestamp = xrt_timestamp;
 	data.flags = flags;
-	data.proj.view_count = proj->viewCount;
+	data.view_count = proj->viewCount;
 	for (size_t i = 0; i < proj->viewCount; ++i) {
 		struct xrt_fov *fov = (struct xrt_fov *)&proj->views[i].fov;
 		data.proj.v[i].fov = *fov;
@@ -1299,58 +1300,44 @@ submit_projection_layer(struct oxr_session *sess,
 	fill_in_blend_factors(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 	fill_in_layer_settings(sess, (XrCompositionLayerBaseHeader *)proj, &data);
 
-
 #ifdef OXR_HAVE_KHR_composition_layer_depth
-	if (proj->viewCount == 2) {
-		const XrCompositionLayerDepthInfoKHR *d_l = OXR_GET_INPUT_FROM_CHAIN(
-		    &proj->views[0], XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR, XrCompositionLayerDepthInfoKHR);
-		if (d_l) {
-			data.stereo_depth.l_d.far_z = d_l->farZ;
-			data.stereo_depth.l_d.near_z = d_l->nearZ;
-			data.stereo_depth.l_d.max_depth = d_l->maxDepth;
-			data.stereo_depth.l_d.min_depth = d_l->minDepth;
-
+	// number of depth layers must be 0 or proj->viewCount
+	const XrCompositionLayerDepthInfoKHR *d_is[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < proj->viewCount; ++i) {
+		d_scs[i] = NULL;
+		d_is[i] = OXR_GET_INPUT_FROM_CHAIN(&proj->views[i], XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR,
+		                                   XrCompositionLayerDepthInfoKHR);
+		if (d_is[i]) {
+			data.depth.d[i].far_z = d_is[i]->farZ;
+			data.depth.d[i].near_z = d_is[i]->nearZ;
+			data.depth.d[i].max_depth = d_is[i]->maxDepth;
+			data.depth.d[i].min_depth = d_is[i]->minDepth;
 			struct oxr_swapchain *sc =
-			    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_swapchain *, d_l->subImage.swapchain);
-
-			fill_in_sub_image(sc, &d_l->subImage, &data.stereo_depth.l_d.sub);
-
-			// Need to pass this in.
-			d_scs[0] = sc;
-		}
-
-		const XrCompositionLayerDepthInfoKHR *d_r = OXR_GET_INPUT_FROM_CHAIN(
-		    &proj->views[1], XR_TYPE_COMPOSITION_LAYER_DEPTH_INFO_KHR, XrCompositionLayerDepthInfoKHR);
-
-		if (d_r) {
-			data.stereo_depth.r_d.far_z = d_r->farZ;
-			data.stereo_depth.r_d.near_z = d_r->nearZ;
-			data.stereo_depth.r_d.max_depth = d_r->maxDepth;
-			data.stereo_depth.r_d.min_depth = d_r->minDepth;
-
-			struct oxr_swapchain *sc =
-			    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_swapchain *, d_r->subImage.swapchain);
-
-			fill_in_sub_image(sc, &d_r->subImage, &data.stereo_depth.r_d.sub);
-
-			// Need to pass this in.
-			d_scs[1] = sc;
+			    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_swapchain *, d_is[i]->subImage.swapchain);
+			fill_in_sub_image(sc, &d_is[i]->subImage, &data.depth.d[i].sub);
+			d_scs[i] = sc;
+			d_swapchains[i] = sc->swapchain;
 		}
 	}
 #endif // OXR_HAVE_KHR_composition_layer_depth
-	if (d_scs[0] != NULL && d_scs[1] != NULL) {
+	bool d_scs_valid = true;
+	for (uint32_t i = 0; i < proj->viewCount; i++) {
+		if (d_scs[i] == NULL) {
+			d_scs_valid = false;
+			break;
+		}
+	}
+	if (d_scs_valid) {
 #ifdef OXR_HAVE_KHR_composition_layer_depth
 		fill_in_depth_test(sess, (XrCompositionLayerBaseHeader *)proj, &data);
-		data.type = XRT_LAYER_STEREO_PROJECTION_DEPTH;
-		xrt_result_t xret = xrt_comp_layer_stereo_projection_depth( //
-		    xc,                                                     // compositor
-		    head,                                                   // xdev
-		    scs[0]->swapchain,                                      // left
-		    scs[1]->swapchain,                                      // right
-		    d_scs[0]->swapchain,                                    // left
-		    d_scs[1]->swapchain,                                    // right
-		    &data);                                                 // data
-		OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_stereo_projection_depth);
+		data.type = XRT_LAYER_PROJECTION_DEPTH;
+		xrt_result_t xret = xrt_comp_layer_projection_depth( //
+		    xc,                                              // compositor
+		    head,                                            // xdev
+		    swapchains,                                      // swapchains
+		    d_swapchains,                                    // depth swapchains
+		    &data);                                          // data
+		OXR_CHECK_XRET(log, sess, xret, xrt_comp_layer_projection_depth);
 #else
 		assert(false && "Should not get here");
 #endif // OXR_HAVE_KHR_composition_layer_depth

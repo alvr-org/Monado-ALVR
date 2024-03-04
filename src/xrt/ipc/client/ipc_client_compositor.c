@@ -595,7 +595,7 @@ ipc_compositor_layer_projection(struct xrt_compositor *xc,
 	struct ipc_layer_entry *layer = &slot->layers[icc->layers.layer_count];
 	layer->xdev_id = 0; //! @todo Real id.
 	layer->data = *data;
-	for (uint32_t i = 0; i < data->proj.view_count; ++i) {
+	for (uint32_t i = 0; i < data->view_count; ++i) {
 		struct ipc_client_swapchain *ics = ipc_client_swapchain(xsc[i]);
 		layer->swapchain_ids[i] = ics->id;
 	}
@@ -606,31 +606,31 @@ ipc_compositor_layer_projection(struct xrt_compositor *xc,
 }
 
 static xrt_result_t
-ipc_compositor_layer_stereo_projection_depth(struct xrt_compositor *xc,
-                                             struct xrt_device *xdev,
-                                             struct xrt_swapchain *l_xsc,
-                                             struct xrt_swapchain *r_xsc,
-                                             struct xrt_swapchain *l_d_xsc,
-                                             struct xrt_swapchain *r_d_xsc,
-                                             const struct xrt_layer_data *data)
+ipc_compositor_layer_projection_depth(struct xrt_compositor *xc,
+                                      struct xrt_device *xdev,
+                                      struct xrt_swapchain *xsc[XRT_MAX_VIEWS],
+                                      struct xrt_swapchain *d_xsc[XRT_MAX_VIEWS],
+                                      const struct xrt_layer_data *data)
 {
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
 
-	assert(data->type == XRT_LAYER_STEREO_PROJECTION_DEPTH);
+	assert(data->type == XRT_LAYER_PROJECTION_DEPTH);
 
 	struct ipc_shared_memory *ism = icc->ipc_c->ism;
 	struct ipc_layer_slot *slot = &ism->slots[icc->layers.slot_id];
 	struct ipc_layer_entry *layer = &slot->layers[icc->layers.layer_count];
-	struct ipc_client_swapchain *l = ipc_client_swapchain(l_xsc);
-	struct ipc_client_swapchain *r = ipc_client_swapchain(r_xsc);
-	struct ipc_client_swapchain *l_d = ipc_client_swapchain(l_d_xsc);
-	struct ipc_client_swapchain *r_d = ipc_client_swapchain(r_d_xsc);
+	struct ipc_client_swapchain *xscn[XRT_MAX_VIEWS];
+	struct ipc_client_swapchain *d_xscn[XRT_MAX_VIEWS];
+	for (uint32_t i = 0; i < data->view_count; ++i) {
+		xscn[i] = ipc_client_swapchain(xsc[i]);
+		d_xscn[i] = ipc_client_swapchain(d_xsc[i]);
+
+		layer->swapchain_ids[i] = xscn[i]->id;
+		layer->swapchain_ids[i + data->view_count] = d_xscn[i]->id;
+	}
 
 	layer->xdev_id = 0; //! @todo Real id.
-	layer->swapchain_ids[0] = l->id;
-	layer->swapchain_ids[1] = r->id;
-	layer->swapchain_ids[2] = l_d->id;
-	layer->swapchain_ids[3] = r_d->id;
+
 	layer->data = *data;
 
 	// Increment the number of layers.
@@ -885,7 +885,7 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.discard_frame = ipc_compositor_discard_frame;
 	icc->base.base.layer_begin = ipc_compositor_layer_begin;
 	icc->base.base.layer_projection = ipc_compositor_layer_projection;
-	icc->base.base.layer_stereo_projection_depth = ipc_compositor_layer_stereo_projection_depth;
+	icc->base.base.layer_projection_depth = ipc_compositor_layer_projection_depth;
 	icc->base.base.layer_quad = ipc_compositor_layer_quad;
 	icc->base.base.layer_cube = ipc_compositor_layer_cube;
 	icc->base.base.layer_cylinder = ipc_compositor_layer_cylinder;
