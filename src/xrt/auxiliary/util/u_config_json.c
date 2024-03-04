@@ -54,7 +54,7 @@ u_config_json_open_or_create_file(struct u_config_json *json, const char *filena
 		return;
 	}
 
-	FILE *file = u_file_open_file_in_config_dir(filename, "r");
+	FILE *file = u_file_open_file_in_config_dir(filename, "rb");
 	if (file == NULL) {
 		return;
 	}

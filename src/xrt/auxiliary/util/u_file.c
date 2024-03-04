@@ -245,7 +245,7 @@ u_file_read_content(FILE *file)
 char *
 u_file_read_content_from_path(const char *path)
 {
-	FILE *file = fopen(path, "r");
+	FILE *file = fopen(path, "rb");
 	if (file == NULL) {
 		return NULL;
 	}
