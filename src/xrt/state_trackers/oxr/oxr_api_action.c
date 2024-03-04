@@ -53,7 +53,7 @@ process_dpad(struct oxr_logger *log,
 		                 dpad->binding);
 	}
 
-	if (!dpad_emulator_fn(&inst->extensions, str, length)) {
+	if (!dpad_emulator_fn(&inst->extensions, inst->openxr_version.major_minor, str, length)) {
 		return oxr_error(log, XR_ERROR_PATH_UNSUPPORTED,
 		                 "(%s->binding == \"%s\") is not a valid dpad binding path for profile \"%s\"", prefix,
 		                 str, ip_str);
@@ -248,7 +248,7 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 
 	bool ext_supported;
 	bool ext_enabled;
-	ext_verify_fn(&inst->extensions, &ext_supported, &ext_enabled);
+	ext_verify_fn(&inst->extensions, inst->openxr_version.major_minor, &ext_supported, &ext_enabled);
 	if (!ext_supported) {
 		return oxr_error(
 		    &log, XR_ERROR_PATH_UNSUPPORTED,
@@ -286,12 +286,12 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 			                 i, s->binding);
 		}
 
-		if (subpath_fn(&inst->extensions, str, length)) {
+		if (subpath_fn(&inst->extensions, inst->openxr_version.major_minor, str, length)) {
 			continue;
 		}
 
 #ifdef XR_EXT_dpad_binding
-		if (dpad_path_fn(&inst->extensions, str, length)) {
+		if (dpad_path_fn(&inst->extensions, inst->openxr_version.major_minor, str, length)) {
 			if (!has_dpad) {
 				return oxr_error(
 				    &log, XR_ERROR_PATH_UNSUPPORTED,
