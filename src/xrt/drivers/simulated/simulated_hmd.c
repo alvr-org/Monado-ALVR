@@ -67,6 +67,7 @@ simulated_hmd(struct xrt_device *xdev)
 }
 
 DEBUG_GET_ONCE_LOG_OPTION(simulated_log, "SIMULATED_LOG", U_LOGGING_WARN)
+DEBUG_GET_ONCE_NUM_OPTION(view_count, "SIMULATED_VIEW_COUNT", 2)
 
 #define HMD_TRACE(hmd, ...) U_LOG_XDEV_IFL_T(&hmd->base, hmd->log_level, __VA_ARGS__)
 #define HMD_DEBUG(hmd, ...) U_LOG_XDEV_IFL_D(&hmd->base, hmd->log_level, __VA_ARGS__)
@@ -205,6 +206,7 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	hmd->log_level = simulated_log_level();
 	hmd->movement = movement;
 
+	hmd->base.hmd->view_count = debug_get_num_option_view_count();
 	// Print name.
 	snprintf(hmd->base.str, XRT_DEVICE_NAME_LEN, "Simulated HMD");
 	snprintf(hmd->base.serial, XRT_DEVICE_NAME_LEN, "Simulated HMD");
@@ -213,6 +215,7 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	hmd->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 
 	// Setup info.
+	bool ret = true;
 	struct u_device_simple_info info;
 	info.display.w_pixels = 1280;
 	info.display.h_pixels = 720;
@@ -220,10 +223,19 @@ simulated_hmd_create(enum simulated_movement movement, const struct xrt_pose *ce
 	info.display.h_meters = 0.07f;
 	info.lens_horizontal_separation_meters = 0.13f / 2.0f;
 	info.lens_vertical_position_meters = 0.07f / 2.0f;
-	info.fov[0] = 85.0f * ((float)(M_PI) / 180.0f);
-	info.fov[1] = 85.0f * ((float)(M_PI) / 180.0f);
 
-	if (!u_device_setup_split_side_by_side(&hmd->base, &info)) {
+	if (hmd->base.hmd->view_count == 1) {
+		info.fov[0] = 120.0f * (M_PI / 180.0f);
+		ret = u_device_setup_one_eye(&hmd->base, &info);
+	} else if (hmd->base.hmd->view_count == 2) {
+		info.fov[0] = 85.0f * (M_PI / 180.0f);
+		info.fov[1] = 85.0f * (M_PI / 180.0f);
+		ret = u_device_setup_split_side_by_side(&hmd->base, &info);
+	} else {
+		U_LOG_E("Invalid view count");
+		ret = false;
+	}
+	if (!ret) {
 		HMD_ERROR(hmd, "Failed to setup basic device info");
 		simulated_hmd_destroy(&hmd->base);
 		return NULL;
