@@ -116,6 +116,23 @@ extern "C" {
 		}                                                                                                      \
 	} while (false)
 
+/*!
+ * A condition if the instance is created with at least a given OpenXR version
+ */
+#define OXR_API_VERSION_AT_LEAST(inst, major, minor)                                                                   \
+	((inst)->openxr_version.major_minor >= XR_MAKE_VERSION(major, minor, 0))
+
+/*!
+ * Checks if the instance is created with at least a given OpenXR version
+ */
+#define OXR_VERIFY_API_VERSION_AT_LEAST(log, inst, major, minor)                                                       \
+	do {                                                                                                           \
+		if (!OXR_VERSION_AT_LEAST(inst, major, minor)) {                                                       \
+			return oxr_error((log), XR_ERROR_FUNCTION_UNSUPPORTED, "Requires OpenXR version %d.%d.x",      \
+			                 major, minor);                                                                \
+		}                                                                                                      \
+	} while (false)
+
 #define OXR_VERIFY_ARG_NOT_NULL(log, arg)                                                                              \
 	do {                                                                                                           \
 		if (arg == NULL) {                                                                                     \
