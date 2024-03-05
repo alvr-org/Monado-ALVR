@@ -144,6 +144,19 @@ oxr_xrEnumerateApiLayerProperties(uint32_t propertyCapacityInput,
  */
 #define ENTRY_IF_EXT(funcName, short_ext_name)                                                                         \
 	ENTRY_IF(funcName, inst->extensions.short_ext_name, "Required extension XR_" #short_ext_name " not enabled")
+
+/*!
+ * @brief Helper define for generating that GetInstanceProcAddr function for
+ * functions that have been promoted to core in some OpenXR version.
+ *
+ * Wraps ENTRY_IF for the common case.
+ *
+ * Pass the function name and the OpenXR version the function has first been available in core.
+ */
+#define ENTRY_IF_VERSION_AT_LEAST(funcName, major, minor)                                                              \
+	ENTRY_IF(funcName, (inst->openxr_version.major_minor >= XR_MAKE_VERSION(major, minor, 0)),                     \
+	         ("OpenXR version must be at least %d.%d.x", major, minor))
+
 /*!
  * Handle a non-null instance pointer.
  */
