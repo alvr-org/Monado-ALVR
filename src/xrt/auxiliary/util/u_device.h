@@ -63,8 +63,17 @@ struct u_device_simple_info
 	float lens_horizontal_separation_meters;
 	float lens_vertical_position_meters;
 
-	float fov[2];
+	float fov[XRT_MAX_VIEWS];
 };
+
+/*!
+ * Setup the device information given a very simple info struct.
+ *
+ * @return true on success.
+ * @ingroup aux_util
+ */
+bool
+u_device_setup_one_eye(struct xrt_device *xdev, const struct u_device_simple_info *info);
 
 /*!
  * Setup the device information given a very simple info struct.

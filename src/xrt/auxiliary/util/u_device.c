@@ -86,40 +86,38 @@ const struct xrt_matrix_2x2 u_device_rotation_180 = {{
 void
 u_device_dump_config(struct xrt_device *xdev, const char *prefix, const char *prod)
 {
-	// clang-format off
 	U_LOG_RAW("%s - device_setup", prefix);
-	PRINT_STR(   "prod", prod);
+	PRINT_STR("prod", prod);
 	if (xdev->hmd != NULL) {
-		PRINT_INT(   "screens[0].w_pixels ", xdev->hmd->screens[0].w_pixels);
-		PRINT_INT(   "screens[0].h_pixels ", xdev->hmd->screens[0].h_pixels);
-//		PRINT_MM(    "info.display.w_meters", info.display.w_meters);
-//		PRINT_MM(    "info.display.h_meters", info.display.h_meters);
-		PRINT_INT(   "views[0].viewport.x_pixels   ", xdev->hmd->views[0].viewport.x_pixels);
-		PRINT_INT(   "views[0].viewport.y_pixels   ", xdev->hmd->views[0].viewport.y_pixels);
-		PRINT_INT(   "views[0].viewport.w_pixels   ", xdev->hmd->views[0].viewport.w_pixels);
-		PRINT_INT(   "views[0].viewport.h_pixels   ", xdev->hmd->views[0].viewport.h_pixels);
-		PRINT_INT(   "views[0].display.w_pixels    ", xdev->hmd->views[0].display.w_pixels);
-		PRINT_INT(   "views[0].display.h_pixels    ", xdev->hmd->views[0].display.h_pixels);
-		PRINT_MAT2X2("views[0].rot            ", xdev->hmd->views[0].rot);
-		PRINT_ANGLE( "distortion.fov[0].angle_left ", xdev->hmd->distortion.fov[0].angle_left);
-		PRINT_ANGLE( "distortion.fov[0].angle_right", xdev->hmd->distortion.fov[0].angle_right);
-		PRINT_ANGLE( "distortion.fov[0].angle_up   ", xdev->hmd->distortion.fov[0].angle_up);
-		PRINT_ANGLE( "distortion.fov[0].angle_down ", xdev->hmd->distortion.fov[0].angle_down);
-//		PRINT_ANGLE( "distortion.fov[0]       ", xdev->hmd->distortion.fov[0]);
-		PRINT_INT(   "views[1].viewport.x_pixels   ", xdev->hmd->views[1].viewport.x_pixels);
-		PRINT_INT(   "views[1].viewport.y_pixels   ", xdev->hmd->views[1].viewport.y_pixels);
-		PRINT_INT(   "views[1].viewport.w_pixels   ", xdev->hmd->views[1].viewport.w_pixels);
-		PRINT_INT(   "views[1].viewport.h_pixels   ", xdev->hmd->views[1].viewport.h_pixels);
-		PRINT_INT(   "views[1].display.w_pixels    ", xdev->hmd->views[1].display.w_pixels);
-		PRINT_INT(   "views[1].display.h_pixels    ", xdev->hmd->views[1].display.h_pixels);
-		PRINT_MAT2X2("views[1].rot            ", xdev->hmd->views[1].rot);
-		PRINT_ANGLE( "distortion.fov[1].angle_left ", xdev->hmd->distortion.fov[1].angle_left);
-		PRINT_ANGLE( "distortion.fov[1].angle_right", xdev->hmd->distortion.fov[1].angle_right);
-		PRINT_ANGLE( "distortion.fov[1].angle_up   ", xdev->hmd->distortion.fov[1].angle_up);
-		PRINT_ANGLE( "distortion.fov[1].angle_down ", xdev->hmd->distortion.fov[1].angle_down);
-//		PRINT_ANGLE( "distortion.fov[1]       ", xdev->hmd->distortion.fov[1]);
+		PRINT_INT("screens[0].w_pixels ", xdev->hmd->screens[0].w_pixels);
+		PRINT_INT("screens[0].h_pixels ", xdev->hmd->screens[0].h_pixels);
+		//		PRINT_MM(    "info.display.w_meters", info.display.w_meters);
+		//		PRINT_MM(    "info.display.h_meters", info.display.h_meters);
+
+		uint32_t view_count = xdev->hmd->view_count;
+		PRINT_INT("view_count", view_count);
+		for (uint32_t i = 0; i < view_count; ++i) {
+			struct xrt_view *view = &xdev->hmd->views[i];
+			struct xrt_fov *fov = &xdev->hmd->distortion.fov[i];
+			U_LOG_RAW("\tview index = %u", i);
+			U_LOG_RAW("\tviews[%d].viewport.x_pixels = %u", i, view->viewport.x_pixels);
+			U_LOG_RAW("\tviews[%d].viewport.y_pixels = %u", i, view->viewport.y_pixels);
+			U_LOG_RAW("\tviews[%d].viewport.w_pixels = %u", i, view->viewport.w_pixels);
+			U_LOG_RAW("\tviews[%d].viewport.h_pixels = %u", i, view->viewport.h_pixels);
+			U_LOG_RAW("\tviews[%d].display.w_pixels = %u", i, view->display.w_pixels);
+			U_LOG_RAW("\tviews[%d].display.h_pixels = %u", i, view->display.h_pixels);
+			U_LOG_RAW("\tviews[%d].rot = {%f, %f} {%f, %f}", i, view->rot.v[0], view->rot.v[1],
+			          view->rot.v[2], view->rot.v[3]);
+			U_LOG_RAW("\tdistortion.fov[%d].angle_left = %f (%i°)", i, fov->angle_left,
+			          (int32_t)(fov->angle_left * (180 / M_PI)));
+			U_LOG_RAW("\tdistortion.fov[%d].angle_right = %f (%i°)", i, fov->angle_right,
+			          (int32_t)(fov->angle_right * (180 / M_PI)));
+			U_LOG_RAW("\tdistortion.fov[%d].angle_up = %f (%i°)", i, fov->angle_up,
+			          (int32_t)(fov->angle_up * (180 / M_PI)));
+			U_LOG_RAW("\tdistortion.fov[%d].angle_down = %f (%i°)", i, fov->angle_down,
+			          (int32_t)(fov->angle_down * (180 / M_PI)));
+		}
 	}
-	// clang-format on
 }
 
 
@@ -159,11 +157,58 @@ u_extents_2d_split_side_by_side(struct xrt_device *xdev, const struct u_extents_
 }
 
 bool
+u_device_setup_one_eye(struct xrt_device *xdev, const struct u_device_simple_info *info)
+{
+	uint32_t w_pixels = info->display.w_pixels;
+	uint32_t h_pixels = info->display.h_pixels;
+	float w_meters = info->display.w_meters;
+	float h_meters = info->display.h_meters;
+
+	float lens_center_x_meters = w_meters / 2.0;
+
+	float lens_center_y_meters = info->lens_vertical_position_meters;
+
+	// Common
+	size_t idx = 0;
+	xdev->hmd->blend_modes[idx++] = XRT_BLEND_MODE_OPAQUE;
+	xdev->hmd->blend_mode_count = idx;
+
+	if (xdev->hmd->distortion.models == 0) {
+		xdev->hmd->distortion.models = XRT_DISTORTION_MODEL_NONE;
+		xdev->hmd->distortion.preferred = XRT_DISTORTION_MODEL_NONE;
+	}
+	xdev->hmd->screens[0].w_pixels = info->display.w_pixels;
+	xdev->hmd->screens[0].h_pixels = info->display.h_pixels;
+
+	// Left
+	xdev->hmd->views[0].display.w_pixels = w_pixels;
+	xdev->hmd->views[0].display.h_pixels = h_pixels;
+	xdev->hmd->views[0].viewport.x_pixels = 0;
+	xdev->hmd->views[0].viewport.y_pixels = 0;
+	xdev->hmd->views[0].viewport.w_pixels = w_pixels;
+	xdev->hmd->views[0].viewport.h_pixels = h_pixels;
+	xdev->hmd->views[0].rot = u_device_rotation_ident;
+
+	{
+		/* left eye */
+		if (!math_compute_fovs(w_meters, lens_center_x_meters, info->fov[0], h_meters, lens_center_y_meters, 0,
+		                       &xdev->hmd->distortion.fov[0])) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool
 u_device_setup_split_side_by_side(struct xrt_device *xdev, const struct u_device_simple_info *info)
 {
-	uint32_t w_pixels = info->display.w_pixels / 2;
+
+	uint32_t view_count = xdev->hmd->view_count;
+
+	uint32_t w_pixels = info->display.w_pixels / view_count;
 	uint32_t h_pixels = info->display.h_pixels;
-	float w_meters = info->display.w_meters / 2;
+	float w_meters = info->display.w_meters / view_count;
 	float h_meters = info->display.h_meters;
 
 	float lens_center_x_meters[2] = {
@@ -189,31 +234,25 @@ u_device_setup_split_side_by_side(struct xrt_device *xdev, const struct u_device
 	xdev->hmd->screens[0].h_pixels = info->display.h_pixels;
 
 	// Left
-	xdev->hmd->views[0].display.w_pixels = w_pixels;
-	xdev->hmd->views[0].display.h_pixels = h_pixels;
-	xdev->hmd->views[0].viewport.x_pixels = 0;
-	xdev->hmd->views[0].viewport.y_pixels = 0;
-	xdev->hmd->views[0].viewport.w_pixels = w_pixels;
-	xdev->hmd->views[0].viewport.h_pixels = h_pixels;
-	xdev->hmd->views[0].rot = u_device_rotation_ident;
-
-	// Right
-	xdev->hmd->views[1].display.w_pixels = w_pixels;
-	xdev->hmd->views[1].display.h_pixels = h_pixels;
-	xdev->hmd->views[1].viewport.x_pixels = w_pixels;
-	xdev->hmd->views[1].viewport.y_pixels = 0;
-	xdev->hmd->views[1].viewport.w_pixels = w_pixels;
-	xdev->hmd->views[1].viewport.h_pixels = h_pixels;
-	xdev->hmd->views[1].rot = u_device_rotation_ident;
+	for (uint32_t i = 0; i < view_count; ++i) {
+		xdev->hmd->views[i].display.w_pixels = w_pixels;
+		xdev->hmd->views[i].display.h_pixels = h_pixels;
+		xdev->hmd->views[i].viewport.x_pixels = w_pixels * i;
+		xdev->hmd->views[i].viewport.y_pixels = 0;
+		xdev->hmd->views[i].viewport.w_pixels = w_pixels;
+		xdev->hmd->views[i].viewport.h_pixels = h_pixels;
+		xdev->hmd->views[i].rot = u_device_rotation_ident;
+	}
 
 	{
 		/* right eye */
-		if (!math_compute_fovs(w_meters, lens_center_x_meters[1], info->fov[1], h_meters,
-		                       lens_center_y_meters[1], 0, &xdev->hmd->distortion.fov[1])) {
+		if (!math_compute_fovs(w_meters, lens_center_x_meters[view_count - 1], info->fov[view_count - 1],
+		                       h_meters, lens_center_y_meters[view_count - 1], 0,
+		                       &xdev->hmd->distortion.fov[view_count - 1])) {
 			return false;
 		}
 	}
-	{
+	if (view_count == 2) {
 		/* left eye - mirroring right eye */
 		xdev->hmd->distortion.fov[0].angle_up = xdev->hmd->distortion.fov[1].angle_up;
 		xdev->hmd->distortion.fov[0].angle_down = xdev->hmd->distortion.fov[1].angle_down;
