@@ -22,6 +22,7 @@
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
 #include "oxr_chain.h"
+#include "oxr_api_verify.h"
 
 
 DEBUG_GET_ONCE_NUM_OPTION(scale_percentage, "OXR_VIEWPORT_SCALE_PERCENTAGE", 100)
@@ -198,14 +199,29 @@ oxr_system_fill_in(
 		sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_LOCAL;
 	}
 
-#ifdef OXR_HAVE_EXT_local_floor
-	if (sys->inst->extensions.EXT_local_floor) {
+	if (OXR_API_VERSION_AT_LEAST(sys->inst, 1, 1)) {
 		if (sys->xso->semantic.local_floor != NULL) {
-			sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT;
+			sys->reference_spaces[sys->reference_space_count++] = XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR;
 		} else {
 			oxr_warn(log,
-			         "XR_EXT_local_floor enabled but system doesn't support local_floor,"
+			         "OpenXR 1.1 used but system doesn't support local_floor,"
 			         " breaking spec by not exposing the reference space.");
+		}
+	}
+
+#ifdef OXR_HAVE_EXT_local_floor
+	// If OpenXR 1.1 and the extension is enabled, don't add a second reference.
+	// Note that XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR is aliased to XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT.
+	if (!OXR_API_VERSION_AT_LEAST(sys->inst, 1, 1)) {
+		if (sys->inst->extensions.EXT_local_floor) {
+			if (sys->xso->semantic.local_floor != NULL) {
+				sys->reference_spaces[sys->reference_space_count++] =
+				    XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT;
+			} else {
+				oxr_warn(log,
+				         "XR_EXT_local_floor enabled but system doesn't support local_floor,"
+				         " breaking spec by not exposing the reference space.");
+			}
 		}
 	}
 #endif

@@ -53,6 +53,10 @@ is_reference_space_type_valid(struct oxr_logger *log,
 			return XR_SUCCESS;
 		}
 #endif
+		if (OXR_API_VERSION_AT_LEAST(sys->inst, 1, 1)) {
+			return XR_SUCCESS;
+		}
+
 		return oxr_error(
 		    log, XR_ERROR_VALIDATION_FAILURE,
 		    "(%s == XR_REFERENCE_SPACE_TYPE_LOCAL_FLOOR_EXT) is only valid if XR_EXT_local_floor is enabled",
