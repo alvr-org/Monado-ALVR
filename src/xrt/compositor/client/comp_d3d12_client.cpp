@@ -525,33 +525,6 @@ try {
 	/// @todo No idea if this is right, might depend on whether it's the compute or graphics compositor!
 	D3D12_RESOURCE_STATES compositorResourceState = D3D12_RESOURCE_STATE_COMMON;
 
-	// app_images do not inherit the initial state of images, so
-	// transition all app images from _COMMON to the correct state
-	{
-		D3D12_RESOURCE_BARRIER barrier{};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-		barrier.Transition.StateAfter = appResourceState;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-		data->state.resize(image_count, barrier.Transition.StateAfter);
-
-		std::vector<D3D12_RESOURCE_BARRIER> barriers;
-		for (const auto &image : data->app_images) {
-			barrier.Transition.pResource = image.get();
-			barriers.emplace_back(barrier);
-		}
-		wil::com_ptr<ID3D12GraphicsCommandList> commandList;
-		THROW_IF_FAILED(c->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-		                                             c->command_allocator.get(), nullptr,
-		                                             IID_PPV_ARGS(commandList.put())));
-		commandList->ResourceBarrier((UINT)barriers.size(), barriers.data());
-		commandList->Close();
-		std::array<ID3D12CommandList *, 1> commandLists{commandList.get()};
-
-		c->app_queue->ExecuteCommandLists((UINT)commandLists.size(), commandLists.data());
-	}
-
 	data->appResourceState = appResourceState;
 	data->compositorResourceState = compositorResourceState;
 
@@ -660,6 +633,33 @@ try {
 	if (xret != XRT_SUCCESS) {
 		D3D_ERROR(c, "Error importing D3D swapchain into native compositor");
 		return xret;
+	}
+
+	// app_images do not inherit the initial state of images, so
+	// transition all app images from _COMMON to the correct state
+	{
+		D3D12_RESOURCE_BARRIER barrier{};
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+		barrier.Transition.StateAfter = appResourceState;
+		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+		data->state.resize(image_count, barrier.Transition.StateAfter);
+
+		std::vector<D3D12_RESOURCE_BARRIER> barriers;
+		for (const auto &image : data->app_images) {
+			barrier.Transition.pResource = image.get();
+			barriers.emplace_back(barrier);
+		}
+		wil::com_ptr<ID3D12GraphicsCommandList> commandList;
+		THROW_IF_FAILED(c->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+		                                             c->command_allocator.get(), nullptr,
+		                                             IID_PPV_ARGS(commandList.put())));
+		commandList->ResourceBarrier((UINT)barriers.size(), barriers.data());
+		commandList->Close();
+		std::array<ID3D12CommandList *, 1> commandLists{commandList.get()};
+
+		c->app_queue->ExecuteCommandLists((UINT)commandLists.size(), commandLists.data());
 	}
 
 	auto release_image_fn = compositorNeedsCopy //
