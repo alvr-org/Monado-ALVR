@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -768,7 +768,8 @@ enum xrt_device_type
 	XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER,
 	XRT_DEVICE_TYPE_GENERIC_TRACKER,
 	XRT_DEVICE_TYPE_HAND_TRACKER,
-	XRT_DEVICE_TYPE_EYE_TRACKER
+	XRT_DEVICE_TYPE_EYE_TRACKER,
+	XRT_DEVICE_TYPE_FACE_TRACKER
 };
 
 /*!
@@ -793,6 +794,8 @@ enum xrt_input_type
 	XRT_INPUT_TYPE_POSE                  = 0x05,
 	//! A tracked hand
 	XRT_INPUT_TYPE_HAND_TRACKING         = 0x06,
+	//! A tracked face
+	XRT_INPUT_TYPE_FACE_TRACKING         = 0x07
 	// clang-format on
 };
 
@@ -1114,6 +1117,8 @@ enum xrt_input_name
 	XRT_INPUT_OPPO_MR_THUMBSTICK_CLICK                = XRT_INPUT_NAME(0x0510, BOOLEAN),
 	XRT_INPUT_OPPO_MR_THUMBSTICK_TOUCH                = XRT_INPUT_NAME(0x0511, BOOLEAN),
 	XRT_INPUT_OPPO_MR_THUMBSTICK                      = XRT_INPUT_NAME(0x0512, VEC2_MINUS_ONE_TO_ONE),
+
+	XRT_INPUT_GENERIC_FACE_TRACKING                   = XRT_INPUT_NAME(0x0600, FACE_TRACKING),
 	// clang-format on
 };
 
@@ -1260,6 +1265,13 @@ enum xrt_output_type
 };
 
 #define XRT_OUTPUT_NAME(id, type) ((UINT32_C(id) << XRT_OUTPUT_TYPE_BITWIDTH) | (uint32_t)XRT_OUTPUT_TYPE_##type)
+
+struct xrt_facial_expression_set
+{
+	union {
+		struct xrt_facial_expression_empty_set* placeholder;
+	};
+};
 
 /*!
  * Name of a output with a baked in type.

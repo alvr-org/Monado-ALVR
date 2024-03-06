@@ -1,10 +1,11 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2024 Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Common protocol definition.
  * @author Pete Black <pblack@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup ipc_shared
  */
 
@@ -131,6 +132,7 @@ struct ipc_shared_device
 	bool position_tracking_supported;
 	bool hand_tracking_supported;
 	bool eye_gaze_supported;
+	bool face_tracking_supported;
 	bool force_feedback_supported;
 	bool form_factor_check_supported;
 	bool stage_supported;
@@ -227,6 +229,7 @@ struct ipc_shared_memory
 	{
 		int32_t head;
 		int32_t eyes;
+		int32_t face;
 
 		struct
 		{

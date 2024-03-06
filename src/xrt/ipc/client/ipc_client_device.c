@@ -1,9 +1,10 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  IPC Client device.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup ipc_client
  */
 
@@ -117,6 +118,21 @@ ipc_client_device_get_hand_tracking(struct xrt_device *xdev,
 	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_get_hand_tracking");
 }
 
+static xrt_result_t
+ipc_client_device_get_face_tracking(struct xrt_device *xdev,
+                                    enum xrt_input_name facial_expression_type,
+                                    struct xrt_facial_expression_set *out_value)
+{
+	ipc_client_device_t *icd = ipc_client_device(xdev);
+
+	xrt_result_t xret = ipc_call_device_get_face_tracking( //
+	    icd->ipc_c,                                        //
+	    icd->device_id,                                    //
+	    facial_expression_type,                            //
+	    out_value);                                        //
+	IPC_CHK_ALWAYS_RET(icd->ipc_c, xret, "ipc_call_device_get_face_tracking");
+}
+
 static void
 ipc_client_device_get_view_poses(struct xrt_device *xdev,
                                  const struct xrt_vec3 *default_eye_relation,
@@ -166,6 +182,7 @@ ipc_client_device_create(struct ipc_connection *ipc_c, struct xrt_tracking_origi
 	icd->base.update_inputs = ipc_client_device_update_inputs;
 	icd->base.get_tracked_pose = ipc_client_device_get_tracked_pose;
 	icd->base.get_hand_tracking = ipc_client_device_get_hand_tracking;
+	icd->base.get_face_tracking = ipc_client_device_get_face_tracking;
 	icd->base.get_view_poses = ipc_client_device_get_view_poses;
 	icd->base.set_output = ipc_client_device_set_output;
 	icd->base.get_visibility_mask = ipc_client_device_get_visibility_mask;
@@ -223,6 +240,7 @@ ipc_client_device_create(struct ipc_connection *ipc_c, struct xrt_tracking_origi
 	icd->base.position_tracking_supported = isdev->position_tracking_supported;
 	icd->base.hand_tracking_supported = isdev->hand_tracking_supported;
 	icd->base.eye_gaze_supported = isdev->eye_gaze_supported;
+	icd->base.face_tracking_supported = isdev->face_tracking_supported;
 	icd->base.force_feedback_supported = isdev->force_feedback_supported;
 	icd->base.stage_supported = isdev->stage_supported;
 

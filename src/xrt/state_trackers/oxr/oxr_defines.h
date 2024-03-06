@@ -1,9 +1,10 @@
-// Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Shared internal defines and enums in the state tracker.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_main
  */
 
@@ -27,6 +28,7 @@
 #define OXR_XR_DEBUG_HTRACKER  (*(uint64_t *)"oxrhtra\0")
 #define OXR_XR_DEBUG_PASSTHROUGH    	(*(uint64_t *)"oxrpass\0")
 #define OXR_XR_DEBUG_PASSTHROUGH_LAYER  (*(uint64_t *)"oxrptla\0")
+#define OXR_XR_DEBUG_FTRACKER  (*(uint64_t *)"oxrftra\0")
 // clang-format on
 
 /*!

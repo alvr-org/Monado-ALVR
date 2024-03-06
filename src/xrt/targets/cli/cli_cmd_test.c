@@ -1,9 +1,10 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Prints a list of found devices and tests opening some of them.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  */
 
 #include "xrt/xrt_space.h"
@@ -131,6 +132,8 @@ cli_cmd_test(int argc, const char **argv)
 	} while (false)
 
 	PRINT_ROLE(head, "               ");
+	PRINT_ROLE(eyes, "               ");
+	PRINT_ROLE(face, "               ");
 	PRINT_DYNR(left, "               ");
 	PRINT_DYNR(right, "              ");
 	PRINT_DYNR(gamepad, "            ");

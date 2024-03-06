@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -251,6 +251,12 @@ struct xrt_system_devices
 		 * (optional).
 		 */
 		struct xrt_device *eyes;
+
+		/*!
+		 * An observing pointer to the device providing face tracking
+		 * (optional).
+		 */
+		struct xrt_device *face;
 
 		/*!
 		 * Devices providing optical (or otherwise more directly

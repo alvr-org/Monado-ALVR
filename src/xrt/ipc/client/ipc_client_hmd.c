@@ -1,9 +1,10 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  IPC Client HMD device.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup ipc_client
  */
 
@@ -370,6 +371,7 @@ ipc_client_hmd_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *
 	ich->base.device_type = isdev->device_type;
 	ich->base.hand_tracking_supported = isdev->hand_tracking_supported;
 	ich->base.eye_gaze_supported = isdev->eye_gaze_supported;
+	ich->base.face_tracking_supported = isdev->face_tracking_supported;
 	ich->base.force_feedback_supported = isdev->force_feedback_supported;
 	ich->base.form_factor_check_supported = isdev->form_factor_check_supported;
 	ich->base.stage_supported = isdev->stage_supported;

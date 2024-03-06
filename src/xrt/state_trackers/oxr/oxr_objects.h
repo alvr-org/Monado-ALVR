@@ -1,4 +1,4 @@
-// Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // Copyright 2023, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
@@ -1385,6 +1385,7 @@ struct oxr_system
 // clang-format off
 static inline struct xrt_device *get_role_head(struct oxr_system *sys) {return sys->xsysd->static_roles.head; }
 static inline struct xrt_device *get_role_eyes(struct oxr_system *sys) {return sys->xsysd->static_roles.eyes; }
+static inline struct xrt_device *get_role_face(struct oxr_system* sys) { return sys->xsysd->static_roles.face; }
 static inline struct xrt_device *get_role_hand_tracking_left(struct oxr_system* sys) { return sys->xsysd->static_roles.hand_tracking.left; }
 static inline struct xrt_device *get_role_hand_tracking_right(struct oxr_system* sys) { return sys->xsysd->static_roles.hand_tracking.right; }
 // clang-format on
@@ -1417,6 +1418,11 @@ get_role_profile_head(struct oxr_system *sys)
 }
 static inline enum xrt_device_name
 get_role_profile_eyes(struct oxr_system *sys)
+{
+	return XRT_DEVICE_INVALID;
+}
+static inline enum xrt_device_name
+get_role_profile_face(struct oxr_system *sys)
 {
 	return XRT_DEVICE_INVALID;
 }

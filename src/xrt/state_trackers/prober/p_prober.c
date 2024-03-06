@@ -1,9 +1,10 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Main prober code.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup st_prober
  */
 
@@ -856,6 +857,7 @@ print_system_devices(u_pp_delegate_t dg, struct xrt_system_devices *xsysd)
 
 	P(head);
 	P(eyes);
+	P(face);
 	PD(left);
 	PD(right);
 	PD(gamepad);

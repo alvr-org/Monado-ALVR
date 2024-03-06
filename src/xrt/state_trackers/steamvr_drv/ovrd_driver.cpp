@@ -1,4 +1,4 @@
-// Copyright 2020,2023 Collabora, Ltd.
+// Copyright 2020,2024 Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -681,6 +681,7 @@ public:
 		case XRT_INPUT_TYPE_POSE:
 			//! @todo how to handle poses?
 		case XRT_INPUT_TYPE_HAND_TRACKING:
+		case XRT_INPUT_TYPE_FACE_TRACKING:
 		case XRT_INPUT_TYPE_VEC3_MINUS_ONE_TO_ONE: break;
 		}
 	}

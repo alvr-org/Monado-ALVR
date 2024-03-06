@@ -1,4 +1,4 @@
-// Copyright 2022-2023, Collabora, Ltd.
+// Copyright 2022-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -36,6 +36,7 @@ get_xrt_input_type_short_str(enum xrt_input_type type)
 	case XRT_INPUT_TYPE_BOOLEAN: return "BOOLEAN";
 	case XRT_INPUT_TYPE_POSE: return "POSE";
 	case XRT_INPUT_TYPE_HAND_TRACKING: return "HAND_TRACKING";
+	case XRT_INPUT_TYPE_FACE_TRACKING: return "FACE_TRACKING";
 	default: return "<UNKNOWN>";
 	}
 }
