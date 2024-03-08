@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -375,6 +375,7 @@ update_session_state_locked(struct multi_system_compositor *msc)
 	    .ext_hand_tracking_enabled = false,
 	    .ext_eye_gaze_interaction_enabled = false,
 	    .ext_hand_interaction_enabled = false,
+	    .htc_facial_tracking_enabled = false,
 	};
 
 	switch (msc->sessions.state) {

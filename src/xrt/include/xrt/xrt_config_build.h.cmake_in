@@ -1,9 +1,10 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  What internal components we are building.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup xrt_iface
  */
 
@@ -31,6 +32,7 @@
 #cmakedefine XRT_FEATURE_OPENXR_DEBUG_UTILS
 #cmakedefine XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE
 #cmakedefine XRT_FEATURE_OPENXR_FORCE_FEEDBACK_CURL
+#cmakedefine XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC
 #cmakedefine XRT_FEATURE_OPENXR_HEADLESS
 #cmakedefine XRT_FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE
 #cmakedefine XRT_FEATURE_OPENXR_INTERACTION_EXT_HAND

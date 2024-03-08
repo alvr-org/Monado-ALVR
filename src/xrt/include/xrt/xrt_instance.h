@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -43,6 +43,7 @@ struct xrt_instance_info
 	bool ext_hand_tracking_enabled;
 	bool ext_eye_gaze_interaction_enabled;
 	bool ext_hand_interaction_enabled;
+	bool htc_facial_tracking_enabled;
 };
 
 /*!

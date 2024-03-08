@@ -1,10 +1,11 @@
-// Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  File for negotiating with the loader.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_api
  */
 
@@ -304,6 +305,12 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 #ifdef OXR_HAVE_KHR_D3D12_enable
 	ENTRY_IF_EXT(xrGetD3D12GraphicsRequirementsKHR, KHR_D3D12_enable);
 #endif // OXR_HAVE_KHR_D3D12_enable
+
+#ifdef OXR_HAVE_HTC_facial_tracking
+	ENTRY_IF_EXT(xrCreateFacialTrackerHTC, HTC_facial_tracking);
+	ENTRY_IF_EXT(xrDestroyFacialTrackerHTC, HTC_facial_tracking);
+	ENTRY_IF_EXT(xrGetFacialExpressionsHTC, HTC_facial_tracking);
+#endif
 
 	/*
 	 * Not logging here because there's no need to loudly advertise

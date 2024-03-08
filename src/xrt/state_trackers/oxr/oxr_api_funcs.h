@@ -1,9 +1,10 @@
-// Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Header defining all API functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_api
  */
 
@@ -608,6 +609,23 @@ oxr_xrPassthroughPauseFB(XrPassthroughFB passthrough);
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrPassthroughStartFB(XrPassthroughFB passthrough);
 #endif
+
+#ifdef OXR_HAVE_HTC_facial_tracking
+//! OpenXR API function @ep{xrCreateFacialTrackerHTC}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateFacialTrackerHTC(XrSession session,
+                             const XrFacialTrackerCreateInfoHTC *createInfo,
+                             XrFacialTrackerHTC *facialTracker);
+
+//! OpenXR API function @ep{xrDestroyFacialTrackerHTC}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyFacialTrackerHTC(XrFacialTrackerHTC facialTracker);
+
+//! OpenXR API function @ep{xrGetFacialExpressionsHTC}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetFacialExpressionsHTC(XrFacialTrackerHTC facialTracker, XrFacialExpressionsHTC *facialExpressions);
+#endif
+
 /*!
  * @}
  */

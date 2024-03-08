@@ -1,9 +1,10 @@
-// Copyright 2018-2022, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  File for verifying app input into api functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_api
  */
 
@@ -71,6 +72,8 @@ extern "C" {
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_passthrough, PASSTHROUGH, name, new_thing->sess->sys->inst)
 #define OXR_VERIFY_PASSTHROUGH_LAYER_AND_INIT_LOG(log, thing, new_thing, name) \
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_passthrough_layer, PASSTHROUGH_LAYER, name, new_thing->sess->sys->inst)
+#define OXR_VERIFY_FACE_TRACKER_HTC_AND_INIT_LOG(log, thing, new_thing, name) \
+	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_facial_tracker_htc, FTRACKER, name, new_thing->sess->sys->inst)
 // clang-format on
 
 #define OXR_VERIFY_INSTANCE_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_instance, INSTANCE);

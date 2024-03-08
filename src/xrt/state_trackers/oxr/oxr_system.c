@@ -1,9 +1,10 @@
-// Copyright 2018-2020, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Holds system related entrypoints.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_main
  */
 
@@ -269,6 +270,35 @@ oxr_system_get_force_feedback_support(struct oxr_logger *log, struct oxr_instanc
 	return left_supported || right_supported;
 }
 
+void
+oxr_system_get_face_tracking_htc_support(struct oxr_logger *log,
+                                         struct oxr_instance *inst,
+                                         bool *supports_eye,
+                                         bool *supports_lip)
+{
+	struct oxr_system *sys = &inst->system;
+	struct xrt_device *face_xdev = GET_XDEV_BY_ROLE(sys, face);
+
+	if (supports_eye)
+		*supports_eye = false;
+	if (supports_lip)
+		*supports_lip = false;
+
+	if (face_xdev == NULL || !face_xdev->face_tracking_supported || face_xdev->inputs == NULL) {
+		return;
+	}
+
+	for (size_t input_idx = 0; input_idx < face_xdev->input_count; ++input_idx) {
+		const struct xrt_input *input = &face_xdev->inputs[input_idx];
+		if (supports_eye != NULL && input->name == XRT_INPUT_HTC_EYE_FACE_TRACKING) {
+			*supports_eye = true;
+		}
+		if (supports_lip != NULL && input->name == XRT_INPUT_HTC_LIP_FACE_TRACKING) {
+			*supports_eye = true;
+		}
+	}
+}
+
 XrResult
 oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSystemProperties *properties)
 {
@@ -347,6 +377,21 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	}
 #endif
 
+#ifdef OXR_HAVE_HTC_facial_tracking
+	XrSystemFacialTrackingPropertiesHTC *htc_facial_tracking_props = NULL;
+	if (sys->inst->extensions.HTC_facial_tracking) {
+		htc_facial_tracking_props = OXR_GET_OUTPUT_FROM_CHAIN(
+		    properties, XR_TYPE_SYSTEM_FACIAL_TRACKING_PROPERTIES_HTC, XrSystemFacialTrackingPropertiesHTC);
+	}
+
+	if (htc_facial_tracking_props) {
+		bool supports_eye = false;
+		bool supports_lip = false;
+		oxr_system_get_face_tracking_htc_support(log, sys->inst, &supports_eye, &supports_lip);
+		htc_facial_tracking_props->supportEyeFacialTracking = supports_eye;
+		htc_facial_tracking_props->supportLipFacialTracking = supports_lip;
+	}
+#endif // OXR_HAVE_HTC_facial_tracking
 	return XR_SUCCESS;
 }
 

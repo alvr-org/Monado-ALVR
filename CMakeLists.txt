@@ -1,4 +1,4 @@
-# Copyright 2018-2023, Collabora, Ltd.
+# Copyright 2018-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 cmake_minimum_required(VERSION 3.10.2)
@@ -364,6 +364,9 @@ option(
 	XRT_FEATURE_OPENXR_VULKAN_SWAPCHAIN_FORMAT_LIST
 	"Enable support for the XR_KHR_vulkan_swapchain_format_list extension" ON
 	)
+if(NOT DEFINED XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC)
+	set(XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC OFF)
+endif()
 
 # Interaction extension support.
 if(NOT DEFINED XRT_FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE)
@@ -618,6 +621,7 @@ message(STATUS "#    FEATURE_DEBUG_GUI:                            ${XRT_FEATURE
 message(STATUS "#    FEATURE_OPENXR:                               ${XRT_FEATURE_OPENXR}")
 message(STATUS "#    FEATURE_OPENXR_DEBUG_UTILS:                   ${XRT_FEATURE_OPENXR_DEBUG_UTILS}")
 message(STATUS "#    FEATURE_OPENXR_DISPLAY_REFRESH_RATE:          ${XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE}")
+message(STATUS "#    FEATURE_OPENXR_FACIAL_TRACKING_HTC:           ${XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC}")
 message(STATUS "#    FEATURE_OPENXR_FORCE_FEEDBACK_CURL:           ${XRT_FEATURE_OPENXR_FORCE_FEEDBACK_CURL}")
 message(STATUS "#    FEATURE_OPENXR_HEADLESS:                      ${XRT_FEATURE_OPENXR_HEADLESS}")
 message(STATUS "#    FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE:      ${XRT_FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE}")

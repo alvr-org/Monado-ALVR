@@ -1,4 +1,4 @@
-// Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -228,6 +228,9 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 #endif
 #ifdef OXR_HAVE_EXT_hand_interaction
 		    .ext_hand_interaction_enabled = extensions->EXT_hand_interaction,
+#endif
+#ifdef OXR_HAVE_HTC_facial_tracking
+		    .htc_facial_tracking_enabled = extensions->HTC_facial_tracking,
 #endif
 		};
 

@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -596,6 +596,17 @@
 #define OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_)
 #endif
 
+
+/*
+ * XR_HTC_facial_tracking
+ */
+#if defined(XR_HTC_facial_tracking) && defined(XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC)
+#define OXR_HAVE_HTC_facial_tracking
+#define OXR_EXTENSION_SUPPORT_HTC_facial_tracking(_) _(HTC_facial_tracking, HTC_FACIAL_TRACKING)
+#else
+#define OXR_EXTENSION_SUPPORT_HTC_facial_tracking(_)
+#endif
+
 // end of GENERATED per-extension defines - do not modify - used by scripts
 
 /*!
@@ -670,5 +681,6 @@
     OXR_EXTENSION_SUPPORT_MNDX_egl_enable(_) \
     OXR_EXTENSION_SUPPORT_MNDX_force_feedback_curl(_) \
     OXR_EXTENSION_SUPPORT_MNDX_hydra(_) \
-    OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_)
+    OXR_EXTENSION_SUPPORT_MNDX_system_buttons(_) \
+    OXR_EXTENSION_SUPPORT_HTC_facial_tracking(_)
 // clang-format on
