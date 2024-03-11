@@ -294,7 +294,7 @@ oxr_system_get_face_tracking_htc_support(struct oxr_logger *log,
 			*supports_eye = true;
 		}
 		if (supports_lip != NULL && input->name == XRT_INPUT_HTC_LIP_FACE_TRACKING) {
-			*supports_eye = true;
+			*supports_lip = true;
 		}
 	}
 }
