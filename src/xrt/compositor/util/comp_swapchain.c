@@ -571,6 +571,12 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 
 	// Use the image helper to get the images.
 	ret = vk_ic_from_natives(vk, info, native_images, native_image_count, &sc->vkic);
+	if (ret == VK_ERROR_FEATURE_NOT_PRESENT) {
+		return XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED;
+	}
+	if (ret == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+		return XRT_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED;
+	}
 	if (ret != VK_SUCCESS) {
 		return XRT_ERROR_VULKAN;
 	}
