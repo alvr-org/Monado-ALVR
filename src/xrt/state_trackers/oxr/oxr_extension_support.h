@@ -590,6 +590,18 @@
 
 
 /*
+ * XR_HTC_vive_cosmos_controller_interaction
+ */
+#if defined(XR_HTC_vive_cosmos_controller_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_VIVE_COSMOS)
+#define OXR_HAVE_HTC_vive_cosmos_controller_interaction
+#define OXR_EXTENSION_SUPPORT_HTC_vive_cosmos_controller_interaction(_)                                                \
+	_(HTC_vive_cosmos_controller_interaction, HTC_VIVE_COSMOS_CONTROLLER_INTERACTION)
+#else
+#define OXR_EXTENSION_SUPPORT_HTC_vive_cosmos_controller_interaction(_)
+#endif
+
+
+/*
  * XR_MNDX_ball_on_a_stick_controller
  */
 #if defined(XR_MNDX_ball_on_a_stick_controller) && defined(XRT_FEATURE_OPENXR_INTERACTION_MNDX)
@@ -729,6 +741,7 @@
     OXR_EXTENSION_SUPPORT_OPPO_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_EXTX_overlay(_) \
     OXR_EXTENSION_SUPPORT_HTCX_vive_tracker_interaction(_) \
+    OXR_EXTENSION_SUPPORT_HTC_vive_cosmos_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_MNDX_ball_on_a_stick_controller(_) \
     OXR_EXTENSION_SUPPORT_MNDX_egl_enable(_) \
     OXR_EXTENSION_SUPPORT_MNDX_force_feedback_curl(_) \
