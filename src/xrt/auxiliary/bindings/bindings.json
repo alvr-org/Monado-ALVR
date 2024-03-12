@@ -1040,6 +1040,12 @@
 				"ext/hand_interaction_poses",
 				"mndx/hp_reverb_g2_system_button"
 			],
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
