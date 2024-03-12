@@ -84,6 +84,7 @@ EXTENSIONS = (
     ['XR_EXTX_overlay', 'XRT_FEATURE_OPENXR_OVERLAY'],
     ['XR_HTCX_vive_tracker_interaction', 'ALWAYS_DISABLED'],
     ['XR_HTC_vive_cosmos_controller_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_VIVE_COSMOS'],
+    ['XR_HTC_vive_focus3_controller_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_VIVE_FOCUS3'],
     ['XR_MNDX_ball_on_a_stick_controller', 'XRT_FEATURE_OPENXR_INTERACTION_MNDX'],
     ['XR_MNDX_egl_enable', 'XR_USE_PLATFORM_EGL', 'XR_USE_GRAPHICS_API_OPENGL'],
     ['XR_MNDX_force_feedback_curl', 'XRT_FEATURE_OPENXR_FORCE_FEEDBACK_CURL'],
