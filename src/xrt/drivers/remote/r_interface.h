@@ -9,9 +9,19 @@
 
 #pragma once
 
+// winsock2.h must be included before windows.h, or the winsock interface will be
+// defined instead of the winsock2 interface.
+// Given that some of the Monado headers could include windows.h, winsock2 is to be
+// included before anything else.
+// As a consequence, this header must also be the first included in the file using
+// it.
+#include "xrt/xrt_config_os.h"
+#ifdef XRT_OS_WINDOWS
+#include <winsock2.h> // For SOCKET
+#endif
+
 #include "xrt/xrt_defines.h"
 #include "util/u_logging.h"
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +44,22 @@ struct xrt_session_event_sink;
  *
  * @brief @ref drv_remote files.
  */
+
+#ifdef XRT_OS_WINDOWS
+/*!
+ * The type for a socket descriptor
+ *
+ * On Windows, this is a SOCKET.
+ */
+typedef SOCKET r_socket_t;
+#else
+/*!
+ * The type for a socket descriptor
+ *
+ * On non-Windows, this is a file descriptor.
+ */
+typedef int r_socket_t;
+#endif
 
 /*!
  * Header value to be set in the packet.
@@ -129,7 +155,7 @@ struct r_remote_connection
 	enum u_logging_level log_level;
 
 	//! Socket.
-	int fd;
+	r_socket_t fd;
 };
 
 /*!
@@ -148,7 +174,7 @@ r_create_devices(uint16_t port,
  *
  * @ingroup drv_remote
  */
-int
+r_socket_t
 r_remote_connection_init(struct r_remote_connection *rc, const char *addr, uint16_t port);
 
 int

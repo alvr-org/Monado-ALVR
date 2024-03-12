@@ -7,6 +7,8 @@
  * @ingroup drv_remote
  */
 
+#include "r_internal.h"
+
 #include "os/os_time.h"
 
 #include "util/u_var.h"
@@ -17,8 +19,6 @@
 
 #include "math/m_api.h"
 #include "math/m_mathinclude.h"
-
-#include "r_internal.h"
 
 #include <stdio.h>
 

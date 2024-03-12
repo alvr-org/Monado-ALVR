@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "r_interface.h"
+
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_tracking.h"
@@ -17,13 +19,10 @@
 
 #include "util/u_hand_tracking.h"
 
-#include "r_interface.h"
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /*!
  * Central object remote object.
@@ -48,7 +47,7 @@ struct r_hub
 	struct r_remote_data latest;
 
 	//! Incoming connection socket.
-	int accept_fd;
+	r_socket_t accept_fd;
 
 	uint16_t port;
 

@@ -7,13 +7,12 @@
  * @ingroup drv_remote
  */
 
+#include "r_internal.h"
+
 #include "util/u_var.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
 #include "util/u_space_overseer.h"
-
-#include "r_interface.h"
-#include "r_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,9 +21,7 @@
 #if defined(XRT_OS_WINDOWS)
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>
-
-#pragma comment(lib, "ws2_32.lib")
+#include "xrt/xrt_windows.h"
 #else
 #include <unistd.h>
 #include <sys/socket.h>
@@ -33,14 +30,10 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#endif
 
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE // same, but for musl // NOLINT
-#endif
-#endif
-
-#ifndef SOCKET
-#define SOCKET int
 #endif
 
 #ifndef __USE_MISC
@@ -78,63 +71,63 @@ DEBUG_GET_ONCE_LOG_OPTION(remote_log, "REMOTE_LOG", U_LOGGING_INFO)
 #if defined(XRT_OS_WINDOWS)
 
 static inline void
-socket_close(SOCKET id)
+socket_close(r_socket_t id)
 {
 	closesocket(id);
 }
 
-static inline SOCKET
+static inline r_socket_t
 socket_create(void)
 {
 	return socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
 static inline int
-socket_set_opt(SOCKET id, int flag)
+socket_set_opt(r_socket_t id, int flag)
 {
 	return setsockopt(id, SOL_SOCKET, SO_REUSEADDR, (const char *)&flag, sizeof(flag));
 }
 
 static inline ssize_t
-socket_read(SOCKET id, void *ptr, size_t size, size_t current)
+socket_read(r_socket_t id, void *ptr, size_t size, size_t current)
 {
-	return recv(id, (char *)ptr, size - current, 0);
+	return recv(id, (char *)ptr, (int)(size - current), 0);
 }
 
-static inline size_t
-socket_write(SOCKET id, void *ptr, size_t size, size_t current)
+static inline ssize_t
+socket_write(r_socket_t id, void *ptr, size_t size, size_t current)
 {
-	return send(id, (const char *)ptr, size - current, 0);
+	return send(id, (const char *)ptr, (int)(size - current), 0);
 }
 
 #elif defined(XRT_OS_UNIX)
 
 static inline void
-socket_close(SOCKET id)
+socket_close(r_socket_t id)
 {
 	close(id);
 }
 
-static inline SOCKET
+static inline r_socket_t
 socket_create(void)
 {
 	return socket(AF_INET, SOCK_STREAM, 0);
 }
 
 static inline int
-socket_set_opt(SOCKET id, int flag)
+socket_set_opt(r_socket_t id, int flag)
 {
 	return setsockopt(id, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 }
 
 static inline ssize_t
-socket_read(SOCKET id, void *ptr, size_t size, size_t current)
+socket_read(r_socket_t id, void *ptr, size_t size, size_t current)
 {
 	return read(id, ptr, size - current);
 }
 
 static inline ssize_t
-socket_write(SOCKET id, void *ptr, size_t size, size_t current)
+socket_write(r_socket_t id, void *ptr, size_t size, size_t current)
 {
 	return write(id, ptr, size - current);
 }
@@ -148,7 +141,7 @@ socket_write(SOCKET id, void *ptr, size_t size, size_t current)
  *
  */
 
-static int
+static r_socket_t
 setup_accept_fd(struct r_hub *r)
 {
 	struct sockaddr_in server_address = {0};
@@ -204,7 +197,7 @@ cleanup:
 }
 
 static bool
-wait_for_read_and_to_continue(struct r_hub *r, SOCKET socket)
+wait_for_read_and_to_continue(struct r_hub *r, r_socket_t socket)
 {
 	fd_set set;
 	int ret = 0;
@@ -222,7 +215,7 @@ wait_for_read_and_to_continue(struct r_hub *r, SOCKET socket)
 		FD_ZERO(&set);
 		FD_SET(socket, &set);
 
-		ret = select(socket + 1, &set, NULL, NULL, &timeout);
+		ret = select((int)socket + 1, &set, NULL, NULL, &timeout);
 	}
 
 	if (ret < 0) {
@@ -235,11 +228,11 @@ wait_for_read_and_to_continue(struct r_hub *r, SOCKET socket)
 	}
 }
 
-static int
+static r_socket_t
 do_accept(struct r_hub *r)
 {
 	struct sockaddr_in addr = {0};
-	int ret = 0;
+	r_socket_t ret = 0;
 	if (!wait_for_read_and_to_continue(r, r->accept_fd)) {
 		R_ERROR(r, "Failed to wait for id %d", r->accept_fd);
 		return -1;
@@ -252,7 +245,7 @@ do_accept(struct r_hub *r)
 		return ret;
 	}
 
-	SOCKET conn_fd = ret;
+	r_socket_t conn_fd = ret;
 
 	int flags = 1;
 	ret = socket_set_opt(r->accept_fd, flags);
@@ -269,7 +262,7 @@ do_accept(struct r_hub *r)
 	return 0;
 }
 
-static int
+static ssize_t
 read_one(struct r_hub *r, struct r_remote_data *data)
 {
 	struct r_remote_connection *rc = &r->rc;
@@ -307,7 +300,7 @@ static void *
 run_thread(void *ptr)
 {
 	struct r_hub *r = (struct r_hub *)ptr;
-	int ret;
+	r_socket_t ret;
 
 	ret = setup_accept_fd(r);
 	if (ret < 0) {
@@ -539,11 +532,12 @@ r_create_devices(uint16_t port,
  *
  */
 
-int
+r_socket_t
 r_remote_connection_init(struct r_remote_connection *rc, const char *ip_addr, uint16_t port)
 {
 	struct sockaddr_in addr = {0};
-	int conn_fd;
+	r_socket_t sock_fd;
+	r_socket_t conn_fd;
 	int ret;
 
 	// Set log level.
