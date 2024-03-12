@@ -126,6 +126,7 @@ target_link_libraries(
 # Only uses normal Windows libraries, doesn't add anything extra.
 if(WIN32)
 	target_sources(aux_util PRIVATE u_windows.c u_windows.h)
+	target_link_libraries(aux_util PRIVATE WIL::WIL)
 endif()
 
 # Only uses POSIX/Linux libraries, doesn't add anything extra.
