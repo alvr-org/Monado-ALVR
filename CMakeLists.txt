@@ -14,6 +14,11 @@ if(POLICY CMP0072)
 	cmake_policy(SET CMP0072 NEW)
 endif()
 
+# CMake 3.14 introduced CMP0083 - Control generation of Position Independent Executable (PIE)
+if(POLICY CMP0083)
+	cmake_policy(SET CMP0083 NEW)
+endif()
+
 set(_default_absolute ON)
 if(WIN32)
 	set(_default_absolute OFF)
@@ -542,6 +547,10 @@ endif()
 include(CompilerFlags.cmake)
 
 # Default to PIC code
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.14.0")
+	include(CheckPIESupported)
+	check_pie_supported()
+endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Describe IPO setting
