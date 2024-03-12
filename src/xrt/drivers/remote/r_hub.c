@@ -40,6 +40,15 @@
 #define __USE_MISC // SOL_TCP on C11
 #endif
 
+// Define the format to use to print a socket descriptor
+#ifdef XRT_OS_WINDOWS
+// On Windows, this is a SOCKET, aka an unsigned long long
+#define R_SOCKET_FMT "%llu"
+#else
+// On non-Windows, this is a file descriptor, aka an int
+#define R_SOCKET_FMT "%i"
+#endif
+
 
 /*
  *
@@ -150,14 +159,14 @@ setup_accept_fd(struct r_hub *r)
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 		int error = WSAGetLastError();
-		R_ERROR(r, "Failed to do WSAStartup %ld", error);
+		R_ERROR(r, "Failed to do WSAStartup %d", error);
 		return error;
 	}
 #endif
-	SOCKET ret = socket_create();
+	r_socket_t ret = socket_create();
 
 	if (ret < 0) {
-		R_ERROR(r, "socket: %i", ret);
+		R_ERROR(r, "socket: " R_SOCKET_FMT, ret);
 		goto cleanup;
 	}
 
@@ -166,7 +175,7 @@ setup_accept_fd(struct r_hub *r)
 	int flag = 1;
 	ret = socket_set_opt(r->accept_fd, flag);
 	if (ret < 0) {
-		R_ERROR(r, "setsockopt: %i", ret);
+		R_ERROR(r, "setsockopt: " R_SOCKET_FMT, ret);
 		socket_close(r->accept_fd);
 		r->accept_fd = -1;
 		goto cleanup;
@@ -178,7 +187,7 @@ setup_accept_fd(struct r_hub *r)
 
 	ret = bind(r->accept_fd, (struct sockaddr *)&server_address, sizeof(server_address));
 	if (ret < 0) {
-		R_ERROR(r, "bind: %i", ret);
+		R_ERROR(r, "bind: " R_SOCKET_FMT, ret);
 		socket_close(r->accept_fd);
 		r->accept_fd = -1;
 		goto cleanup;
@@ -234,14 +243,14 @@ do_accept(struct r_hub *r)
 	struct sockaddr_in addr = {0};
 	r_socket_t ret = 0;
 	if (!wait_for_read_and_to_continue(r, r->accept_fd)) {
-		R_ERROR(r, "Failed to wait for id %d", r->accept_fd);
+		R_ERROR(r, "Failed to wait for id " R_SOCKET_FMT, r->accept_fd);
 		return -1;
 	}
 
 	socklen_t addr_length = (socklen_t)sizeof(addr);
 	ret = accept(r->accept_fd, (struct sockaddr *)&addr, &addr_length);
 	if (ret < 0) {
-		R_ERROR(r, "accept: %i", ret);
+		R_ERROR(r, "accept: " R_SOCKET_FMT, ret);
 		return ret;
 	}
 
@@ -250,14 +259,14 @@ do_accept(struct r_hub *r)
 	int flags = 1;
 	ret = socket_set_opt(r->accept_fd, flags);
 	if (ret < 0) {
-		R_ERROR(r, "setsockopt: %i", ret);
+		R_ERROR(r, "setsockopt: " R_SOCKET_FMT, ret);
 		socket_close(conn_fd);
 		return ret;
 	}
 
 	r->rc.fd = conn_fd;
 
-	R_INFO(r, "Connection received! %i", r->rc.fd);
+	R_INFO(r, "Connection received! " R_SOCKET_FMT, r->rc.fd);
 
 	return 0;
 }
@@ -280,7 +289,7 @@ read_one(struct r_hub *r, struct r_remote_data *data)
 		ssize_t ret = socket_read(rc->fd, ptr, size, current);
 		if (ret < 0) {
 #if defined(XRT_OS_WINDOWS)
-			RC_ERROR(rc, "recv: %zi", WSAGetLastError());
+			RC_ERROR(rc, "recv: %i", WSAGetLastError());
 #else
 			RC_ERROR(rc, "read: %zi", ret);
 #endif
@@ -548,7 +557,7 @@ r_remote_connection_init(struct r_remote_connection *rc, const char *ip_addr, ui
 	WSADATA wsaData;
 	ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (ret != 0) {
-		RC_ERROR(rc, "Failed to do WSAStartup %ld", WSAGetLastError());
+		RC_ERROR(rc, "Failed to do WSAStartup %i", WSAGetLastError());
 		return ret;
 	}
 #endif
@@ -569,27 +578,30 @@ r_remote_connection_init(struct r_remote_connection *rc, const char *ip_addr, ui
 		goto cleanup;
 	}
 
-	ret = socket_create();
-	if (ret < 0) {
+	sock_fd = socket_create();
 #if defined(XRT_OS_WINDOWS)
-		RC_ERROR(rc, "Failed to create socket %ld", WSAGetLastError());
-#else
-		RC_ERROR(rc, "Failed to create socket: %i", ret);
-#endif
+	if (sock_fd == INVALID_SOCKET) {
+		RC_ERROR(rc, "Failed to create socket %i", WSAGetLastError());
 		goto cleanup;
 	}
+#else
+	if (sock_fd < 0) {
+		RC_ERROR(rc, "Failed to create socket: %i", ret);
+		goto cleanup;
+	}
+#endif
 
-	conn_fd = ret;
+	conn_fd = sock_fd;
 
 	ret = connect(conn_fd, (struct sockaddr *)&addr, sizeof(addr));
 	// If connect operation succeed, both Windows and POSIX returns 0.
 	if (ret != 0) {
 #if defined(XRT_OS_WINDOWS)
-		RC_ERROR(rc, "Failed to connect id %d and addr %s with failure %d", conn_fd, inet_ntoa(addr.sin_addr),
-		         WSAGetLastError());
+		RC_ERROR(rc, "Failed to connect id " R_SOCKET_FMT " and addr %s with failure %d", conn_fd,
+		         inet_ntoa(addr.sin_addr), WSAGetLastError());
 #else
-		RC_ERROR(rc, "Failed to connect id %d and addr %s with failure %d", conn_fd, inet_ntoa(addr.sin_addr),
-		         ret);
+		RC_ERROR(rc, "Failed to connect id " R_SOCKET_FMT " and addr %s with failure %d", conn_fd,
+		         inet_ntoa(addr.sin_addr), ret);
 #endif
 		socket_close(conn_fd);
 		goto cleanup;
