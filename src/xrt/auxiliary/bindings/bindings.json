@@ -1251,6 +1251,12 @@
 			"monado_device": "XRT_DEVICE_ML2_CONTROLLER",
 			"extension": "ML_ml2_controller_interaction",
 			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
