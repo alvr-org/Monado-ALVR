@@ -141,6 +141,70 @@
 			}
 		},
 
+		"/virtual_profiles/oculus/touch_controller_proximity_fb": {
+			"title": "Oculus Touch Controller Proximity Extension",
+			"type": "tracked_controller",
+			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER",
+			"extension": "FB_touch_controller_proximity",
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/trigger": {
+					"type": "button",
+					"localized_name": "Trigger",
+					"components": ["proximity_fb"],
+					"monado_bindings": {
+						"proximity_fb": "XRT_INPUT_TOUCH_TRIGGER_PROXIMITY"
+					}
+				},
+				"/input/thumb_fb": {
+					"type": "button",
+					"localized_name": "Thumb",
+					"components": ["proximity_fb"],
+					"monado_bindings": {
+						"proximity_fb": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
+					}
+				}
+			}
+		},
+
+		"/virtual_profiles/oculus/touch_controller_proximity_1_1": {
+			"title": "Oculus Touch Controller Proximity OpenXR 1.1",
+			"type": "tracked_controller",
+			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER",
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/trigger": {
+					"type": "button",
+					"localized_name": "Trigger",
+					"components": ["proximity"],
+					"monado_bindings": {
+						"proximity": "XRT_INPUT_TOUCH_TRIGGER_PROXIMITY"
+					}
+				},
+				"/input/thumb_resting_surfaces": {
+					"type": "button",
+					"localized_name": "Thumb",
+					"components": ["proximity"],
+					"monado_bindings": {
+						"proximity": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
+					}
+				}
+			}
+		},
+
+
 		"/interaction_profiles/ext/hand_interaction_ext": {
 			"title": "Ext Hand Interaction",
 			"type": "tracked_controller",
@@ -786,7 +850,7 @@
 			"type": "tracked_controller",
 			"steamvr_controllertype": "oculus_touch",
 			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER",
-			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses", "oculus/touch_controller_proximity_fb", "oculus/touch_controller_proximity_1_1"],
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"

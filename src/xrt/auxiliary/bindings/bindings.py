@@ -604,7 +604,7 @@ def generate_bindings_c(file, b):
 
             # @todo Doesn't handle pose yet.
             steamvr_path = component.steamvr_path
-            if component.component_name in ["click", "touch", "force", "value"]:
+            if component.component_name in ["click", "touch", "force", "value", "proximity"]:
                 steamvr_path += "/" + component.component_name
 
             f.write(f'\t\t\t{{ // binding_template {idx}\n')

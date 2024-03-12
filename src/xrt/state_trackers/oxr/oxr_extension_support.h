@@ -487,6 +487,18 @@
 
 
 /*
+ * XR_FB_touch_controller_proximity
+ */
+#if defined(XR_FB_touch_controller_proximity) && defined(XRT_FEATURE_OPENXR_INTERACTION_FB_PROXIMITY)
+#define OXR_HAVE_FB_touch_controller_proximity
+#define OXR_EXTENSION_SUPPORT_FB_touch_controller_proximity(_)                                                         \
+	_(FB_touch_controller_proximity, FB_TOUCH_CONTROLLER_PROXIMITY)
+#else
+#define OXR_EXTENSION_SUPPORT_FB_touch_controller_proximity(_)
+#endif
+
+
+/*
  * XR_HTC_facial_tracking
  */
 #if defined(XR_HTC_facial_tracking) && defined(XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC)
@@ -744,6 +756,7 @@
     OXR_EXTENSION_SUPPORT_FB_composition_layer_depth_test(_) \
     OXR_EXTENSION_SUPPORT_FB_display_refresh_rate(_) \
     OXR_EXTENSION_SUPPORT_FB_passthrough(_) \
+    OXR_EXTENSION_SUPPORT_FB_touch_controller_proximity(_) \
     OXR_EXTENSION_SUPPORT_HTC_facial_tracking(_) \
     OXR_EXTENSION_SUPPORT_ML_ml2_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_MND_headless(_) \

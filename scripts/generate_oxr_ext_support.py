@@ -74,6 +74,7 @@ EXTENSIONS = (
     ['XR_FB_composition_layer_depth_test', 'XRT_FEATURE_OPENXR_LAYER_FB_DEPTH_TEST'],
     ['XR_FB_display_refresh_rate', 'XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE'],
     ['XR_FB_passthrough', 'XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH'],
+    ['XR_FB_touch_controller_proximity', 'XRT_FEATURE_OPENXR_INTERACTION_FB_PROXIMITY'],
     ['XR_HTC_facial_tracking', 'XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC'],
     ['XR_ML_ml2_controller_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_ML2'],
     ['XR_MND_headless', 'XRT_FEATURE_OPENXR_HEADLESS'],
