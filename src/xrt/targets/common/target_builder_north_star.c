@@ -308,7 +308,7 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
 	struct xrt_slam_sinks *hand_sinks = NULL;
-	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
+	struct xrt_hand_masks_sink *masks_sink = slam_sinks ? slam_sinks->hand_masks : NULL;
 
 	struct t_camera_extra_info extra_camera_info = {0};
 

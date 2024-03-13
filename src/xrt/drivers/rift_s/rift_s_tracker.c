@@ -404,7 +404,7 @@ rift_s_tracker_create(struct xrt_tracking_origin *origin,
 	// Initialize hand tracker
 	struct xrt_slam_sinks *hand_sinks = NULL;
 	struct xrt_device *hand_device = NULL;
-	struct xrt_hand_masks_sink *masks_sink = slam_sinks->hand_masks;
+	struct xrt_hand_masks_sink *masks_sink = slam_sinks ? slam_sinks->hand_masks : NULL;
 	if (t->tracking.hand_enabled) {
 		int hand_status = rift_s_create_hand_tracker(t, xfctx, masks_sink, &hand_sinks, &hand_device);
 		if (hand_status != 0 || hand_sinks == NULL || hand_device == NULL) {
