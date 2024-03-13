@@ -1156,6 +1156,12 @@
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_SAMSUNG_ODYSSEY_CONTROLLER",
 			"extension": "EXT_samsung_odyssey_controller",
+			"openxr_version": {
+				"promoted": {
+					"major": "1",
+					"minor": "1"
+				}
+			},
 			"extended_by": [
 				"ext/palm_pose", "grip_surface",
 				"ext/hand_interaction_poses",
