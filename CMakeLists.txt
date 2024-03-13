@@ -451,7 +451,6 @@ list(
 	"HYDRA"
 	"ILLIXR"
 	"NS"
-	"NA"
 	"OHMD"
 	"OPENGLOVES"
 	"PSMV"
@@ -473,6 +472,7 @@ list(
 	"EUROC"
 	"SIMULAVR"
 	"TWRAP"
+	"XREAL_AIR"
 	"STEAMVR_LIGHTHOUSE"
 	)
 
