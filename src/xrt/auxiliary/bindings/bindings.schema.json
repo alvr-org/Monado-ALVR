@@ -35,7 +35,16 @@
                 "haptic",
                 "force",
                 "pose",
-                "ready_ext"
+                "ready_ext",
+                "curl",
+                "curl_fb",
+                "curl_meta",
+                "slide",
+                "slide_fb",
+                "slide_meta",
+                "proximity",
+                "proximity_fb",
+                "proximity_meta"
             ]
         },
         "subActionPathName": {
@@ -98,6 +107,33 @@
                     "$ref": "#/definitions/monadoBindingDefine"
                 },
                 "ready_ext": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "curl": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "curl_fb": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "curl_meta": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "slide": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "slide_fb": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "slide_meta": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "proximity": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "proximity_fb": {
+                    "$ref": "#/definitions/monadoBindingDefine"
+                },
+                "proximity_meta": {
                     "$ref": "#/definitions/monadoBindingDefine"
                 }
             }
