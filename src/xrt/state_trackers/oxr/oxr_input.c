@@ -1125,7 +1125,7 @@ oxr_action_cache_update(struct oxr_logger *log,
 	/* a cache can only have outputs or inputs, not both */
 	if (cache->output_count > 0) {
 		cache->current.active = true;
-		if (cache->stop_output_time < time) {
+		if (cache->stop_output_time > 0 && cache->stop_output_time < time) {
 			oxr_action_cache_stop_output(log, sess, cache);
 		}
 	} else if (cache->input_count > 0) {
