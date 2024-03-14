@@ -521,6 +521,17 @@
 
 
 /*
+ * XR_META_touch_controller_plus
+ */
+#if defined(XR_META_touch_controller_plus) && defined(XRT_FEATURE_OPENXR_INTERACTION_TOUCH_PLUS)
+#define OXR_HAVE_META_touch_controller_plus
+#define OXR_EXTENSION_SUPPORT_META_touch_controller_plus(_) _(META_touch_controller_plus, META_TOUCH_CONTROLLER_PLUS)
+#else
+#define OXR_EXTENSION_SUPPORT_META_touch_controller_plus(_)
+#endif
+
+
+/*
  * XR_ML_ml2_controller_interaction
  */
 #if defined(XR_ML_ml2_controller_interaction) && defined(XRT_FEATURE_OPENXR_INTERACTION_ML2)
@@ -770,6 +781,7 @@
     OXR_EXTENSION_SUPPORT_FB_touch_controller_pro(_) \
     OXR_EXTENSION_SUPPORT_FB_touch_controller_proximity(_) \
     OXR_EXTENSION_SUPPORT_HTC_facial_tracking(_) \
+    OXR_EXTENSION_SUPPORT_META_touch_controller_plus(_) \
     OXR_EXTENSION_SUPPORT_ML_ml2_controller_interaction(_) \
     OXR_EXTENSION_SUPPORT_MND_headless(_) \
     OXR_EXTENSION_SUPPORT_MND_swapchain_usage_input_attachment_bit(_) \
