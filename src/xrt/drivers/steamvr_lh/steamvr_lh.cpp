@@ -149,6 +149,7 @@ Context::setup_hmd(const char *serial, vr::ITrackedDeviceServerDriver *driver)
 #undef VERIFY
 
 	auto hmd_parts = std::make_unique<HmdDevice::Parts>();
+	hmd_parts->base.view_count = 2;
 	for (size_t idx = 0; idx < 2; ++idx) {
 		vr::EVREye eye = (idx == 0) ? vr::Eye_Left : vr::Eye_Right;
 		xrt_view &view = hmd_parts->base.views[idx];
