@@ -1,3 +1,8 @@
+---
+- mr.2086
+- mr.2175
+---
+
 - xrt_layer_type: Renamed the `XRT_LAYER_STEREO_PROJECTION` to `XRT_LAYER_PROJECTION` and `XRT_LAYER_STEREO_PROJECTION_DEPTH` to `XRT_LAYER_PROJECTION_DEPTH` in the `xrt_layer_type` enumeration to support both mono and stereo projection layers. This change provides a more inclusive and versatile categorization of projection layers within the XRT framework, accommodating a wider range of use cases.
 
 - multi_layer_entry: Updated the array length of xscs within multi_layer_entry from 4 to `2 * XRT_MAX_VIEWS` to accommodate a variable number of views.
