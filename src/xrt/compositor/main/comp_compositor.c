@@ -964,6 +964,11 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 
 	COMP_DEBUG(c, "Doing init %p", (void *)c);
 
+	if (xdev->hmd->view_count == 0) {
+		U_LOG_E("Bug detected: HMD \"%s\" does not set xdev->hmd.view_count. Value must be > 0!", xdev->str);
+		assert(xdev->hmd->view_count > 0);
+	}
+
 	// Do this as early as possible.
 	comp_base_init(&c->base);
 
