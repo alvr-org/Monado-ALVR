@@ -93,6 +93,17 @@ class Context : public ObjectWrapperBase {
     pm::PackageManager getPackageManager();
 
     /*!
+     * Wrapper for the getPackageName method
+     *
+     * Java prototype:
+     * `public abstract android.content.Context getPackageName();`
+     *
+     * JNI signature: ()Ljava/lang/String;
+     *
+     */
+    std::string getPackageName();
+
+    /*!
      * Wrapper for the getContentResolver method
      *
      * Java prototype:
@@ -207,6 +218,7 @@ class Context : public ObjectWrapperBase {
         impl::StaticFieldId<std::string> DISPLAY_SERVICE;
         impl::StaticFieldId<std::string> WINDOW_SERVICE;
         jni::method_t getPackageManager;
+        jni::method_t getPackageName;
         jni::method_t getContentResolver;
         jni::method_t getApplicationContext;
         jni::method_t getClassLoader;

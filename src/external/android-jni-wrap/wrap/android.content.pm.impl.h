@@ -51,6 +51,19 @@ inline std::string PackageInfo::getPackageName() const {
     return get(Meta::data().packageName, object());
 }
 
+inline std::string Signature::toCharsString() const {
+    assert(!isNull());
+    return object().call<std::string>(Meta::data().toCharsString);
+}
+
+inline Signature PackageInfo::getSignature() const {
+    assert(!isNull());
+    jobject signatures_obj = jni::env()->GetObjectField(object().getHandle(), Meta::data().signaturesId);
+    jobjectArray signatures_array = reinterpret_cast<jobjectArray>(signatures_obj);
+    jobject signature_obj = jni::env()->GetObjectArrayElement(signatures_array, 0);
+    return Signature(signature_obj);
+}
+
 inline ServiceInfo ResolveInfo::getServiceInfo() const {
     assert(!isNull());
     return get(Meta::data().serviceInfo, object());

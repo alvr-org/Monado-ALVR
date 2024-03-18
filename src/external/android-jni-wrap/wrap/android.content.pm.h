@@ -17,6 +17,7 @@ namespace android::content::pm {
 class ApplicationInfo;
 class PackageInfo;
 class ServiceInfo;
+class Signature;
 } // namespace android::content::pm
 
 namespace android::os {
@@ -216,6 +217,46 @@ class ApplicationInfo : public PackageItemInfo {
 };
 
 /*!
+ * Wrapper for android.content.pm.Signature objects.
+ */
+class Signature : public ObjectWrapperBase {
+  public:
+    using ObjectWrapperBase::ObjectWrapperBase;
+    static constexpr const char *getTypeName() noexcept {
+        return "android/content/pm/Signature";
+    }
+
+    /*!
+     * Wrapper for the toCharsString method
+     *
+     * Java prototype:
+     * `public abstract android.content.pm.Signature toCharsString();`
+     *
+     * JNI signature: Ljava/lang/String;
+     *
+     */
+    std::string toCharsString() const;
+
+    /*!
+     * Class metadata
+     */
+    struct Meta : public MetaBaseDroppable {
+        jni::method_t toCharsString;
+
+        /*!
+         * Singleton accessor
+         */
+        static Meta &data() {
+            static Meta instance{};
+            return instance;
+        }
+
+      private:
+        Meta();
+    };
+};
+
+/*!
  * Wrapper for android.content.pm.PackageInfo objects.
  */
 class PackageInfo : public ObjectWrapperBase {
@@ -248,11 +289,23 @@ class PackageInfo : public ObjectWrapperBase {
     std::string getPackageName() const;
 
     /*!
+     * Getter for the packageName field value
+     *
+     * Java prototype:
+     * `public android.content.pm.Signature signatures;`
+     *
+     * JNI signature: [Landroid/content/pm/Signature;
+     *
+     */
+    Signature getSignature() const;
+
+    /*!
      * Class metadata
      */
     struct Meta : public MetaBaseDroppable {
         impl::WrappedFieldId<ApplicationInfo> applicationInfo;
         impl::FieldId<std::string> packageName;
+        jni::field_t signaturesId;
 
         /*!
          * Singleton accessor

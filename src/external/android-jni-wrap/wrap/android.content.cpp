@@ -12,6 +12,8 @@ Context::Meta::Meta(bool deferDrop)
       WINDOW_SERVICE(classRef(), "WINDOW_SERVICE"),
       getPackageManager(classRef().getMethod(
           "getPackageManager", "()Landroid/content/pm/PackageManager;")),
+      getPackageName(classRef().getMethod(
+          "getPackageName", "()Ljava/lang/String;")),
       getContentResolver(classRef().getMethod(
           "getContentResolver", "()Landroid/content/ContentResolver;")),
       getApplicationContext(classRef().getMethod(

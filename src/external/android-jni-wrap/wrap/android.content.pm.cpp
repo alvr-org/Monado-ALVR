@@ -12,6 +12,12 @@ PackageItemInfo::Meta::Meta()
       packageName(classRef(), "packageName") {
     MetaBaseDroppable::dropClassRef();
 }
+Signature::Meta::Meta()
+    : MetaBaseDroppable(Signature::getTypeName()),
+      toCharsString(classRef().getMethod(
+          "toCharsString", "()Ljava/lang/String;")) {
+    MetaBaseDroppable::dropClassRef();
+}
 ComponentInfo::Meta::Meta()
     : MetaBaseDroppable(ComponentInfo::getTypeName()),
       applicationInfo(classRef(), "applicationInfo") {
@@ -29,7 +35,9 @@ ApplicationInfo::Meta::Meta()
 PackageInfo::Meta::Meta()
     : MetaBaseDroppable(PackageInfo::getTypeName()),
       applicationInfo(classRef(), "applicationInfo"),
-      packageName(classRef(), "packageName") {
+      packageName(classRef(), "packageName"),
+      signaturesId(classRef().getField("signatures", 
+        "[Landroid/content/pm/Signature;")) {
     MetaBaseDroppable::dropClassRef();
 }
 ResolveInfo::Meta::Meta()

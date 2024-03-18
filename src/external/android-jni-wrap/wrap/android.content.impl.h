@@ -36,6 +36,12 @@ inline pm::PackageManager Context::getPackageManager() {
         object().call<jni::Object>(Meta::data().getPackageManager));
 }
 
+inline std::string Context::getPackageName() {
+    assert(!isNull());
+    return std::string(
+        object().call<std::string>(Meta::data().getPackageName));
+}
+
 inline ContentResolver Context::getContentResolver() const {
     assert(!isNull());
     return ContentResolver(
