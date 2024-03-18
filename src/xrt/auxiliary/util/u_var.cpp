@@ -14,6 +14,7 @@
 #include <sstream>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 
 
 namespace xrt::auxiliary::util {
@@ -54,6 +55,7 @@ class Tracker
 public:
 	std::unordered_map<std::string, uint32_t> counters = {};
 	std::unordered_map<ptrdiff_t, Obj> map = {};
+	std::mutex mutex = {};
 	bool on = false;
 	bool tested = false;
 
@@ -130,6 +132,8 @@ u_var_add_root(void *root, const char *c_name, bool suffix_with_number)
 		return;
 	}
 
+	std::unique_lock<std::mutex> lock(gTracker.mutex);
+
 	auto name = std::string(c_name);
 	auto raw_name = name;
 	uint32_t count = 0; // Zero means no number.
@@ -157,6 +161,8 @@ u_var_remove_root(void *root)
 		return;
 	}
 
+	std::unique_lock<std::mutex> lock(gTracker.mutex);
+
 	auto s = gTracker.map.find((ptrdiff_t)root);
 	if (s == gTracker.map.end()) {
 		return;
@@ -171,6 +177,8 @@ u_var_visit(u_var_root_cb enter_cb, u_var_root_cb exit_cb, u_var_elm_cb elem_cb,
 	if (!get_on()) {
 		return;
 	}
+
+	std::unique_lock<std::mutex> lock(gTracker.mutex);
 
 	std::vector<Obj *> tmp;
 	tmp.reserve(gTracker.map.size());
