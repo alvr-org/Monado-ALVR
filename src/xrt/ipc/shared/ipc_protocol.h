@@ -133,6 +133,7 @@ struct ipc_shared_device
 	bool hand_tracking_supported;
 	bool eye_gaze_supported;
 	bool face_tracking_supported;
+	bool body_tracking_supported;
 	bool force_feedback_supported;
 	bool form_factor_check_supported;
 	bool stage_supported;
@@ -230,6 +231,7 @@ struct ipc_shared_memory
 		int32_t head;
 		int32_t eyes;
 		int32_t face;
+		int32_t body;
 
 		struct
 		{

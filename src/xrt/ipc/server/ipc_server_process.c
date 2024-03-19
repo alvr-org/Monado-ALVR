@@ -354,6 +354,7 @@ init_shm(struct ipc_server *s)
 		isdev->form_factor_check_supported = xdev->form_factor_check_supported;
 		isdev->eye_gaze_supported = xdev->eye_gaze_supported;
 		isdev->face_tracking_supported = xdev->face_tracking_supported;
+		isdev->body_tracking_supported = xdev->body_tracking_supported;
 		isdev->stage_supported = xdev->stage_supported;
 
 		// Is this a HMD?
@@ -434,6 +435,7 @@ init_shm(struct ipc_server *s)
 	ism->roles.head = find_xdev_index(s, s->xsysd->static_roles.head);
 	ism->roles.eyes = find_xdev_index(s, s->xsysd->static_roles.eyes);
 	ism->roles.face = find_xdev_index(s, s->xsysd->static_roles.face);
+	ism->roles.body = find_xdev_index(s, s->xsysd->static_roles.body);
 	ism->roles.hand_tracking.left = find_xdev_index(s, s->xsysd->static_roles.hand_tracking.left);
 	ism->roles.hand_tracking.right = find_xdev_index(s, s->xsysd->static_roles.hand_tracking.right);
 

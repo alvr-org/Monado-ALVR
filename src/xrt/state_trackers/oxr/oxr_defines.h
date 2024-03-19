@@ -29,6 +29,8 @@
 #define OXR_XR_DEBUG_PASSTHROUGH    	(*(uint64_t *)"oxrpass\0")
 #define OXR_XR_DEBUG_PASSTHROUGH_LAYER  (*(uint64_t *)"oxrptla\0")
 #define OXR_XR_DEBUG_FTRACKER  (*(uint64_t *)"oxrftra\0")
+// body tracker
+#define OXR_XR_DEBUG_BTRACKER  (*(uint64_t *)"oxrbtra\0")
 // clang-format on
 
 /*!

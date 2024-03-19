@@ -1083,6 +1083,9 @@ oxr_input_combine_input(struct oxr_session *sess,
 		case XRT_INPUT_TYPE_FACE_TRACKING:
 			// shouldn't be possible to get here
 			break;
+		case XRT_INPUT_TYPE_BODY_TRACKING:
+			// shouldn't be possible to get here
+			break;
 		}
 	}
 

@@ -259,6 +259,12 @@ struct xrt_system_devices
 		struct xrt_device *face;
 
 		/*!
+		 * An observing pointer to the device providing body tracking
+		 * (optional).
+		 */
+		struct xrt_device *body;
+
+		/*!
 		 * Devices providing optical (or otherwise more directly
 		 * measured than from controller estimation) hand tracking.
 		 */

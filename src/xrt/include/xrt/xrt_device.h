@@ -268,6 +268,7 @@ struct xrt_device
 	bool form_factor_check_supported;
 	bool stage_supported;
 	bool face_tracking_supported;
+	bool body_tracking_supported;
 
 	/*
 	 *
@@ -353,6 +354,37 @@ struct xrt_device
 	xrt_result_t (*get_face_tracking)(struct xrt_device *xdev,
 	                                  enum xrt_input_name facial_expression_type,
 	                                  struct xrt_facial_expression_set *out_value);
+
+	/*!
+	 * @brief Get the body skeleton in T-pose, used to query the skeleton hierarchy, scale, proportions etc
+	 *
+	 * @param[in] xdev                    The device.
+	 * @param[in] body_tracking_type      The body joint set type (XR_FB_body_tracking,
+	 * XR_META_body_tracking_full_body, etc).
+	 * @param[in] out_value               The body skeleton hierarchy/properties.
+	 *
+	 * @see xrt_input_name
+	 */
+	xrt_result_t (*get_body_skeleton)(struct xrt_device *xdev,
+	                                  enum xrt_input_name body_tracking_type,
+	                                  struct xrt_body_skeleton *out_value);
+
+	/*!
+	 * @brief Get the joint locations for a body tracker
+	 *
+	 * @param[in] xdev                    The device.
+	 * @param[in] body_tracking_type      The body joint set type (XR_FB_body_tracking,
+	 * XR_META_body_tracking_full_body, etc).
+	 * @param[in] desired_timestamp_ns    If the device can predict or has a history
+	 *                                    of locations, this is when the caller
+	 * @param[in] out_value               Set of body joint locations & properties.
+	 *
+	 * @see xrt_input_name
+	 */
+	xrt_result_t (*get_body_joints)(struct xrt_device *xdev,
+	                                enum xrt_input_name body_tracking_type,
+	                                uint64_t desired_timestamp_ns,
+	                                struct xrt_body_joint_set *out_value);
 
 	/*!
 	 * Set a output value.
@@ -537,6 +569,43 @@ xrt_device_get_face_tracking(struct xrt_device *xdev,
                              struct xrt_facial_expression_set *out_value)
 {
 	return xdev->get_face_tracking(xdev, facial_expression_type, out_value);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_body_skeleton.
+ *
+ * @copydoc xrt_device::get_body_skeleton
+ *
+ * @public @memberof xrt_device
+ */
+static inline xrt_result_t
+xrt_device_get_body_skeleton(struct xrt_device *xdev,
+                             enum xrt_input_name body_tracking_type,
+                             struct xrt_body_skeleton *out_value)
+{
+	if (xdev->get_body_skeleton == NULL) {
+		return XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED;
+	}
+	return xdev->get_body_skeleton(xdev, body_tracking_type, out_value);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_body_joints.
+ *
+ * @copydoc xrt_device::get_body_joints
+ *
+ * @public @memberof xrt_device
+ */
+static inline xrt_result_t
+xrt_device_get_body_joints(struct xrt_device *xdev,
+                           enum xrt_input_name body_tracking_type,
+                           uint64_t desired_timestamp_ns,
+                           struct xrt_body_joint_set *out_value)
+{
+	if (xdev->get_body_joints == NULL) {
+		return XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED;
+	}
+	return xdev->get_body_joints(xdev, body_tracking_type, desired_timestamp_ns, out_value);
 }
 
 /*!

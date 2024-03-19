@@ -37,6 +37,7 @@ get_xrt_input_type_short_str(enum xrt_input_type type)
 	case XRT_INPUT_TYPE_POSE: return "POSE";
 	case XRT_INPUT_TYPE_HAND_TRACKING: return "HAND_TRACKING";
 	case XRT_INPUT_TYPE_FACE_TRACKING: return "FACE_TRACKING";
+	case XRT_INPUT_TYPE_BODY_TRACKING: return "BODY_TRACKING";
 	default: return "<UNKNOWN>";
 	}
 }

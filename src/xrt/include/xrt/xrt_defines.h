@@ -772,7 +772,8 @@ enum xrt_device_type
 	XRT_DEVICE_TYPE_GENERIC_TRACKER,
 	XRT_DEVICE_TYPE_HAND_TRACKER,
 	XRT_DEVICE_TYPE_EYE_TRACKER,
-	XRT_DEVICE_TYPE_FACE_TRACKER
+	XRT_DEVICE_TYPE_FACE_TRACKER,
+	XRT_DEVICE_TYPE_BODY_TRACKER,
 };
 
 /*!
@@ -798,7 +799,9 @@ enum xrt_input_type
 	//! A tracked hand
 	XRT_INPUT_TYPE_HAND_TRACKING         = 0x06,
 	//! A tracked face
-	XRT_INPUT_TYPE_FACE_TRACKING         = 0x07
+	XRT_INPUT_TYPE_FACE_TRACKING         = 0x07,
+	//! A tracked body
+	XRT_INPUT_TYPE_BODY_TRACKING         = 0x08,
 	// clang-format on
 };
 
@@ -1118,7 +1121,9 @@ enum xrt_input_type
 	_(XRT_INPUT_GENERIC_FACE_TRACKING                  , XRT_INPUT_NAME(0x0600, FACE_TRACKING)) \
 \
 	_(XRT_INPUT_HTC_EYE_FACE_TRACKING                  , XRT_INPUT_NAME(0x0601, FACE_TRACKING)) \
-	_(XRT_INPUT_HTC_LIP_FACE_TRACKING                  , XRT_INPUT_NAME(0x0602, FACE_TRACKING))
+	_(XRT_INPUT_HTC_LIP_FACE_TRACKING                  , XRT_INPUT_NAME(0x0602, FACE_TRACKING)) \
+\
+	_(XRT_INPUT_GENERIC_BODY_TRACKING                  , XRT_INPUT_NAME(0x0700, BODY_TRACKING))
 
 // clang-format on
 
@@ -1377,6 +1382,22 @@ struct xrt_facial_expression_set
 		struct xrt_facial_base_expression_set_htc base_expression_set_htc;
 		struct xrt_facial_eye_expression_set_htc eye_expression_set_htc;
 		struct xrt_facial_lip_expression_set_htc lip_expression_set_htc;
+	};
+};
+
+// structure is a container to represent the body skeleton in T-pose including the joint hierarchy,
+// can have info such as skeleton scale and proportions
+struct xrt_body_skeleton
+{
+	union {
+		struct xrt_body_empty_skeleton *placeholder;
+	};
+};
+
+struct xrt_body_joint_set
+{
+	union {
+		struct xrt_body_joint_empty_set *placeholder;
 	};
 };
 

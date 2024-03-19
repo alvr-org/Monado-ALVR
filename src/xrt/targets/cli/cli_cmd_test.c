@@ -134,6 +134,7 @@ cli_cmd_test(int argc, const char **argv)
 	PRINT_ROLE(head, "               ");
 	PRINT_ROLE(eyes, "               ");
 	PRINT_ROLE(face, "               ");
+	PRINT_ROLE(body, "               ");
 	PRINT_DYNR(left, "               ");
 	PRINT_DYNR(right, "              ");
 	PRINT_DYNR(gamepad, "            ");

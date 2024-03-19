@@ -682,6 +682,7 @@ public:
 			//! @todo how to handle poses?
 		case XRT_INPUT_TYPE_HAND_TRACKING:
 		case XRT_INPUT_TYPE_FACE_TRACKING:
+		case XRT_INPUT_TYPE_BODY_TRACKING:
 		case XRT_INPUT_TYPE_VEC3_MINUS_ONE_TO_ONE: break;
 		}
 	}
