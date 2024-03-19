@@ -142,7 +142,7 @@ try_to_grant_privilege(enum u_logging_level log_level, HANDLE hProcess, LPCTSTR 
 	if (check_privilege_on_process(hProcess, lpszPrivilege, &bHas)) {
 		LOG_D("%s: %s", lpszPrivilege, bHas ? "true" : "false");
 		if (bHas) {
-			LOG_I("Already had privilege '%s'.");
+			LOG_I("Already had privilege '%s'.", lpszPrivilege);
 			return true;
 		}
 	}
