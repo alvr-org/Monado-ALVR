@@ -53,11 +53,18 @@ m_pose_is_identity(const struct xrt_pose *pose)
  *
  */
 
+/*!
+ * Create an xrt_space_relation from a pose. If @p set_tracked is false, only orientation and position valid flags are
+ * set.
+ */
 static inline void
-m_space_relation_from_pose(const struct xrt_pose *pose, struct xrt_space_relation *out_relation)
+m_space_relation_from_pose(const struct xrt_pose *pose, bool set_tracked, struct xrt_space_relation *out_relation)
 {
-	enum xrt_space_relation_flags flags = (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
-	                                                                      XRT_SPACE_RELATION_POSITION_VALID_BIT);
+	enum xrt_space_relation_flags flags =
+	    set_tracked ? XRT_SPACE_RELATION_BITMASK_ALL
+	                : (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
+	                                                  XRT_SPACE_RELATION_POSITION_VALID_BIT);
+
 	struct xrt_space_relation relation = {
 	    flags,
 	    *pose,
@@ -68,12 +75,15 @@ m_space_relation_from_pose(const struct xrt_pose *pose, struct xrt_space_relatio
 	*out_relation = relation;
 }
 
+/*!
+ * Create an xrt_space_relation with only orientation and position valid flags.
+ */
 static inline void
 m_space_relation_ident(struct xrt_space_relation *out_relation)
 {
 	struct xrt_pose identity = XRT_POSE_IDENTITY;
 
-	m_space_relation_from_pose(&identity, out_relation);
+	m_space_relation_from_pose(&identity, false, out_relation);
 }
 
 void
@@ -146,7 +156,11 @@ m_relation_chain_push_inverted_relation(struct xrt_relation_chain *xrc, const st
 }
 
 /*!
- * Append a new pose as a relation without velocity
+ * Append a new pose as a fully tracked relation.
+ * This follows OpenXR conventions where a space that is purely an offset to another space is fully tracked in that
+ * space.
+ * Conceptually, a pose is only considered not fully tracked when it is related to an xrt_space_relation that is not
+ * fully tracked.
  *
  * @public @memberof xrt_relation_chain
  */
@@ -154,7 +168,7 @@ static inline void
 m_relation_chain_push_pose(struct xrt_relation_chain *xrc, const struct xrt_pose *pose)
 {
 	struct xrt_space_relation relation;
-	m_space_relation_from_pose(pose, &relation);
+	m_space_relation_from_pose(pose, true, &relation);
 	m_relation_chain_push_relation(xrc, &relation);
 }
 

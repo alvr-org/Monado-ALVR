@@ -133,7 +133,15 @@ apply_relation(const struct xrt_space_relation *a,
 	flags af = get_flags(a);
 	flags bf = get_flags(b);
 
+	// If either of the relations does not have a valid or tracked flag, the entire chain loses that flag.
 	flags nf = {};
+	nf.has_orientation = af.has_orientation && bf.has_orientation;
+	nf.has_position = af.has_position && bf.has_position;
+	nf.has_tracked_orientation = af.has_tracked_orientation && bf.has_tracked_orientation;
+	nf.has_tracked_position = af.has_tracked_position && bf.has_tracked_position;
+	nf.has_linear_velocity = af.has_linear_velocity && bf.has_linear_velocity;
+	nf.has_angular_velocity = af.has_angular_velocity && bf.has_angular_velocity;
+
 	struct xrt_pose pose = XRT_POSE_IDENTITY;
 	struct xrt_vec3 linear_velocity = XRT_VEC3_ZERO;
 	struct xrt_vec3 angular_velocity = XRT_VEC3_ZERO;
@@ -146,11 +154,13 @@ apply_relation(const struct xrt_space_relation *a,
 	struct xrt_pose body_pose = XRT_POSE_IDENTITY; // aka valid_a_pose
 	struct xrt_pose base_pose = XRT_POSE_IDENTITY; // aka valid_b_pose
 
-	// Only valid poses handled in chain. Flags are determined later.
+	// If either orientation or position component is not valid, make that component identity so that transforms
+	// work. The flags of the result are determined in nf and not taken from the result of the transform.
 	make_valid_pose(af, &a->pose, &body_pose);
 	make_valid_pose(bf, &b->pose, &base_pose);
 
-	// Pose will be undefined if we don't have at least rotation.
+	// Not already valid poses needed to be made valid because the transoformed pose would be undefined otherwise
+	// and we still want e.g. valid positions.
 	math_pose_transform(&base_pose, &body_pose, &pose);
 
 
@@ -158,8 +168,8 @@ apply_relation(const struct xrt_space_relation *a,
 	 * Linear velocity.
 	 */
 
-	if (af.has_linear_velocity) {
-		nf.has_linear_velocity = true;
+	// We only need to bother with velocities if we know that we will pass them on.
+	if (nf.has_linear_velocity) {
 		struct xrt_vec3 tmp = XRT_VEC3_ZERO;
 
 		math_quat_rotate_vec3(&base_pose.orientation, // Base rotation
@@ -167,10 +177,6 @@ apply_relation(const struct xrt_space_relation *a,
 		                      &tmp);                  // Output
 
 		linear_velocity += tmp;
-	}
-
-	if (bf.has_linear_velocity) {
-		nf.has_linear_velocity = true;
 		linear_velocity += b->linear_velocity;
 	}
 
@@ -179,8 +185,7 @@ apply_relation(const struct xrt_space_relation *a,
 	 * Angular velocity.
 	 */
 
-	if (af.has_angular_velocity) {
-		nf.has_angular_velocity = true;
+	if (nf.has_angular_velocity) {
 		struct xrt_vec3 tmp = XRT_VEC3_ZERO;
 
 		math_quat_rotate_derivative(&base_pose.orientation, // Base rotation
@@ -188,11 +193,6 @@ apply_relation(const struct xrt_space_relation *a,
 		                            &tmp);                  // Output
 
 		angular_velocity += tmp;
-	}
-
-	if (bf.has_angular_velocity) {
-		nf.has_angular_velocity = true;
-		nf.has_linear_velocity = true;
 		angular_velocity += b->angular_velocity;
 
 		// handle tangential velocity AKA "lever arm" effect on velocity:
@@ -223,30 +223,16 @@ apply_relation(const struct xrt_space_relation *a,
 
 	int new_flags = 0;
 
-	/*
-	 * Make sure to not drop a space relation, even if only either position
-	 * or orintation is valid. We should not be getting here if neither
-	 * position and orintation is valid.
-	 *
-	 * When position is valid, always set orientation valid to "upgrade"
-	 * poses with valid position but invalid orientation to fully valid
-	 * pose using identity quat, @see make_valid_pose.
-	 *
-	 * When orientation is valid, always set position valid to "upgrade"
-	 * poses with valid orientation but invalid position to fully valid
-	 * pose using identity vec3, @see make_valid_pose.
-	 */
-	assert(af.has_position || af.has_orientation);
-	assert(bf.has_position || bf.has_orientation);
-
-	new_flags |= XRT_SPACE_RELATION_POSITION_VALID_BIT;
-	new_flags |= XRT_SPACE_RELATION_ORIENTATION_VALID_BIT;
-
-	//! @todo combining these flags with OR is probably okay for now
-	if (af.has_tracked_position || bf.has_tracked_position) {
+	if (nf.has_orientation) {
+		new_flags |= XRT_SPACE_RELATION_ORIENTATION_VALID_BIT;
+	}
+	if (nf.has_position) {
+		new_flags |= XRT_SPACE_RELATION_POSITION_VALID_BIT;
+	}
+	if (nf.has_tracked_position) {
 		new_flags |= XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
 	}
-	if (af.has_tracked_orientation || bf.has_tracked_orientation) {
+	if (nf.has_tracked_orientation) {
 		new_flags |= XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
 	}
 	if (nf.has_linear_velocity) {
