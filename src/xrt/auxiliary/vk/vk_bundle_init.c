@@ -1024,8 +1024,8 @@ filter_device_features(struct vk_bundle *vk,
 #endif
 
 #ifdef VK_KHR_synchronization2
-	VkPhysicalDeviceSynchronization2Features synchronization_2_info = {
-	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+	VkPhysicalDeviceSynchronization2FeaturesKHR synchronization_2_info = {
+	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
 	    .pNext = NULL,
 	};
 #endif
