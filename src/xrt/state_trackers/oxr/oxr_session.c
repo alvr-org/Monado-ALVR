@@ -232,6 +232,9 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 #ifdef OXR_HAVE_HTC_facial_tracking
 		    .htc_facial_tracking_enabled = extensions->HTC_facial_tracking,
 #endif
+#ifdef OXR_HAVE_FB_body_tracking
+		    .fb_body_tracking_enabled = extensions->FB_body_tracking,
+#endif
 		};
 
 		xrt_result_t xret = xrt_comp_begin_session(xc, &begin_session_info);
@@ -1262,6 +1265,42 @@ oxr_session_hand_joints(struct oxr_logger *log,
 			v->angularVelocity.z = result.angular_velocity.z;
 		}
 	}
+
+	return XR_SUCCESS;
+}
+
+/*
+ * Gets the body pose in the base space.
+ */
+XrResult
+oxr_get_base_body_pose(struct oxr_logger *log,
+                       const struct xrt_body_joint_set *body_joint_set,
+                       struct oxr_space *base_spc,
+                       struct xrt_device *body_xdev,
+                       XrTime at_time,
+                       struct xrt_space_relation *out_base_body)
+{
+	const struct xrt_space_relation space_relation_zero = XRT_SPACE_RELATION_ZERO;
+	*out_base_body = space_relation_zero;
+
+	// The body pose is returned in the xdev's space.
+	const struct xrt_space_relation *T_xdev_body = &body_joint_set->body_pose;
+
+	// Get the xdev's pose in the base space.
+	struct xrt_space_relation T_base_xdev = XRT_SPACE_RELATION_ZERO;
+
+	XrResult ret = oxr_space_locate_device(log, body_xdev, base_spc, at_time, &T_base_xdev);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+	if (T_base_xdev.relation_flags == 0) {
+		return XR_SUCCESS;
+	}
+
+	struct xrt_relation_chain xrc = {0};
+	m_relation_chain_push_relation(&xrc, T_xdev_body);
+	m_relation_chain_push_relation(&xrc, &T_base_xdev);
+	m_relation_chain_resolve(&xrc, out_base_body);
 
 	return XR_SUCCESS;
 }

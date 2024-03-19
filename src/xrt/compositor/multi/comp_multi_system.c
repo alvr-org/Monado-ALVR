@@ -381,6 +381,7 @@ update_session_state_locked(struct multi_system_compositor *msc)
 	    .ext_eye_gaze_interaction_enabled = false,
 	    .ext_hand_interaction_enabled = false,
 	    .htc_facial_tracking_enabled = false,
+	    .fb_body_tracking_enabled = false,
 	};
 
 	switch (msc->sessions.state) {

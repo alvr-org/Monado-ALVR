@@ -74,6 +74,8 @@ extern "C" {
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_passthrough_layer, PASSTHROUGH_LAYER, name, new_thing->sess->sys->inst)
 #define OXR_VERIFY_FACE_TRACKER_HTC_AND_INIT_LOG(log, thing, new_thing, name) \
 	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_facial_tracker_htc, FTRACKER, name, new_thing->sess->sys->inst)
+#define OXR_VERIFY_BODY_TRACKER_FB_AND_INIT_LOG(log, thing, new_thing, name) \
+	OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_body_tracker_fb, BTRACKER, name, new_thing->sess->sys->inst)
 // clang-format on
 
 #define OXR_VERIFY_INSTANCE_NOT_NULL(log, arg, new_arg) OXR_VERIFY_SET(log, arg, new_arg, oxr_instance, INSTANCE);

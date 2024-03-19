@@ -287,6 +287,9 @@ oxr_instance_create(struct oxr_logger *log,
 #ifdef OXR_HAVE_HTC_facial_tracking
 	    .htc_facial_tracking_enabled = extensions->HTC_facial_tracking,
 #endif
+#ifdef OXR_HAVE_FB_body_tracking
+	    .fb_body_tracking_enabled = extensions->FB_body_tracking,
+#endif
 	};
 	snprintf(i_info.application_name, sizeof(inst->xinst->instance_info.application_name), "%s",
 	         createInfo->applicationInfo.applicationName);

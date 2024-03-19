@@ -312,6 +312,13 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrGetFacialExpressionsHTC, HTC_facial_tracking);
 #endif
 
+#ifdef OXR_HAVE_FB_body_tracking
+	ENTRY_IF_EXT(xrCreateBodyTrackerFB, FB_body_tracking);
+	ENTRY_IF_EXT(xrDestroyBodyTrackerFB, FB_body_tracking);
+	ENTRY_IF_EXT(xrGetBodySkeletonFB, FB_body_tracking);
+	ENTRY_IF_EXT(xrLocateBodyJointsFB, FB_body_tracking);
+#endif
+
 	/*
 	 * Not logging here because there's no need to loudly advertise
 	 * which extensions the loader knows about (it calls this on

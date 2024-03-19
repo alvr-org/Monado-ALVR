@@ -108,6 +108,10 @@ if(XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH)
 	target_sources(st_oxr PRIVATE oxr_api_passthrough.c oxr_passthrough.c)
 endif()
 
+if(XRT_FEATURE_OPENXR_BODY_TRACKING_FB)
+	target_sources(st_oxr PRIVATE oxr_api_body_tracking.c oxr_body_tracking.c)
+endif()
+
 target_link_libraries(
 	st_oxr
 	PRIVATE
