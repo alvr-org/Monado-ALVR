@@ -50,7 +50,7 @@ enum xrt_session_event_type
 	//! The session has been lost.
 	XRT_SESSION_EVENT_LOST = 4,
 
-	//! The referesh rate of session (compositor) has changed.
+	//! The refresh rate of session (compositor) has changed.
 	XRT_SESSION_EVENT_DISPLAY_REFRESH_RATE_CHANGE = 5,
 
 	//! A reference space for this session has a pending change.
@@ -225,7 +225,7 @@ xrt_session_event_sink_push(struct xrt_session_event_sink *xses, const union xrt
  * The XRT representation of `XrSession`, this object does not have all of the
  * functionality of a session, most are partitioned to the session level
  * compositor object. Often this is @ref xrt_compositor_native, note that
- * interface may also be a system level object depending in implementor.
+ * interface may also be a system level object depending in implementer.
  *
  * @ingroup xrt_iface
  */
