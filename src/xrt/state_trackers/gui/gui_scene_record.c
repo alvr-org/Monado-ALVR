@@ -158,7 +158,7 @@ window_create(struct gui_program *p, const char *camera)
 	    !cw->use.depthai_stereo &&    //
 	    !cw->use.elp) {
 		U_LOG_W(
-		    "Can't recongnize camera name '%s', options are 'elp', 'depthai-[monocular|stereo]', index' & "
+		    "Can't recognize camera name '%s', options are 'elp', 'depthai-[monocular|stereo]', index' & "
 		    "'leap_motion'.\n\tFalling back to 'index'.",
 		    camera);
 		cw->use.index = true;
