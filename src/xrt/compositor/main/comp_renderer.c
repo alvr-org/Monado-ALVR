@@ -1126,7 +1126,7 @@ comp_renderer_draw(struct comp_renderer *r)
 	const uint32_t view_count = c->nr.view_count;
 	enum comp_target_fov_source fov_source = COMP_TARGET_FOV_SOURCE_DISTORTION;
 
-	// For sratch image debugging.
+	// For scratch image debugging.
 	struct comp_render_scratch_state crss;
 	scratch_get_init(&crss, r, view_count);
 

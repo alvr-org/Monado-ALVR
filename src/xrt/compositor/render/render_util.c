@@ -108,7 +108,7 @@ render_calc_time_warp_matrix(const struct xrt_pose *src_pose,
 	m_mat4_f64_orientation(&new_q, &new_rot_inv); // This is a model matrix, a inverted view matrix.
 	m_mat4_f64_invert(&new_rot_inv, &new_rot);    // Invert to make it a view matrix.
 
-	// Combine both rotation matricies to get difference.
+	// Combine both rotation matrices to get difference.
 	struct xrt_matrix_4x4_f64 delta_rot, delta_rot_inv;
 	m_mat4_f64_multiply(&new_rot, &src_rot_inv, &delta_rot);
 	m_mat4_f64_invert(&delta_rot, &delta_rot_inv);

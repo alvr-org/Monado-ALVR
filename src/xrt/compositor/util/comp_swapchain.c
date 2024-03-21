@@ -477,7 +477,7 @@ error:
 static void
 really_destroy(struct comp_swapchain *sc)
 {
-	// Re-use close function.
+	// Reuse close function.
 	comp_swapchain_teardown(sc);
 
 	free(sc);
