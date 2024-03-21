@@ -33,6 +33,11 @@ typedef enum xrt_result
 	XRT_TIMEOUT = 2,
 
 	/*!
+	 * The space’s bounds are not known at the moment.
+	 */
+	XRT_SPACE_BOUNDS_UNAVAILABLE = 3,
+
+	/*!
 	 * A problem occurred either with the IPC transport itself, with invalid commands from the client, or with
 	 * invalid responses from the server.
 	 */
@@ -181,4 +186,9 @@ typedef enum xrt_result
 	 * error condition on bad code.
 	 */
 	XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED = -29,
+
+	/*!
+	 * The function was not implemented in the compositor
+	 */
+	XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED = -30,
 } xrt_result_t;

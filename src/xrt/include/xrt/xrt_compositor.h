@@ -1386,6 +1386,13 @@ struct xrt_compositor
 	                                      enum xrt_perf_set_level level);
 
 	/*!
+	 * @brief Get the extents of the reference space’s bounds rectangle.
+	 */
+	xrt_result_t (*get_reference_bounds_rect)(struct xrt_compositor *xc,
+	                                          enum xrt_reference_space_type reference_space_type,
+	                                          struct xrt_vec2 *bounds);
+
+	/*!
 	 * Teardown the compositor.
 	 *
 	 * The state tracker must have made sure that no frames or sessions are
@@ -1869,6 +1876,27 @@ static inline xrt_result_t
 xrt_comp_set_performance_level(struct xrt_compositor *xc, enum xrt_perf_domain domain, enum xrt_perf_set_level level)
 {
 	return xc->set_performance_level(xc, domain, level);
+}
+
+/*!
+ * @copydoc xrt_compositor::get_reference_bounds_rect
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_compositor
+ */
+static inline xrt_result_t
+xrt_comp_get_reference_bounds_rect(struct xrt_compositor *xc,
+                                   enum xrt_reference_space_type reference_space_type,
+                                   struct xrt_vec2 *bounds)
+{
+	if (xc->get_reference_bounds_rect == NULL) {
+		bounds->x = 0.f;
+		bounds->y = 0.f;
+		return XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED;
+	}
+
+	return xc->get_reference_bounds_rect(xc, reference_space_type, bounds);
 }
 
 /*!

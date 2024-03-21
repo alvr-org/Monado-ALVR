@@ -138,6 +138,7 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	switch (xret) {
 	case XRT_SUCCESS:                                    DG("XRT_SUCCESS"); return;
 	case XRT_TIMEOUT:                                    DG("XRT_TIMEOUT"); return;
+	case XRT_SPACE_BOUNDS_UNAVAILABLE:                   DG("XRT_SPACE_BOUNDS_UNAVAILABLE"); return;
 	case XRT_ERROR_IPC_FAILURE:                          DG("XRT_ERROR_IPC_FAILURE"); return;
 	case XRT_ERROR_NO_IMAGE_AVAILABLE:                   DG("XRT_ERROR_NO_IMAGE_AVAILABLE"); return;
 	case XRT_ERROR_VULKAN:                               DG("XRT_ERROR_VULKAN"); return;
@@ -167,6 +168,7 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	case XRT_ERROR_COMPOSITOR_NOT_SUPPORTED:             DG("XRT_ERROR_COMPOSITOR_NOT_SUPPORTED"); return;
 	case XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED:           DG("XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED"); return;
 	case XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED:      DG("XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED"); return;
+	case XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED:  DG("XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED"); return;
 	}
 	// clang-format on
 
