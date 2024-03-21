@@ -134,7 +134,7 @@ vk_create_and_submit_fence_native(struct vk_bundle *vk, xrt_graphics_sync_handle
 		return ret;
 	}
 
-	// Won't be returned, but name for debbuging.
+	// Won't be returned, but name for debugging.
 	VK_NAME_FENCE(vk, fence, "VK Create Submit Sync");
 
 

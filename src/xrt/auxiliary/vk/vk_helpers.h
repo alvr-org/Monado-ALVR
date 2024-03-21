@@ -1678,7 +1678,7 @@ vk_create_timeline_semaphore_from_native(struct vk_bundle *vk, xrt_graphics_sync
  * equating to an epoch of 5726 seconds before overflowing. The function can
  * handle overflows happening between the given timestamps and when it is called
  * but only for one such epoch overflow, any more will only be treated as one
- * such overflow. So timestamps needs to be converted resonably soon after they
+ * such overflow. So timestamps needs to be converted reasonably soon after they
  * have been captured.
  *
  * @param vk                The Vulkan bundle.
