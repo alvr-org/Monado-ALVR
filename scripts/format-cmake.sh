@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright 2019-2023, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 # Author: Rylie Pavlik <rylie.pavlik@collabora.com>
 
@@ -9,7 +9,7 @@ set -e
 
 CMAKE_FORMAT=cmake-format
 if ! command -v ${CMAKE_FORMAT} > /dev/null; then
-        echo "cmake-format not found, do python3 -m pip install cmakelang" 1>&2
+        echo "cmake-format not found, do pipx install cmakelang" 1>&2
         exit 1
 fi
 (
