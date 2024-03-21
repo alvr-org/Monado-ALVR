@@ -856,6 +856,18 @@ ipc_compositor_request_display_refresh_rate(struct xrt_compositor *xc, float dis
 	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_request_display_refresh_rate");
 }
 
+static xrt_result_t
+ipc_compositor_get_reference_bounds_rect(struct xrt_compositor *xc,
+                                         enum xrt_reference_space_type reference_space_type,
+                                         struct xrt_vec2 *bounds)
+{
+	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
+	xrt_result_t xret;
+
+	xret = ipc_call_compositor_get_reference_bounds_rect(icc->ipc_c, reference_space_type, bounds);
+	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_compositor_get_reference_bounds_rect");
+}
+
 static void
 ipc_compositor_destroy(struct xrt_compositor *xc)
 {
@@ -899,6 +911,7 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 	icc->base.base.get_display_refresh_rate = ipc_compositor_get_display_refresh_rate;
 	icc->base.base.request_display_refresh_rate = ipc_compositor_request_display_refresh_rate;
 	icc->base.base.set_performance_level = ipc_compositor_set_performance_level;
+	icc->base.base.get_reference_bounds_rect = ipc_compositor_get_reference_bounds_rect;
 
 	// Using in wait frame.
 	os_precise_sleeper_init(&icc->sleeper);

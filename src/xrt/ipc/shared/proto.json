@@ -244,6 +244,15 @@
 		]
 	},
 
+	"compositor_get_reference_bounds_rect": {
+		"in": [
+			{"name": "reference_space_type", "type": "enum xrt_reference_space_type"}
+		],
+		"out": [
+			{"name": "bounds", "type":  "struct xrt_vec2"}
+		]
+	},
+
 	"swapchain_get_properties": {
 		"in": [
 			{"name": "info", "type": "struct xrt_swapchain_create_info"}

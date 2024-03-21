@@ -1186,6 +1186,20 @@ ipc_handle_compositor_set_thread_hint(volatile struct ipc_client_state *ics,
 }
 
 xrt_result_t
+ipc_handle_compositor_get_reference_bounds_rect(volatile struct ipc_client_state *ics,
+                                                enum xrt_reference_space_type reference_space_type,
+                                                struct xrt_vec2 *bounds)
+{
+	IPC_TRACE_MARKER();
+
+	if (ics->xc == NULL) {
+		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
+	}
+
+	return xrt_comp_get_reference_bounds_rect(ics->xc, reference_space_type, bounds);
+}
+
+xrt_result_t
 ipc_handle_system_get_clients(volatile struct ipc_client_state *_ics, struct ipc_client_list *list)
 {
 	struct ipc_server *s = _ics->server;
