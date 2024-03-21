@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileCopyrightText: 2018-2023 Collabora, Ltd. and the Monado contributors
+# SPDX-FileCopyrightText: 2018-2024, Collabora, Ltd. and the Monado contributors
 
 # Please run the following from the repo root after modifying this file:
 #   make -f .gitlab-ci/ci-scripts.mk
@@ -15,41 +15,42 @@ fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
   unzip:
   cmake:
   ninja-build:
-  libeigen3-dev:
   curl:
   patch:
   python3:
   pkg-config:
+  ca-certificates:
+  glslang-tools:
+  libeigen3-dev:
+  libgl1-mesa-dev:
+  libglvnd-dev:
+  libudev-dev:
+  libusb-1.0-0-dev:
+  libvulkan-dev:
   libx11-dev:
   libx11-xcb-dev:
-  libxxf86vm-dev:
-  libxrandr-dev:
   libxcb-randr0-dev:
-  libvulkan-dev:
-  glslang-tools:
-  libglvnd-dev:
-  libgl1-mesa-dev:
-  ca-certificates:
-  libusb-1.0-0-dev:
-  libudev-dev:
+  libxrandr-dev:
+  libxxf86vm-dev:
+  wayland-protocols:
   # These are optional packages, that we're building against to ensure we build as much code as possible
-  libhidapi-dev:
-  libwayland-dev:
-  libuvc-dev:
-  libopencv-dev:
-  libv4l-dev:
-  libcjson-dev:
-  libsdl2-dev:
-  libegl1-mesa-dev:
-  libdbus-1-dev:
-  libgstreamer1.0-dev:
-  libgstreamer-plugins-base1.0-dev:
-  libsystemd-dev:
-  libbsd-dev:
   libbluetooth-dev:
+  libbsd-dev:
+  libcjson-dev:
+  libdbus-1-dev:
+  libegl1-mesa-dev:
+  libgstreamer-plugins-base1.0-dev:
+  libgstreamer1.0-dev:
+  libhidapi-dev:
+  libopencv-dev:
+  libsdl2-dev:
+  libsystemd-dev:
+  libuvc-dev:
+  libv4l-dev:
+  libwayland-dev:
   # Only used for building packages
-  devscripts:
   debhelper:
+  devscripts:
   dput-ng:
   gettext-base:
   pandoc:
@@ -69,15 +70,16 @@ distributions:
   - name: debian
     images:
       # This image does some extra work.
-      - codename: bullseye
+      - codename: bookworm
         script: i386_and_proclamation_container_prep.sh
-        tag: "2024-01-16"
-        deb_version_suffix: bpo11
+        tag: "2024-03-21.2"
+        deb_version_suffix: bpo12
         packages:
           <<: *default_debian_packages
           codespell:
           doxygen:
           graphviz:
+          pipx:
           python3-pip:
           python3-click:
           clang-format:
@@ -110,6 +112,15 @@ distributions:
               CMAKE_TOOLCHAIN_FILE: .gitlab-ci/i386.cmake
               # OpenCV doesn't play nicely with us in multi-arch.
               XRT_HAVE_OPENCV: "OFF"
+
+      - codename: bullseye
+        tag: "2024-03-21"
+        deb_version_suffix: bpo11
+        packages:
+          <<: *default_debian_packages
+        build_jobs:
+          - name: "debian:bullseye:cmake"
+
 
       # This one is pretty minimal, compared to the others.
       # Though, we now install the android SDK in it...

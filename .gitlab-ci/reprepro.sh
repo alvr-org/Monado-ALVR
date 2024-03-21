@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileCopyrightText: 2018-2022 Collabora, Ltd. and the Monado contributors
+# SPDX-FileCopyrightText: 2018-2024 Collabora, Ltd. and the Monado contributors
 
 ###############################################
 #           GENERATED - DO NOT EDIT           #
@@ -29,6 +29,16 @@ cat repo/conf/distributions
 echo "---------------------"
 
 # For each distro, sign the changes file and add it to the repo.
+
+# bookworm
+if [ -f "incoming/bookworm.distro" ]; then
+    VERSION=$(cat incoming/bookworm.distro)
+    echo "Signing and processing bookworm: ${VERSION}"
+    debsign -k "${MONADO_GPG_FINGERPRINT}" -p "gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase ${MONADO_GPG_PASSPHRASE}" "incoming/monado_${VERSION}_amd64.changes"
+    reprepro -V --ignore=wrongdistribution -b repo include bookworm "incoming/monado_${VERSION}_amd64.changes"
+else
+    echo "Skipping bookworm - no artifact found"
+fi
 
 # bullseye
 if [ -f "incoming/bullseye.distro" ]; then

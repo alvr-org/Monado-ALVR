@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018-2022, Collabora, Ltd. and the Monado contributors
+# Copyright 2018-2024, Collabora, Ltd. and the Monado contributors
 # SPDX-License-Identifier: BSL-1.0
 
 (
@@ -9,4 +9,5 @@
     bash ./install-ci-fairy.sh
 )
 
-python3 -m pip install proclamation cmakelang
+# Getting the path set up right for pipx in CI is a hassle.
+python3 -m pip install --break-system-packages proclamation cmakelang
