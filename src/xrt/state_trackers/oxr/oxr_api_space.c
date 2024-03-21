@@ -155,6 +155,7 @@ oxr_xrGetReferenceSpaceBoundsRect(XrSession session, XrReferenceSpaceType refere
 	struct oxr_session *sess;
 	struct oxr_logger log;
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrGetReferenceSpaceBoundsRect");
+	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 	OXR_VERIFY_ARG_NOT_NULL(&log, bounds);
 
 	ret = is_reference_space_type_valid(&log, sess->sys, "referenceSpaceType", referenceSpaceType);
@@ -167,11 +168,7 @@ oxr_xrGetReferenceSpaceBoundsRect(XrSession session, XrReferenceSpaceType refere
 		return ret;
 	}
 
-	bounds->width = 0.0;
-	bounds->height = 0.0;
-
-	// Silently return that the bounds aren't available.
-	return XR_SPACE_BOUNDS_UNAVAILABLE;
+	return oxr_space_get_reference_bounds_rect(&log, sess, referenceSpaceType, bounds);
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL

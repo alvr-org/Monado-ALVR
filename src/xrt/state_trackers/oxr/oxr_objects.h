@@ -830,6 +830,12 @@ oxr_space_action_create(struct oxr_logger *log,
                         struct oxr_space **out_space);
 
 XrResult
+oxr_space_get_reference_bounds_rect(struct oxr_logger *log,
+                                    struct oxr_session *sess,
+                                    XrReferenceSpaceType referenceSpaceType,
+                                    XrExtent2Df *bounds);
+
+XrResult
 oxr_space_reference_create(struct oxr_logger *log,
                            struct oxr_session *sess,
                            const XrReferenceSpaceCreateInfo *createInfo,

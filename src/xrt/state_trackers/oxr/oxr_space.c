@@ -23,6 +23,7 @@
 #include "oxr_chain.h"
 #include "oxr_pretty_print.h"
 #include "oxr_conversions.h"
+#include "oxr_xret.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -159,6 +160,25 @@ oxr_space_action_create(struct oxr_logger *log,
 	*out_space = spc;
 
 	return XR_SUCCESS;
+}
+
+XrResult
+oxr_space_get_reference_bounds_rect(struct oxr_logger *log,
+                                    struct oxr_session *sess,
+                                    XrReferenceSpaceType referenceSpaceType,
+                                    XrExtent2Df *bounds)
+{
+	struct xrt_compositor *xc = &sess->xcn->base;
+
+	enum xrt_reference_space_type reference_space_type = xr_ref_space_to_xrt(referenceSpaceType);
+
+	xrt_result_t xret = xrt_comp_get_reference_bounds_rect(xc, reference_space_type, (struct xrt_vec2 *)bounds);
+	if (xret == XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED || xret == XRT_SPACE_BOUNDS_UNAVAILABLE) {
+		return XR_SPACE_BOUNDS_UNAVAILABLE;
+	}
+	OXR_CHECK_XRET(log, sess, xret, oxr_space_get_reference_bounds_rect);
+
+	return oxr_session_success_result(sess);
 }
 
 XrResult
