@@ -230,7 +230,7 @@ t_stereo_camera_calibration_load_v1(FILE *calib_file, struct t_stereo_camera_cal
 	// Scratch-space temporary matrix
 	cv::Mat scratch;
 
-	// Temp load matricies
+	// Temp load matrices
 	cv::Mat_<double> l_intrinsics(3, 3);
 	cv::Mat_<double> r_intrinsics(3, 3);
 	cv::Mat_<double> l_distortion(5, 1);

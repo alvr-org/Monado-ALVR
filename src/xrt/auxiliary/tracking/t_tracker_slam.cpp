@@ -363,7 +363,7 @@ struct TrackerSlam
 			//! @note Harmless race condition over this as the UI might read this while it's being written
 			deque<pair<timepoint_ns, int>> entries{};
 
-			//! Persitently stored camera name for display in the UI
+			//! Persistently stored camera name for display in the UI
 			string cam_name;
 
 			void
