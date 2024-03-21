@@ -191,7 +191,7 @@ oxr_xrCreateReferenceSpace(XrSession session, const XrReferenceSpaceCreateInfo *
 	ret = is_reference_space_type_valid(&log, sess->sys, "createInfo->referenceSpaceType",
 	                                    createInfo->referenceSpaceType);
 	if (ret != XR_SUCCESS) {
-		// The CTS currently requiers us to return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED.
+		// The CTS currently requires us to return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED.
 		if (sess->sys->inst->quirks.no_validation_error_in_create_ref_space &&
 		    ret == XR_ERROR_VALIDATION_FAILURE) {
 			return XR_ERROR_REFERENCE_SPACE_UNSUPPORTED;
