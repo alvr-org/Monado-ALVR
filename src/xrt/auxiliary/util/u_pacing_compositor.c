@@ -313,7 +313,7 @@ predict_next_frame(struct pacing_compositor *pc, uint64_t now_ns)
 	if (last_predicted == NULL && last_completed == NULL) {
 		f = do_clean_slate_frame(pc, now_ns);
 	} else if (last_completed == last_predicted) {
-		// Very high propability that we missed a frame.
+		// Very high probability that we missed a frame.
 		f = walk_forward_through_frames(pc, last_completed->earliest_present_time_ns, now_ns);
 	} else if (last_completed != NULL) {
 		assert(last_predicted != NULL);

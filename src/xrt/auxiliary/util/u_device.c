@@ -25,7 +25,7 @@
 
 /*
  *
- * Matricies.
+ * Matrices.
  *
  */
 

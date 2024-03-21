@@ -56,7 +56,7 @@ struct u_session
 /*!
  * Create a session, optionally pass in a @ref u_system. If @p usys is not NULL
  * the call register this session on that system. This function is exposed so
- * that code can re-use @ref u_session as a base class.
+ * that code can reuse @ref u_session as a base class.
  *
  * @public @memberof u_session
  * @ingroup aux_util
@@ -66,7 +66,7 @@ u_session_create(struct u_system *usys);
 
 /*!
  * Push an event to this session. This function is exposed so that code can
- * re-use @ref u_session as a base class.
+ * reuse @ref u_session as a base class.
  *
  *
  * @public @memberof u_session
