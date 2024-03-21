@@ -86,7 +86,7 @@ SPDX-FileCopyrightText: 2020 Collabora, Ltd. and the Monado contributors
   - Implement support for XR_KHR_composition_layer_equirect (equirect1).
     ([!620](https://gitlab.freedesktop.org/monado/monado/merge_requests/620),
     [!624](https://gitlab.freedesktop.org/monado/monado/merge_requests/624))
-  - comp: Improve thread safety. Resolve issues in mutlithreading CTS.
+  - comp: Improve thread safety. Resolve issues in multithreading CTS.
     ([!645](https://gitlab.freedesktop.org/monado/monado/merge_requests/645))
   - main: Lower priority on sRGB format. This works around a bug in the OpenXR CTS
     and mirrors better what at least on other OpenXR runtime does.
