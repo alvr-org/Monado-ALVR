@@ -736,7 +736,7 @@ wmr_hmd_activate_reverb(struct wmr_hmd *wh)
 
 	WMR_TRACE(wh, "Activating HP Reverb G1/G2 HMD...");
 
-	// Hack to power up the Reverb G1 display, thanks to OpenHMD contibutors.
+	// Hack to power up the Reverb G1 display, thanks to OpenHMD contributors.
 	// Sleep before we start seems to improve reliability.
 	// 300ms is what Windows seems to do, so cargo cult that.
 	os_nanosleep(U_TIME_1MS_IN_NS * 300);

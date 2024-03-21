@@ -176,7 +176,7 @@ struct wmr_hmd
 
 	/*!
 	 * Offset for tracked pose offsets (applies to both fusion and SLAM).
-	 * Applied when getting the tracked poses, so is effectivily a offset
+	 * Applied when getting the tracked poses, so is effectively a offset
 	 * to increase or decrease prediction.
 	 */
 	struct u_var_draggable_f32 tracked_offset_ms;

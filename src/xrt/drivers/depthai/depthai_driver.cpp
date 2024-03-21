@@ -913,7 +913,7 @@ depthai_setup_stereo_grayscale_pipeline(struct depthai_fs *depthai)
 	}
 
 	//!@todo This code will turn the exposure time down, but you may not want it. Or we may want to rework Monado's
-	//! AEG code to control the IR floodlight brightness in concert with the exposure itme. For now, disable.
+	//! AEG code to control the IR floodlight brightness in concert with the exposure time. For now, disable.
 }
 
 #ifdef DEPTHAI_HAS_MULTICAM_SUPPORT
