@@ -187,8 +187,6 @@ class Component:
         if self.component_name == "position":
             paths.append(basepath + "/" + "x")
             paths.append(basepath + "/" + "y")
-            if self.has_dpad_emulation():
-                paths += dpad_paths(basepath, self.dpad_emulation["center"])
             paths.append(basepath)
         else:
             paths.append(basepath + "/" + self.component_name)
