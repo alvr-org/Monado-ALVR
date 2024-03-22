@@ -25,6 +25,7 @@
 		"/virtual_profiles/grip_surface": {
 			"title": "Grip Surface",
 			"type": "tracked_controller",
+			"extension": "KHR_maintenance1",
 			"openxr_version": {
 				"promoted": {
 					"major": "1",
