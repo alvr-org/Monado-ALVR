@@ -16,6 +16,7 @@
 #include "util/u_misc.h"
 
 #include <memory>
+#include <cassert>
 
 using xrt::auxiliary::tracking::SimpleIMUFusion;
 using namespace xrt::auxiliary::math;
