@@ -129,3 +129,8 @@ Files:  src/external/valve-file-vdf/*
 Copyright: 2016-2023, Matthias Moeller
 License: MIT
 Comment: SPDX-License-Identifier missing.
+
+Files:  flake.lock
+Copyright: No copyright
+License: CC0-1.0
+Comment: Computer-generated files do not have a copyright per US law.
