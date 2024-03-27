@@ -386,6 +386,7 @@ oxr_instance_create(struct oxr_logger *log,
 	        "\tcreateInfo->applicationInfo.applicationVersion: %i\n"
 	        "\tcreateInfo->applicationInfo.engineName: %s\n"
 	        "\tcreateInfo->applicationInfo.engineVersion: %i\n"
+	        "\tcreateInfo->applicationInfo.apiVersion: %d.%d.%d\n"
 	        "\tappinfo.detected.engine.name: %s\n"
 	        "\tappinfo.detected.engine.version: %i.%i.%i\n"
 	        "\tquirks.disable_vulkan_format_depth_stencil: %s\n"
@@ -394,6 +395,9 @@ oxr_instance_create(struct oxr_logger *log,
 	        createInfo->applicationInfo.applicationVersion,                           //
 	        createInfo->applicationInfo.engineName,                                   //
 	        createInfo->applicationInfo.engineVersion,                                //
+	        XR_VERSION_MAJOR(createInfo->applicationInfo.apiVersion),                 //
+	        XR_VERSION_MINOR(createInfo->applicationInfo.apiVersion),                 //
+	        XR_VERSION_PATCH(createInfo->applicationInfo.apiVersion),                 //
 	        inst->appinfo.detected.engine.name,                                       //
 	        inst->appinfo.detected.engine.major,                                      //
 	        inst->appinfo.detected.engine.minor,                                      //
