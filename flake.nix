@@ -6,7 +6,7 @@
     # Whenever an upstream change is merged, update this to
     # the relevant commit and remove the packages from the
     # ...ToUpstream lists below
-    nixpkgs.url = "github:NixOS/nixpkgs/5e8260003c8ec6c5d6ac6064a2ff901677960412";
+    nixpkgs.url = "github:NixOS/nixpkgs/e80d1b630036fe33badbc168dfcd071d463b92cf";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -35,7 +35,6 @@
         # If there are any buildInputs that are not in nixpkgs, add them here
         # buildInputs are any packages that are needed at runtime (i.e. dependencies)
         # Once they are upstreamed to nixpkgs master, remove them from this list
-        xorg.libXext # Open PR: https://github.com/NixOS/nixpkgs/pull/298083
       ];
       
       package = pkgs.monado.overrideAttrs (oldAttrs: {
