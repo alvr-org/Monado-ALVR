@@ -591,11 +591,44 @@ verify_projection_layer(struct oxr_session *sess,
 		return ret;
 	}
 
-	if (proj->viewCount < 1 || proj->viewCount > XRT_MAX_VIEWS) {
-		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
-		                 "(frameEndInfo->layers[%u]->viewCount == %u) must be between 1 and %d for projection "
-		                 "layers and the current view configuration",
-		                 layer_index, proj->viewCount, XRT_MAX_VIEWS);
+	switch (sess->sys->view_config_type) {
+	case XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO:
+		if (proj->viewCount != 1) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->viewCount == %u) must be 1 for "
+			                 "XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO",
+			                 layer_index, proj->viewCount);
+		}
+		break;
+	case XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO:
+		if (proj->viewCount != 2) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->viewCount == %u) must be 2 for "
+			                 "XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO",
+			                 layer_index, proj->viewCount);
+		}
+		break;
+	case XR_VIEW_CONFIGURATION_TYPE_PRIMARY_QUAD_VARJO:
+		if (proj->viewCount != 4) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->viewCount == %u) must be 4 for "
+			                 "XR_VIEW_CONFIGURATION_TYPE_PRIMARY_QUAD_VARJO",
+			                 layer_index, proj->viewCount);
+		}
+		break;
+	case XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT:
+		if (proj->viewCount != 1) {
+			return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+			                 "(frameEndInfo->layers[%u]->viewCount == %u) must be 1 for "
+			                 "XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT",
+			                 layer_index, proj->viewCount);
+		}
+		break;
+	default:
+		assert(false && "view type validation unimplemented");
+		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "view type %d not supported",
+		                 sess->sys->view_config_type);
+		break;
 	}
 
 	// number of depth layers must be 0 or proj->viewCount
