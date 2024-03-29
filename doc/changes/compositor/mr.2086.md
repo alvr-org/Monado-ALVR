@@ -1,6 +1,7 @@
 ---
 - mr.2086
 - mr.2175
+- mr.2189
 ---
 
 - xrt_layer_type: Renamed the `XRT_LAYER_STEREO_PROJECTION` to `XRT_LAYER_PROJECTION` and `XRT_LAYER_STEREO_PROJECTION_DEPTH` to `XRT_LAYER_PROJECTION_DEPTH` in the `xrt_layer_type` enumeration to support both mono and stereo projection layers. This change provides a more inclusive and versatile categorization of projection layers within the XRT framework, accommodating a wider range of use cases.
