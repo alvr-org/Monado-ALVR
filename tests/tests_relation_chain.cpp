@@ -130,6 +130,11 @@ run_func(struct xrt_relation_chain *xrc, Functions fn)
 	}
 }
 
+/**
+ * The first argument is the expected relation flags.
+ * The following arguments are `enum Functions` values that get translated to one of the kSpaceRelation*
+ * xrt_space_relations each and pushed in order to the relation chain.
+ */
 #define TEST_FLAGS(EXPECTED, ...)                                                                                      \
 	do {                                                                                                           \
 		struct xrt_space_relation result = XRT_STRUCT_INIT;                                                    \
@@ -166,26 +171,23 @@ TEST_CASE("Relation Chain Flags")
 		TEST_FLAGS(kFlagsNotValid, ONLY_POSITION, NV);
 	}
 
-	/*!
-	 * @todo: These should all not return tracked.
-	 */
-	SECTION("Wrongly Tracked")
+	SECTION("Not Wrongly Tracked")
 	{
-		TEST_FLAGS(kFlagsValidTracked, VNT, IP, VT);
-		TEST_FLAGS(kFlagsValidTracked, VNT, P, VT);
-		TEST_FLAGS(kFlagsValidTracked, P, VT, P, VNT);
-		TEST_FLAGS(kFlagsValidTracked, VT, VT, VNT, VT);
-		TEST_FLAGS(kFlagsValidTracked, IP, VT, P, VNT, P, VT);
+		TEST_FLAGS(kFlagsValid, VNT, IP, VT);
+		TEST_FLAGS(kFlagsValid, VNT, P, VT);
+		TEST_FLAGS(kFlagsValid, P, VT, P, VNT);
+		TEST_FLAGS(kFlagsValid, VT, VT, VNT, VT);
+		TEST_FLAGS(kFlagsValid, IP, VT, P, VNT, P, VT);
 
-		TEST_FLAGS(kFlagsValidTracked, VT, ONLY_ORIENTATION);
-		TEST_FLAGS(kFlagsValidTracked, VT, ONLY_POSITION);
-		TEST_FLAGS(kFlagsValidTracked, ONLY_ORIENTATION, VT);
-		TEST_FLAGS(kFlagsValidTracked, ONLY_POSITION, VT);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, VT, ONLY_ORIENTATION);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, VT, ONLY_POSITION);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, ONLY_ORIENTATION, VT);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, ONLY_POSITION, VT);
 
-		TEST_FLAGS(kFlagsValidTracked, P, VT, ONLY_ORIENTATION, P);
-		TEST_FLAGS(kFlagsValidTracked, P, VT, ONLY_POSITION, P);
-		TEST_FLAGS(kFlagsValidTracked, P, ONLY_ORIENTATION, VT, P);
-		TEST_FLAGS(kFlagsValidTracked, P, ONLY_POSITION, VT, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, P, VT, ONLY_ORIENTATION, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, P, VT, ONLY_POSITION, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, P, ONLY_ORIENTATION, VT, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, P, ONLY_POSITION, VT, P);
 	}
 
 	SECTION("Tracked")
@@ -212,17 +214,17 @@ TEST_CASE("Relation Chain Flags")
 		TEST_FLAGS(kFlagsValid, P, VNT, IP, P);
 		TEST_FLAGS(kFlagsValid, P, IP, VNT, P);
 
-		TEST_FLAGS(kFlagsValid, P, ONLY_ORIENTATION, IP, P);
-		TEST_FLAGS(kFlagsValid, P, ONLY_POSITION, IP, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, P, ONLY_ORIENTATION, IP, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, P, ONLY_POSITION, IP, P);
 
-		TEST_FLAGS(kFlagsValid, ONLY_ORIENTATION, VNT);
-		TEST_FLAGS(kFlagsValid, ONLY_POSITION, VNT);
-		TEST_FLAGS(kFlagsValid, VNT, ONLY_ORIENTATION);
-		TEST_FLAGS(kFlagsValid, VNT, ONLY_POSITION);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, ONLY_ORIENTATION, VNT);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, ONLY_POSITION, VNT);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, VNT, ONLY_ORIENTATION);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, VNT, ONLY_POSITION);
 
-		TEST_FLAGS(kFlagsValid, ONLY_ORIENTATION, P, VNT);
-		TEST_FLAGS(kFlagsValid, ONLY_POSITION, P, VNT);
-		TEST_FLAGS(kFlagsValid, VNT, ONLY_ORIENTATION, P);
-		TEST_FLAGS(kFlagsValid, VNT, ONLY_POSITION, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, ONLY_ORIENTATION, P, VNT);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, ONLY_POSITION, P, VNT);
+		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, VNT, ONLY_ORIENTATION, P);
+		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, VNT, ONLY_POSITION, P);
 	}
 }
