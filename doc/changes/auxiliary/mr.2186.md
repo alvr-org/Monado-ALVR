@@ -1,0 +1,1 @@
+math: Refactor apply_relation to handle valid/tracked flags more like OpenXR.
