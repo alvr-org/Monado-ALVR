@@ -1206,7 +1206,7 @@ struct xrt_compositor
 	 *
 	 * @param xc          Self pointer
 	 * @param xdev        The device the layer is relative to.
-	 * @param xsc         Swapchain object containing eye RGB data.
+	 * @param xsc         Array of swapchain objects containing eye RGB data.
 	 * @param data        All of the pure data bits (not pointers/handles),
 	 *                    including what parts of the supplied swapchain
 	 *                    objects to use for each view.
@@ -1227,10 +1227,8 @@ struct xrt_compositor
 	 *
 	 * @param xc          Self pointer
 	 * @param xdev        The device the layer is relative to.
-	 * @param l_xsc       Swapchain object containing left eye RGB data.
-	 * @param r_xsc       Swapchain object containing right eye RGB data.
-	 * @param l_d_xsc     Swapchain object containing left eye depth data.
-	 * @param r_d_xsc     Swapchain object containing right eye depth data.
+	 * @param xsc         Array of swapchain objects containing eye RGB data.
+	 * @param d_xsc       Array of swapchain objects containing eye depth data.
 	 * @param data        All of the pure data bits (not pointers/handles),
 	 *                    including what parts of the supplied swapchain
 	 *                    objects to use for each view.
@@ -1343,7 +1341,6 @@ struct xrt_compositor
 	 *
 	 * Only after this call will the compositor actually use the layers.
 	 * @param xc          Self pointer
-	 * @param frame_id    The frame id this commit is for.
 	 * @param xcsem       Semaphore that will be signalled when the app GPU
 	 *                    work has completed.
 	 * @param value       Semaphore value upone completion of GPU work.

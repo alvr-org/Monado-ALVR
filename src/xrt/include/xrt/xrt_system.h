@@ -105,7 +105,7 @@ xrt_system_create_session(struct xrt_system *xsys,
 /*!
  * Destroy an xrt_system - helper function.
  *
- * @param[in,out] xsysd_ptr A pointer to the xrt_system struct pointer.
+ * @param[in,out] xsys_ptr A pointer to the xrt_system struct pointer.
  *
  * Will destroy the system if `*xsys_ptr` is not NULL. Will then set
  * `*xsys_ptr` to NULL.

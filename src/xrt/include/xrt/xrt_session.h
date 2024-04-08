@@ -279,7 +279,7 @@ xrt_session_poll_events(struct xrt_session *xs, union xrt_session_event *out_xse
 /*!
  * Destroy an xrt_session - helper function.
  *
- * @param[in,out] xsd_ptr A pointer to the xrt_session struct pointer.
+ * @param[in,out] xs_ptr A pointer to the xrt_session struct pointer.
  *
  * Will destroy the system if `*xs_ptr` is not NULL. Will then set `*xs_ptr` to
  * NULL.
