@@ -18,7 +18,7 @@
 /*!
  * IPC client implementation of @ref xrt_system.
  *
- * @implements xrt_system.
+ * @implements xrt_system
  * @ingroup ipc_client
  */
 struct ipc_client_system

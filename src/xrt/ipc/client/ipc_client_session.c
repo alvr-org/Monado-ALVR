@@ -16,7 +16,7 @@
 /*!
  * IPC client implementation of @ref xrt_session.
  *
- * @implements xrt_session.
+ * @implements xrt_session
  * @ingroup ipc_client
  */
 struct ipc_client_session
