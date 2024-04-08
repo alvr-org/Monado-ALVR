@@ -143,7 +143,7 @@ void
 comp_scratch_single_images_done(struct comp_scratch_single_images *cssi);
 
 /*!
- * Discard a @g get call, this clears the image debug part causing no image to
+ * Discard a @p get call, this clears the image debug part causing no image to
  * be shown in the debug UI.
  *
  * @public @memberof comp_scratch_single_images

@@ -658,7 +658,7 @@ bool
 render_scratch_images_ensure(struct render_resources *r, struct render_scratch_images *rsi, VkExtent2D extent);
 
 /*!
- * Close all resources on the given @ref render_scatch_images.
+ * Close all resources on the given @ref render_scratch_images.
  */
 void
 render_scratch_images_close(struct render_resources *r, struct render_scratch_images *rsi);
