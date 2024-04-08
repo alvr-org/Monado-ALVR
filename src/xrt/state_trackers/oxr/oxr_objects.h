@@ -891,6 +891,14 @@ XrResult
 oxr_space_locate(
     struct oxr_logger *log, struct oxr_space *spc, struct oxr_space *baseSpc, XrTime time, XrSpaceLocation *location);
 
+XrResult
+oxr_spaces_locate(struct oxr_logger *log,
+                  struct oxr_space **spcs,
+                  uint32_t spc_count,
+                  struct oxr_space *baseSpc,
+                  XrTime time,
+                  XrSpaceLocations *locations);
+
 /*!
  * Locate the @ref xrt_device in the given base space, useful for implementing
  * hand tracking location look ups and the like.

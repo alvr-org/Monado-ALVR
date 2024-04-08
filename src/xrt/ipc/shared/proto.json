@@ -131,6 +131,16 @@
 		]
 	},
 
+	"space_locate_spaces": {
+		"varlen": true,
+		"in": [
+			{"name": "base_space_id", "type": "uint32_t"},
+			{"name": "base_offset", "type": "struct xrt_pose"},
+			{"name": "space_count", "type": "uint32_t"},
+			{"name": "at_timestamp", "type": "uint64_t"}
+		]
+	},
+
 	"space_locate_device": {
 		"in": [
 			{"name": "base_space_id", "type": "uint32_t"},

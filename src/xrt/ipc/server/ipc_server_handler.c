@@ -491,6 +491,108 @@ ipc_handle_space_locate_space(volatile struct ipc_client_state *ics,
 }
 
 xrt_result_t
+ipc_handle_space_locate_spaces(volatile struct ipc_client_state *ics,
+                               uint32_t base_space_id,
+                               const struct xrt_pose *base_offset,
+                               uint32_t space_count,
+                               uint64_t at_timestamp)
+{
+	IPC_TRACE_MARKER();
+	struct ipc_message_channel *imc = (struct ipc_message_channel *)&ics->imc;
+	struct ipc_server *s = ics->server;
+
+	struct xrt_space_overseer *xso = ics->server->xso;
+	struct xrt_space *base_space = NULL;
+
+	struct xrt_space **xspaces = U_TYPED_ARRAY_CALLOC(struct xrt_space *, space_count);
+	struct xrt_pose *offsets = U_TYPED_ARRAY_CALLOC(struct xrt_pose, space_count);
+	struct xrt_space_relation *out_relations = U_TYPED_ARRAY_CALLOC(struct xrt_space_relation, space_count);
+
+	xrt_result_t xret;
+
+	os_mutex_lock(&ics->server->global_state.lock);
+
+	uint32_t *space_ids = U_TYPED_ARRAY_CALLOC(uint32_t, space_count);
+
+	// we need to send back whether allocation succeeded so the client knows whether to send more data
+	if (space_ids == NULL) {
+		xret = XRT_ERROR_ALLOCATION;
+	} else {
+		xret = XRT_SUCCESS;
+	}
+
+	xret = ipc_send(imc, &xret, sizeof(enum xrt_result));
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "Failed to send spaces allocate result");
+		// Nothing else we can do
+		goto out_locate_spaces;
+	}
+
+	// only after sending the allocation result can we skip to the end in the allocation error case
+	if (space_ids == NULL) {
+		IPC_ERROR(s, "Failed to allocate space for receiving spaces ids");
+		goto out_locate_spaces;
+	}
+
+	xret = ipc_receive(imc, space_ids, space_count * sizeof(uint32_t));
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "Failed to receive spaces ids");
+		// assume early abort is possible, i.e. client will not send more data for this request
+		goto out_locate_spaces;
+	}
+
+	xret = ipc_receive(imc, offsets, space_count * sizeof(struct xrt_pose));
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "Failed to receive spaces offsets");
+		// assume early abort is possible, i.e. client will not send more data for this request
+		goto out_locate_spaces;
+	}
+
+	xret = validate_space_id(ics, base_space_id, &base_space);
+	if (xret != XRT_SUCCESS) {
+		U_LOG_E("Invalid base_space_id %d!", base_space_id);
+		// Client is receiving out_relations now, it will get xret on this receive.
+		goto out_locate_spaces;
+	}
+
+	for (uint32_t i = 0; i < space_count; i++) {
+		if (space_ids[i] == UINT32_MAX) {
+			xspaces[i] = NULL;
+		} else {
+			xret = validate_space_id(ics, space_ids[i], &xspaces[i]);
+			if (xret != XRT_SUCCESS) {
+				U_LOG_E("Invalid space_id space_ids[%d] = %d!", i, space_ids[i]);
+				// Client is receiving out_relations now, it will get xret on this receive.
+				goto out_locate_spaces;
+			}
+		}
+	}
+	xret = xrt_space_overseer_locate_spaces( //
+	    xso,                                 //
+	    base_space,                          //
+	    base_offset,                         //
+	    at_timestamp,                        //
+	    xspaces,                             //
+	    space_count,                         //
+	    offsets,                             //
+	    out_relations);                      //
+
+	xret = ipc_send(imc, out_relations, sizeof(struct xrt_space_relation) * space_count);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "Failed to send spaces relations");
+		// Nothing else we can do
+		goto out_locate_spaces;
+	}
+
+out_locate_spaces:
+	free(xspaces);
+	free(offsets);
+	free(out_relations);
+	os_mutex_unlock(&ics->server->global_state.lock);
+	return xret;
+}
+
+xrt_result_t
 ipc_handle_space_locate_device(volatile struct ipc_client_state *ics,
                                uint32_t base_space_id,
                                const struct xrt_pose *base_offset,

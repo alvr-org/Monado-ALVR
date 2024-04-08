@@ -7,6 +7,9 @@
  * @ingroup ipc_client
  */
 
+#include "client/ipc_client.h"
+#include "client/ipc_client_connection.h"
+#include "shared/ipc_message_channel.h"
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_space.h"
 
@@ -151,6 +154,67 @@ locate_space(struct xrt_space_overseer *xso,
 }
 
 static xrt_result_t
+locate_spaces(struct xrt_space_overseer *xso,
+              struct xrt_space *base_space,
+              const struct xrt_pose *base_offset,
+              uint64_t at_timestamp_ns,
+              struct xrt_space **spaces,
+              uint32_t space_count,
+              const struct xrt_pose *offsets,
+              struct xrt_space_relation *out_relations)
+{
+	struct ipc_client_space_overseer *icspo = ipc_client_space_overseer(xso);
+	struct ipc_connection *ipc_c = icspo->ipc_c;
+
+	xrt_result_t xret;
+
+	struct ipc_client_space *icsp_base_space = ipc_client_space(base_space);
+
+	uint32_t *space_ids = U_TYPED_ARRAY_CALLOC(uint32_t, space_count);
+	if (space_ids == NULL) {
+		IPC_ERROR(ipc_c, "Failed to allocate space_ids");
+		return XRT_ERROR_ALLOCATION;
+	}
+
+	ipc_client_connection_lock(ipc_c);
+
+	xret =
+	    ipc_send_space_locate_spaces_locked(ipc_c, icsp_base_space->id, base_offset, space_count, at_timestamp_ns);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_send_space_locate_spaces_locked", locate_spaces_out);
+
+	enum xrt_result received_result = XRT_SUCCESS;
+	xret = ipc_receive(&ipc_c->imc, &received_result, sizeof(enum xrt_result));
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_receive: Receive spaces allocation result", locate_spaces_out);
+
+	// now check if the service sent a success code or an error code about allocating memory for spaces.
+	xret = received_result;
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_receive: service side spaces allocation failed", locate_spaces_out);
+
+	for (uint32_t i = 0; i < space_count; i++) {
+		if (spaces[i] == NULL) {
+			space_ids[i] = UINT32_MAX;
+		} else {
+			struct ipc_client_space *icsp_space = ipc_client_space(spaces[i]);
+			space_ids[i] = icsp_space->id;
+		}
+	}
+
+	xret = ipc_send(&ipc_c->imc, space_ids, sizeof(uint32_t) * space_count);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_send: Send spaces ids", locate_spaces_out);
+
+	xret = ipc_send(&ipc_c->imc, offsets, sizeof(struct xrt_pose) * space_count);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_send: Send spaces offsets", locate_spaces_out);
+
+	xret = ipc_receive(&ipc_c->imc, out_relations, sizeof(struct xrt_space_relation) * space_count);
+	IPC_CHK_WITH_GOTO(ipc_c, xret, "ipc_receive: Receive spaces relations", locate_spaces_out);
+
+locate_spaces_out:
+	free(space_ids);
+	ipc_client_connection_unlock(ipc_c);
+	return xret;
+}
+
+static xrt_result_t
 locate_device(struct xrt_space_overseer *xso,
               struct xrt_space *base_space,
               const struct xrt_pose *base_offset,
@@ -265,6 +329,7 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	icspo->base.create_offset_space = create_offset_space;
 	icspo->base.create_pose_space = create_pose_space;
 	icspo->base.locate_space = locate_space;
+	icspo->base.locate_spaces = locate_spaces;
 	icspo->base.locate_device = locate_device;
 	icspo->base.ref_space_inc = ref_space_inc;
 	icspo->base.ref_space_dec = ref_space_dec;

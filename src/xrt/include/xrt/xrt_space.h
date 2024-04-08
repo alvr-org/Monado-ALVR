@@ -160,6 +160,29 @@ struct xrt_space_overseer
 	                             struct xrt_space_relation *out_relation);
 
 	/*!
+	 * Locate spaces in the base space.
+	 *
+	 * @see xrt_device::get_tracked_pose.
+	 *
+	 * @param[in] xso             Owning space overseer.
+	 * @param[in] base_space      The space that we want the pose in.
+	 * @param[in] base_offset     Offset if any to the base space.
+	 * @param[in] at_timestamp_ns At which time.
+	 * @param[in] spaces          The array of pointers to spaces to be located.
+	 * @param[in] space_count     The number of spaces to locate.
+	 * @param[in] offsets         Array of offset if any to the located spaces.
+	 * @param[out] out_relations  Array of resulting poses.
+	 */
+	xrt_result_t (*locate_spaces)(struct xrt_space_overseer *xso,
+	                              struct xrt_space *base_space,
+	                              const struct xrt_pose *base_offset,
+	                              uint64_t at_timestamp_ns,
+	                              struct xrt_space **spaces,
+	                              uint32_t space_count,
+	                              const struct xrt_pose *offsets,
+	                              struct xrt_space_relation *out_relations);
+
+	/*!
 	 * Locate a the origin of the tracking space of a device, this is not
 	 * the same as the device position. In other words, what is the position
 	 * of the space that the device is in, and which it returns its poses
@@ -270,6 +293,27 @@ xrt_space_overseer_locate_space(struct xrt_space_overseer *xso,
                                 struct xrt_space_relation *out_relation)
 {
 	return xso->locate_space(xso, base_space, base_offset, at_timestamp_ns, space, offset, out_relation);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::locate_spaces
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_locate_spaces(struct xrt_space_overseer *xso,
+                                 struct xrt_space *base_space,
+                                 const struct xrt_pose *base_offset,
+                                 uint64_t at_timestamp_ns,
+                                 struct xrt_space **spaces,
+                                 uint32_t space_count,
+                                 const struct xrt_pose *offsets,
+                                 struct xrt_space_relation *out_relations)
+{
+	return xso->locate_spaces(xso, base_space, base_offset, at_timestamp_ns, spaces, space_count, offsets,
+	                          out_relations);
 }
 
 /*!

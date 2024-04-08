@@ -23,6 +23,7 @@
 #include "util/u_space_overseer.h"
 
 #include <assert.h>
+#include <math.h>
 #include <pthread.h>
 
 
@@ -534,6 +535,74 @@ locate_space(struct xrt_space_overseer *xso,
 	return XRT_SUCCESS;
 }
 
+static bool
+pose_approx(const struct xrt_pose *a, const struct xrt_pose *b)
+{
+	const float e = 0.00001f;
+	return fabsf(a->orientation.x - b->orientation.x) < e && //
+	       fabsf(a->orientation.y - b->orientation.y) < e && //
+	       fabsf(a->orientation.z - b->orientation.z) < e && //
+	       fabsf(a->orientation.w - b->orientation.w) < e && //
+	       fabsf(a->position.x - b->position.x) < e &&       //
+	       fabsf(a->position.y - b->position.y) < e &&       //
+	       fabsf(a->position.z - b->position.z) < e;
+}
+
+static int32_t
+find_same_space_before(struct xrt_space **spaces, const struct xrt_pose *offsets, uint32_t space_index)
+{
+	for (int32_t i = 0; i < (int32_t)space_index; i++) {
+		if (spaces[i] == spaces[space_index] && pose_approx(&offsets[i], &offsets[space_index])) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static xrt_result_t
+locate_spaces(struct xrt_space_overseer *xso,
+              struct xrt_space *base_space,
+              const struct xrt_pose *base_offset,
+              uint64_t at_timestamp_ns,
+              struct xrt_space **spaces,
+              uint32_t space_count,
+              const struct xrt_pose *offsets,
+              struct xrt_space_relation *out_relations)
+{
+	struct u_space_overseer *uso = u_space_overseer(xso);
+
+	struct u_space *ubase_space = u_space(base_space);
+
+	for (uint32_t i = 0; i < space_count; i++) {
+		// spaces are allowed to be NULL
+		if (spaces[i] == NULL) {
+			out_relations->relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
+			continue;
+		}
+
+		// crude optimization: If space ptr is equal to one already located, don't locate again, just copy
+		{
+			int32_t found = find_same_space_before(spaces, offsets, i);
+			if (found >= 0) {
+				out_relations[i] = out_relations[found];
+				continue;
+			}
+		}
+
+		struct u_space *uspace = u_space(spaces[i]);
+		struct xrt_relation_chain xrc = {0};
+
+		m_relation_chain_push_pose_if_not_identity(&xrc, &offsets[i]);
+		build_relation_chain(uso, &xrc, ubase_space, uspace, at_timestamp_ns);
+		m_relation_chain_push_inverted_pose_if_not_identity(&xrc, base_offset);
+
+		// For base_space =~= space (approx equals).
+		special_resolve(&xrc, &out_relations[i]);
+	}
+
+	return XRT_SUCCESS;
+}
+
 static xrt_result_t
 locate_device(struct xrt_space_overseer *xso,
               struct xrt_space *base_space,
@@ -762,6 +831,7 @@ u_space_overseer_create(struct xrt_session_event_sink *broadcast)
 	uso->base.create_offset_space = create_offset_space;
 	uso->base.create_pose_space = create_pose_space;
 	uso->base.locate_space = locate_space;
+	uso->base.locate_spaces = locate_spaces;
 	uso->base.locate_device = locate_device;
 	uso->base.ref_space_inc = ref_space_inc;
 	uso->base.ref_space_dec = ref_space_dec;
