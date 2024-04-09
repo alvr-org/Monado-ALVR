@@ -377,11 +377,15 @@ special_resolve(struct xrt_relation_chain *xrc, struct xrt_space_relation *out_r
 	// A space chain with zero step is always valid.
 	if (xrc->step_count == 0) {
 		out_relation->pose = (struct xrt_pose)XRT_POSE_IDENTITY;
-		out_relation->relation_flags =                   //
-		    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |   //
-		    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | //
-		    XRT_SPACE_RELATION_POSITION_VALID_BIT |      //
-		    XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
+		out_relation->linear_velocity = (struct xrt_vec3)XRT_VEC3_ZERO;
+		out_relation->angular_velocity = (struct xrt_vec3)XRT_VEC3_ZERO;
+		out_relation->relation_flags =                     //
+		    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |     //
+		    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |   //
+		    XRT_SPACE_RELATION_POSITION_VALID_BIT |        //
+		    XRT_SPACE_RELATION_POSITION_TRACKED_BIT |      //
+		    XRT_SPACE_RELATION_LINEAR_VELOCITY_VALID_BIT | //
+		    XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT;
 	} else {
 		m_relation_chain_resolve(xrc, out_relation);
 	}
