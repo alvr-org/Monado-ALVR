@@ -593,7 +593,13 @@ locate_spaces(struct xrt_space_overseer *xso,
 		struct xrt_relation_chain xrc = {0};
 
 		m_relation_chain_push_pose_if_not_identity(&xrc, &offsets[i]);
-		build_relation_chain(uso, &xrc, ubase_space, uspace, at_timestamp_ns);
+
+		// crude optimization: If locating a space in itself, we don't actually need to locate the space itself.
+		// only the offsets need to be applied.
+		if (spaces[i] != base_space) {
+			build_relation_chain(uso, &xrc, ubase_space, uspace, at_timestamp_ns);
+		}
+
 		m_relation_chain_push_inverted_pose_if_not_identity(&xrc, base_offset);
 
 		// For base_space =~= space (approx equals).
