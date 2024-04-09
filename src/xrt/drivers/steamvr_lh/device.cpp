@@ -657,35 +657,59 @@ Device::init_chaperone(const std::string &steam_install)
 	DEV_INFO("Initialized chaperone data.");
 }
 
+inline xrt_space_relation_flags
+operator|(xrt_space_relation_flags a, xrt_space_relation_flags b)
+{
+	return static_cast<xrt_space_relation_flags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline xrt_space_relation_flags &
+operator|=(xrt_space_relation_flags &a, xrt_space_relation_flags b)
+{
+	a = a | b;
+	return a;
+}
+
 void
 Device::update_pose(const vr::DriverPose_t &newPose) const
 {
 	xrt_space_relation relation = {};
-	if (newPose.poseIsValid && newPose.deviceIsConnected) {
-		relation.relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
-		relation.pose = copy_pose(newPose.qRotation, newPose.vecPosition);
-		relation.linear_velocity = copy_vec3(newPose.vecVelocity);
-		relation.angular_velocity = copy_vec3(newPose.vecAngularVelocity);
-
-		math_quat_rotate_vec3(&relation.pose.orientation, &relation.angular_velocity,
-		                      &relation.angular_velocity);
-
-		// apply over local transform
-		const xrt_pose local = copy_pose(newPose.qDriverFromHeadRotation, newPose.vecDriverFromHeadTranslation);
-		math_pose_transform(&relation.pose, &local, &relation.pose);
-
-		// apply world transform
-		const xrt_pose world =
-		    copy_pose(newPose.qWorldFromDriverRotation, newPose.vecWorldFromDriverTranslation);
-		math_pose_transform(&world, &relation.pose, &relation.pose);
-		math_quat_rotate_vec3(&world.orientation, &relation.linear_velocity, &relation.linear_velocity);
-		math_quat_rotate_vec3(&world.orientation, &relation.angular_velocity, &relation.angular_velocity);
-
-		// apply chaperone transform
-		math_pose_transform(&chaperone, &relation.pose, &relation.pose);
-		math_quat_rotate_vec3(&chaperone.orientation, &relation.linear_velocity, &relation.linear_velocity);
-		math_quat_rotate_vec3(&chaperone.orientation, &relation.angular_velocity, &relation.angular_velocity);
+	// These relation hookups are a bit seat of the pants however they produce good full body track results
+	// especially when occluded from basestations linear drift off into space is minimized.
+	if (newPose.deviceIsConnected) {
+		relation.relation_flags |= xrt_space_relation_flags::XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
+		                           xrt_space_relation_flags::XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
 	}
+	if (newPose.poseIsValid) {
+		relation.relation_flags |= xrt_space_relation_flags::XRT_SPACE_RELATION_LINEAR_VELOCITY_VALID_BIT |
+		                           xrt_space_relation_flags::XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT;
+	}
+	if (newPose.result == vr::TrackingResult_Running_OK) {
+		relation.relation_flags |= xrt_space_relation_flags::XRT_SPACE_RELATION_POSITION_VALID_BIT |
+		                           xrt_space_relation_flags::XRT_SPACE_RELATION_ORIENTATION_VALID_BIT;
+	}
+
+	// The driver still outputs good pose data regardless of the pose results above
+	relation.pose = copy_pose(newPose.qRotation, newPose.vecPosition);
+	relation.linear_velocity = copy_vec3(newPose.vecVelocity);
+	relation.angular_velocity = copy_vec3(newPose.vecAngularVelocity);
+
+	math_quat_rotate_vec3(&relation.pose.orientation, &relation.angular_velocity, &relation.angular_velocity);
+
+	// apply over local transform
+	const xrt_pose local = copy_pose(newPose.qDriverFromHeadRotation, newPose.vecDriverFromHeadTranslation);
+	math_pose_transform(&relation.pose, &local, &relation.pose);
+
+	// apply world transform
+	const xrt_pose world = copy_pose(newPose.qWorldFromDriverRotation, newPose.vecWorldFromDriverTranslation);
+	math_pose_transform(&world, &relation.pose, &relation.pose);
+	math_quat_rotate_vec3(&world.orientation, &relation.linear_velocity, &relation.linear_velocity);
+	math_quat_rotate_vec3(&world.orientation, &relation.angular_velocity, &relation.angular_velocity);
+
+	// apply chaperone transform
+	math_pose_transform(&chaperone, &relation.pose, &relation.pose);
+	math_quat_rotate_vec3(&chaperone.orientation, &relation.linear_velocity, &relation.linear_velocity);
+	math_quat_rotate_vec3(&chaperone.orientation, &relation.angular_velocity, &relation.angular_velocity);
 
 	const uint64_t ts = chrono_timestamp_ns() + static_cast<uint64_t>(newPose.poseTimeOffset * 1000000.0);
 
