@@ -60,7 +60,7 @@ r_device_update_inputs(struct xrt_device *xdev)
 	struct r_remote_controller_data *latest = rd->is_left ? &r->latest.left : &r->latest.right;
 
 	if (!latest->active) {
-		for (uint32_t i = 0; i < 19; i++) {
+		for (uint32_t i = 0; i < xdev->input_count; i++) {
 			xdev->inputs[i].active = false;
 			xdev->inputs[i].timestamp = now;
 			U_ZERO(&xdev->inputs[i].value);
@@ -68,7 +68,7 @@ r_device_update_inputs(struct xrt_device *xdev)
 		return;
 	}
 
-	for (uint32_t i = 0; i < 19; i++) {
+	for (uint32_t i = 0; i < xdev->input_count; i++) {
 		xdev->inputs[i].active = true;
 		xdev->inputs[i].timestamp = now;
 	}
@@ -103,7 +103,8 @@ r_device_get_tracked_pose(struct xrt_device *xdev,
 	struct r_device *rd = r_device(xdev);
 	struct r_hub *r = rd->r;
 
-	if (name != XRT_INPUT_INDEX_AIM_POSE && name != XRT_INPUT_INDEX_GRIP_POSE) {
+	if (name != XRT_INPUT_INDEX_AIM_POSE && name != XRT_INPUT_INDEX_GRIP_POSE &&
+	    name != XRT_INPUT_GENERIC_PALM_POSE) {
 		U_LOG_E("Unknown input name: 0x%0x", name);
 		return;
 	}
@@ -198,7 +199,7 @@ r_device_create(struct r_hub *r, bool is_left)
 {
 	// Allocate.
 	const enum u_device_alloc_flags flags = 0;
-	const uint32_t input_count = 20; // 19 + hand tracker
+	const uint32_t input_count = 21; // 20 + hand tracker
 	const uint32_t output_count = 1;
 	struct r_device *rd = U_DEVICE_ALLOCATE( //
 	    struct r_device, flags, input_count, output_count);
@@ -251,6 +252,8 @@ r_device_create(struct r_hub *r, bool is_left)
 	} else {
 		rd->base.inputs[19].name = XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT;
 	}
+	rd->base.inputs[20].name = XRT_INPUT_GENERIC_PALM_POSE;
+
 	rd->base.outputs[0].name = XRT_OUTPUT_NAME_INDEX_HAPTIC;
 
 	if (is_left) {
