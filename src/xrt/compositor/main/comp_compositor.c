@@ -1101,7 +1101,7 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 
 	// Only add active views.
 	for (uint32_t i = 0; i < view_count; i++) {
-		char tmp[] = "View[X_XXX_XXX]";
+		char tmp[64] = {0};
 		snprintf(tmp, sizeof(tmp), "View[%u]", i);
 		u_var_add_native_images_debug(c, &c->scratch.views[i].unid, tmp);
 	}
