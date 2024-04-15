@@ -76,13 +76,16 @@ distributions:
         deb_version_suffix: bpo12
         packages:
           <<: *default_debian_packages
+          clang-format:
           codespell:
           doxygen:
           graphviz:
           pipx:
-          python3-pip:
           python3-click:
-          clang-format:
+          python3-pip:
+          # reprepro must always run on the most recent debian-derived distribution so it is aware of all distros we package for.
+          # Right now that is bookworm but it will be a new Ubuntu soon.
+          reprepro:
         build_jobs:
           - name: "debian:cmake"
             # Generate "changes since last release" and add to changelog,
@@ -198,7 +201,6 @@ distributions:
         deb_version_suffix: ubuntu2204
         packages:
           <<: *default_debian_packages
-          reprepro:
         build_jobs:
           - name: "ubuntu:jammy:cmake"
             cmake_defines:
