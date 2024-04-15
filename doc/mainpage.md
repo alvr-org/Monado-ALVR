@@ -44,6 +44,7 @@ includes a section for changes that have not yet been in a tagged release.
 * @ref implementing-extension
 * @ref how-to-release
 * @ref winbuild
+* @ref packaging-notes - for people maintaining Linux packages of Monado
 
 ## Design Documentation
 
