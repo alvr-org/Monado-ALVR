@@ -532,7 +532,6 @@ comp_swapchain_create_init(struct comp_swapchain *sc,
 	if (ret != VK_SUCCESS) {
 		VK_ERROR(vk, "Failed to get native handles for images.");
 		vk_ic_destroy(vk, &sc->vkic);
-		free(sc);
 		return XRT_ERROR_VULKAN;
 	}
 	for (uint32_t i = 0; i < sc->vkic.image_count; i++) {
@@ -544,7 +543,6 @@ comp_swapchain_create_init(struct comp_swapchain *sc,
 	xrt_result_t res = do_post_create_vulkan_setup(vk, info, sc);
 	if (res != XRT_SUCCESS) {
 		vk_ic_destroy(vk, &sc->vkic);
-		free(sc);
 		return res;
 	}
 
