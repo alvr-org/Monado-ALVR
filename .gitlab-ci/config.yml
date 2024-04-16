@@ -72,7 +72,7 @@ distributions:
       # This image does some extra work.
       - codename: bookworm
         script: i386_and_proclamation_container_prep.sh
-        tag: "2024-03-21.2"
+        tag: "2024-04-16"
         deb_version_suffix: bpo12
         packages:
           <<: *default_debian_packages
@@ -197,7 +197,7 @@ distributions:
 
       - codename: jammy
         distro_version: "22.04"
-        tag: "2024-01-16"
+        tag: "2024-04-16"
         deb_version_suffix: ubuntu2204
         packages:
           <<: *default_debian_packages
