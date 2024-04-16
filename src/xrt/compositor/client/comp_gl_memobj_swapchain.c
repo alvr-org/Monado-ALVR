@@ -137,11 +137,11 @@ client_gl_memobj_swapchain_create(struct xrt_compositor *xc,
 		xscn->images[i].handle = XRT_GRAPHICS_BUFFER_HANDLE_INVALID;
 
 		if (info->array_size == 1) {
-			glTextureStorageMem2DEXT(xscgl->images[i], info->mip_count, (GLuint)info->format, info->width,
-			                         info->height, sc->memory[i], 0);
+			glTexStorageMem2DEXT(tex_target, info->mip_count, (GLuint)info->format, info->width,
+			                     info->height, sc->memory[i], 0);
 		} else {
-			glTextureStorageMem3DEXT(xscgl->images[i], info->mip_count, (GLuint)info->format, info->width,
-			                         info->height, info->array_size, sc->memory[i], 0);
+			glTexStorageMem3DEXT(tex_target, info->mip_count, (GLuint)info->format, info->width,
+			                     info->height, info->array_size, sc->memory[i], 0);
 		}
 	}
 
