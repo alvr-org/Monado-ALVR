@@ -582,7 +582,6 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 	xrt_result_t res = do_post_create_vulkan_setup(vk, info, sc);
 	if (res != XRT_SUCCESS) {
 		vk_ic_destroy(vk, &sc->vkic);
-		free(sc);
 		return res;
 	}
 
