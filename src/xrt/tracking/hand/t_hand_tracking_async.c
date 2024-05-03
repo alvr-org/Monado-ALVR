@@ -200,7 +200,7 @@ ht_async_receive_right(struct xrt_frame_sink *sink, struct xrt_frame *frame)
 		return;
 	}
 
-	// Just to sanity check the above.
+	// Just to check the above.
 	assert(hta->frames[0] != NULL);
 	assert(hta->frames[1] == NULL);
 
