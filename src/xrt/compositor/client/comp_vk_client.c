@@ -917,7 +917,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 		return c;
 	}
 
-	// Create a dummy VkCommandBuffer and submit it to the VkQueue, just for inserting a debug label into
+	// Create a no-op VkCommandBuffer and submit it to the VkQueue, just for inserting a debug label into
 	// RenderDoc for triggering the capture.
 	ret = vk_cmd_pool_create_begin_insert_label_and_end_cmd_buffer_locked(
 	    vk, &c->pool, "vr-marker,frame_end,type,application", &c->dcb);

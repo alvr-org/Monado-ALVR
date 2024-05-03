@@ -811,7 +811,7 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 	// Only used if fast_path is true.
 	const struct comp_layer *layer = &layers[0];
 
-	// Sanity check.
+	// Consistency check.
 	assert(!fast_path || layer_count >= 1);
 
 	if (fast_path && layer->data.type == XRT_LAYER_PROJECTION) {

@@ -862,7 +862,7 @@ dispatch_graphics(struct comp_renderer *r,
 	// Resources for the distortion render target.
 	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
 
-	// Sanity check.
+	// Consistency check.
 	assert(!fast_path || c->base.slot.layer_count >= 1);
 
 	// Viewport information.
