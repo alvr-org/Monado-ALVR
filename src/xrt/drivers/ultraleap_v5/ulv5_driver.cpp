@@ -168,70 +168,70 @@ ulv5_process_joint(LEAP_VECTOR joint_pos,
 void
 ulv5_process_hand(LEAP_HAND hand, struct ulv5_device *ulv5d, int handedness)
 {
-	struct xrt_hand_joint_set dummy_joint_set;
+	struct xrt_hand_joint_set joint_set;
 // gives access to individual joints of the joint_set
-#define dummy_joint_set(y) &dummy_joint_set.values.hand_joint_set_default[XRT_HAND_JOINT_##y]
+#define joint_set(y) &joint_set.values.hand_joint_set_default[XRT_HAND_JOINT_##y]
 
-	ulv5_process_joint(hand.palm.position, hand.palm.orientation, hand.palm.width, dummy_joint_set(PALM));
+	ulv5_process_joint(hand.palm.position, hand.palm.orientation, hand.palm.width, joint_set(PALM));
 	// wrist is the next_joint of the arm
-	ulv5_process_joint(hand.arm.next_joint, hand.arm.rotation, hand.arm.width, dummy_joint_set(WRIST));
+	ulv5_process_joint(hand.arm.next_joint, hand.arm.rotation, hand.arm.width, joint_set(WRIST));
 	// thumb
 	ulv5_process_joint(hand.thumb.proximal.prev_joint, hand.thumb.proximal.rotation, hand.thumb.proximal.width,
-	                   dummy_joint_set(THUMB_METACARPAL));
+	                   joint_set(THUMB_METACARPAL));
 	ulv5_process_joint(hand.thumb.intermediate.prev_joint, hand.thumb.intermediate.rotation,
-	                   hand.thumb.intermediate.width, dummy_joint_set(THUMB_PROXIMAL));
+	                   hand.thumb.intermediate.width, joint_set(THUMB_PROXIMAL));
 	ulv5_process_joint(hand.thumb.distal.prev_joint, hand.thumb.distal.rotation, hand.thumb.distal.width,
-	                   dummy_joint_set(THUMB_DISTAL));
+	                   joint_set(THUMB_DISTAL));
 	ulv5_process_joint(hand.thumb.distal.next_joint, hand.thumb.distal.rotation, hand.thumb.distal.width,
-	                   dummy_joint_set(THUMB_TIP));
+	                   joint_set(THUMB_TIP));
 	// index
 	ulv5_process_joint(hand.index.metacarpal.prev_joint, hand.index.metacarpal.rotation,
-	                   hand.index.metacarpal.width, dummy_joint_set(INDEX_METACARPAL));
+	                   hand.index.metacarpal.width, joint_set(INDEX_METACARPAL));
 	ulv5_process_joint(hand.index.proximal.prev_joint, hand.index.proximal.rotation, hand.index.proximal.width,
-	                   dummy_joint_set(INDEX_PROXIMAL));
+	                   joint_set(INDEX_PROXIMAL));
 	ulv5_process_joint(hand.index.intermediate.prev_joint, hand.index.intermediate.rotation,
-	                   hand.index.intermediate.width, dummy_joint_set(INDEX_INTERMEDIATE));
+	                   hand.index.intermediate.width, joint_set(INDEX_INTERMEDIATE));
 	ulv5_process_joint(hand.index.distal.prev_joint, hand.index.distal.rotation, hand.index.distal.width,
-	                   dummy_joint_set(INDEX_DISTAL));
+	                   joint_set(INDEX_DISTAL));
 	ulv5_process_joint(hand.index.distal.next_joint, hand.index.distal.rotation, hand.index.distal.width,
-	                   dummy_joint_set(INDEX_TIP));
+	                   joint_set(INDEX_TIP));
 	// middle
 	ulv5_process_joint(hand.middle.metacarpal.prev_joint, hand.middle.metacarpal.rotation,
-	                   hand.middle.metacarpal.width, dummy_joint_set(MIDDLE_METACARPAL));
+	                   hand.middle.metacarpal.width, joint_set(MIDDLE_METACARPAL));
 	ulv5_process_joint(hand.middle.proximal.prev_joint, hand.middle.proximal.rotation, hand.middle.proximal.width,
-	                   dummy_joint_set(MIDDLE_PROXIMAL));
+	                   joint_set(MIDDLE_PROXIMAL));
 	ulv5_process_joint(hand.middle.intermediate.prev_joint, hand.middle.intermediate.rotation,
-	                   hand.middle.intermediate.width, dummy_joint_set(MIDDLE_INTERMEDIATE));
+	                   hand.middle.intermediate.width, joint_set(MIDDLE_INTERMEDIATE));
 	ulv5_process_joint(hand.middle.distal.prev_joint, hand.middle.distal.rotation, hand.middle.distal.width,
-	                   dummy_joint_set(MIDDLE_DISTAL));
+	                   joint_set(MIDDLE_DISTAL));
 	ulv5_process_joint(hand.middle.distal.next_joint, hand.middle.distal.rotation, hand.middle.distal.width,
-	                   dummy_joint_set(MIDDLE_TIP));
+	                   joint_set(MIDDLE_TIP));
 	// ring
 	ulv5_process_joint(hand.ring.metacarpal.prev_joint, hand.ring.metacarpal.rotation, hand.ring.metacarpal.width,
-	                   dummy_joint_set(RING_METACARPAL));
+	                   joint_set(RING_METACARPAL));
 	ulv5_process_joint(hand.ring.proximal.prev_joint, hand.ring.proximal.rotation, hand.ring.proximal.width,
-	                   dummy_joint_set(RING_PROXIMAL));
+	                   joint_set(RING_PROXIMAL));
 	ulv5_process_joint(hand.ring.intermediate.prev_joint, hand.ring.intermediate.rotation,
-	                   hand.ring.intermediate.width, dummy_joint_set(RING_INTERMEDIATE));
+	                   hand.ring.intermediate.width, joint_set(RING_INTERMEDIATE));
 	ulv5_process_joint(hand.ring.distal.prev_joint, hand.ring.distal.rotation, hand.ring.distal.width,
-	                   dummy_joint_set(RING_DISTAL));
+	                   joint_set(RING_DISTAL));
 	ulv5_process_joint(hand.ring.distal.next_joint, hand.ring.distal.rotation, hand.ring.distal.width,
-	                   dummy_joint_set(RING_TIP));
+	                   joint_set(RING_TIP));
 	// pinky
 	ulv5_process_joint(hand.pinky.metacarpal.prev_joint, hand.pinky.metacarpal.rotation,
-	                   hand.pinky.metacarpal.width, dummy_joint_set(LITTLE_METACARPAL));
+	                   hand.pinky.metacarpal.width, joint_set(LITTLE_METACARPAL));
 	ulv5_process_joint(hand.pinky.proximal.prev_joint, hand.pinky.proximal.rotation, hand.pinky.proximal.width,
-	                   dummy_joint_set(LITTLE_PROXIMAL));
+	                   joint_set(LITTLE_PROXIMAL));
 	ulv5_process_joint(hand.pinky.intermediate.prev_joint, hand.pinky.intermediate.rotation,
-	                   hand.pinky.intermediate.width, dummy_joint_set(LITTLE_INTERMEDIATE));
+	                   hand.pinky.intermediate.width, joint_set(LITTLE_INTERMEDIATE));
 	ulv5_process_joint(hand.pinky.distal.prev_joint, hand.pinky.distal.rotation, hand.pinky.distal.width,
-	                   dummy_joint_set(LITTLE_DISTAL));
+	                   joint_set(LITTLE_DISTAL));
 	ulv5_process_joint(hand.pinky.distal.next_joint, hand.pinky.distal.rotation, hand.pinky.distal.width,
-	                   dummy_joint_set(LITTLE_TIP));
+	                   joint_set(LITTLE_TIP));
 
 	// copy over to ulv5d joint set
 	os_thread_helper_lock(&ulv5d->oth);
-	memcpy(&ulv5d->joint_set[handedness], &dummy_joint_set, sizeof(struct xrt_hand_joint_set));
+	memcpy(&ulv5d->joint_set[handedness], &joint_set, sizeof(struct xrt_hand_joint_set));
 	os_thread_helper_unlock(&ulv5d->oth);
 }
 
