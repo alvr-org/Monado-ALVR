@@ -97,7 +97,7 @@ getStartupConfig(struct ht_device *htd, const cJSON *startup_config)
 static void
 getUserConfig(struct ht_device *htd)
 {
-	// The game here is to avoid bugs + be paranoid, not to be fast. If you see something that seems "slow" - don't
+	// The game here is to avoid bugs + be cautious, not to be fast. If you see something that seems "slow" - don't
 	// fix it. Any of the tracking code is way stickier than this could ever be.
 
 	struct u_config_json config_json = {0};
