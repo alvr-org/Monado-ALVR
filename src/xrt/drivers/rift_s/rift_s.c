@@ -442,7 +442,7 @@ handle_controller_report(struct rift_s_system *sys, timepoint_ns local_ts, const
 	}
 
 	if (report.device_id == 0x00) {
-		/* Dummy report. Ignore it */
+		/* placeholder report. Ignore it */
 		return;
 	}
 
