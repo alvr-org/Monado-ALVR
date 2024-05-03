@@ -58,7 +58,7 @@ struct wmr_distortion_3K
 	struct xrt_vec2 eye_center;
 	/* k1,k2,k3 params for radial distortion as
 	 * per the radial distortion model in
-	 * https://docs.opencv.org/master/d9/d0c/group__calib3d.html */
+	 * https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html */
 	double k[3];
 };
 
