@@ -230,7 +230,7 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
 		// see
-		// https://android.googlesource.com/platform/cts/+/master/tests/tests/nativehardware/jni/AHardwareBufferGLTest.cpp
+		// https://android.googlesource.com/platform/cts/+/e59c1e8ef5c19ff49bd53dd5d039f9a773d877ec/tests/tests/nativehardware/jni/AHardwareBufferGLTest.cpp#1416
 		native_buffer = eglGetNativeClientBufferANDROID(xscn->images[i].handle);
 
 		AHardwareBuffer_Desc desc;
