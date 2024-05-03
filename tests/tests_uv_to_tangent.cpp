@@ -37,7 +37,7 @@ check(xrt_normalized_rect &result, xrt_normalized_rect &&truth)
 
 TEST_CASE("render_calc_uv_to_tangent_lengths_rect")
 {
-	// Sanity check.
+	// check assumptions
 	REQUIRE_THAT(tan(QUARTER_PI), Catch::WithinAbs(1.0, MARGIN));
 
 	SECTION("45_degrees")

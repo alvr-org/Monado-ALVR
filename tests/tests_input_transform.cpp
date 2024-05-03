@@ -353,7 +353,7 @@ TEST_CASE("input_transform_dpad")
 			input.type = XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE;
 
 			CHECK(oxr_input_transform_create_chain_dpad(
-			    &log, &slog, input.type, action_type, "/dummy_vec2/dpad_up", dpad_binding_modification,
+			    &log, &slog, input.type, action_type, "/mock_vec2/dpad_up", dpad_binding_modification,
 			    dpad_region, activation_input_type, NULL, &transforms, &transform_count));
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
@@ -410,7 +410,7 @@ TEST_CASE("input_transform_dpad")
 			activation_input_type = XRT_INPUT_TYPE_BOOLEAN;
 
 			CHECK(oxr_input_transform_create_chain_dpad(
-			    &log, &slog, input.type, action_type, "/dummy_vec2/dpad_up", dpad_binding_modification,
+			    &log, &slog, input.type, action_type, "/mock_vec2/dpad_up", dpad_binding_modification,
 			    dpad_region, activation_input_type, &activation_input, &transforms, &transform_count));
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
@@ -438,7 +438,7 @@ TEST_CASE("input_transform_dpad")
 			activation_input_type = XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE;
 
 			CHECK(oxr_input_transform_create_chain_dpad(
-			    &log, &slog, input.type, action_type, "/dummy_vec2/dpad_up", dpad_binding_modification,
+			    &log, &slog, input.type, action_type, "/mock_vec2/dpad_up", dpad_binding_modification,
 			    dpad_region, activation_input_type, &activation_input, &transforms, &transform_count));
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
@@ -495,7 +495,7 @@ TEST_CASE("input_transform_dpad")
 			input.value.vec2.y = 1.0f;
 
 			CHECK(oxr_input_transform_create_chain_dpad(
-			    &log, &slog, input.type, action_type, "/dummy_vec2/dpad_up", dpad_binding_modification,
+			    &log, &slog, input.type, action_type, "/mock_vec2/dpad_up", dpad_binding_modification,
 			    dpad_region, activation_input_type, NULL, &transforms, &transform_count));
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
