@@ -356,17 +356,17 @@ ns_setup_depthai_device(struct ns_builder *nsb,
 	    .gt = slam_sinks->gt,
 	};
 
-	struct xrt_slam_sinks dummy_slam_sinks = {0};
-	dummy_slam_sinks.imu = entry_sinks.imu;
+	struct xrt_slam_sinks unused_slam_sinks = {0};
+	unused_slam_sinks.imu = entry_sinks.imu;
 
-	u_sink_force_genlock_create(    //
-	    xfctx,                      //
-	    entry_sinks.cams[0],        //
-	    entry_sinks.cams[1],        //
-	    &dummy_slam_sinks.cams[0],  //
-	    &dummy_slam_sinks.cams[1]); //
+	u_sink_force_genlock_create(     //
+	    xfctx,                       //
+	    entry_sinks.cams[0],         //
+	    entry_sinks.cams[1],         //
+	    &unused_slam_sinks.cams[0],  //
+	    &unused_slam_sinks.cams[1]); //
 
-	xrt_fs_slam_stream_start(the_fs, &dummy_slam_sinks);
+	xrt_fs_slam_stream_start(the_fs, &unused_slam_sinks);
 
 	return XRT_SUCCESS;
 }

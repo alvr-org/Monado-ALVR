@@ -106,7 +106,6 @@ steamvr_open_system(struct xrt_builder *xb,
 	struct xrt_system_devices *xsysd = NULL;
 	xrt_result_t result = XRT_SUCCESS;
 
-	// Sanity checking.
 	if (out_xsysd == NULL || *out_xsysd != NULL) {
 		LH_ERROR("Invalid output system pointer");
 		return XRT_ERROR_DEVICE_CREATION_FAILED;
@@ -127,7 +126,6 @@ steamvr_open_system(struct xrt_builder *xb,
 	// Look for regular devices.
 	u_device_assign_xdev_roles(xsysd->xdevs, xsysd->xdev_count, &head_idx, &left_idx, &right_idx);
 
-	// Sanity check.
 	if (head_idx < 0) {
 		LH_ERROR("Unable to find HMD");
 		result = XRT_ERROR_DEVICE_CREATION_FAILED;
