@@ -325,7 +325,7 @@ SPDX-FileCopyrightText: 2020 Collabora, Ltd. and the Monado contributors
     ([!509](https://gitlab.freedesktop.org/monado/monado/merge_requests/509))
   - survive: Implement haptic feedback.
     ([!557](https://gitlab.freedesktop.org/monado/monado/merge_requests/557))
-  - dummy: Tidy the code a bit and switch over to the new
+  - simulated: Tidy the code a bit and switch over to the new
     logging API.
     ([!572](https://gitlab.freedesktop.org/monado/monado/merge_requests/572),
     [!573](https://gitlab.freedesktop.org/monado/monado/merge_requests/573))
@@ -373,9 +373,9 @@ SPDX-FileCopyrightText: 2020 Collabora, Ltd. and the Monado contributors
   - compositor: Enable subimage rectangle rendering for projection layers.
     ([!436](https://gitlab.freedesktop.org/monado/monado/merge_requests/436))
   - compositor: Fix printing of current connected displays on nvidia when no
-    whitelisted display is found.
+    allowed display is found.
     ([!477](https://gitlab.freedesktop.org/monado/monado/merge_requests/477))
-  - compositor: Add env var to temporarily add display string to nvidia whitelist.
+  - compositor: Add env var to temporarily add display string to NVIDIA allowlist.
     ([!477](https://gitlab.freedesktop.org/monado/monado/merge_requests/477))
   - compositor and clients: Use a generic typedef to represent the platform-
     specific graphics buffer, allowing use of `AHardwareBuffer` on recent Android.
