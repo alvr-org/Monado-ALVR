@@ -32,7 +32,7 @@ cli_print_help(int argc, const char **argv)
 	P("  probe      - Just probe and then exit.\n");
 	P("  lighthouse - Control the power of lighthouses [on|off].\n");
 	P("  calibrate  - Calibrate a camera and save config (not implemented yet).\n");
-	P("  calib-dumb - Load and dump a calibration to stdout.\n");
+	P("  calib-dump - Load and dump a calibration to stdout.\n");
 	P("  slambatch  - Runs a sequence of EuRoC datasets with the SLAM tracker.\n");
 
 	return 1;
