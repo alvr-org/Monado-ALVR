@@ -197,7 +197,7 @@ namespace {
 		if (out_relation == NULL) {
 			return;
 		}
-		// Clear to sane values
+		// Clear to identity values
 		U_ZERO(out_relation);
 		out_relation->pose.orientation.w = 1;
 		if (!tracked || filter_time_ns == 0) {

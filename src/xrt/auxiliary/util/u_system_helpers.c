@@ -128,7 +128,7 @@ u_system_devices_static_finalize(struct u_system_devices_static *usysds,
 	    left_index, (void *)left,    //
 	    right_index, (void *)right); //
 
-	// Sanity checking.
+	// Consistency checking.
 	assert(usysds->cached.generation_id == 0);
 	assert(left_index < 0 || left != NULL);
 	assert(left_index >= 0 || left == NULL);
