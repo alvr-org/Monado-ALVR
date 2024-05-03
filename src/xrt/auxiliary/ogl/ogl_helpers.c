@@ -41,7 +41,7 @@ ogl_texture_target_for_swapchain_info(const struct xrt_swapchain_create_info *in
                                       uint32_t *out_tex_param_name)
 {
 	// see reference:
-	// https://android.googlesource.com/platform/cts/+/master/tests/tests/nativehardware/jni/AHardwareBufferGLTest.cpp#1261
+	// https://android.googlesource.com/platform/cts/+/e59c1e8ef5c19ff49bd53dd5d039f9a773d877ec/tests/tests/nativehardware/jni/AHardwareBufferGLTest.cpp#1267
 	if (info->face_count == 6) {
 		if (info->array_size > 1) {
 			*out_tex_target = GL_TEXTURE_CUBE_MAP_ARRAY;
