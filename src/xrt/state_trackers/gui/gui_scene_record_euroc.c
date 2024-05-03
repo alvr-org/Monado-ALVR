@@ -44,7 +44,7 @@
 void
 gui_scene_record_euroc(struct gui_program *p)
 {
-	// Dummy so that gui_scene_debug doesn't try to probe.
+	// Placeholder so that gui_scene_debug doesn't try to probe.
 	struct u_system_devices *usysd = u_system_devices_allocate();
 	struct xrt_system_devices *xsysd = &usysd->base;
 	p->xsysd = xsysd;
