@@ -98,6 +98,8 @@ vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk, VkComman
 {
 	VkFence fence;
 	VkResult ret;
+	int wait_attempts = 0;
+	int max_wait_attempts = 10;
 
 	// Finish the command buffer first, the command buffer pool lock needs to be held.
 	ret = vk->vkEndCommandBuffer(cmd_buffer);
@@ -134,7 +136,15 @@ vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk, VkComman
 	}
 
 	// Then wait for the fence.
-	ret = vk->vkWaitForFences(vk->device, 1, &fence, VK_TRUE, 1000000000);
+	do {
+		wait_attempts++;
+		ret = vk->vkWaitForFences(vk->device, 1, &fence, VK_TRUE, 1000000000);
+		if (ret != VK_TIMEOUT) {
+			break;
+		}
+		VK_WARN(vk, "vkWaitForFences not finished after %i attempt(s)...", wait_attempts);
+	} while (wait_attempts < max_wait_attempts);
+
 	if (ret != VK_SUCCESS) {
 		VK_ERROR(vk, "vkWaitForFences: %s", vk_result_string(ret));
 		goto out_fence;
