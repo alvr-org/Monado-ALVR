@@ -16,6 +16,7 @@
 - mr.1377
 - mr.1385
 - mr.2232
+- mr.2204
 ---
 
 More improvements to the Android port.

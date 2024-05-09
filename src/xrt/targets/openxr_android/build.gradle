@@ -1,4 +1,4 @@
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 import groovy.xml.XmlUtil
 
@@ -8,7 +8,6 @@ plugins {
 
     id 'com.mikepenz.aboutlibraries.plugin'
 
-    id "com.gladed.androidgitversion"
     id "de.undercouch.download"
 
     // Hilt dependency injection
@@ -33,12 +32,6 @@ spotless {
         // Use ktfmt(https://github.com/facebook/ktfmt) as the default Kotlin formatter.
         ktfmt('0.43').kotlinlangStyle()
     }
-}
-
-androidGitVersion {
-    tagPattern(/^v[0-9]+.*/)
-    codeFormat = 'MMNPBBBBB'
-    format = '%tag%%-count%%-gcommit%%-dirty%'
 }
 
 def parseOpenXRVersion(def fn) {
@@ -97,6 +90,60 @@ if (!(new File(project.file(project.eigenIncludeDir), "Eigen/Core")).exists()) {
     unpackEigen.enabled = false
 }
 
+// ***
+// Git version handling
+// ***
+
+// Supplied with major, minor, patch, commit count
+def versionCodeFormatPattern = "%02d%01d%01d%05d"
+
+// parsed using this regex
+def gitDescribePattern = ~/v(?<tag>(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+))-(?<commits>\d+)-g(?<hash>[0-9a-f]+)/
+
+// Get the version code from git describe output
+def getVersionCode = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'describe', '--always', '--long', '--match', 'v*'
+            standardOutput = stdout
+            workingDir rootDir
+        }
+        def longOutput = stdout.toString().trim()
+        def matcher = longOutput =~ gitDescribePattern
+        if (!matcher.matches()) {
+            println "Could not find an annotated git tag matching the regex!"
+            return null
+        }
+        def codeAsString = String.format(versionCodeFormatPattern,
+            Integer.parseInt(matcher.group('major')),
+            Integer.parseInt(matcher.group('minor')),
+            Integer.parseInt(matcher.group('patch')),
+            Integer.parseInt(matcher.group('commits')))
+        return Integer.parseInt(codeAsString)
+    }
+    catch (ignored) {
+        return null;
+    }
+}
+
+// Get the version string from git describe output
+def getVersionString = { ->
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'describe', '--always', '--dirty', '--match', 'v*'
+            standardOutput = stdout
+            workingDir rootDir
+        }
+        return stdout.toString().trim()
+    }
+    catch (ignored) {
+        return null;
+    }
+}
+
+
 // Pass -PsharedStl=true on the gradle command line to build with the shared runtime library.
 // This has potential compatibility issues and should only be used if you're consuming another
 // library that exposes a C++ interface.
@@ -117,10 +164,11 @@ android {
         minSdkVersion project.sharedMinSdk
         targetSdkVersion project.sharedTargetSdk
 
-        versionCode androidGitVersion.code()
-        versionName androidGitVersion.name()
+        versionCode = getVersionCode()
+        versionName = getVersionString()
 
         println versionName
+        println versionCode
 
         resValue "string", "monado_lib_version", "${versionName}"
 
