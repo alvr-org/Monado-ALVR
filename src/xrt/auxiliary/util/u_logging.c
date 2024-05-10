@@ -50,6 +50,11 @@
  */
 #define LOG_HEX_LINE_BUF_SIZE (128)
 
+
+#ifndef LOG_ANDROID_TAG_PREFIX
+#define LOG_ANDROID_TAG_PREFIX "monado"
+#endif
+
 /*
  *
  * Global log level functions.
@@ -381,10 +386,15 @@ do_print(const char *file, int line, const char *func, enum u_logging_level leve
 
 
 #ifdef XRT_OS_ANDROID
-
 	android_LogPriority prio = u_log_convert_priority(level);
-	__android_log_write(prio, func, storage);
 
+	char storage_tag[256];
+	int tag_ret = u_truncate_snprintf(storage_tag, sizeof(storage_tag), LOG_ANDROID_TAG_PREFIX ".%s", func);
+	if (tag_ret < 0) {
+		__android_log_write(prio, func, storage);
+	} else {
+		__android_log_write(prio, storage_tag, storage);
+	}
 #elif defined XRT_OS_WINDOWS || defined XRT_OS_LINUX
 
 	// We want a newline, so add it, then null-terminate again.
