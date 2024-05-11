@@ -205,6 +205,16 @@ distributions:
           - name: "ubuntu:jammy:cmake"
             cmake_defines:
 
+      - codename: noble
+        distro_version: "24.04"
+        tag: "2024-05-11"
+        deb_version_suffix: ubuntu2404
+        packages:
+          <<: *default_debian_packages
+        build_jobs:
+          - name: "ubuntu:noble:cmake"
+            cmake_defines:
+
   - name: arch
     images:
       - tag: "2024-01-16"

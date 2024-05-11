@@ -69,3 +69,13 @@ if [ -f "incoming/jammy.distro" ]; then
 else
     echo "Skipping jammy - no artifact found"
 fi
+
+# noble
+if [ -f "incoming/noble.distro" ]; then
+    VERSION=$(cat incoming/noble.distro)
+    echo "Signing and processing noble: ${VERSION}"
+    debsign -k "${MONADO_GPG_FINGERPRINT}" -p "gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase ${MONADO_GPG_PASSPHRASE}" "incoming/monado_${VERSION}_amd64.changes"
+    reprepro -V --ignore=wrongdistribution -b repo include noble "incoming/monado_${VERSION}_amd64.changes"
+else
+    echo "Skipping noble - no artifact found"
+fi

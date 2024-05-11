@@ -157,6 +157,12 @@ win:container_prep:
     FDO_DISTRIBUTION_VERSION: "22.04"
     FDO_DISTRIBUTION_TAG: "2024-04-16"
 
+# Variables for build and usage of Ubuntu noble image
+.monado.variables.ubuntu:noble:
+  variables:
+    FDO_DISTRIBUTION_VERSION: "24.04"
+    FDO_DISTRIBUTION_TAG: "2024-05-11"
+
 # Variables for build and usage of Arch image
 .monado.variables.arch:
   variables:
@@ -227,6 +233,17 @@ ubuntu:jammy:container_prep:
   variables:
     FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
 
+# Make Ubuntu noble image
+ubuntu:noble:container_prep:
+  stage: container_prep
+  extends:
+    - .container-rules
+    - .monado.variables.ubuntu:noble
+    - .fdo.container-build@ubuntu # from ci-templates
+
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
+
 # Make Arch image
 arch:container_prep:
   stage: container_prep
@@ -290,6 +307,14 @@ alpine:container_prep:
 .monado.image.ubuntu:jammy:
   extends:
     - .monado.variables.ubuntu:jammy
+    - .fdo.distribution-image@ubuntu # from ci-templates
+    - .build-rules
+
+
+# Base for using Ubuntu noble image
+.monado.image.ubuntu:noble:
+  extends:
+    - .monado.variables.ubuntu:noble
     - .fdo.distribution-image@ubuntu # from ci-templates
     - .build-rules
 
@@ -556,6 +581,16 @@ ubuntu:jammy:cmake:
     - .gitlab-ci/ci-cmake-build.sh
     - cd build && ctest --output-on-failure
 
+ubuntu:noble:cmake:
+  stage: build
+  extends:
+    - .monado.image.ubuntu:noble
+  script:
+
+    - .gitlab-ci/prebuild.sh
+    - .gitlab-ci/ci-cmake-build.sh
+    - cd build && ctest --output-on-failure
+
 arch:cmake:
   stage: build
   extends:
@@ -709,6 +744,33 @@ ubuntu:jammy:package:
       - "incoming/"
     expire_in: 2 days
 
+ubuntu:noble:package:
+  extends:
+    - .monado.image.ubuntu:noble
+    - .monado.packaging.conditions
+  variables:
+    GIT_STRATEGY: clone
+    DEBFULLNAME: "Monado CI"
+    DEBEMAIL: "rylie.pavlik@collabora.com"
+    DISTRO: ubuntu
+    CODENAME: noble
+    DEB_VERSION_SUFFIX: ubuntu2404
+  stage: package
+  before_script:
+    - git config --global user.name Monado CI
+    - git config --global user.email rylie.pavlik@collabora.com
+  script:
+    - .gitlab-ci/prebuild.sh
+    # Prep the source tree
+    - git clean -dfx
+    # Call this script to build binary and source packages.
+    # Can try locally by exporting the right variables and passing -B to get only a binary package to avoid complaints.
+    - .gitlab-ci/build-and-submit-package.sh
+  artifacts:
+    paths:
+      - "incoming/"
+    expire_in: 2 days
+
 reprepro:package:
   stage: reprepro
   extends:
@@ -720,6 +782,7 @@ reprepro:package:
     - debian:bullseye:package
     - ubuntu:focal:package
     - ubuntu:jammy:package
+    - ubuntu:noble:package
   script:
     - bash .gitlab-ci/reprepro.sh
   artifacts:
