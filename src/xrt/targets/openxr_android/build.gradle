@@ -15,9 +15,6 @@ plugins {
     id 'kotlin-kapt'
     id 'dagger.hilt.android.plugin'
 
-    // SVG files in the "raw" resource directory will be transformed into vector drawables of the same name.
-    id 'com.quittle.svg-2-android-vector'
-
     // Use spotless to format Java and Kotlin code
     id 'com.diffplug.spotless'
 }
