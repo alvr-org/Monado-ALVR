@@ -11,7 +11,9 @@ add_library(xrt-optimized-math INTERFACE)
 if(MSVC)
 	target_compile_options(xrt-optimized-math INTERFACE $<IF:$<CONFIG:Debug>,/O2 /Ob2,/O2 /Ob3>)
 else()
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -Wno-unused-parameter")
+	set(CMAKE_C_FLAGS
+	    "${CMAKE_C_FLAGS} -pedantic -Wall -Wextra -Wno-unused-parameter -Wno-missing-braces"
+		)
 	set(CMAKE_C_FLAGS
 	    "${CMAKE_C_FLAGS} -Werror-implicit-function-declaration -Werror=incompatible-pointer-types"
 		)
