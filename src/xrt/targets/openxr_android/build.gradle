@@ -68,7 +68,7 @@ project.ext.filterLicense = { String line ->
 
 project.ext.licenseDir = new File(project.buildDir, 'generated/licenses/main/res/raw')
 
-task copyLicenses(type: Copy) {
+tasks.register('copyLicenses', Copy) {
     from "${rootDir}/LICENSES/"
     include 'BSL-1.0.txt'
     rename(renameLicense)
@@ -77,13 +77,14 @@ task copyLicenses(type: Copy) {
 }
 
 // Grab Eigen if we can't find it on the system.
-task downloadEigen(type: Download) {
+tasks.register('downloadEigen', Download) {
     src "https://gitlab.com/libeigen/eigen/-/archive/${project.eigenFetchVersion}/eigen-${project.eigenFetchVersion}.tar.gz"
     dest new File(project.buildDir, "intermediates/eigenDownload/eigen-${project.eigenFetchVersion}.tar.gz")
 }
 
 def eigenUnpackDir = new File(project.buildDir, 'intermediates/eigen')
-task unpackEigen(dependsOn: downloadEigen, type: Copy) {
+tasks.register('unpackEigen', Copy) {
+    dependsOn downloadEigen
     from tarTree(downloadEigen.dest)
     into eigenUnpackDir
 }
@@ -170,7 +171,7 @@ android {
             externalNativeBuild.cmake.targets "openxr_monado"
 
             buildConfigField "boolean", "inProcess", "true"
-            resValue "string", "app_name", "Monado XR"
+            resValue "string", "app_name", "Monado In Process (Debugging)"
         }
         outOfProcess {
             dimension 'deployment'
@@ -179,7 +180,7 @@ android {
             externalNativeBuild.cmake.targets "openxr_monado", "monado-service"
 
             buildConfigField "boolean", "inProcess", "false"
-            resValue "string", "app_name", "Monado XR (Out-of-Proc)"
+            resValue "string", "app_name", "Monado XR"
         }
     }
     hilt {
