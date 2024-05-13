@@ -17,6 +17,26 @@ Copyright: 2020-2021, Collabora, Ltd. and the Monado contributors
 License: CC0-1.0
 Comment: Prevents needing a license header per fragment between releases.
 
+Files: src/xrt/targets/openxr_android/src/main/res/mipmap-mdpi/*.webp
+  src/xrt/targets/openxr_android/src/main/res/mipmap-hdpi/*.webp
+  src/xrt/targets/openxr_android/src/main/res/mipmap-xhdpi/*.webp
+  src/xrt/targets/openxr_android/src/main/res/mipmap-xxhdpi/*.webp
+  src/xrt/targets/openxr_android/src/main/res/mipmap-xxxhdpi/*.webp
+  src/xrt/targets/openxr_android/src/main/ic_launcher-playstore.png
+  src/xrt/targets/openxr_android/src/inProcess/res/mipmap-mdpi/*.webp
+  src/xrt/targets/openxr_android/src/inProcess/res/mipmap-hdpi/*.webp
+  src/xrt/targets/openxr_android/src/inProcess/res/mipmap-xhdpi/*.webp
+  src/xrt/targets/openxr_android/src/inProcess/res/mipmap-xxhdpi/*.webp
+  src/xrt/targets/openxr_android/src/inProcess/res/mipmap-xxxhdpi/*.webp
+  src/xrt/targets/openxr_android/src/inProcess/ic_launcher_inproc-playstore.png
+  src/xrt/targets/openxr_android/src/main/res/drawable-mdpi/*.png
+  src/xrt/targets/openxr_android/src/main/res/drawable-hdpi/*.png
+  src/xrt/targets/openxr_android/src/main/res/drawable-xhdpi/*.png
+  src/xrt/targets/openxr_android/src/main/res/drawable-xxhdpi/*.png
+Copyright: 2023-2024, Collabora, Ltd.
+License: CC-BY-4.0
+Comment: Based on the official Monado logo commissioned by Collabora.
+
 Files: doc/doxygen-awesome-css/*
 Copyright: 2021-2023, jothepro
 License: MIT

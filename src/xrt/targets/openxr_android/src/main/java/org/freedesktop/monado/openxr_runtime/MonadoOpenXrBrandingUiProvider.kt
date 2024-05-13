@@ -26,5 +26,5 @@ class MonadoOpenXrBrandingUiProvider @Inject constructor(@ApplicationContext val
      * runtime/Monado-incorporating target.
      */
     override fun getLogoDrawable(): Drawable? =
-        ContextCompat.getDrawable(context, R.drawable.ic_monado_logo)
+        ContextCompat.getDrawable(context, R.drawable.ic_monado_vertical)
 }

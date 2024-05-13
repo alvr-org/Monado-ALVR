@@ -2,7 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!--
-        Copyright 2020-2022, Collabora, Ltd.
+        Copyright 2020-2024, Collabora, Ltd.
+
         SPDX-License-Identifier: BSL-1.0
     -->
 
@@ -46,7 +47,8 @@
     <application
         android:name="org.freedesktop.monado.openxr_runtime.MonadoOpenXrApplication"
         android:allowBackup="true"
-        android:icon="@drawable/ic_monado_logo"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
@@ -55,7 +57,6 @@
         <service
             android:name="org.freedesktop.monado.android_common.MonadoVrListener"
             android:exported="true"
-            android:icon="@drawable/ic_monado_logo"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_VR_LISTENER_SERVICE">
             <meta-data

@@ -24,7 +24,7 @@ class MonadoOpenXrUiProvider @Inject constructor(@ApplicationContext val context
 
     /** Gets a drawable for use in a notification, for the runtime/Monado-incorporating target. */
     override fun getNotificationIcon(): Icon? =
-        Icon.createWithResource(context, R.drawable.ic_notif_xr_letters_custom)
+        Icon.createWithResource(context, R.drawable.ic_monado_notif)
 
     /** Make a {@code PendingIntent} to launch an "About" activity for the runtime/target. */
     override fun makeAboutActivityPendingIntent(): PendingIntent {

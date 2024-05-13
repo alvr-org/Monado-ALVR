@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+    Copyright 2024, Collabora, Ltd.
+
+    SPDX-License-Identifier: CC-BY-4.0
+    -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
