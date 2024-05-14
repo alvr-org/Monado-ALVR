@@ -9,7 +9,6 @@
 
 #include <functional>
 #include <cstring>
-#include <math.h>
 #include <thread>
 #include <algorithm>
 
@@ -18,7 +17,6 @@
 #include "math/m_space.h"
 #include "device.hpp"
 #include "interfaces/context.hpp"
-#include "os/os_time.h"
 #include "util/u_debug.h"
 #include "util/u_device.h"
 #include "util/u_hand_simulation.h"
@@ -35,27 +33,18 @@
 #define DEV_INFO(...) U_LOG_IFL_I(ctx->log_level, __VA_ARGS__)
 #define DEV_DEBUG(...) U_LOG_IFL_D(ctx->log_level, __VA_ARGS__)
 
-#define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
-
 DEBUG_GET_ONCE_BOOL_OPTION(lh_emulate_hand, "LH_EMULATE_HAND", true)
 
 // Each device will have its own input class.
 struct InputClass
 {
 	xrt_device_name name;
-	std::string description;
 	const std::vector<xrt_input_name> poses;
 	const std::unordered_map<std::string_view, xrt_input_name> non_poses;
 	const std::unordered_map<std::string_view, IndexFinger> finger_curls;
 };
 
 namespace {
-const std::unordered_map<std::string_view, InputClass> hmd_classes{
-    {"vive", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
-    {"indexhmd", InputClass{XRT_DEVICE_GENERIC_HMD, "Index HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
-    {"vive_pro", InputClass{XRT_DEVICE_GENERIC_HMD, "Vive Pro HMD", {XRT_INPUT_GENERIC_HEAD_POSE}, {}, {}}},
-};
-
 // Adding support for a new controller is a simple as adding it here.
 // The key for the map needs to be the name of input profile as indicated by the lighthouse driver.
 const std::unordered_map<std::string_view, InputClass> controller_classes{
@@ -63,7 +52,6 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
         "vive_controller",
         InputClass{
             XRT_DEVICE_VIVE_WAND,
-            "Vive Wand",
             {
                 XRT_INPUT_VIVE_GRIP_POSE,
                 XRT_INPUT_VIVE_AIM_POSE,
@@ -87,7 +75,6 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
         "index_controller",
         InputClass{
             XRT_DEVICE_INDEX_CONTROLLER,
-            "Valve Index Controller",
             {
                 XRT_INPUT_INDEX_GRIP_POSE,
                 XRT_INPUT_INDEX_AIM_POSE,
@@ -123,7 +110,6 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
         "vive_tracker",
         InputClass{
             XRT_DEVICE_VIVE_TRACKER,
-            "HTC Vive Tracker",
             {
                 XRT_INPUT_GENERIC_TRACKER_POSE,
             },
@@ -143,7 +129,6 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
         "tundra_tracker",
         InputClass{
             XRT_DEVICE_VIVE_TRACKER,
-            "Tundra Tracker",
             {
                 XRT_INPUT_GENERIC_TRACKER_POSE,
             },
@@ -185,6 +170,10 @@ HmdDevice::HmdDevice(const DeviceBuilder &builder) : Device(builder)
 	this->device_type = XRT_DEVICE_TYPE_HMD;
 	this->container_handle = 0;
 	this->stage_supported = true;
+
+	inputs_vec = {xrt_input{true, 0, XRT_INPUT_GENERIC_HEAD_POSE, {}}};
+	this->inputs = inputs_vec.data();
+	this->input_count = inputs_vec.size();
 
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<HmdDevice, &HmdDevice::name>
 	SETUP_MEMBER_FUNC(get_view_poses);
@@ -241,8 +230,11 @@ ControllerDevice::set_hand_tracking_hand(xrt_input_name name)
 	}
 }
 
+// NOTE: No operations that would force inputs_vec or finger_inputs_vec to reallocate (such as insertion)
+// should be done after this function is called, otherwise the pointers in inputs_map/finger_inputs_map
+// would be invalidated.
 void
-Device::set_input_class(const InputClass *input_class)
+ControllerDevice::set_input_class(const InputClass *input_class)
 {
 	// this should only be called once
 	assert(inputs_vec.empty());
@@ -258,28 +250,20 @@ Device::set_input_class(const InputClass *input_class)
 		inputs_vec.push_back({true, 0, input, {}});
 		inputs_map.insert({path, &inputs_vec.back()});
 	}
-	this->inputs = inputs_vec.data();
-	this->input_count = inputs_vec.size();
-}
 
-void
-ControllerDevice::set_input_class(const InputClass *input_class)
-{
-	Device::set_input_class(input_class);
-	if (!debug_get_bool_option_lh_emulate_hand()) {
-		return;
-	}
 	has_index_hand_tracking = !input_class->finger_curls.empty();
-	if (!has_index_hand_tracking) {
-		return;
+	if (debug_get_bool_option_lh_emulate_hand() && has_index_hand_tracking) {
+		finger_inputs_vec.reserve(input_class->finger_curls.size());
+		for (const auto &[path, finger] : input_class->finger_curls) {
+			assert(finger_inputs_vec.capacity() >= finger_inputs_vec.size() + 1);
+			finger_inputs_vec.push_back({0, finger, 0.f});
+			finger_inputs_map.insert({path, &finger_inputs_vec.back()});
+		}
+		assert(inputs_vec.capacity() >= inputs_vec.size() + 1);
+		inputs_vec.push_back({true, 0, XRT_INPUT_GENERIC_HAND_TRACKING_LEFT, {}});
+		inputs_map.insert({std::string_view("HAND"), &inputs_vec.back()});
 	}
-	finger_inputs_vec.reserve(input_class->finger_curls.size());
-	for (const auto &[path, finger] : input_class->finger_curls) {
-		finger_inputs_vec.push_back({0, finger, 0.f});
-		finger_inputs_map.insert({path, &finger_inputs_vec.back()});
-	}
-	inputs_vec.push_back({true, 0, XRT_INPUT_GENERIC_HAND_TRACKING_LEFT, {}});
-	inputs_map.insert({std::string_view("HAND"), &inputs_vec.back()});
+
 	this->inputs = inputs_vec.data();
 	this->input_count = inputs_vec.size();
 }
@@ -757,6 +741,33 @@ parse_profile(std::string_view path)
 } // namespace
 
 void
+Device::handle_property_write(const vr::PropertyWrite_t &prop)
+{
+	switch (prop.prop) {
+	case vr::Prop_ManufacturerName_String: {
+		this->manufacturer = std::string(static_cast<char *>(prop.pvBuffer), prop.unBufferSize);
+		if (!this->model.empty()) {
+			std::snprintf(this->str, std::size(this->str), "%s %s", this->manufacturer.c_str(),
+			              this->model.c_str());
+		}
+		break;
+	}
+	case vr::Prop_ModelNumber_String: {
+		this->model = std::string(static_cast<char *>(prop.pvBuffer), prop.unBufferSize);
+		if (!this->manufacturer.empty()) {
+			std::snprintf(this->str, std::size(this->str), "%s %s", this->manufacturer.c_str(),
+			              this->model.c_str());
+		}
+		break;
+	}
+	default: {
+		DEV_DEBUG("Unhandled property: %i", prop.prop);
+		break;
+	}
+	}
+}
+
+void
 HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 {
 	switch (prop.prop) {
@@ -764,19 +775,6 @@ HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		assert(prop.unBufferSize == sizeof(float));
 		float freq = *static_cast<float *>(prop.pvBuffer);
 		set_nominal_frame_interval((1.f / freq) * 1e9f);
-		break;
-	}
-	case vr::Prop_InputProfilePath_String: {
-		std::string_view profile =
-		    parse_profile(std::string_view(static_cast<char *>(prop.pvBuffer), prop.unBufferSize));
-		auto input_class = hmd_classes.find(profile);
-		if (input_class == hmd_classes.end()) {
-			DEV_ERR("Could not find input class for hmd profile %s", std::string(profile).c_str());
-		} else {
-			std::strcpy(this->str, input_class->second.description.c_str());
-			this->name = input_class->second.name;
-			set_input_class(&input_class->second);
-		}
 		break;
 	}
 	case vr::Prop_UserIpdMeters_Float: {
@@ -789,7 +787,10 @@ HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		vsync_to_photon_ns = *static_cast<float *>(prop.pvBuffer) * 1e9f;
 		break;
 	}
-	default: DEV_DEBUG("Unassigned HMD property: %i", prop.prop); break;
+	default: {
+		Device::handle_property_write(prop);
+		break;
+	}
 	}
 }
 
@@ -804,7 +805,6 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		if (input_class == controller_classes.end()) {
 			DEV_ERR("Could not find input class for controller profile %s", std::string(profile).c_str());
 		} else {
-			std::strcpy(this->str, input_class->second.description.c_str());
 			this->name = input_class->second.name;
 			set_input_class(&input_class->second);
 		}
@@ -877,6 +877,9 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		DEV_DEBUG("Battery: %s: %f", name, bat);
 		break;
 	}
-	default: DEV_DEBUG("Unassigned controller property: %i", prop.prop); break;
+	default: {
+		Device::handle_property_write(prop);
+		break;
+	}
 	}
 }

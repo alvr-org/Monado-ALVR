@@ -72,14 +72,12 @@ protected:
 	std::vector<xrt_input> inputs_vec;
 	inline static xrt_pose chaperone = XRT_POSE_IDENTITY;
 	const InputClass *input_class;
-
+	std::string manufacturer;
+	std::string model;
 	float vsync_to_photon_ns{0.f};
 
 	virtual void
-	handle_property_write(const vr::PropertyWrite_t &prop) = 0;
-
-	void
-	set_input_class(const InputClass *input_class);
+	handle_property_write(const vr::PropertyWrite_t &prop);
 
 private:
 	vr::ITrackedDeviceServerDriver *driver;
@@ -147,10 +145,6 @@ private:
 
 class ControllerDevice : public Device
 {
-protected:
-	void
-	set_input_class(const InputClass *input_class);
-
 public:
 	ControllerDevice(vr::PropertyContainerHandle_t container_handle, const DeviceBuilder &builder);
 
@@ -177,6 +171,10 @@ public:
 
 	void
 	update_hand_tracking(struct xrt_hand_joint_set *out);
+
+protected:
+	void
+	set_input_class(const InputClass *input_class);
 
 private:
 	vr::VRInputComponentHandle_t haptic_handle{0};
