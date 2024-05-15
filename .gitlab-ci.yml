@@ -367,6 +367,7 @@ debian:cmake:
   extends:
     - .monado.packaging.conditions
     - .monado.image.debian:bookworm
+
   before_script:
     - pushd doc/changes
     - proclamation build vNEXT
@@ -385,6 +386,7 @@ debian:cmake-no-opencv:
   stage: build
   extends:
     - .monado.image.debian:bookworm
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -395,6 +397,7 @@ debian:cmake-no-sdl2:
   stage: build
   extends:
     - .monado.image.debian:bookworm
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -405,6 +408,7 @@ debian:cmake-no-service:
   stage: build
   extends:
     - .monado.image.debian:bookworm
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -415,6 +419,7 @@ debian:cmake:32bit:
   stage: build
   extends:
     - .monado.image.debian:bookworm
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -425,6 +430,7 @@ debian:bullseye:cmake:
   stage: build
   extends:
     - .monado.image.debian:bullseye
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -435,6 +441,7 @@ ndk:armeabi-v7a:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -444,6 +451,7 @@ ndk:arm64-v8a:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -453,6 +461,7 @@ android:spotlessCheck:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -473,6 +482,7 @@ android:outOfProcessDebug:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -496,6 +506,7 @@ android:inProcessDebug:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -519,6 +530,8 @@ android:outOfProcessRelease:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+    - .monado.packaging.conditions
+
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -533,6 +546,7 @@ android:outOfProcessRelease:
   script:
 
     - .gitlab-ci/prebuild.sh
+    - base64 --decode ${MONADO_ANDROID_KEYSTORE} > monado-release.jks
     - .gitlab-ci/ci-gradle-build.sh assembleOutOfProcessRelease
   artifacts:
     paths:
@@ -542,6 +556,8 @@ android:inProcessRelease:
   stage: build
   extends:
     - .monado.image.debian:bookworm-ndk
+    - .monado.packaging.conditions
+
   before_script:
     # For caching gradle stuff
     - export GRADLE_USER_HOME=`pwd`/.gradlehome
@@ -556,6 +572,7 @@ android:inProcessRelease:
   script:
 
     - .gitlab-ci/prebuild.sh
+    - base64 --decode ${MONADO_ANDROID_KEYSTORE} > monado-release.jks
     - .gitlab-ci/ci-gradle-build.sh assembleInProcessRelease
   artifacts:
     paths:
@@ -565,6 +582,7 @@ ubuntu:focal:cmake:
   stage: build
   extends:
     - .monado.image.ubuntu:focal
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -575,6 +593,7 @@ ubuntu:jammy:cmake:
   stage: build
   extends:
     - .monado.image.ubuntu:jammy
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -585,6 +604,7 @@ ubuntu:noble:cmake:
   stage: build
   extends:
     - .monado.image.ubuntu:noble
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -595,6 +615,7 @@ arch:cmake:
   stage: build
   extends:
     - .monado.image.arch
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -605,6 +626,7 @@ arch:cmake:clang:
   stage: build
   extends:
     - .monado.image.arch
+
   script:
 
     - .gitlab-ci/prebuild.sh
@@ -615,6 +637,7 @@ alpine:cmake:
   stage: build
   extends:
     - .monado.image.alpine
+
   script:
 
     - .gitlab-ci/prebuild.sh

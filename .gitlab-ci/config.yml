@@ -177,10 +177,12 @@ distributions:
           - name: android:outOfProcessRelease
             target: assembleOutOfProcessRelease
             artifact_path: src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess
+            extra_extends: .monado.packaging.conditions
 
           - name: android:inProcessRelease
             target: assembleInProcessRelease
             artifact_path: src/xrt/targets/openxr_android/build/outputs/apk/inProcess
+            extra_extends: .monado.packaging.conditions
 
   - name: ubuntu
     images:

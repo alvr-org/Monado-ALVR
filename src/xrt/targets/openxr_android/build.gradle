@@ -49,6 +49,8 @@ def parseOpenXRVersion(def fn) {
     String.join('.', components)
 }
 
+project.ext.repoRoot = file('../../../../')
+
 project.ext.renameLicense = { String name ->
     def lowerNoExtension = name.toLowerCase().replace(".txt", "")
     def result = lowerNoExtension.replaceAll(~/[\-.]/, "_") + ".txt"
@@ -200,6 +202,27 @@ android {
         fatal 'StopShip'
     }
 
+}
+
+// For signing of release binaries - env var must contain an absolute path
+// CI always does this.
+def keystorePropertiesFilename = System.getenv("MONADO_KEYSTORE_PROPERTIES")
+if (keystorePropertiesFilename) {
+    def keystorePropertiesFile = file("${keystorePropertiesFilename}")
+    if (keystorePropertiesFile.exists()) {
+        println("Signing release artifacts for monado")
+        def keystoreProperties = new Properties()
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+        android.signingConfigs {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file("${project.repoRoot}/" + keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+        android.buildTypes.release.signingConfig android.signingConfigs.release
+    }
 }
 
 aboutLibraries {

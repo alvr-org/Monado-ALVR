@@ -108,6 +108,9 @@ reuse:
     - .monado.packaging.conditions
 {% endif %}
     - {{base_job_to_use_image(distro, image)}}
+{% if job.extra_extends %}
+    - {{ job.extra_extends }}
+{% endif %}
 
 {%- if job.before_script or "android" in job.name %}
 
@@ -140,6 +143,9 @@ reuse:
 {#- gradle builds -#}
 {%- elif "android" in job.name %}
 
+{% if "Release" in job.name %}
+    - base64 --decode ${MONADO_ANDROID_KEYSTORE} > monado-release.jks
+{% endif %}
     - .gitlab-ci/ci-gradle-build.sh {{ job.target }}
 
 {%- else %}
