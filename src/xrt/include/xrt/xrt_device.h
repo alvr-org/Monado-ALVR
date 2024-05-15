@@ -667,6 +667,10 @@ xrt_device_get_visibility_mask(struct xrt_device *xdev,
                                uint32_t view_index,
                                struct xrt_visibility_mask **out_mask)
 {
+
+	if (xdev->get_visibility_mask == NULL) {
+		return XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED;
+	}
 	return xdev->get_visibility_mask(xdev, type, view_index, out_mask);
 }
 

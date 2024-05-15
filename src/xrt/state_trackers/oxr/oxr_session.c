@@ -29,6 +29,7 @@
 #include "util/u_debug.h"
 #include "util/u_misc.h"
 #include "util/u_time.h"
+#include "util/u_visibility_mask.h"
 #include "util/u_verify.h"
 
 #include "math/m_api.h"
@@ -1417,6 +1418,11 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
 	// If we didn't have any cached mask get it.
 	if (mask == NULL) {
 		xret = xrt_device_get_visibility_mask(xdev, type, viewIndex, &mask);
+		if (xret == XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED && xdev->hmd != NULL) {
+			const struct xrt_fov fov = xdev->hmd->distortion.fov[viewIndex];
+			u_visibility_mask_get_default(type, &fov, &mask);
+			xret = XRT_SUCCESS;
+		}
 		OXR_CHECK_XRET(log, sess, xret, get_visibility_mask);
 		sys->visibility_mask[viewIndex] = mask;
 	}
