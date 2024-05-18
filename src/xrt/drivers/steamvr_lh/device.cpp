@@ -663,11 +663,10 @@ operator|(xrt_space_relation_flags a, xrt_space_relation_flags b)
 	return static_cast<xrt_space_relation_flags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
-inline xrt_space_relation_flags &
-operator|=(xrt_space_relation_flags &a, xrt_space_relation_flags b)
+inline xrt_space_relation_flags
+operator|=(xrt_space_relation_flags a, xrt_space_relation_flags b)
 {
-	a = a | b;
-	return a;
+	return a | b;
 }
 
 void

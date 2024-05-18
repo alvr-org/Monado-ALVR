@@ -7,15 +7,13 @@
  * @ingroup drv_steamvr_lh
  */
 
-#pragma once
+#include <xrt/xrt_results.h>
 
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-struct xrt_device;
 
 /*!
  * @defgroup drv_steamvr_lh Wrapper for the SteamVR Lighthouse driver.
@@ -31,12 +29,14 @@ struct xrt_device;
  */
 
 /*!
- * Create devices.
+ * Creates the steamvr system devices.
  *
  * @ingroup drv_steamvr_lh
  */
-int
-steamvr_lh_get_devices(struct xrt_device **out_xdevs);
+enum xrt_result
+steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
+                          struct xrt_system_devices **out_xsysd,
+                          struct xrt_space_overseer **out_xso);
 
 
 #ifdef __cplusplus
