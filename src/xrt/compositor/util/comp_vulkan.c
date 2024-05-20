@@ -282,6 +282,12 @@ create_device(struct vk_bundle *vk, const struct comp_vulkan_arguments *vk_args)
 	    .synchronization_2 = true,
 	};
 
+	ret = vk_init_mutex(vk);
+	if (ret != VK_SUCCESS) {
+		VK_ERROR_RET(vk, "vk_init_mutex", "Failed to init mutex.", ret);
+		return ret;
+	}
+
 	// No other way then to try to see if realtime is available.
 	for (size_t i = 0; i < ARRAY_SIZE(prios); i++) {
 		ret = vk_create_device(                  //
@@ -313,12 +319,6 @@ create_device(struct vk_bundle *vk, const struct comp_vulkan_arguments *vk_args)
 	// All tries failed, return error. Yes this code is clunky.
 	if (ret != VK_SUCCESS) {
 		VK_ERROR_RET(vk, "vk_create_device", "Failed to create Vulkan device.", ret);
-		return ret;
-	}
-
-	ret = vk_init_mutex(vk);
-	if (ret != VK_SUCCESS) {
-		VK_ERROR_RET(vk, "vk_init_mutex", "Failed to init mutex.", ret);
 		return ret;
 	}
 
