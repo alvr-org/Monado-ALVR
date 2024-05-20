@@ -840,6 +840,14 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
 		    layer,         //
 		    vds);          //
 
+	} else if (layer_count == 0) {
+		// Just clear the screen
+		render_gfx_begin_target(     //
+		    rr,                      //
+		    d->gfx.rtr,              //
+		    &background_color_idle); //
+
+		render_gfx_end_target(rr);
 	} else {
 		if (fast_path) {
 			U_LOG_W("Wanted fast path but no projection layer, falling back to layer squasher.");
