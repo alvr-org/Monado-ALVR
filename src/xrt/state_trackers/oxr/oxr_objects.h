@@ -824,6 +824,12 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
                                 XrVisibilityMaskTypeKHR visibilityMaskType,
                                 uint32_t viewIndex,
                                 XrVisibilityMaskKHR *visibilityMask);
+
+XrResult
+oxr_event_push_XrEventDataVisibilityMaskChangedKHR(struct oxr_logger *log,
+                                                   struct oxr_session *sess,
+                                                   XrViewConfigurationType viewConfigurationType,
+                                                   uint32_t viewIndex);
 #endif // OXR_HAVE_KHR_visibility_mask
 
 #ifdef OXR_HAVE_EXT_performance_settings

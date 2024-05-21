@@ -61,6 +61,9 @@ enum xrt_session_event_type
 
 	//! The passthrough state of the session has changed
 	XRT_SESSION_EVENT_PASSTHRU_STATE_CHANGE = 8,
+
+	// ! The visibility mask of given view has changed
+	XRT_SESSION_EVENT_VISIBILITY_MASK_CHANGE = 9
 };
 
 /*!
@@ -165,6 +168,15 @@ struct xrt_session_event_passthrough_state_change
 };
 
 /*!
+ *  Visibility mask changed event
+ */
+struct xrt_session_event_visibility_mask_change
+{
+	enum xrt_session_event_type type;
+	uint32_t view_index;
+};
+
+/*!
  * Union of all session events, used to return multiple events through one call.
  * Each event struct must start with a @ref xrt_session_event_type field.
  *
@@ -181,6 +193,7 @@ union xrt_session_event {
 	struct xrt_session_event_reference_space_change_pending ref_change;
 	struct xrt_session_event_perf_change performance;
 	struct xrt_session_event_passthrough_state_change passthru;
+	struct xrt_session_event_visibility_mask_change mask_change;
 };
 
 /*!

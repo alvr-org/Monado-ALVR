@@ -403,6 +403,12 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 			    log, sess, xrt_to_passthrough_state_flags(xse.passthru.state));
 #endif // OXR_HAVE_FB_passthrough
 			break;
+		case XRT_SESSION_EVENT_VISIBILITY_MASK_CHANGE:
+#ifdef OXR_HAVE_KHR_visibility_mask
+			oxr_event_push_XrEventDataVisibilityMaskChangedKHR(log, sess, sess->sys->view_config_type,
+			                                                   xse.mask_change.view_index);
+#endif // OXR_HAVE_KHR_visibility_mask
+			break;
 		default: U_LOG_W("unhandled event type! %d", xse.type); break;
 		}
 	}
