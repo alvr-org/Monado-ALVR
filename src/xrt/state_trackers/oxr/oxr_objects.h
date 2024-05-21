@@ -2667,6 +2667,7 @@ oxr_event_push_XrEventDataPassthroughStateChangedFB(struct oxr_logger *log,
 
 #endif // OXR_HAVE_FB_passthrough
 
+#ifdef OXR_HAVE_HTC_facial_tracking
 /*!
  * HTC specific Facial tracker.
  *
@@ -2690,6 +2691,18 @@ struct oxr_facial_tracker_htc
 	//! Type of facial tracking, eyes or lips
 	enum xrt_facial_tracking_type_htc facial_tracking_type;
 };
+
+XrResult
+oxr_facial_tracker_htc_create(struct oxr_logger *log,
+                              struct oxr_session *sess,
+                              const XrFacialTrackerCreateInfoHTC *createInfo,
+                              struct oxr_facial_tracker_htc **out_face_tracker_htc);
+
+XrResult
+oxr_get_facial_expressions_htc(struct oxr_logger *log,
+                               struct oxr_facial_tracker_htc *facial_tracker_htc,
+                               XrFacialExpressionsHTC *facialExpressions);
+#endif
 
 #ifdef OXR_HAVE_FB_body_tracking
 /*!
