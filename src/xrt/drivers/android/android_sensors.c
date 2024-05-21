@@ -178,11 +178,16 @@ android_device_get_tracked_pose(struct xrt_device *xdev,
 	(void)at_timestamp_ns;
 
 	struct android_device *d = android_device(xdev);
-	out_relation->pose.orientation = d->fusion.rot;
+
+	struct xrt_space_relation new_relation = XRT_SPACE_RELATION_ZERO;
+	new_relation.pose.orientation = d->fusion.rot;
 
 	//! @todo assuming that orientation is actually currently tracked.
-	out_relation->relation_flags = (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
-	                                                               XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT);
+	new_relation.relation_flags = (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
+	                                                              XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
+	                                                              XRT_SPACE_RELATION_POSITION_VALID_BIT);
+
+	*out_relation = new_relation;
 }
 
 
