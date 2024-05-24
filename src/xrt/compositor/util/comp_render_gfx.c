@@ -29,43 +29,45 @@
  *
  */
 
-/*
- * Internal per-view for the layer shashing render step.
+/**
+ * Internal per-view for the layer squashing render step.
  */
 struct gfx_layer_view_state
 {
-	// Filled out descriptor sets.
+	/// Filled out descriptor sets.
 	VkDescriptorSet descriptor_sets[RENDER_MAX_LAYERS];
 
-	// The type of layer.
+	/// The type of layer.
 	enum xrt_layer_type types[RENDER_MAX_LAYERS];
-	// Is the alpha premultipled, false means unpremultiplied.
+
+	/// Is the alpha premultipled, false means unpremultiplied.
 	bool premultiplied_alphas[RENDER_MAX_LAYERS];
 
-	// To go to this view's tangent lengths.
+	/// To go to this view's tangent lengths.
 	struct xrt_normalized_rect to_tangent;
 
-	// Number of layers filed in.
+	/// Number of layers filled in.
+	/// TODO move to parent struct
 	uint32_t layer_count;
 
-	// Full rotation and translation VP matrix, in world space.
+	/// Full rotation and translation VP matrix, in world space.
 	struct xrt_matrix_4x4 world_vp_full;
-	// Full rotation and translation VP matrix, in view space.
+	/// Full rotation and translation VP matrix, in view space.
 	struct xrt_matrix_4x4 eye_vp_full;
 
-	// Full rotation and translation inverse V matrix, in world space.
+	/// Full rotation and translation inverse V matrix, in world space.
 	struct xrt_matrix_4x4 world_v_inv_full;
-	// Full rotation and translation inverse V matrix, in view space.
+	/// Full rotation and translation inverse V matrix, in view space.
 	struct xrt_matrix_4x4 eye_v_inv_full;
 
-	// Only rotation and translation VP matrix, in world space.
+	/// Only rotation and translation VP matrix, in world space.
 	struct xrt_matrix_4x4 world_vp_rot_only;
-	// Only rotation and translation VP matrix, in view space.
+	/// Only rotation and translation VP matrix, in view space.
 	struct xrt_matrix_4x4 eye_vp_rot_only;
 };
 
-/*
- * Internal state for the layer squashing render step.
+/**
+ * Internal state for the layer squashing render step, contains all per-view state
  */
 struct gfx_layer_state
 {
@@ -476,9 +478,10 @@ do_layers(struct render_gfx *rr,
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
 
-	// Hardcoded to stereo.
 	struct gfx_layer_state ls = XRT_STRUCT_INIT;
 
+	// Compute MVP matrices per eye: populates gfx_layer_view_state elements in `ls`
+	// from `comp_render_dispatch_data *d`
 	for (uint32_t view = 0; view < d->view_count; view++) {
 
 		// Data for this view, convenience.
@@ -519,8 +522,8 @@ do_layers(struct render_gfx *rr,
 	}
 
 	/*
-	 * Reserve UBOs, create descriptor sets, and fill in any data a head of
-	 * time, if we ever want to copy UBO data this lets us do that easily
+	 * Reserve UBOs, create descriptor sets, and fill in any data ahead of
+	 * time. If we ever want to copy UBO data, this lets us do that easily:
 	 * write a copy command before the other gfx commands.
 	 */
 
