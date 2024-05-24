@@ -91,6 +91,8 @@ struct comp_scratch_single_images
  * not enough as it has a mutex in it and has native handles which on some
  * platforms zero is a valid handle.
  *
+ * @public @memberof comp_scratch_single_images
+ *
  * @ingroup comp_util
  */
 void
@@ -98,6 +100,8 @@ comp_scratch_single_images_init(struct comp_scratch_single_images *cssi);
 
 /*!
  * Ensure that the scratch images are allocated and match @p extent size.
+ *
+ * @public @memberof comp_scratch_single_images
  *
  * @ingroup comp_util
  */
@@ -108,6 +112,8 @@ comp_scratch_single_images_ensure(struct comp_scratch_single_images *cssi, struc
  * Free all images allocated, @p init must be called before calling this
  * function, is safe to call without any image allocated.
  *
+ * @public @memberof comp_scratch_single_images
+ *
  * @ingroup comp_util
  */
 void
@@ -116,6 +122,8 @@ comp_scratch_single_images_free(struct comp_scratch_single_images *cssi, struct 
 /*!
  * Get the next free image, after this function has been called you must call
  * either @p done or @p discard before calling any other function.
+ *
+ * @public @memberof comp_scratch_single_images
  *
  * @ingroup comp_util
  */
@@ -127,6 +135,8 @@ comp_scratch_single_images_get(struct comp_scratch_single_images *cssi, uint32_t
  * signal that you are done with this function, the GPU work needs to be fully
  * completed before calling done.
  *
+ * @public @memberof comp_scratch_single_images
+ *
  * @ingroup comp_util
  */
 void
@@ -136,6 +146,8 @@ comp_scratch_single_images_done(struct comp_scratch_single_images *cssi);
  * Discard a @g get call, this clears the image debug part causing no image to
  * be shown in the debug UI.
  *
+ * @public @memberof comp_scratch_single_images
+ *
  * @ingroup comp_util
  */
 void
@@ -143,6 +155,8 @@ comp_scratch_single_images_discard(struct comp_scratch_single_images *cssi);
 
 /*!
  * Clears the debug output, this causes nothing to be shown in the debug UI.
+ *
+ * @public @memberof comp_scratch_single_images
  *
  * @ingroup comp_util
  */
@@ -153,6 +167,8 @@ comp_scratch_single_images_clear_debug(struct comp_scratch_single_images *cssi);
  * Destroys scratch image struct, if any images has been allocated must call
  * @p free before as this function only destroys the mutex, and the @p unid must
  * no longer be tracked.
+ *
+ * @public @memberof comp_scratch_single_images
  *
  * @ingroup comp_util
  */
