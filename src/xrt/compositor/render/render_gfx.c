@@ -180,6 +180,7 @@ begin_render_pass(struct vk_bundle *vk,
 	vk->vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
+/// Update descriptor set for a layer to reference the parameter UBO and the source (layer) image.
 static void
 update_ubo_and_src_descriptor_set(struct vk_bundle *vk,
                                   uint32_t ubo_binding,
@@ -230,6 +231,8 @@ update_ubo_and_src_descriptor_set(struct vk_bundle *vk,
 	    NULL);                             // pDescriptorCopies
 }
 
+/// Sub-allocate a UBO for our layer-specific data,
+/// and create a descriptor set for it and the layer image to sample.
 XRT_CHECK_RESULT static VkResult
 do_ubo_and_src_alloc_and_write(struct render_gfx *rr,
                                uint32_t ubo_binding,
@@ -262,7 +265,7 @@ do_ubo_and_src_alloc_and_write(struct render_gfx *rr,
 
 
 	/*
-	 * Create and fill out destriptor.
+	 * Create and fill out descriptor.
 	 */
 
 	ret = vk_create_descriptor_set( //
