@@ -161,6 +161,7 @@ struct comp_scratch_view_state
 	bool used;
 };
 
+/// Holds an array of @ref comp_scratch_view_state to match the number of views
 struct comp_render_scratch_state
 {
 	struct comp_scratch_view_state views[2];
@@ -173,6 +174,7 @@ struct comp_render_scratch_state
  *
  */
 
+/// Zeroes the object pointed to by @p crss then populates it with the image indices.
 static void
 scratch_get_init(struct comp_render_scratch_state *crss, struct comp_renderer *r, uint32_t view_count)
 {
@@ -184,6 +186,7 @@ scratch_get_init(struct comp_render_scratch_state *crss, struct comp_renderer *r
 	}
 }
 
+/// Calls done or discard on each view in @p crss, depending on whether "used" is set.
 static void
 scratch_get_fini(struct comp_render_scratch_state *crss, struct comp_renderer *r, uint32_t view_count)
 {
