@@ -648,7 +648,7 @@ public:
 	static struct profile_template *
 	get_profile_template(enum xrt_device_name device_name)
 	{
-		for (int i = 0; i < NUM_PROFILE_TEMPLATES; i++) {
+		for (int i = 0; i < OXR_BINDINGS_PROFILE_TEMPLATE_COUNT; i++) {
 			if (profile_templates[i].name == device_name)
 				return &profile_templates[i];
 		}

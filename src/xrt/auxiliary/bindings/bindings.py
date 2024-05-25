@@ -756,33 +756,23 @@ def generate_bindings_c(file, b):
     f.write('}\n')
 
     f.write(f'''
-// Array of pointers to XrPath variables contained in each profile template
-static XrPath *path_cache[{len(b.profiles)}] =
-{{
-''')
+
+static const struct oxr_bindings_path_cache internal_path_cache = {{
+\t.path_cache = {{''')
     for profile_index, _ in enumerate(b.profiles):
-        f.write(f'\t&profile_templates[{profile_index}].path_cache,\n')
+        f.write(f'''
+\t\t{{
+\t\t\t.path_cache = &profile_templates[{profile_index}].path_cache,
+\t\t\t.path_cache_name = &profile_templates[{profile_index}].path,
+\t\t}},\n''')
         profile_index += 1
-    f.write(f'''}};
+    f.write(f'''\t}}
+}};
 
-// Array of pointers to the location of the path cache name in each profile template.
-// The name string itself is not a compile time constant.
-static const char **path_cache_names[{len(b.profiles)}] =
+void oxr_get_interaction_profile_path_cache(const struct oxr_bindings_path_cache **out_path_cache)
 {{
-''')
-    for profile_index, _ in enumerate(b.profiles):
-        f.write(f'\t&profile_templates[{profile_index}].path,\n')
-        profile_index += 1
-    f.write(f'''}};
-
-static uint64_t path_cache_count = {len(b.profiles)};
-
-void oxr_get_interaction_profile_path_cache(XrPath **out_path_cache[{len(b.profiles)}], const char ***out_path_cache_names[''' + str(len(b.profiles)) + '''], uint64_t *out_path_cache_count)
-{
-    *out_path_cache = path_cache;
-    *out_path_cache_names = path_cache_names;
-    *out_path_cache_count = path_cache_count;
-}
+    *out_path_cache = &internal_path_cache;
+}}
 ''')
     f.write("\n// clang-format on\n")
 
@@ -806,12 +796,21 @@ typedef uint64_t XrVersion; // OpenXR typedef
 
 struct oxr_extension_status;
 
-/**
-  * @p out_path_cache Pointer to Array of XrPath pointers.
-  * @p out_path_cache_names Pointer to Array of string (char*) locations.
-  * @p out_path_cache_count Number of entries in the out_path_cache[_names] arrays.
-  */
-void oxr_get_interaction_profile_path_cache(XrPath **out_path_cache[{len(b.profiles)}], const char ***out_path_cache_names[''' + str(len(b.profiles)) + '''], uint64_t *out_path_cache_count);
+#define OXR_BINDINGS_PROFILE_TEMPLATE_COUNT {len(b.profiles)}
+
+struct oxr_bindings_path_cache_element {{
+    //! Pointer to XrPath
+    XrPath *path_cache;
+    //! Pointer to char*
+    const char **path_cache_name;
+}};
+
+struct oxr_bindings_path_cache {{
+    // wrapped in a struct solely to reduce the C pointer soup
+    struct oxr_bindings_path_cache_element path_cache[OXR_BINDINGS_PROFILE_TEMPLATE_COUNT];
+}};
+
+void oxr_get_interaction_profile_path_cache(const struct oxr_bindings_path_cache **out_path_cache);
 
 // clang-format off
 ''')
@@ -884,8 +883,7 @@ struct profile_template
 \tconst char *extension_name;
 }};
 
-#define NUM_PROFILE_TEMPLATES {len(b.profiles)}
-extern struct profile_template profile_templates[NUM_PROFILE_TEMPLATES];
+extern struct profile_template profile_templates[OXR_BINDINGS_PROFILE_TEMPLATE_COUNT];
 
 ''')
 

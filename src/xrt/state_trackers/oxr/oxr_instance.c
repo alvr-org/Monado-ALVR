@@ -255,12 +255,11 @@ oxr_instance_create(struct oxr_logger *log,
 
 #undef CACHE_SUBACTION_PATHS
 
-	XrPath **path_cache;
-	const char ***path_cache_names;
-	uint64_t path_cache_count;
-	oxr_get_interaction_profile_path_cache(&path_cache, &path_cache_names, &path_cache_count);
-	for (uint32_t i = 0; i < path_cache_count; i++) {
-		cache_path(log, inst, *path_cache_names[i], path_cache[i]);
+	const struct oxr_bindings_path_cache *path_cache;
+	oxr_get_interaction_profile_path_cache(&path_cache);
+
+	for (uint32_t i = 0; i < ARRAY_SIZE(path_cache->path_cache); i++) {
+		cache_path(log, inst, *path_cache->path_cache[i].path_cache_name, path_cache->path_cache[i].path_cache);
 	}
 
 	// fill in our application info - @todo - replicate all createInfo

@@ -115,7 +115,7 @@ interaction_profile_find_or_create_in_instance(struct oxr_logger *log,
 
 	struct profile_template *templ = NULL;
 
-	for (size_t x = 0; x < NUM_PROFILE_TEMPLATES; x++) {
+	for (size_t x = 0; x < OXR_BINDINGS_PROFILE_TEMPLATE_COUNT; x++) {
 		XrPath t_path = XR_NULL_PATH;
 
 		oxr_path_get_or_create(log, inst, profile_templates[x].path, strlen(profile_templates[x].path),
