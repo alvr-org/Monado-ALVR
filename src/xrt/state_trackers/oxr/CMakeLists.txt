@@ -53,19 +53,9 @@ add_library(
 	oxr_xdev.c
 	)
 
-set(OXR_COMPILE_DEFINITIONS)
-
 if(XRT_HAVE_VULKAN)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_GRAPHICS_API_VULKAN)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_vk.c oxr_swapchain_vk.c oxr_vulkan.c)
 	target_link_libraries(st_oxr PUBLIC Vulkan::Vulkan)
-endif()
-
-if(XRT_HAVE_OPENGL)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_GRAPHICS_API_OPENGL)
-endif()
-if(XRT_HAVE_OPENGLES)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_GRAPHICS_API_OPENGL_ES)
 endif()
 
 if(XRT_HAVE_OPENGL OR XRT_HAVE_OPENGLES)
@@ -74,12 +64,10 @@ if(XRT_HAVE_OPENGL OR XRT_HAVE_OPENGLES)
 endif()
 
 if(XRT_HAVE_OPENGL_GLX AND XRT_HAVE_XLIB)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_PLATFORM_XLIB)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_gl_xlib.c)
 endif()
 
 if(XRT_HAVE_EGL)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_PLATFORM_EGL)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_egl.c)
 endif()
 
@@ -89,32 +77,25 @@ if(XRT_HAVE_D3D11 OR XRT_HAVE_D3D12)
 endif()
 
 if(XRT_HAVE_D3D11)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_GRAPHICS_API_D3D11)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_d3d11.c oxr_swapchain_d3d11.c oxr_d3d11.cpp)
 endif()
 
 if(XRT_HAVE_D3D12)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_GRAPHICS_API_D3D12)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_d3d12.c oxr_swapchain_d3d12.c oxr_d3d12.cpp)
 	target_link_libraries(st_oxr PRIVATE aux_d3d)
 endif()
 
 if(ANDROID)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_PLATFORM_ANDROID)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_gles_android.c)
 	target_link_libraries(st_oxr PRIVATE aux_android)
 endif()
+
 if(WIN32)
 	target_link_libraries(st_oxr PRIVATE kernel32)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_PLATFORM_WIN32)
 endif()
 
 if(WIN32 AND XRT_HAVE_OPENGL)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_gl_win32.c)
-endif()
-
-if(WIN32)
-	list(APPEND OXR_COMPILE_DEFINITIONS XR_USE_PLATFORM_WIN32)
 endif()
 
 if(XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH)
@@ -128,9 +109,6 @@ endif()
 if(XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC)
 	target_sources(st_oxr PRIVATE oxr_api_face_tracking.c oxr_face_tracking.c)
 endif()
-
-target_compile_definitions(st_oxr PRIVATE ${OXR_COMPILE_DEFINITIONS})
-target_compile_definitions(oxr-interfaces INTERFACE ${OXR_COMPILE_DEFINITIONS})
 
 target_link_libraries(
 	st_oxr

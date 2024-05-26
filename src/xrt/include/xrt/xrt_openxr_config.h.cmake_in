@@ -1,0 +1,20 @@
+// Copyright 2024, Collabora, Ltd.
+// SPDX-License-Identifier: BSL-1.0
+/*!
+ * @file
+ * @brief  What OpenXR defines are enabled in this oxr build.
+ * @author Christoph Haag <christoph.haag@collabora.com>
+ * @ingroup xrt_iface
+ */
+
+#pragma once
+
+#cmakedefine XR_USE_GRAPHICS_API_VULKAN
+#cmakedefine XR_USE_GRAPHICS_API_OPENGL
+#cmakedefine XR_USE_GRAPHICS_API_OPENGL_ES
+#cmakedefine XR_USE_PLATFORM_EGL
+#cmakedefine XR_USE_PLATFORM_XLIB
+#cmakedefine XR_USE_GRAPHICS_API_D3D11
+#cmakedefine XR_USE_GRAPHICS_API_D3D12
+#cmakedefine XR_USE_PLATFORM_ANDROID
+#cmakedefine XR_USE_PLATFORM_WIN32

@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "xrt/xrt_openxr_config.h"
+
 //! @todo Move these to the build system instead.
 #define XR_USE_TIMESPEC 1
 
