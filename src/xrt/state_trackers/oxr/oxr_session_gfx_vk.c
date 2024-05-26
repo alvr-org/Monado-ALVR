@@ -8,10 +8,6 @@
  * @ingroup comp_client
  */
 
-#ifndef XR_USE_GRAPHICS_API_VULKAN
-#error "Must build this file with Vulkan enabled!"
-#endif
-
 #include "xrt/xrt_instance.h"
 #include "xrt/xrt_handles.h"
 #include "xrt/xrt_gfx_vk.h"
@@ -26,6 +22,10 @@
 #include "oxr_two_call.h"
 #include "oxr_handle.h"
 
+
+#ifndef XR_USE_GRAPHICS_API_VULKAN
+#error "Must build this file with Vulkan enabled!"
+#endif
 
 DEBUG_GET_ONCE_BOOL_OPTION(force_timeline_semaphores, "OXR_DEBUG_FORCE_TIMELINE_SEMAPHORES", false)
 DEBUG_GET_ONCE_BOOL_OPTION(force_debug_utils, "OXR_DEBUG_FORCE_VK_DEBUG_UTILS", false)

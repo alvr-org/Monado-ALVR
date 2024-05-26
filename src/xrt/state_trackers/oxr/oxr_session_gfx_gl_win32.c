@@ -9,14 +9,6 @@
  * @ingroup comp_client
  */
 
-#ifndef XR_USE_PLATFORM_WIN32
-#error "Must build this file with Win32 enabled!"
-#endif
-
-#ifndef XR_USE_GRAPHICS_API_OPENGL
-#error "Must build this file with OpenGL enabled!"
-#endif
-
 #include <stdlib.h>
 
 #include "util/u_misc.h"
@@ -29,6 +21,14 @@
 #include "xrt/xrt_instance.h"
 #include "xrt/xrt_gfx_win32.h"
 
+
+#ifndef XR_USE_PLATFORM_WIN32
+#error "Must build this file with Win32 enabled!"
+#endif
+
+#ifndef XR_USE_GRAPHICS_API_OPENGL
+#error "Must build this file with OpenGL enabled!"
+#endif
 
 XrResult
 oxr_session_populate_gl_win32(struct oxr_logger *log,

@@ -8,14 +8,6 @@
  * @ingroup comp_client
  */
 
-#ifndef XR_USE_PLATFORM_XLIB
-#error "Must build this file with XLIB enabled!"
-#endif
-
-#ifndef XR_USE_GRAPHICS_API_OPENGL
-#error "Must build this file with OpenGL enabled!"
-#endif
-
 #include <stdlib.h>
 
 #include "util/u_misc.h"
@@ -28,6 +20,14 @@
 #include "xrt/xrt_instance.h"
 #include "xrt/xrt_gfx_xlib.h"
 
+
+#ifndef XR_USE_PLATFORM_XLIB
+#error "Must build this file with XLIB enabled!"
+#endif
+
+#ifndef XR_USE_GRAPHICS_API_OPENGL
+#error "Must build this file with OpenGL enabled!"
+#endif
 
 XrResult
 oxr_session_populate_gl_xlib(struct oxr_logger *log,

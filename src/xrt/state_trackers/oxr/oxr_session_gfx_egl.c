@@ -9,10 +9,6 @@
  * @ingroup comp_client
  */
 
-#ifndef XR_USE_PLATFORM_EGL
-#error "Must build this file with EGL enabled!"
-#endif
-
 #include <stdlib.h>
 
 #include "util/u_misc.h"
@@ -29,6 +25,10 @@
 #include <EGL/egl.h>
 #include "xrt/xrt_gfx_egl.h"
 
+
+#ifndef XR_USE_PLATFORM_EGL
+#error "Must build this file with EGL enabled!"
+#endif
 
 // Not forward declared by mesa
 typedef EGLBoolean(EGLAPIENTRYP PFNEGLQUERYCONTEXTPROC)(EGLDisplay dpy,

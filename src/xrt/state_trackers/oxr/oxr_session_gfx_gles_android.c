@@ -10,10 +10,6 @@
  * @ingroup comp_client
  */
 
-#ifndef XR_USE_GRAPHICS_API_OPENGL_ES
-#error "Must build this file with OpenGL ES enabled!"
-#endif
-
 #include <stdlib.h>
 
 #include "util/u_misc.h"
@@ -33,6 +29,10 @@
 
 #include <dlfcn.h>
 
+
+#ifndef XR_USE_GRAPHICS_API_OPENGL_ES
+#error "Must build this file with OpenGL ES enabled!"
+#endif
 
 XrResult
 oxr_session_populate_gles_android(struct oxr_logger *log,
