@@ -1173,7 +1173,6 @@ oh_device_create(ohmd_context *ctx, bool no_hmds, struct xrt_device **out_xdevs)
 	/* Find first HMD, first left controller, first right controller, and all trackers */
 	for (int i = 0; i < device_count; i++) {
 		int device_class = 0, device_flags = 0;
-		const char *prod = NULL;
 
 		ohmd_list_geti(ctx, i, OHMD_DEVICE_CLASS, &device_class);
 		ohmd_list_geti(ctx, i, OHMD_DEVICE_FLAGS, &device_flags);
@@ -1183,9 +1182,15 @@ oh_device_create(ohmd_context *ctx, bool no_hmds, struct xrt_device **out_xdevs)
 			continue;
 		}
 
-		prod = ohmd_list_gets(ctx, i, OHMD_PRODUCT);
+		const char *prod = ohmd_list_gets(ctx, i, OHMD_PRODUCT);
 		if (strcmp(prod, "External Device") == 0 && !debug_get_bool_option_ohmd_external()) {
 			U_LOG_D("Rejecting device idx %i, is a External device.", i);
+			continue;
+		} else if (strcmp(prod, "HoloLens Sensors") == 0) {
+			U_LOG_W("Ignoring OpenHMD WMR device idx %i. Use the native Monado WMR driver.", i);
+			continue;
+		} else if (strncmp(prod, "Rift S", strlen("Rift S")) == 0) {
+			U_LOG_W("Ignoring OpenHMD Rift S device idx %i. Use the native Monado Rift S driver.", i);
 			continue;
 		}
 
