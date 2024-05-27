@@ -125,6 +125,14 @@ check_and_get_interface(struct xrt_prober_device *device,
 		default: U_LOG_IFL_T(log_level, "No matching PID!"); return false;
 		}
 
+	case ACER_VID:
+		U_LOG_IFL_T(log_level, "ACER_VID");
+
+		switch (device->product_id) {
+		case AH101_PID: *out_hmd_type = WMR_HEADSET_ACER_AH101; return true;
+		default: U_LOG_IFL_T(log_level, "No matching PID!"); return false;
+		}
+
 	default: return false;
 	}
 }
