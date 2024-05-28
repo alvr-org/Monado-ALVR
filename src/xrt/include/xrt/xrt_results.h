@@ -193,4 +193,9 @@ typedef enum xrt_result
 	 * Some other Android error, typically a logic error that should be impossible to reach.
 	 */
 	XRT_ERROR_ANDROID = -31,
+
+	/*!
+	 * Returned when a feature is not supported by the device.
+	 */
+	XRT_ERROR_FEATURE_NOT_SUPPORTED = -32,
 } xrt_result_t;

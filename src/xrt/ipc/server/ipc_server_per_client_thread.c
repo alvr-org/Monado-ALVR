@@ -90,6 +90,17 @@ common_shutdown(volatile struct ipc_client_state *ics)
 		ics->ref_space_used[i] = false;
 	}
 
+	// Make a still in use device features as no longer used.
+	for (uint32_t i = 0; i < ARRAY_SIZE(ics->device_feature_used); i++) {
+		bool used = ics->device_feature_used[i];
+		if (!used) {
+			continue;
+		}
+
+		xrt_system_devices_feature_dec(ics->server->xsysd, (enum xrt_device_feature_type)i);
+		ics->device_feature_used[i] = false;
+	}
+
 	// Should we stop the server when a client disconnects?
 	if (ics->server->exit_on_disconnect) {
 		ics->server->running = false;

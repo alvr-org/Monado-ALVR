@@ -220,6 +220,17 @@ struct xrt_binding_profile
 };
 
 /*!
+ * Higher level features for devices.
+ */
+enum xrt_device_feature_type
+{
+	XRT_DEVICE_FEATURE_HAND_TRACKING_LEFT = 0,
+	XRT_DEVICE_FEATURE_HAND_TRACKING_RIGHT,
+	XRT_DEVICE_FEATURE_EYE_TRACKING,
+	XRT_DEVICE_FEATURE_MAX_ENUM,
+};
+
+/*!
  * @interface xrt_device
  *
  * A single HMD or input device.
@@ -520,6 +531,22 @@ struct xrt_device
 	                                   float *out_charge);
 
 	/*!
+	 * Enable the feature for this device.
+	 *
+	 * @param[in] xdev        The device.
+	 * @param[in] type        The type of device feature.
+	 */
+	xrt_result_t (*begin_feature)(struct xrt_device *xdev, enum xrt_device_feature_type type);
+
+	/*!
+	 * Disable the feature for this device.
+	 *
+	 * @param[in] xdev        The device.
+	 * @param[in] type        The type of device feature.
+	 */
+	xrt_result_t (*end_feature)(struct xrt_device *xdev, enum xrt_device_feature_type type);
+
+	/*!
 	 * Destroy device.
 	 */
 	void (*destroy)(struct xrt_device *xdev);
@@ -734,6 +761,38 @@ xrt_device_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *
 		return XRT_ERROR_NOT_IMPLEMENTED;
 	}
 	return xdev->get_battery_status(xdev, out_present, out_charging, out_charge);
+}
+
+/*!
+ * Helper function for @ref xrt_device::begin_feature.
+ *
+ * @copydoc xrt_device::begin_feature
+ *
+ * @public @memberof xrt_device
+ */
+static inline xrt_result_t
+xrt_device_begin_feature(struct xrt_device *xdev, enum xrt_device_feature_type type)
+{
+	if (xdev->begin_feature == NULL) {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+	return xdev->begin_feature(xdev, type);
+}
+
+/*!
+ * Helper function for @ref xrt_device::end_feature.
+ *
+ * @copydoc xrt_device::end_feature
+ *
+ * @public @memberof xrt_device
+ */
+static inline xrt_result_t
+xrt_device_end_feature(struct xrt_device *xdev, enum xrt_device_feature_type type)
+{
+	if (xdev->end_feature == NULL) {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+	return xdev->end_feature(xdev, type);
 }
 
 /*!

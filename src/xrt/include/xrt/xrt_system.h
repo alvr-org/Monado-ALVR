@@ -13,6 +13,7 @@
 
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_device.h"
 
 
 #ifdef __cplusplus
@@ -302,6 +303,24 @@ struct xrt_system_devices
 	xrt_result_t (*get_roles)(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles);
 
 	/*!
+	 * Increment the usage count of a feature.
+	 * When the feature is used for the first time, then the feature will be begun.
+	 *
+	 * @param xsysd   Pointer to self
+	 * @param feature Which feature is being counted.
+	 */
+	xrt_result_t (*feature_inc)(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type);
+
+	/*!
+	 * Decrement the usage count of a feature.
+	 * When the feature is not used by the current application any more, then the feature will be ended.
+	 *
+	 * @param xsysd   Pointer to self
+	 * @param feature Which feature is being counted.
+	 */
+	xrt_result_t (*feature_dec)(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type);
+
+	/*!
 	 * Destroy all the devices that are owned by this system devices.
 	 *
 	 * Code consuming this interface should use @ref xrt_system_devices_destroy.
@@ -322,6 +341,32 @@ static inline xrt_result_t
 xrt_system_devices_get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
 {
 	return xsysd->get_roles(xsysd, out_roles);
+}
+
+/*!
+ * @copydoc xrt_system_devices::feature_inc
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_system_devices
+ */
+static inline xrt_result_t
+xrt_system_devices_feature_inc(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type)
+{
+	return xsysd->feature_inc(xsysd, type);
+}
+
+/*!
+ * @copydoc xrt_system_devices::feature_dec
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_system_devices
+ */
+static inline xrt_result_t
+xrt_system_devices_feature_dec(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type)
+{
+	return xsysd->feature_dec(xsysd, type);
 }
 
 /*!

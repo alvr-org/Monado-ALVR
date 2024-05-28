@@ -131,6 +131,9 @@ struct ipc_client_state
 	//! Which of the references spaces is the client using.
 	bool ref_space_used[XRT_SPACE_REFERENCE_TYPE_COUNT];
 
+	//! Which of the device features is the client using.
+	bool device_feature_used[XRT_DEVICE_FEATURE_MAX_ENUM];
+
 	//! Socket fd used for client comms
 	struct ipc_message_channel imc;
 

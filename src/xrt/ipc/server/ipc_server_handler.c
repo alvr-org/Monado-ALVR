@@ -114,6 +114,18 @@ validate_reference_space_type(volatile struct ipc_client_state *ics, enum xrt_re
 }
 
 static xrt_result_t
+validate_device_feature_type(volatile struct ipc_client_state *ics, enum xrt_device_feature_type type)
+{
+	if ((uint32_t)type >= XRT_DEVICE_FEATURE_MAX_ENUM) {
+		IPC_ERROR(ics->server, "Invalid device feature type %u", type);
+		return XRT_ERROR_FEATURE_NOT_SUPPORTED;
+	}
+
+	return XRT_SUCCESS;
+}
+
+
+static xrt_result_t
 validate_space_id(volatile struct ipc_client_state *ics, int64_t space_id, struct xrt_space **out_xspc)
 {
 	if (space_id < 0) {
@@ -2148,6 +2160,63 @@ xrt_result_t
 ipc_handle_system_devices_get_roles(volatile struct ipc_client_state *ics, struct xrt_system_roles *out_roles)
 {
 	return xrt_system_devices_get_roles(ics->server->xsysd, out_roles);
+}
+
+xrt_result_t
+ipc_handle_system_devices_begin_feature(volatile struct ipc_client_state *ics, enum xrt_device_feature_type type)
+{
+	struct xrt_system_devices *xsysd = ics->server->xsysd;
+	xrt_result_t xret;
+
+	xret = validate_device_feature_type(ics, type);
+	if (xret != XRT_SUCCESS) {
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	// Is this feature already used?
+	if (ics->device_feature_used[type]) {
+		IPC_ERROR(ics->server, "feature '%u' already used!", type);
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	xret = xrt_system_devices_feature_inc(xsysd, type);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "xrt_system_devices_feature_inc failed");
+		return xret;
+	}
+
+	// Can now mark it as used.
+	ics->device_feature_used[type] = true;
+
+	return XRT_SUCCESS;
+}
+
+xrt_result_t
+ipc_handle_system_devices_end_feature(volatile struct ipc_client_state *ics, enum xrt_device_feature_type type)
+{
+	struct xrt_system_devices *xsysd = ics->server->xsysd;
+	xrt_result_t xret;
+
+	xret = validate_device_feature_type(ics, type);
+	if (xret != XRT_SUCCESS) {
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	if (!ics->device_feature_used[type]) {
+		IPC_ERROR(ics->server, "feature '%u' not used!", type);
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	xret = xrt_system_devices_feature_dec(xsysd, type);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "xrt_system_devices_feature_dec failed");
+		return xret;
+	}
+
+	// Now we can mark it as not used.
+	ics->device_feature_used[type] = false;
+
+	return XRT_SUCCESS;
 }
 
 xrt_result_t

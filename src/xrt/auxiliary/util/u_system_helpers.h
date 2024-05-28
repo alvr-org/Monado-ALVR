@@ -113,6 +113,9 @@ struct u_system_devices_static
 
 	//! Is automatically returned.
 	struct xrt_system_roles cached;
+
+	//! Tracks usage of device features.
+	struct xrt_reference feature_use[XRT_DEVICE_FEATURE_MAX_ENUM];
 };
 
 /*!

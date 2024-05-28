@@ -44,6 +44,16 @@ get_index_for_device(const struct xrt_system_devices *xsysd, const struct xrt_de
 	return -1;
 }
 
+static const char *
+type_to_small_string(enum xrt_device_feature_type type)
+{
+	switch (type) {
+	case XRT_DEVICE_FEATURE_HAND_TRACKING_LEFT: return "hand_tracking_left";
+	case XRT_DEVICE_FEATURE_HAND_TRACKING_RIGHT: return "hand_tracking_right";
+	case XRT_DEVICE_FEATURE_EYE_TRACKING: return "eye_tracking";
+	default: return "invalid";
+	}
+}
 
 
 /*
@@ -67,6 +77,72 @@ get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
 	assert(usysds->cached.generation_id == 1);
 
 	*out_roles = usysds->cached;
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+feature_inc(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type)
+{
+	struct u_system_devices_static *usysds = u_system_devices_static(xsysd);
+
+	if (type >= XRT_DEVICE_FEATURE_MAX_ENUM) {
+		return XRT_ERROR_FEATURE_NOT_SUPPORTED;
+	}
+
+	// If it wasn't zero nothing to do.
+	if (!xrt_reference_inc_and_was_zero(&usysds->feature_use[type])) {
+		return XRT_SUCCESS;
+	}
+
+	xrt_result_t xret;
+	if (type == XRT_DEVICE_FEATURE_HAND_TRACKING_LEFT) {
+		xret = xrt_device_begin_feature(xsysd->static_roles.hand_tracking.left, type);
+	} else if (type == XRT_DEVICE_FEATURE_HAND_TRACKING_RIGHT) {
+		xret = xrt_device_begin_feature(xsysd->static_roles.hand_tracking.right, type);
+	} else if (type == XRT_DEVICE_FEATURE_EYE_TRACKING) {
+		xret = xrt_device_begin_feature(xsysd->static_roles.eyes, type);
+	} else {
+		xret = XRT_ERROR_FEATURE_NOT_SUPPORTED;
+	}
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
+
+	U_LOG_D("Device-feature %s in use", type_to_small_string(type));
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+feature_dec(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type)
+{
+	struct u_system_devices_static *usysds = u_system_devices_static(xsysd);
+
+	if (type >= XRT_DEVICE_FEATURE_MAX_ENUM) {
+		return XRT_ERROR_FEATURE_NOT_SUPPORTED;
+	}
+
+	// If it is not zero we are done.
+	if (!xrt_reference_dec_and_is_zero(&usysds->feature_use[type])) {
+		return XRT_SUCCESS;
+	}
+
+	xrt_result_t xret;
+	if (type == XRT_DEVICE_FEATURE_HAND_TRACKING_LEFT) {
+		xret = xrt_device_end_feature(xsysd->static_roles.hand_tracking.left, type);
+	} else if (type == XRT_DEVICE_FEATURE_HAND_TRACKING_RIGHT) {
+		xret = xrt_device_end_feature(xsysd->static_roles.hand_tracking.right, type);
+	} else if (type == XRT_DEVICE_FEATURE_EYE_TRACKING) {
+		xret = xrt_device_end_feature(xsysd->static_roles.eyes, type);
+	} else {
+		xret = XRT_ERROR_FEATURE_NOT_SUPPORTED;
+	}
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
+
+	U_LOG_D("Device-feature %s no longer in use", type_to_small_string(type));
 
 	return XRT_SUCCESS;
 }
@@ -107,6 +183,8 @@ u_system_devices_static_allocate(void)
 	struct u_system_devices_static *usysds = U_TYPED_CALLOC(struct u_system_devices_static);
 	usysds->base.base.destroy = destroy;
 	usysds->base.base.get_roles = get_roles;
+	usysds->base.base.feature_inc = feature_inc;
+	usysds->base.base.feature_dec = feature_dec;
 
 	return usysds;
 }
