@@ -94,7 +94,11 @@ oxr_xrBeginSession(XrSession session, const XrSessionBeginInfo *beginInfo)
 	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrBeginSession");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, beginInfo, XR_TYPE_SESSION_BEGIN_INFO);
-	OXR_VERIFY_VIEW_CONFIG_TYPE(&log, sess->sys->inst, beginInfo->primaryViewConfigurationType);
+
+	// in a headless session there is no compositor and primaryViewConfigurationType must be ignored
+	if (sess->compositor != NULL) {
+		OXR_VERIFY_VIEW_CONFIG_TYPE(&log, sess->sys->inst, beginInfo->primaryViewConfigurationType);
+	}
 
 	if (sess->has_begun) {
 		return oxr_error(&log, XR_ERROR_SESSION_RUNNING, "Session is already running");
