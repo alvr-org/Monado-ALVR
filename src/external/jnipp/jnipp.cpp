@@ -156,11 +156,22 @@ namespace jni
 
 #endif // _WIN32
 
+    static bool isEnvChanged(JavaVM* vm, ScopedEnv& threadLocalEnv) {
+        if (vm == nullptr)
+	{
+            return false;
+        }
+        JNIEnv *curEnv = nullptr;
+        getEnv(vm, &curEnv);
+        return curEnv != threadLocalEnv.get();
+    }
+
+
     JNIEnv* env()
     {
         static thread_local ScopedEnv env;
 
-        if (env.get() != nullptr && !isAttached(javaVm))
+        if (env.get() != nullptr && (!isAttached(javaVm) || isEnvChanged(javaVm, env)))
         {
             // we got detached, so clear it.
             // will be re-populated from static javaVm below.
