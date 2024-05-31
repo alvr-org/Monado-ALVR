@@ -543,7 +543,6 @@ ns_open_system_impl(struct xrt_builder *xb,
 	struct xrt_device *head_wrap = NULL;
 
 	if (slam_device != NULL) {
-		xsysd->xdevs[xsysd->xdev_count++] = slam_device;
 		head_wrap = multi_create_tracking_override(XRT_TRACKING_OVERRIDE_DIRECT, ns_hmd, slam_device,
 		                                           XRT_INPUT_GENERIC_TRACKER_POSE, &head_offset);
 	} else {
@@ -555,6 +554,10 @@ ns_open_system_impl(struct xrt_builder *xb,
 	struct xrt_device *left = NULL, *right = NULL;
 	struct xrt_device *left_ht = NULL, *right_ht = NULL;
 	xsysd->xdevs[xsysd->xdev_count++] = head_wrap;
+
+	// Add slam device after HMD:
+	if (slam_device != NULL)
+		xsysd->xdevs[xsysd->xdev_count++] = slam_device;
 
 	if (hand_device != NULL) {
 		// note: hand_parented_to_head_tracker is always false when slam_device is NULL
