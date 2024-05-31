@@ -72,6 +72,16 @@ slam_device(struct xrt_device *xdev)
 	return (struct slam_device *)xdev;
 }
 
+static struct xrt_pose
+twrap_hmd_correct_pose_from_basalt(struct xrt_pose pose)
+{
+	pose.position.y = -pose.position.y;
+	pose.position.z = -pose.position.z;
+	pose.orientation.y = -pose.orientation.y;
+	pose.orientation.z = -pose.orientation.z;
+	return pose;
+}
+
 static void
 twrap_slam_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
@@ -100,15 +110,19 @@ twrap_slam_get_tracked_pose(struct xrt_device *xdev,
 			return;
 		}
 
+		basalt_rel.pose = twrap_hmd_correct_pose_from_basalt(basalt_rel.pose);
+
 		struct xrt_relation_chain xrc = {0};
 
 		m_relation_chain_push_relation(&xrc, &basalt_rel);
 
 
 
-		struct xrt_pose pre = {0};
-		math_quat_from_plus_x_z(&dx->pre_rotate_x, &dx->pre_rotate_z, &pre.orientation);
-		m_relation_chain_push_pose(&xrc, &pre);
+		if (dx->pre_rotate) {
+			struct xrt_pose pre = {0};
+			math_quat_from_plus_x_z(&dx->pre_rotate_x, &dx->pre_rotate_z, &pre.orientation);
+			m_relation_chain_push_pose(&xrc, &pre);
+		}
 
 		m_relation_chain_resolve(&xrc, out_relation);
 		return;
