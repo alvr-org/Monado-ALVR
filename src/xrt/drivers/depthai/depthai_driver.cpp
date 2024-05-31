@@ -573,12 +573,14 @@ depthai_do_one_imu_frame(struct depthai_fs *depthai)
 	// Prepare sample
 	xrt_imu_sample sample;
 	sample.timestamp_ns = ts;
-	sample.accel_m_s2.x = a.x;
-	sample.accel_m_s2.y = a.y;
+
+	// Need to swap x and y axis for Oak-D cameras at least:
+	sample.accel_m_s2.x = a.y;
+	sample.accel_m_s2.y = -a.x;
 	sample.accel_m_s2.z = a.z;
 
-	sample.gyro_rad_secs.x = g.x;
-	sample.gyro_rad_secs.y = g.y;
+	sample.gyro_rad_secs.x = g.y;
+	sample.gyro_rad_secs.y = -g.x;
 	sample.gyro_rad_secs.z = g.z;
 
 	// Sample prepared, now push it out.
