@@ -734,6 +734,7 @@ void
 destroy(struct xrt_system_devices *xsysd)
 {
 	u_system_devices_close(xsysd);
+	svrs->ctx.reset();
 	free(svrs);
 }
 
