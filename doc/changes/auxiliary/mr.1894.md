@@ -1,1 +1,5 @@
-vk: Add and use enumeration helpers.
+---
+- mr.1894
+- mr.1940
+---
+- vk: Add and use enumeration helpers.

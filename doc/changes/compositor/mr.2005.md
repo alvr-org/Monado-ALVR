@@ -1,1 +1,1 @@
-client: Add renderdoc_enabled implementation for vk/gl only on android platform
+client: Add renderdoc_enabled implementation for Vulkan/OpenGL only on Android platform

@@ -1,1 +1,8 @@
-Add driver for nreal Air glasses, the device features 3dof tracking.
+---
+- mr.1798
+- mr.1989
+- mr.2150
+- issue.330
+- mr.2172
+---
+- Add driver for XREAL (formerly nreal) Air glasses, the device features 3dof tracking. Also support XREAL Air 2 and XREAL Air 2 Pro.

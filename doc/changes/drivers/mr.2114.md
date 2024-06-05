@@ -1,2 +1,1 @@
-steamvr_lh: Make playspace reading more robust by choosing the first tracking univere from
-lighthousedb.json that is found in chaperone_info.vrchap.
+steamvr_lh: Make playspace reading more robust by choosing the first tracking universe from `lighthousedb.json` that is found in `chaperone_info.vrchap`.

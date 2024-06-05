@@ -3,4 +3,4 @@
 - mr.1942
 ---
 
-vk: Further separate printing functions out as well into their own file.
+vk: Separate printing functions into their own file.

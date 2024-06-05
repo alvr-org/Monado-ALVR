@@ -1,1 +1,1 @@
-ipc: Share per client thread shutdown code between platforms.
+all: Share per client thread shutdown code between platforms.

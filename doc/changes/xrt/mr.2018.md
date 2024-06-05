@@ -1,2 +1,6 @@
-Extend xrt_space_overseer to support local_floor, in the Monado interface it's
-optional, but in OpenXR it's always required if the extension is supported.
+---
+- mr.2018
+- mr.2048
+- mr.1796
+---
+- Extend `xrt_space_overseer` and other APIs to support LOCAL_FLOOR. In the Monado interface it is optional, but in OpenXR it is always required if the extension is supported or 1.1 is enabled.

@@ -1,2 +1,4 @@
-st/oxr: Fixes null-pointer def crash bug in xrGetVisibilityMaskKHR with in-process builds and replicates the same behaviour as
-out-of-process builds of falling back to a default implementation. Fixes issue #375.
+---
+- issue.375
+---
+OpenXR: Fix null-pointer crash bug in `xrGetVisibilityMaskKHR` with in-process builds and replicates the same behaviour as out-of-process builds of falling back to a default implementation.

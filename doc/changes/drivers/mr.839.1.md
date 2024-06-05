@@ -1,1 +1,1 @@
-north_star: Upstreams Moses Turner's "VIPD" distortion.
+north_star: Upstream Moshi Turner's "VIPD" distortion.

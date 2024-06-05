@@ -1,1 +1,1 @@
-general: Adds support for `XR_EXT_hand_interaction` profile.
+general: Add support for `XR_EXT_hand_interaction` profile.

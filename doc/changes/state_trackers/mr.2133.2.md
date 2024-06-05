@@ -1,1 +1,1 @@
-st/oxr: Fixes `xrGetCurrentInteractionPath` returning incorrect paths for particular hand becoming unbound
+OpenXR: Fix `xrGetCurrentInteractionPath` returning incorrect paths for a particular hand becoming unbound

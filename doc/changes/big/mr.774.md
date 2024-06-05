@@ -60,7 +60,6 @@
 - mr.1857
 - mr.1859
 ---
-
 Added WinMR driver, it supports most headsets and controllers. Controllers can
 be connected both via host-Bluetooth and tunneled with the onboard radio chip.
 By default has 3DoF tracking, it can do 6DoF if used with the Basalt SLAM

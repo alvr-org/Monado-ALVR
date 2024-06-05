@@ -1,1 +1,8 @@
-vk: Add fence import function.
+---
+- mr.721.2
+- mr.721
+- mr.841
+- mr.1142.2
+- mr.1820.2
+---
+- vk: Add more functions to `vk_bundle` struct.

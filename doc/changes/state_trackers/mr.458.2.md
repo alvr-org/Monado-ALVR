@@ -1,1 +1,1 @@
-st/oxr: Stricter path verification in xrSyncActions
+OpenXR: Stricter path verification in `xrSyncActions`

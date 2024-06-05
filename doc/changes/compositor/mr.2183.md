@@ -1,1 +1,1 @@
-c/main: Fixes bug with incorrect surface format matching.
+main: Fix bug with incorrect surface format matching.

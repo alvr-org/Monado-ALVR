@@ -1,1 +1,1 @@
-multi: Adds support for `XR_EXT_hand_interaction` profile.
+multi: Add support for `XR_EXT_hand_interaction` profile.

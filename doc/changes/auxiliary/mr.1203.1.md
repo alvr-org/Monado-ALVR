@@ -1,1 +1,1 @@
-vk: Refactor out bundle functions into a file of their own.
+vk: Refactor bundle functions into a file of their own.

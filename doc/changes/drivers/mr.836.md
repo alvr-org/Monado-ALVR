@@ -1,6 +1,8 @@
 ---
 - mr.831
+- mr.836
 - mr.837
+- mr.858
 - mr.934
 - mr.1027
 - mr.1029
@@ -11,11 +13,17 @@
 - mr.1278
 - mr.1282
 - mr.1360
+- mr.1494
 - mr.1519
-- mr.1649
 - mr.1523
 - mr.1603
+- mr.1649
+- mr.1692
+- mr.1769
+- mr.1770
+- mr.1832
 - mr.1839
+- mr.1881
+- mr.2228
 ---
-
-dai: Add a new frameserver driver that uses supports the DepthAI cameras.
+- depthai: Add a new frameserver driver that supports some of the DepthAI cameras.

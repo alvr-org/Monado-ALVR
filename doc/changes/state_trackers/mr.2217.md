@@ -1,1 +1,1 @@
-st/oxr: support XrEventDataVisibilityMaskChangedKHR for visibility mask
+OpenXR: support `XrEventDataVisibilityMaskChangedKHR` for visibility mask

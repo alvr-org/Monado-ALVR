@@ -1,5 +1,4 @@
 ---
 - issue.61
 ---
-
-Add a @ref conventions page.
+Add a conventions page.

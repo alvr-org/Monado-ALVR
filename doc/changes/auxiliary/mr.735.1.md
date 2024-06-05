@@ -1,1 +1,1 @@
-math: Fixes for M_PI on Windows.
+math: Fix for M_PI on Windows.

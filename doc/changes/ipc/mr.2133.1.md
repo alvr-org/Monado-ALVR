@@ -1,1 +1,1 @@
-client,server: Setting timer resolution (timeBeginPeriod) improves performance with Nvidia drivers
+client,server: Setting timer resolution (timeBeginPeriod) improves performance with NVIDIA drivers

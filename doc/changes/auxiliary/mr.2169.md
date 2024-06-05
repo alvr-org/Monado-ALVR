@@ -1,1 +1,1 @@
-a/util: Fixes missing lib in cmake file for building mercury_steamvr_driver
+a/util: Fix missing lib in cmake file for building `mercury_steamvr_driver`

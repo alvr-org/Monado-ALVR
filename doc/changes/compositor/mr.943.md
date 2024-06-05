@@ -7,5 +7,4 @@
 - mr.1337
 - mr.1340
 ---
-
 client: Initial support for D3D11 client applications on Windows.

@@ -1,1 +1,1 @@
-vk: Init vk bundle with shaderImageGatherExtended enabled if supported.
+vk: Init vk bundle with `shaderImageGatherExtended` enabled if supported.

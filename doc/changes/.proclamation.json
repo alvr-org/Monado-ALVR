@@ -22,13 +22,16 @@
             "sort_by_prefix": true
         },
         "IPC": {
-            "directory": "ipc"
+            "directory": "ipc",
+            "sort_by_prefix": true
         },
         "Compositor": {
-            "directory": "compositor"
+            "directory": "compositor",
+            "sort_by_prefix": true
         },
         "Tracking": {
-            "directory": "tracking"
+            "directory": "tracking",
+            "sort_by_prefix": true
         },
         "Helper Libraries": {
             "directory": "auxiliary",
@@ -38,10 +41,12 @@
             "directory": "doc"
         },
         "Misc. Features": {
-            "directory": "misc_features"
+            "directory": "misc_features",
+            "sort_by_prefix": true
         },
         "Misc. Fixes": {
-            "directory": "misc_fixes"
+            "directory": "misc_fixes",
+            "sort_by_prefix": true
         }
     }
 }

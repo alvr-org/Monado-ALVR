@@ -1,1 +1,1 @@
-st/oxr: Fixes action state change/timestamp updates
+OpenXR: Fix action state change/timestamp updates

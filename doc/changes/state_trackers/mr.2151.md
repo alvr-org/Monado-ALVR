@@ -1,1 +1,1 @@
-st/oxr: Getting vendor id/name from server.
+OpenXR: Get vendor id/name from server.

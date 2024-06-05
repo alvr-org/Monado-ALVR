@@ -1,1 +1,1 @@
-st/oxr: Remove non-reachable return for oxr_xrPathToString 
+OpenXR: Remove non-reachable return for `oxr_xrPathToString`

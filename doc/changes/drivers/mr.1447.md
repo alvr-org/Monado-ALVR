@@ -5,5 +5,4 @@
 - mr.1691
 - mr.1823
 ---
-
 rift_s: Add Rift-S driver, this works with Monado's hand and SLAM tracking.

@@ -1,2 +1,1 @@
-psvr: Ensure that timestamps are always after each other, stopping any
-time-traveling sample packets.
+psvr: Ensure that timestamps are always monotonic, stopping any time-traveling sample packets.

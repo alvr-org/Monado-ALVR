@@ -1,1 +1,1 @@
-comp: Fix layer submission on nvidia tegra.
+comp: Fix layer submission on NVIDIA Tegra.

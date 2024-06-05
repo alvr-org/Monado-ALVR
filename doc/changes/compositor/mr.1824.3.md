@@ -1,1 +1,1 @@
-util: Remove samplers from comp_swapchain_image, they where alsways the same.
+util: Remove samplers from comp_swapchain_image, they were always the same.

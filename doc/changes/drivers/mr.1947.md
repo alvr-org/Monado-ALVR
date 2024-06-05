@@ -1,1 +1,1 @@
-steamvr_lh: Use proper timestamp on hands and fixes to angular/ linear velocity handling.
+steamvr_lh: Use proper timestamp on hands and fix angular/linear velocity handling.
