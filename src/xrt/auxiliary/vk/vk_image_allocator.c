@@ -13,6 +13,7 @@
 
 #include "vk/vk_image_allocator.h"
 
+#include <vulkan/vulkan_core.h>
 #include <xrt/xrt_handles.h>
 
 #ifdef XRT_OS_LINUX
@@ -239,6 +240,12 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	};
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
+	// VUID-VkImageCreateInfo-pNext-01974
+	if (format_android.externalFormat != 0) {
+		create_info.format = VK_FORMAT_UNDEFINED;
+	}
+#endif
 
 	ret = vk->vkCreateImage(vk->device, &create_info, NULL, &image);
 	if (ret != VK_SUCCESS) {
