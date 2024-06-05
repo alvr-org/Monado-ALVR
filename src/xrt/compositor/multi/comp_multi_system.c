@@ -224,6 +224,32 @@ overlay_sort_func(const void *a, const void *b)
 	return 0;
 }
 
+static enum xrt_blend_mode
+find_active_blend_mode(struct multi_compositor **overlay_sorted_clients, size_t size)
+{
+	if (overlay_sorted_clients == NULL)
+		return XRT_BLEND_MODE_OPAQUE;
+
+	const struct multi_compositor *first_visible = NULL;
+	for (size_t k = 0; k < size; ++k) {
+		const struct multi_compositor *mc = overlay_sorted_clients[k];
+		assert(mc != NULL);
+
+		// if a focused client is found just return, "first_visible" has lower priority and can be ignored.
+		if (mc->state.focused) {
+			assert(mc->state.visible);
+			return mc->delivered.data.env_blend_mode;
+		}
+
+		if (first_visible == NULL && mc->state.visible) {
+			first_visible = mc;
+		}
+	}
+	if (first_visible != NULL)
+		return first_visible->delivered.data.env_blend_mode;
+	return XRT_BLEND_MODE_OPAQUE;
+}
+
 static void
 transfer_layers_locked(struct multi_system_compositor *msc, uint64_t display_time_ns, int64_t system_frame_id)
 {
@@ -277,6 +303,16 @@ transfer_layers_locked(struct multi_system_compositor *msc, uint64_t display_tim
 
 	// Sort the stack array
 	qsort(array, count, sizeof(struct multi_compositor *), overlay_sort_func);
+
+	// find first (ordered by bottom to top) active client to retrieve xrt_layer_frame_data
+	const enum xrt_blend_mode blend_mode = find_active_blend_mode(array, count);
+
+	const struct xrt_layer_frame_data data = {
+	    .frame_id = system_frame_id,
+	    .display_time_ns = display_time_ns,
+	    .env_blend_mode = blend_mode,
+	};
+	xrt_comp_layer_begin(xc, &data);
 
 	// Copy all active layers.
 	for (size_t k = 0; k < count; k++) {
@@ -497,20 +533,6 @@ multi_main_loop(struct multi_system_compositor *msc)
 		broadcast_timings_to_pacers(msc, predicted_display_time_ns, predicted_display_period_ns, diff_ns);
 
 		xrt_comp_begin_frame(xc, frame_id);
-
-		//! @todo Pick the blend mode from primary client.
-		enum xrt_blend_mode blend_mode = XRT_BLEND_MODE_OPAQUE;
-
-		//! @todo Pick a good display time.
-		uint64_t display_time_ns = 0;
-
-		// Prepare data.
-		struct xrt_layer_frame_data data = {
-		    .frame_id = frame_id,
-		    .display_time_ns = display_time_ns,
-		    .env_blend_mode = blend_mode,
-		};
-		xrt_comp_layer_begin(xc, &data);
 
 		// Make sure that the clients doesn't go away while we transfer layers.
 		os_mutex_lock(&msc->list_and_timing_lock);
