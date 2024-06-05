@@ -564,7 +564,7 @@ oxr_vk_get_physical_device(struct oxr_logger *log,
                            VkPhysicalDevice *vkPhysicalDevice)
 {
 	GET_PROC(vkEnumeratePhysicalDevices);
-	GET_PROC(vkGetPhysicalDeviceProperties2);
+	GET_PROC(vkGetPhysicalDeviceProperties2KHR);
 	VkResult vk_ret;
 	uint32_t count;
 
@@ -610,7 +610,7 @@ oxr_vk_get_physical_device(struct oxr_logger *log,
 		    .pNext = &pdidp,
 		};
 
-		vkGetPhysicalDeviceProperties2(phys[i], &pdp2);
+		vkGetPhysicalDeviceProperties2KHR(phys[i], &pdp2);
 
 		// These should always be true
 		static_assert(VK_UUID_SIZE == XRT_UUID_SIZE, "uuid sizes mismatch");
