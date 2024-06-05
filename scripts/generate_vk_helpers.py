@@ -8,6 +8,10 @@ from typing import Callable, Iterable, List, Optional
 
 
 def get_device_cmds():
+    # NOTE: Be sure to use the Vulkan 1.0 name of functions in here!
+    # (so, the decorated extension version)
+    # If you want to alias it in the generated file, use the member_name
+    # keyword argument.
     return [
         Cmd("vkDestroyDevice"),
         Cmd("vkDeviceWaitIdle"),
@@ -194,8 +198,14 @@ def get_instance_cmds():
         None,
         Cmd("vkEnumeratePhysicalDevices"),
         Cmd("vkGetPhysicalDeviceProperties"),
-        Cmd("vkGetPhysicalDeviceProperties2"),
-        Cmd("vkGetPhysicalDeviceFeatures2"),
+        Cmd(
+            "vkGetPhysicalDeviceProperties2KHR",
+            member_name="vkGetPhysicalDeviceProperties2",
+        ),
+        Cmd(
+            "vkGetPhysicalDeviceFeatures2KHR",
+            member_name="vkGetPhysicalDeviceFeatures2",
+        ),
         Cmd("vkGetPhysicalDeviceMemoryProperties"),
         Cmd("vkGetPhysicalDeviceQueueFamilyProperties"),
         Cmd("vkGetPhysicalDeviceSurfaceCapabilitiesKHR"),
@@ -203,8 +213,14 @@ def get_instance_cmds():
         Cmd("vkGetPhysicalDeviceSurfacePresentModesKHR"),
         Cmd("vkGetPhysicalDeviceSurfaceSupportKHR"),
         Cmd("vkGetPhysicalDeviceFormatProperties"),
-        Cmd("vkGetPhysicalDeviceFormatProperties2KHR", member_name="vkGetPhysicalDeviceFormatProperties2"),
-        Cmd("vkGetPhysicalDeviceImageFormatProperties2"),
+        Cmd(
+            "vkGetPhysicalDeviceFormatProperties2KHR",
+            member_name="vkGetPhysicalDeviceFormatProperties2",
+        ),
+        Cmd(
+            "vkGetPhysicalDeviceImageFormatProperties2KHR",
+            member_name="vkGetPhysicalDeviceImageFormatProperties2",
+        ),
         Cmd("vkGetPhysicalDeviceExternalBufferPropertiesKHR"),
         Cmd("vkGetPhysicalDeviceExternalFencePropertiesKHR"),
         Cmd("vkGetPhysicalDeviceExternalSemaphorePropertiesKHR"),

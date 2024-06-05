@@ -68,8 +68,8 @@ vk_get_instance_functions(struct vk_bundle *vk)
 
 	vk->vkEnumeratePhysicalDevices                        = GET_INS_PROC(vk, vkEnumeratePhysicalDevices);
 	vk->vkGetPhysicalDeviceProperties                     = GET_INS_PROC(vk, vkGetPhysicalDeviceProperties);
-	vk->vkGetPhysicalDeviceProperties2                    = GET_INS_PROC(vk, vkGetPhysicalDeviceProperties2);
-	vk->vkGetPhysicalDeviceFeatures2                      = GET_INS_PROC(vk, vkGetPhysicalDeviceFeatures2);
+	vk->vkGetPhysicalDeviceProperties2                    = GET_INS_PROC(vk, vkGetPhysicalDeviceProperties2KHR);
+	vk->vkGetPhysicalDeviceFeatures2                      = GET_INS_PROC(vk, vkGetPhysicalDeviceFeatures2KHR);
 	vk->vkGetPhysicalDeviceMemoryProperties               = GET_INS_PROC(vk, vkGetPhysicalDeviceMemoryProperties);
 	vk->vkGetPhysicalDeviceQueueFamilyProperties          = GET_INS_PROC(vk, vkGetPhysicalDeviceQueueFamilyProperties);
 	vk->vkGetPhysicalDeviceSurfaceCapabilitiesKHR         = GET_INS_PROC(vk, vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
@@ -78,7 +78,7 @@ vk_get_instance_functions(struct vk_bundle *vk)
 	vk->vkGetPhysicalDeviceSurfaceSupportKHR              = GET_INS_PROC(vk, vkGetPhysicalDeviceSurfaceSupportKHR);
 	vk->vkGetPhysicalDeviceFormatProperties               = GET_INS_PROC(vk, vkGetPhysicalDeviceFormatProperties);
 	vk->vkGetPhysicalDeviceFormatProperties2              = GET_INS_PROC(vk, vkGetPhysicalDeviceFormatProperties2KHR);
-	vk->vkGetPhysicalDeviceImageFormatProperties2         = GET_INS_PROC(vk, vkGetPhysicalDeviceImageFormatProperties2);
+	vk->vkGetPhysicalDeviceImageFormatProperties2         = GET_INS_PROC(vk, vkGetPhysicalDeviceImageFormatProperties2KHR);
 	vk->vkGetPhysicalDeviceExternalBufferPropertiesKHR    = GET_INS_PROC(vk, vkGetPhysicalDeviceExternalBufferPropertiesKHR);
 	vk->vkGetPhysicalDeviceExternalFencePropertiesKHR     = GET_INS_PROC(vk, vkGetPhysicalDeviceExternalFencePropertiesKHR);
 	vk->vkGetPhysicalDeviceExternalSemaphorePropertiesKHR = GET_INS_PROC(vk, vkGetPhysicalDeviceExternalSemaphorePropertiesKHR);
