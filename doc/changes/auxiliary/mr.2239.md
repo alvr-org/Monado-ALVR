@@ -1,0 +1,1 @@
+math: Restore upgrading of 3DOF relations with valid positions to ensure 3DOF devices have monado's 3DOF offset.
