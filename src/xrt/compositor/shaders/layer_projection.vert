@@ -1,5 +1,8 @@
-// Copyright 2023, Collabora Ltd.
+// Copyright 2020-2023, Collabora Ltd.
+//
 // Author: Jakob Bornecrantz <jakob@collabora.com>
+// Author: Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
+//
 // SPDX-License-Identifier: BSL-1.0
 
 #version 460
