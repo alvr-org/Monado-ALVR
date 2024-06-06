@@ -133,15 +133,6 @@ apply_relation(const struct xrt_space_relation *a,
 	flags af = get_flags(a);
 	flags bf = get_flags(b);
 
-	// If either of the relations does not have a valid or tracked flag, the entire chain loses that flag.
-	flags nf = {};
-	nf.has_orientation = af.has_orientation && bf.has_orientation;
-	nf.has_position = af.has_position && bf.has_position;
-	nf.has_tracked_orientation = af.has_tracked_orientation && bf.has_tracked_orientation;
-	nf.has_tracked_position = af.has_tracked_position && bf.has_tracked_position;
-	nf.has_linear_velocity = af.has_linear_velocity && bf.has_linear_velocity;
-	nf.has_angular_velocity = af.has_angular_velocity && bf.has_angular_velocity;
-
 	struct xrt_pose pose = XRT_POSE_IDENTITY;
 	struct xrt_vec3 linear_velocity = XRT_VEC3_ZERO;
 	struct xrt_vec3 angular_velocity = XRT_VEC3_ZERO;
@@ -158,6 +149,36 @@ apply_relation(const struct xrt_space_relation *a,
 	// work. The flags of the result are determined in nf and not taken from the result of the transform.
 	make_valid_pose(af, &a->pose, &body_pose);
 	make_valid_pose(bf, &b->pose, &base_pose);
+
+
+	// This is a band aid to make 3dof devices work until we have a real solution.
+	// A 3dof device may return a relation with only orientation valid/tracked and no position.
+	//
+	// Monado wants to apply a predefined offset to 3dof devices, giving them a position.
+	//
+	// But per the comment below "If either of the relations does not have a valid or tracked flag, the entire chain
+	// loses that flag".
+	//
+	// For now we upgrade every relation that only has an orientation, to also have a position. Note that
+	// make_valid_pose zeroed the position if has_position was not set originally, ensuring there are no garbage
+	// values propagated.
+	if (af.has_orientation && !af.has_position) {
+		af.has_position = true;
+	}
+	if (bf.has_orientation && !bf.has_position) {
+		bf.has_position = true;
+	}
+
+
+	// If either of the relations does not have a valid or tracked flag, the entire chain loses that flag.
+	flags nf = {};
+	nf.has_orientation = af.has_orientation && bf.has_orientation;
+	nf.has_position = af.has_position && bf.has_position;
+	nf.has_tracked_orientation = af.has_tracked_orientation && bf.has_tracked_orientation;
+	nf.has_tracked_position = af.has_tracked_position && bf.has_tracked_position;
+	nf.has_linear_velocity = af.has_linear_velocity && bf.has_linear_velocity;
+	nf.has_angular_velocity = af.has_angular_velocity && bf.has_angular_velocity;
+
 
 	// Not already valid poses needed to be made valid because the transoformed pose would be undefined otherwise
 	// and we still want e.g. valid positions.

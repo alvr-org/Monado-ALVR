@@ -87,13 +87,13 @@ constexpr xrt_space_relation kSpaceRelationOnlyPosition = {
 
 enum Functions
 {
-	NV,               // (Non-Identity) (Space Relation) Not Valid Not Tracked
-	VT,               // (Non-Identity) (Space Relation) Valid Tracked
-	VNT,              // (Non-Identity) (Space Relation) Valid Not Tracked
+	NV,               // (Non-Identity) (Space Relation) Neither Position/Orientation Valid, Not Tracked
+	VT,               // (Non-Identity) (Space Relation) Position/Orientation Valid, Tracked
+	VNT,              // (Non-Identity) (Space Relation) Position/Orientation Valid, Not Tracked
 	P,                // (Non-Identity) Pose
 	IP,               // Identity Pose
-	ONLY_ORIENTATION, // (Non-Identity) (Space Relation) Only orientation
-	ONLY_POSITION,    // (Non-Identity) (Space Relation) Only position
+	ONLY_ORIENTATION, // (Non-Identity) (Space Relation) Only orientation Valid, Not Tracked
+	ONLY_POSITION,    // (Non-Identity) (Space Relation) Only position Valid, Not Tracked
 };
 
 static void
@@ -179,14 +179,18 @@ TEST_CASE("Relation Chain Flags")
 		TEST_FLAGS(kFlagsValid, VT, VT, VNT, VT);
 		TEST_FLAGS(kFlagsValid, IP, VT, P, VNT, P, VT);
 
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, VT, ONLY_ORIENTATION);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, VT, ONLY_ORIENTATION);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, VT, ONLY_POSITION);
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, ONLY_ORIENTATION, VT);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, ONLY_ORIENTATION, VT);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, ONLY_POSITION, VT);
 
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, P, VT, ONLY_ORIENTATION, P);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, P, VT, ONLY_ORIENTATION, P);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, P, VT, ONLY_POSITION, P);
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, P, ONLY_ORIENTATION, VT, P);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, P, ONLY_ORIENTATION, VT, P);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, P, ONLY_POSITION, VT, P);
 	}
 
@@ -214,17 +218,22 @@ TEST_CASE("Relation Chain Flags")
 		TEST_FLAGS(kFlagsValid, P, VNT, IP, P);
 		TEST_FLAGS(kFlagsValid, P, IP, VNT, P);
 
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, P, ONLY_ORIENTATION, IP, P);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, P, ONLY_ORIENTATION, IP, P);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, P, ONLY_POSITION, IP, P);
 
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, ONLY_ORIENTATION, VNT);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, ONLY_ORIENTATION, VNT);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, ONLY_POSITION, VNT);
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, VNT, ONLY_ORIENTATION);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, VNT, ONLY_ORIENTATION);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, VNT, ONLY_POSITION);
 
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, ONLY_ORIENTATION, P, VNT);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, ONLY_ORIENTATION, P, VNT);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, ONLY_POSITION, P, VNT);
-		TEST_FLAGS(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT, VNT, ONLY_ORIENTATION, P);
+		// ONLY_ORIENTATION relation is upgraded to position valid
+		TEST_FLAGS(kFlagsValid, VNT, ONLY_ORIENTATION, P);
 		TEST_FLAGS(XRT_SPACE_RELATION_POSITION_VALID_BIT, VNT, ONLY_POSITION, P);
 	}
 }
