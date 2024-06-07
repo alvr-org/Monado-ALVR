@@ -252,27 +252,6 @@ android {
 
 }
 
-// For signing of release binaries - env var must contain an absolute path
-// CI always does this.
-def keystorePropertiesFilename = System.getenv("MONADO_KEYSTORE_PROPERTIES")
-if (keystorePropertiesFilename) {
-    def keystorePropertiesFile = file("${keystorePropertiesFilename}")
-    if (keystorePropertiesFile.exists()) {
-        println("Signing release artifacts for monado")
-        def keystoreProperties = new Properties()
-        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-        android.signingConfigs {
-            release {
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-                storeFile file("${project.repoRoot}/" + keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-            }
-        }
-        android.buildTypes.release.signingConfig android.signingConfigs.release
-    }
-}
-
 aboutLibraries {
     // Full license text for license IDs mentioned here
     // will be included, even if no detected dependency uses them.
@@ -303,4 +282,25 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     kapt "com.google.dagger:hilt-compiler:$hiltVersion"
 
+}
+
+// For signing of release binaries - env var must contain an absolute path
+// CI always does this.
+def keystorePropertiesFilename = System.getenv("MONADO_KEYSTORE_PROPERTIES")
+if (keystorePropertiesFilename) {
+    def keystorePropertiesFile = file("${keystorePropertiesFilename}")
+    if (keystorePropertiesFile.exists()) {
+        println("Signing release artifacts for monado")
+        def keystoreProperties = new Properties()
+        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+        android.signingConfigs {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file("${project.repoRoot}/" + keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+        android.buildTypes.release.signingConfig android.signingConfigs.release
+    }
 }
