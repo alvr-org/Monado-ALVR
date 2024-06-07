@@ -1,7 +1,7 @@
 {
     "name": "monado",
     "homepage": "https://monado.freedesktop.org",
-    "version-string": "21.0",
+    "version-string": "24.0",
     "dependencies": [
         {
             "name": "wil",
