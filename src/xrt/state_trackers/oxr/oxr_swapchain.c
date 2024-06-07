@@ -206,7 +206,7 @@ oxr_swapchain_common_acquire(struct oxr_logger *log, struct oxr_swapchain *sc, u
 	u_index_fifo_push(&sc->acquired.fifo, index);
 	sc->images[index].state = OXR_IMAGE_STATE_ACQUIRED;
 
-	// If the compositor is resuing the image,
+	// If the compositor is reusing the image,
 	// mark it as invalid to use in xrEndFrame.
 	if (sc->released.index == (int)index) {
 		sc->released.yes = false;
