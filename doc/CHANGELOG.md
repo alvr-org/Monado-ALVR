@@ -760,7 +760,7 @@ SPDX-FileCopyrightText: 2020 Collabora, Ltd. and the Monado contributors
   - main: Delay the destruction of swapchains until a time where it is safe, this
     allows swapchains to be destroyed from other threads.
     ([!278](https://gitlab.freedesktop.org/monado/monado/merge_requests/278))
-  - client: Propegate the supported formats from the real compositor to the client
+  - client: Propagate the supported formats from the real compositor to the client
     ones. ([!282](https://gitlab.freedesktop.org/monado/monado/merge_requests/282))
   - renderer: Change the idle images colour from bright white to grey.
     ([!282](https://gitlab.freedesktop.org/monado/monado/merge_requests/282))
