@@ -1,1 +1,0 @@
-steamvr_lh: Adjust location flags behavior for better lighthouse tracking on occlusion

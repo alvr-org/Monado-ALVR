@@ -1,3 +1,0 @@
-- vk: Add enumerators for two surface properties.
-- vk: Add `vk_enumerate_swapchain_images`.
-- vk: Tidy surface info function.

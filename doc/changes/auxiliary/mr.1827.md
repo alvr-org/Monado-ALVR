@@ -1,1 +1,0 @@
-u/var: Improve documentation.

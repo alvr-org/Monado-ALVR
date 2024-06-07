@@ -1,1 +1,0 @@
-opengloves: Refactor creation.

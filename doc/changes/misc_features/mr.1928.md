@@ -1,2 +1,0 @@
-- m/vec2: Add float array helper
-- m/vec3: Add float array helper

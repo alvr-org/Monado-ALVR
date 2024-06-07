@@ -1,1 +1,0 @@
-android_sensors: Set both orientation and position valid flags in the Android driver's `get_tracked_pose` callback. hello_xr, Unity and possibly other apps check the view pose flags for both position & orientation flags to be valid otherwise they invoke `xrEndFrame` with no layers set causing a constant gray screen.

@@ -1,6 +1,0 @@
----
-- mr.1939
-- mr.1963
-- mr.2176
----
-- external: Update android-jni-wrap, add additional wrapped methods.

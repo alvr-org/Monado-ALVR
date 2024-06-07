@@ -1,1 +1,0 @@
-remote: Greatly improve the remote driver. Properly shut down the main loop. Use the new `xrt_system_devices` as base class for `r_hub`. Expose the Valve Index Controller instead of the simple controller as it better allows to map other controllers to it. Reuse the vive bindings helper library.

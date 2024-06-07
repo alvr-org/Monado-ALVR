@@ -1,1 +1,0 @@
-- wmr: Add support for Acer AH101 HMD

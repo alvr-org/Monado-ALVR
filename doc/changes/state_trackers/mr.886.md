@@ -1,1 +1,0 @@
-OpenXR: Add support for XR_KHR_swapchain_usage_input_attachment_bit.

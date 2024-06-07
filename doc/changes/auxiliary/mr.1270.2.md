@@ -1,2 +1,0 @@
-vk: Make `VK_KHR_external_[fence|semaphore]_fd` optional. This is helpful for CI
-where only lavapipe can be used which does not support those extensions.

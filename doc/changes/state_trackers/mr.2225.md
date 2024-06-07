@@ -1,1 +1,0 @@
-OpenXR: Ignore primaryViewConfigurationType with XR_MND_headless

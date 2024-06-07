@@ -1,1 +1,0 @@
-OpenXR: Implement function 'xrGetReferenceSpaceBoundsRect'.
