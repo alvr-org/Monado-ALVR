@@ -23,7 +23,11 @@ dependencyResolutionManagement {
 
 rootProject.name = 'monado'
 
-include ':src:xrt:auxiliary:android'
-include ':src:xrt:ipc:android'
+include ':src:xrt:auxiliary'
+project(':src:xrt:auxiliary').projectDir = new File(rootDir, 'src/xrt/auxiliary/android')
+
+include ':src:xrt:ipc'
+project(':src:xrt:ipc').projectDir = new File(rootDir, 'src/xrt/ipc/android')
+
 include ':src:xrt:targets:android_common'
 include ':src:xrt:targets:openxr_android'

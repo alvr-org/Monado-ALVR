@@ -60,7 +60,7 @@ android {
 }
 
 dependencies {
-    implementation project(':src:xrt:auxiliary:android')
+    implementation project(':src:xrt:auxiliary')
     implementation "androidx.annotation:annotation:$androidxAnnotationVersion"
     implementation "androidx.core:core-ktx:$androidxCoreVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"

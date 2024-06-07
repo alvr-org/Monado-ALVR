@@ -284,8 +284,8 @@ aboutLibraries {
 }
 
 dependencies {
-    outOfProcessImplementation project(':src:xrt:ipc:android')
-    implementation project(':src:xrt:auxiliary:android')
+    outOfProcessImplementation project(':src:xrt:ipc')
+    implementation project(':src:xrt:auxiliary')
     implementation project(':src:xrt:targets:android_common')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
