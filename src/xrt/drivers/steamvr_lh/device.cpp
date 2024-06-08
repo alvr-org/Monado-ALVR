@@ -810,6 +810,23 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		}
 		break;
 	}
+	case vr::Prop_ModelNumber_String: {
+		using namespace std::literals::string_view_literals;
+		vr::PropertyWrite_t fixedProp = prop;
+		const std::string_view name = {static_cast<char *>(prop.pvBuffer), prop.unBufferSize};
+		if (name == "SlimeVR Virtual Tracker\0"sv) {
+			static const InputClass input_class = {
+			    XRT_DEVICE_VIVE_TRACKER, {XRT_INPUT_GENERIC_TRACKER_POSE}, {}, {}};
+			this->name = input_class.name;
+			set_input_class(&input_class);
+			this->manufacturer = name.substr(0, name.find_first_of(' '));
+			fixedProp.pvBuffer = (char *)fixedProp.pvBuffer + this->manufacturer.size() +
+			                     (this->manufacturer.size() != name.size());
+			fixedProp.unBufferSize = name.end() - (char *)fixedProp.pvBuffer;
+		}
+		Device::handle_property_write(fixedProp);
+		break;
+	}
 	case vr::Prop_ControllerRoleHint_Int32: {
 		vr::ETrackedControllerRole role = *static_cast<vr::ETrackedControllerRole *>(prop.pvBuffer);
 		switch (role) {

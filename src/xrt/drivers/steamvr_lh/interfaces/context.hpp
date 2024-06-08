@@ -102,7 +102,7 @@ class Context final : public xrt_tracking_origin,
 
 	bool
 	setup_controller(const char *serial, vr::ITrackedDeviceServerDriver *driver);
-	vr::IServerTrackedDeviceProvider *provider;
+	std::vector<vr::IServerTrackedDeviceProvider *> providers;
 
 	inline vr::VRInputComponentHandle_t
 	new_handle()
@@ -112,10 +112,9 @@ class Context final : public xrt_tracking_origin,
 		return h;
 	}
 
-protected:
+public:
 	Context(const std::string &steam_install, const std::string &steamvr_install, u_logging_level level);
 
-public:
 	// These are owned by monado, context is destroyed when these are destroyed
 	class HmdDevice *hmd{nullptr};
 	class ControllerDevice *controller[16]{nullptr};
@@ -126,7 +125,10 @@ public:
 	[[nodiscard]] static std::shared_ptr<Context>
 	create(const std::string &steam_install,
 	       const std::string &steamvr_install,
-	       vr::IServerTrackedDeviceProvider *p);
+	       std::vector<vr::IServerTrackedDeviceProvider *> providers);
+
+	void
+	run_frame();
 
 	void
 	maybe_run_frame(uint64_t new_frame);

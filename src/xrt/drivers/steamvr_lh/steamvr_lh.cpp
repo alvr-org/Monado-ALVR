@@ -15,6 +15,7 @@
 #include <string_view>
 #include <filesystem>
 #include <istream>
+#include <thread>
 
 #include "openvr_driver.h"
 #include "vdf_parser.hpp"
@@ -29,9 +30,12 @@
 #include "util/u_system_helpers.h"
 #include "vive/vive_bindings.h"
 
+#include "math/m_api.h"
+
 namespace {
 
 DEBUG_GET_ONCE_LOG_OPTION(lh_log, "LIGHTHOUSE_LOG", U_LOGGING_INFO)
+DEBUG_GET_ONCE_BOOL_OPTION(lh_load_slimevr, "LH_LOAD_SLIMEVR", false)
 
 static const size_t MAX_CONTROLLERS = 16;
 
@@ -46,9 +50,6 @@ struct steamvr_lh_system
 
 	//! Pointer to driver context
 	std::shared_ptr<Context> ctx;
-
-	// Controller as index and value as xdev
-	int32_t controller_to_xdev_map[MAX_CONTROLLERS];
 
 	//! Index to the left controller.
 	int32_t left_index;
@@ -106,15 +107,23 @@ find_steamvr_install()
 std::shared_ptr<Context>
 Context::create(const std::string &steam_install,
                 const std::string &steamvr_install,
-                vr::IServerTrackedDeviceProvider *p)
+                std::vector<vr::IServerTrackedDeviceProvider *> providers)
 {
 	// xrt_tracking_origin initialization
-	Context *c = new Context(steam_install, steamvr_install, debug_get_log_option_lh_log());
-	c->provider = p;
+	std::shared_ptr<Context> c =
+	    std::make_shared<Context>(steam_install, steamvr_install, debug_get_log_option_lh_log());
+	c->providers = std::move(providers);
 	std::strncpy(c->name, "SteamVR Lighthouse Tracking", XRT_TRACKING_NAME_LEN);
 	c->type = XRT_TRACKING_TYPE_LIGHTHOUSE;
 	c->offset = XRT_POSE_IDENTITY;
-	return std::shared_ptr<Context>(c);
+	for (vr::IServerTrackedDeviceProvider *const &driver : c->providers) {
+		vr::EVRInitError err = driver->Init(c.get());
+		if (err != vr::VRInitError_None) {
+			U_LOG_IFL_E(c->log_level, "OpenVR driver initialization failed: error %u", err);
+			return nullptr;
+		}
+	}
+	return c;
 }
 
 Context::Context(const std::string &steam_install, const std::string &steamvr_install, u_logging_level level)
@@ -123,7 +132,8 @@ Context::Context(const std::string &steam_install, const std::string &steamvr_in
 
 Context::~Context()
 {
-	provider->Cleanup();
+	for (vr::IServerTrackedDeviceProvider *const &provider : providers)
+		provider->Cleanup();
 }
 
 /***** IVRDriverContext methods *****/
@@ -270,11 +280,18 @@ Context::setup_controller(const char *serial, vr::ITrackedDeviceServerDriver *dr
 }
 
 void
+Context::run_frame()
+{
+	for (vr::IServerTrackedDeviceProvider *const &provider : providers)
+		provider->RunFrame();
+}
+
+void
 Context::maybe_run_frame(uint64_t new_frame)
 {
 	if (new_frame > current_frame) {
 		++current_frame;
-		provider->RunFrame();
+		run_frame();
 	}
 }
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
@@ -314,8 +331,8 @@ Context::TrackedDevicePoseUpdated(uint32_t unWhichDevice, const vr::DriverPose_t
 {
 	assert(sizeof(newPose) == unPoseStructSize);
 
-	// Check for valid device index, allowing for the HMD plus up to 16 controllers
-	if (unWhichDevice > 16)
+	// Check for valid device index, allowing for the HMD plus up to MAX_CONTROLLERS controllers
+	if (unWhichDevice > MAX_CONTROLLERS)
 		return;
 
 	Device *dev = nullptr;
@@ -387,7 +404,23 @@ void
 Context::GetRawTrackedDevicePoses(float fPredictedSecondsFromNow,
                                   vr::TrackedDevicePose_t *pTrackedDevicePoseArray,
                                   uint32_t unTrackedDevicePoseArrayCount)
-{}
+{
+	// This is the bare minimum required for SlimeVR's HMD feedback to work
+	if (unTrackedDevicePoseArrayCount != 10 || this->hmd == nullptr)
+		return;
+	const uint64_t time =
+	    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch())
+	        .count();
+	xrt_space_relation head = {};
+	xrt_device_get_tracked_pose(this->hmd, XRT_INPUT_GENERIC_HEAD_POSE, time, &head);
+	xrt_matrix_3x3 rot = {};
+	math_matrix_3x3_from_quat(&head.pose.orientation, &rot);
+	pTrackedDevicePoseArray[0].mDeviceToAbsoluteTracking = {{
+	    {rot.v[0], rot.v[3], rot.v[6], head.pose.position.x},
+	    {rot.v[1], rot.v[4], rot.v[7], head.pose.position.y},
+	    {rot.v[2], rot.v[5], rot.v[8], head.pose.position.z},
+	}};
+}
 
 void
 Context::RequestRestart(const char *pchLocalizedReason,
@@ -672,7 +705,7 @@ Context::TrackedDeviceToPropertyContainer(vr::TrackedDeviceIndex_t nDevice)
 	if (nDevice == 0 && this->hmd) {
 		return container;
 	}
-	if (nDevice >= 1 && nDevice <= 16 && this->controller[nDevice - 1]) {
+	if (nDevice >= 1 && nDevice <= MAX_CONTROLLERS && this->controller[nDevice - 1]) {
 		return container;
 	}
 
@@ -727,49 +760,52 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
 
 	U_LOG_IFL_I(level, "Found SteamVR install: %s", steamvr.c_str());
 
-	// TODO: support windows?
-	auto driver_so = steamvr + "/drivers/lighthouse/bin/linux64/driver_lighthouse.so";
+	std::vector<vr::IServerTrackedDeviceProvider *> drivers = {};
+	const auto loadDriver = [&](std::string soPath, bool require) {
+		// TODO: support windows?
+		void *driver_lib = dlopen((steamvr + soPath).c_str(), RTLD_LAZY);
+		if (!driver_lib) {
+			U_LOG_IFL_E(level, "Couldn't open driver lib: %s", dlerror());
+			return !require;
+		}
 
-	void *lighthouse_lib = dlopen(driver_so.c_str(), RTLD_LAZY);
-	if (!lighthouse_lib) {
-		U_LOG_IFL_E(level, "Couldn't open lighthouse lib: %s", dlerror());
+		void *sym = dlsym(driver_lib, "HmdDriverFactory");
+		if (!sym) {
+			U_LOG_IFL_E(level, "Couldn't find HmdDriverFactory in driver lib: %s", dlerror());
+			return false;
+		}
+		using HmdDriverFactory_t = void *(*)(const char *, int *);
+		auto factory = reinterpret_cast<HmdDriverFactory_t>(sym);
+
+		vr::EVRInitError err = vr::VRInitError_None;
+		drivers.push_back(static_cast<vr::IServerTrackedDeviceProvider *>(
+		    factory(vr::IServerTrackedDeviceProvider_Version, (int *)&err)));
+		if (err != vr::VRInitError_None) {
+			U_LOG_IFL_E(level, "Couldn't get tracked device driver: error %u", err);
+			return false;
+		}
+		return true;
+	};
+	if (!loadDriver("/drivers/lighthouse/bin/linux64/driver_lighthouse.so", true))
 		return xrt_result::XRT_ERROR_DEVICE_CREATION_FAILED;
-	}
-
-	void *sym = dlsym(lighthouse_lib, "HmdDriverFactory");
-	if (!sym) {
-		U_LOG_IFL_E(level, "Couldn't find HmdDriverFactory in lighthouse lib: %s", dlerror());
+	if (debug_get_bool_option_lh_load_slimevr() &&
+	    !loadDriver("/drivers/slimevr/bin/linux64/driver_slimevr.so", false))
 		return xrt_result::XRT_ERROR_DEVICE_CREATION_FAILED;
-	}
-	using HmdDriverFactory_t = void *(*)(const char *, int *);
-	auto factory = reinterpret_cast<HmdDriverFactory_t>(sym);
-
-	vr::EVRInitError err = vr::VRInitError_None;
-	auto *driver = static_cast<vr::IServerTrackedDeviceProvider *>(
-	    factory(vr::IServerTrackedDeviceProvider_Version, (int *)&err));
-	if (err != vr::VRInitError_None) {
-		U_LOG_IFL_E(level, "Couldn't get tracked device driver: error %u", err);
+	svrs->ctx = Context::create(STEAM_INSTALL_DIR, steamvr, std::move(drivers));
+	if (svrs->ctx == nullptr)
 		return xrt_result::XRT_ERROR_DEVICE_CREATION_FAILED;
-	}
-
-	svrs->ctx = Context::create(STEAM_INSTALL_DIR, steamvr, driver);
-
-	err = driver->Init(svrs->ctx.get());
-	if (err != vr::VRInitError_None) {
-		U_LOG_IFL_E(level, "Lighthouse driver initialization failed: error %u", err);
-		return xrt_result::XRT_ERROR_DEVICE_CREATION_FAILED;
-	}
 
 	U_LOG_IFL_I(level, "Lighthouse initialization complete, giving time to setup connected devices...");
 	// RunFrame needs to be called to detect controllers
 	using namespace std::chrono_literals;
 	auto start_time = std::chrono::steady_clock::now();
 	while (true) {
-		driver->RunFrame();
+		svrs->ctx->run_frame();
 		auto cur_time = std::chrono::steady_clock::now();
 		if (cur_time - start_time >= 3s) {
 			break;
 		}
+		std::this_thread::sleep_for(20ms);
 	}
 	U_LOG_IFL_I(level, "Device search time complete.");
 
@@ -803,11 +839,10 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
 		xsysd->static_roles.head = head;
 	}
 
-	// Include the controllers (up to 16)
-	for (int i = 0; i < 16; i++) {
+	// Include the controllers
+	for (int i = 0; i < MAX_CONTROLLERS; i++) {
 		if (svrs->ctx->controller[i]) {
-			xsysd->xdevs[xsysd->xdev_count] = svrs->ctx->controller[i];
-			svrs->controller_to_xdev_map[i] = xsysd->xdev_count++;
+			xsysd->xdevs[xsysd->xdev_count++] = svrs->ctx->controller[i];
 		}
 	}
 
