@@ -72,6 +72,7 @@ slam_device(struct xrt_device *xdev)
 	return (struct slam_device *)xdev;
 }
 
+#ifdef XRT_FEATURE_SLAM
 static struct xrt_pose
 twrap_hmd_correct_pose_from_basalt(struct xrt_pose pose)
 {
@@ -81,6 +82,7 @@ twrap_hmd_correct_pose_from_basalt(struct xrt_pose pose)
 	pose.orientation.z = -pose.orientation.z;
 	return pose;
 }
+#endif
 
 static void
 twrap_slam_get_tracked_pose(struct xrt_device *xdev,
