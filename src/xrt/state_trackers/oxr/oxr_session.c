@@ -1419,7 +1419,7 @@ oxr_session_get_visibility_mask(struct oxr_logger *log,
 	// If we didn't have any cached mask get it.
 	if (mask == NULL) {
 		xret = xrt_device_get_visibility_mask(xdev, type, viewIndex, &mask);
-		if (xret == XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED && xdev->hmd != NULL) {
+		if (xret == XRT_ERROR_NOT_IMPLEMENTED && xdev->hmd != NULL) {
 			const struct xrt_fov fov = xdev->hmd->distortion.fov[viewIndex];
 			u_visibility_mask_get_default(type, &fov, &mask);
 			xret = XRT_SUCCESS;

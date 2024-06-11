@@ -530,7 +530,7 @@ u_device_ni_get_visibility_mask(struct xrt_device *xdev,
                                 struct xrt_visibility_mask **out_mask)
 {
 	E(get_visibility_mask);
-	return XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED;
+	return XRT_ERROR_NOT_IMPLEMENTED;
 }
 
 bool

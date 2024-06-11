@@ -1889,9 +1889,7 @@ xrt_comp_get_reference_bounds_rect(struct xrt_compositor *xc,
                                    struct xrt_vec2 *bounds)
 {
 	if (xc->get_reference_bounds_rect == NULL) {
-		bounds->x = 0.f;
-		bounds->y = 0.f;
-		return XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED;
+		return XRT_ERROR_NOT_IMPLEMENTED;
 	}
 
 	return xc->get_reference_bounds_rect(xc, reference_space_type, bounds);

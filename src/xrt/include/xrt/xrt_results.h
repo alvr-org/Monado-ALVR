@@ -181,14 +181,7 @@ typedef enum xrt_result
 	XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED = -28,
 
 	/*!
-	 * The function called on the device was not implemented, it is not
-	 * meant to query the availability of the function or feature, only a
-	 * error condition on bad code.
+	 * The interface function called is not implemented by its interface.
 	 */
-	XRT_ERROR_DEVICE_FUNCTION_NOT_IMPLEMENTED = -29,
-
-	/*!
-	 * The function was not implemented in the compositor
-	 */
-	XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED = -30,
+	XRT_ERROR_NOT_IMPLEMENTED = -29,
 } xrt_result_t;
