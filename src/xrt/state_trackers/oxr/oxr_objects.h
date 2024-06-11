@@ -1129,9 +1129,6 @@ oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuf
 void
 oxr_xdev_destroy(struct xrt_device **xdev_ptr);
 
-void
-oxr_xdev_update(struct xrt_device *xdev);
-
 /*!
  * Return true if it finds an input of that name on this device.
  */
