@@ -175,7 +175,9 @@ oxr_space_get_reference_bounds_rect(struct oxr_logger *log,
 	enum xrt_reference_space_type reference_space_type = xr_ref_space_to_xrt(referenceSpaceType);
 
 	xrt_result_t xret = xrt_comp_get_reference_bounds_rect(xc, reference_space_type, (struct xrt_vec2 *)bounds);
-	if (xret == XRT_ERROR_COMPOSITOR_FUNCTION_NOT_IMPLEMENTED || xret == XRT_SPACE_BOUNDS_UNAVAILABLE) {
+	if (xret == XRT_SPACE_BOUNDS_UNAVAILABLE) {
+		// `bounds` must be set to 0 on XR_SPACE_BOUNDS_UNAVAILABLE
+		*bounds = (XrExtent2Df){0};
 		return XR_SPACE_BOUNDS_UNAVAILABLE;
 	}
 	OXR_CHECK_XRET(log, sess, xret, oxr_space_get_reference_bounds_rect);
