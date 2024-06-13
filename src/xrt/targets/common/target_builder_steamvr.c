@@ -40,14 +40,7 @@
  *
  */
 
-DEBUG_GET_ONCE_LOG_OPTION(steamvr_log, "STEAMVR_LH_LOG", U_LOGGING_WARN)
 DEBUG_GET_ONCE_BOOL_OPTION(steamvr_enable, "STEAMVR_LH_ENABLE", false)
-
-#define LH_TRACE(...) U_LOG_IFL_T(debug_get_log_option_steamvr_log(), __VA_ARGS__)
-#define LH_DEBUG(...) U_LOG_IFL_D(debug_get_log_option_steamvr_log(), __VA_ARGS__)
-#define LH_INFO(...) U_LOG_IFL_I(debug_get_log_option_steamvr_log(), __VA_ARGS__)
-#define LH_WARN(...) U_LOG_IFL_W(debug_get_log_option_steamvr_log(), __VA_ARGS__)
-#define LH_ERROR(...) U_LOG_IFL_E(debug_get_log_option_steamvr_log(), __VA_ARGS__)
 
 static const char *driver_list[] = {
     "steamvr_lh",
