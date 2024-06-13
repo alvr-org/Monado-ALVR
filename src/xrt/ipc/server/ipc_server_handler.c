@@ -703,8 +703,9 @@ ipc_handle_space_destroy(volatile struct ipc_client_state *ics, uint32_t space_i
 	xrt_space_reference(xs_ptr, NULL);
 
 	if (space_id == ics->local_space_index) {
-		struct xrt_space *xslocal_ptr = ics->server->xso->localspace[ics->local_space_overseer_index];
-		xrt_space_reference(&xslocal_ptr, NULL);
+		struct xrt_space **xslocal_ptr =
+		    (struct xrt_space **)&ics->server->xso->localspace[ics->local_space_overseer_index];
+		xrt_space_reference(xslocal_ptr, NULL);
 	}
 
 	return XRT_SUCCESS;

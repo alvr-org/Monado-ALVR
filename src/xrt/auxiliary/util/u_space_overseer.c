@@ -836,8 +836,8 @@ destroy(struct xrt_space_overseer *xso)
 	u_hashmap_int_destroy(&uso->xdev_map);
 
 	for (int id = 0; id < XRT_MAX_CLIENT_SPACES; id++) {
-		struct xrt_space *xslocal = xso->localspace[id];
-		xrt_space_reference(&xslocal, NULL);
+		struct xrt_space **xslocal_ptr = (struct xrt_space **)&xso->localspace[id];
+		xrt_space_reference(xslocal_ptr, NULL);
 	}
 
 	pthread_rwlock_destroy(&uso->lock);

@@ -68,8 +68,8 @@ common_shutdown(volatile struct ipc_client_state *ics)
 	}
 
 	if (ics->local_space_overseer_index < IPC_MAX_CLIENT_SPACES && ics->local_space_overseer_index >= 0) {
-		struct xrt_space *xslocal = ics->server->xso->localspace[ics->local_space_overseer_index];
-		xrt_space_reference(&xslocal, NULL);
+		xrt_space_reference((struct xrt_space **)&ics->server->xso->localspace[ics->local_space_overseer_index],
+		                    NULL);
 	}
 
 	// Mark an still in use reference spaces as no longer used.
