@@ -198,7 +198,6 @@ create_localspace(volatile struct ipc_client_state *ics, uint32_t *out_local_id)
 		return xret;
 	}
 
-	struct xrt_space *xs = NULL;
 	struct xrt_space_overseer *xso = ics->server->xso;
 	struct xrt_space **xs_ptr = (struct xrt_space **)&ics->xspcs[id];
 

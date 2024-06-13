@@ -67,7 +67,7 @@ common_shutdown(volatile struct ipc_client_state *ics)
 		xrt_space_reference((struct xrt_space **)&ics->xspcs[i], NULL);
 	}
 
-	if (ics->local_space_overseer_index < IPC_MAX_CLIENT_SPACES && ics->local_space_overseer_index >= 0) {
+	if (ics->local_space_overseer_index < IPC_MAX_CLIENT_SPACES) {
 		xrt_space_reference((struct xrt_space **)&ics->server->xso->localspace[ics->local_space_overseer_index],
 		                    NULL);
 	}
