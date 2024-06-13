@@ -425,8 +425,8 @@ do_cs_distortion_for_layer(struct render_compute *crc,
 		src_image_view = get_image_view(image, data->flags, array_index);
 
 		if (data->flip_y) {
+			src_norm_rect.y += src_norm_rect.h;
 			src_norm_rect.h = -src_norm_rect.h;
-			src_norm_rect.y = 1 + src_norm_rect.y;
 		}
 
 		// Fill in data.

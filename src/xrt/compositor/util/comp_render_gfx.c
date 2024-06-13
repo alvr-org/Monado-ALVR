@@ -774,8 +774,8 @@ do_mesh_from_proj(struct render_gfx *rr,
 		const VkImageView src_image_view = get_image_view(image, data->flags, array_index);
 
 		if (data->flip_y) {
+			src_norm_rect.y += src_norm_rect.h;
 			src_norm_rect.h = -src_norm_rect.h;
-			src_norm_rect.y = 1 + src_norm_rect.y;
 		}
 
 		gfx_mesh_add_view(         //
