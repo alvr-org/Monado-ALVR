@@ -827,7 +827,9 @@ err_unlock:
 }
 
 static xrt_result_t
-create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
+create_local_space(struct xrt_space_overseer *xso,
+                   struct xrt_space **out_local_space,
+                   struct xrt_space **out_local_floor_space)
 {
 	assert(xso->semantic.root != NULL);
 
@@ -847,7 +849,31 @@ create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
 	xsr.pose.orientation.z = 0;
 	math_quat_normalize(&xsr.pose.orientation);
 
-	return create_offset_space(xso, xso->semantic.root, &xsr.pose, out_space);
+	xrt_result_t xret = XRT_SUCCESS;
+
+	if (out_local_space != NULL) {
+		xret = create_offset_space(xso, xso->semantic.root, &xsr.pose, out_local_space);
+		if (xret != XRT_SUCCESS) {
+			U_LOG_E("Failed to create offset space LOCAL!");
+			return xret;
+		}
+	}
+
+	if (out_local_floor_space != NULL) {
+		if (xso->semantic.stage != NULL) {
+			struct u_space *ustage = u_space(xso->semantic.stage);
+			xsr.pose.position.y = ustage->offset.pose.position.y;
+		} else {
+			xsr.pose.position.y = 0;
+		}
+		xret = create_offset_space(xso, xso->semantic.root, &xsr.pose, out_local_floor_space);
+		if (xret != XRT_SUCCESS) {
+			U_LOG_E("Failed to create offset space LOCAL_FLOOR!");
+			return xret;
+		}
+	}
+
+	return xret;
 }
 
 static xrt_result_t
@@ -1018,6 +1044,9 @@ destroy(struct xrt_space_overseer *xso)
 	for (int id = 0; id < XRT_MAX_CLIENT_SPACES; id++) {
 		struct xrt_space **xslocal_ptr = (struct xrt_space **)&xso->localspace[id];
 		xrt_space_reference(xslocal_ptr, NULL);
+
+		struct xrt_space **xslocalfloor_ptr = (struct xrt_space **)&xso->localfloorspace[id];
+		xrt_space_reference(xslocalfloor_ptr, NULL);
 	}
 
 	pthread_rwlock_destroy(&uso->lock);

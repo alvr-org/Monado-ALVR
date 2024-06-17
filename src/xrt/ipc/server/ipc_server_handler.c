@@ -174,7 +174,7 @@ track_space(volatile struct ipc_client_state *ics, struct xrt_space *xs, uint32_
 
 
 static xrt_result_t
-get_new_localspace_id(volatile struct ipc_client_state *ics, uint32_t *out_id)
+get_new_localspace_id(volatile struct ipc_client_state *ics, uint32_t *out_local_id, uint32_t *out_local_floor_id)
 {
 	// Our handle is just the index for now.
 	uint32_t index = 0;
@@ -203,27 +203,61 @@ get_new_localspace_id(volatile struct ipc_client_state *ics, uint32_t *out_id)
 	}
 
 	ics->local_space_index = index;
-	*out_id = index;
+	*out_local_id = index;
+
+	for (index = 0; index < IPC_MAX_CLIENT_SPACES; index++) {
+		if (ics->server->xso->localfloorspace[index] == NULL) {
+			break;
+		}
+	}
+
+	if (index >= IPC_MAX_CLIENT_SPACES) {
+		IPC_ERROR(ics->server, "Too many localfloorspaces!");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	ics->local_floor_space_overseer_index = index;
+
+	for (index = 0; index < IPC_MAX_CLIENT_SPACES; index++) {
+		if (ics->xspcs[index] == NULL && index != ics->local_space_index) {
+			break;
+		}
+	}
+
+	if (index >= IPC_MAX_CLIENT_SPACES) {
+		IPC_ERROR(ics->server, "Too many spaces!");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	ics->local_floor_space_index = index;
+	*out_local_floor_id = index;
 
 	return XRT_SUCCESS;
 }
 
 static xrt_result_t
-create_localspace(volatile struct ipc_client_state *ics, uint32_t *out_local_id)
+create_localspace(volatile struct ipc_client_state *ics, uint32_t *out_local_id, uint32_t *out_local_floor_id)
 {
-	uint32_t id = UINT32_MAX;
-	xrt_result_t xret = get_new_localspace_id(ics, &id);
+	uint32_t local_id = UINT32_MAX;
+	uint32_t local_floor_id = UINT32_MAX;
+	xrt_result_t xret = get_new_localspace_id(ics, &local_id, &local_floor_id);
 	if (xret != XRT_SUCCESS) {
 		return xret;
 	}
 
 	struct xrt_space_overseer *xso = ics->server->xso;
-	struct xrt_space **xs_ptr = (struct xrt_space **)&ics->xspcs[id];
+	struct xrt_space **xslocal_ptr = (struct xrt_space **)&ics->xspcs[local_id];
+	struct xrt_space **xslocalfloor_ptr = (struct xrt_space **)&ics->xspcs[local_floor_id];
 
-	xrt_space_overseer_create_local_space(xso, &xso->localspace[ics->local_space_overseer_index]);
-
-	xrt_space_reference(xs_ptr, xso->localspace[ics->local_space_overseer_index]);
-	*out_local_id = id;
+	xret = xrt_space_overseer_create_local_space(xso, &xso->localspace[ics->local_space_overseer_index],
+	                                             &xso->localfloorspace[ics->local_floor_space_overseer_index]);
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
+	xrt_space_reference(xslocal_ptr, xso->localspace[ics->local_space_overseer_index]);
+	xrt_space_reference(xslocalfloor_ptr, xso->localfloorspace[ics->local_floor_space_overseer_index]);
+	*out_local_id = local_id;
+	*out_local_floor_id = local_floor_id;
 
 	return XRT_SUCCESS;
 }
@@ -444,13 +478,11 @@ ipc_handle_space_create_semantic_ids(volatile struct ipc_client_state *ics,
 
 	CREATE(root);
 	CREATE(view);
-	CREATE(local_floor);
 	CREATE(stage);
 	CREATE(unbounded);
 
 #undef CREATE
-	create_localspace(ics, out_local_id);
-	return XRT_SUCCESS;
+	return create_localspace(ics, out_local_id, out_local_floor_id);
 }
 
 xrt_result_t
@@ -728,6 +760,12 @@ ipc_handle_space_destroy(volatile struct ipc_client_state *ics, uint32_t space_i
 		struct xrt_space **xslocal_ptr =
 		    (struct xrt_space **)&ics->server->xso->localspace[ics->local_space_overseer_index];
 		xrt_space_reference(xslocal_ptr, NULL);
+	}
+
+	if (space_id == ics->local_floor_space_index) {
+		struct xrt_space **xslocalfloor_ptr =
+		    (struct xrt_space **)&ics->server->xso->localfloorspace[ics->local_floor_space_overseer_index];
+		xrt_space_reference(xslocalfloor_ptr, NULL);
 	}
 
 	return XRT_SUCCESS;

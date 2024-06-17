@@ -110,6 +110,8 @@ struct xrt_space_overseer
 
 	//! Ptrs to the localspace
 	struct xrt_space *localspace[XRT_MAX_CLIENT_SPACES];
+	//! Ptrs to the localfloorspace
+	struct xrt_space *localfloorspace[XRT_MAX_CLIENT_SPACES];
 
 	/*!
 	 * Create a space with a fixed offset to the parent space.
@@ -291,12 +293,15 @@ struct xrt_space_overseer
 	                                           const struct xrt_pose *offset);
 
 	/*!
-	 * Create a localspace.
+	 * Create a localspace and a localfloorspace.
 	 *
 	 * @param[in] xso        Owning space overseer.
-	 * @param[out] out_space The newly created localspace.
+	 * @param[out] out_local_space The newly created localspace.
+	 * @param[out] out_local_floor_space The newly created localfloorspace.
 	 */
-	xrt_result_t (*create_local_space)(struct xrt_space_overseer *xso, struct xrt_space **out_space);
+	xrt_result_t (*create_local_space)(struct xrt_space_overseer *xso,
+	                                   struct xrt_space **out_local_space,
+	                                   struct xrt_space **out_local_floor_space);
 
 	/*!
 	 * Destroy function.
@@ -496,16 +501,18 @@ xrt_space_overseer_set_reference_space_offset(struct xrt_space_overseer *xso,
 }
 
 /*!
- * @copydoc xrt_space_overseer::create_localspace_space
+ * @copydoc xrt_space_overseer::create_local_space
  *
  * Helper for calling through the function pointer.
  *
  * @public @memberof xrt_space_overseer
  */
 static inline xrt_result_t
-xrt_space_overseer_create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
+xrt_space_overseer_create_local_space(struct xrt_space_overseer *xso,
+                                      struct xrt_space **out_local_space,
+                                      struct xrt_space **out_local_floor_space)
 {
-	return xso->create_local_space(xso, out_space);
+	return xso->create_local_space(xso, out_local_space, out_local_floor_space);
 }
 
 /*!

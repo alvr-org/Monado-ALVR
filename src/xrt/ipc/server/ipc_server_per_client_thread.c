@@ -72,6 +72,13 @@ common_shutdown(volatile struct ipc_client_state *ics)
 		                    NULL);
 	}
 
+	if (ics->local_floor_space_overseer_index < IPC_MAX_CLIENT_SPACES && //
+	    ics->local_floor_space_overseer_index >= 0) {
+		xrt_space_reference(
+		    (struct xrt_space **)&ics->server->xso->localfloorspace[ics->local_floor_space_overseer_index],
+		    NULL);
+	}
+
 	// Mark an still in use reference spaces as no longer used.
 	for (uint32_t i = 0; i < ARRAY_SIZE(ics->ref_space_used); i++) {
 		bool used = ics->ref_space_used[i];

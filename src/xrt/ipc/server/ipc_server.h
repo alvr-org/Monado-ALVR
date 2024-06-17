@@ -120,6 +120,10 @@ struct ipc_client_state
 	uint32_t local_space_index;
 	//! Index of localspace in space overseer.
 	uint32_t local_space_overseer_index;
+	//! Index of localfloorspace in ipc client.
+	uint32_t local_floor_space_index;
+	//! Index of localfloorspace in space overseer.
+	uint32_t local_floor_space_overseer_index;
 
 	//! Ptrs to the spaces.
 	struct xrt_space *xspcs[IPC_MAX_CLIENT_SPACES];
