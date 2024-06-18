@@ -840,7 +840,7 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
 	}
 
 	// Include the controllers
-	for (int i = 0; i < MAX_CONTROLLERS; i++) {
+	for (size_t i = 0; i < MAX_CONTROLLERS; i++) {
 		if (svrs->ctx->controller[i]) {
 			xsysd->xdevs[xsysd->xdev_count++] = svrs->ctx->controller[i];
 		}
