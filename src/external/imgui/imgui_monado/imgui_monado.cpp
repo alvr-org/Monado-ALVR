@@ -91,7 +91,7 @@ static void PlotTimings(const char *label,
   ItemSize(total_bb, style.FramePadding.y);
   if (!ItemAdd(total_bb, 0, &frame_bb))
     return;
-  const bool hovered = ItemHoverable(frame_bb, id);
+  const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
 
   float v_min = FLT_MAX;
   float v_max = -FLT_MAX;

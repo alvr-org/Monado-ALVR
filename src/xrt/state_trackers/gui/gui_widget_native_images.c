@@ -163,7 +163,7 @@ gui_widget_native_images_render(struct gui_widget_native_images *gwni, struct gu
 		return;
 	}
 
-	igPushIDPtr(gwni);
+	igPushID_Ptr(gwni);
 
 	window_draw_misc(gwni);
 

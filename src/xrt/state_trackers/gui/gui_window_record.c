@@ -162,19 +162,18 @@ draw_gst(struct gui_record_window *rw)
 {
 	static ImVec2 button_dims = {0, 0};
 
-	if (!igCollapsingHeaderBoolPtr("Record", NULL, ImGuiTreeNodeFlags_None)) {
+	if (!igCollapsingHeader_BoolPtr("Record", NULL, ImGuiTreeNodeFlags_None)) {
 		return;
 	}
-
 
 	os_mutex_lock(&rw->gst.mutex);
 	bool recording = rw->gst.gp != NULL;
 	os_mutex_unlock(&rw->gst.mutex);
 
-	igComboStr("Pipeline", (int *)&rw->gst.pipeline,
-	           "SW Ultrafast\0SW Veryfast\0SW Fast\0SW Medium\0SW Slow\0SW Veryslow\0VAAPI H264\0\0", 5);
-	igComboStr("Bitrate", (int *)&rw->gst.bitrate, "32768bps (Be careful!)\0004096bps\0002048bps\0001024bps\0\0",
-	           3);
+	igCombo_Str("Pipeline", (int *)&rw->gst.pipeline,
+	            "SW Ultrafast\0SW Veryfast\0SW Fast\0SW Medium\0SW Slow\0SW Veryslow\0VAAPI H264\0\0", 5);
+	igCombo_Str("Bitrate", (int *)&rw->gst.bitrate, "32768bps (Be careful!)\0004096bps\0002048bps\0001024bps\0\0",
+	            3);
 
 	igInputText("Filename", rw->gst.filename, sizeof(rw->gst.filename), 0, NULL, NULL);
 
@@ -325,7 +324,7 @@ void
 gui_window_record_render(struct gui_record_window *rw, struct gui_program *p)
 {
 	// Make all IDs unique.
-	igPushIDPtr(rw);
+	igPushID_Ptr(rw);
 
 	gui_ogl_sink_update(rw->texture.ogl);
 

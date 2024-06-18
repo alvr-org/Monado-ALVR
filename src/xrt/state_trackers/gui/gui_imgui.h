@@ -10,6 +10,7 @@
 #pragma once
 
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#include "imgui/cimgui.h"
-#include "imgui/cimplot.h"
+#include "cimgui/cimgui.h"
+#include "cimgui/cimgui_impl.h"
+#include "cimplot/cimplot.h"
 #include "imgui_monado/cimgui_monado.h"

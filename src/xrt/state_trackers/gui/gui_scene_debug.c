@@ -237,27 +237,27 @@ draw_native_images_to_background(struct u_var_info *var, struct draw_state *stat
  */
 
 #define PLOT_HELPER(elm)                                                                                               \
-	static ImPlotPoint plot_vec3_f32_##elm(void *ptr, int index)                                                   \
+	static void *plot_vec3_f32_##elm(void *ptr, int index, ImPlotPoint *point)                                     \
 	{                                                                                                              \
 		struct plot_state *state = (struct plot_state *)ptr;                                                   \
 		struct xrt_vec3 value;                                                                                 \
 		uint64_t timestamp;                                                                                    \
 		m_ff_vec3_f32_get(state->ff, index, &value, &timestamp);                                               \
-		ImPlotPoint point = {time_ns_to_s(state->now - timestamp), value.elm};                                 \
-		return point;                                                                                          \
+		*point = (ImPlotPoint){time_ns_to_s(state->now - timestamp), value.elm};                               \
+		return NULL;                                                                                           \
 	}
 
 PLOT_HELPER(x)
 PLOT_HELPER(y)
 PLOT_HELPER(z)
 
-static ImPlotPoint
-plot_curve_point(void *ptr, int i)
+static void *
+plot_curve_point(void *ptr, int i, ImPlotPoint *point)
 {
 	struct u_var_curve *c = (struct u_var_curve *)ptr;
-	struct u_var_curve_point point = c->getter(c->data, i);
-	ImPlotPoint implot_point = {point.x, point.y};
-	return implot_point;
+	struct u_var_curve_point p = c->getter(c->data, i);
+	*point = (ImPlotPoint){p.x, p.y};
+	return NULL;
 }
 
 static float
@@ -302,13 +302,15 @@ on_f32_arr(const char *name, void *ptr)
 	int length = f32_arr->length;
 	float *arr = (float *)f32_arr->data;
 
-	float w = igGetWindowContentRegionWidth();
-	ImVec2 graph_size = {w, 200};
+	ImVec2 min, max;
+	igGetWindowContentRegionMin(&min);
+	igGetWindowContentRegionMax(&max);
+	ImVec2 graph_size = {max.x - min.x, 200};
 
 	float stats_min = FLT_MAX;
 	float stats_max = FLT_MAX;
 
-	igPlotLinesFnFloatPtr(    //
+	igPlotLines_FnFloatPtr(   //
 	    name,                 //
 	    plot_f32_array_value, //
 	    arr,                  //
@@ -329,9 +331,10 @@ on_timing(const char *name, void *ptr)
 	int length = f32_arr->length;
 	float *arr = (float *)f32_arr->data;
 
-	float w = igGetWindowContentRegionWidth();
-	ImVec2 graph_size = {w, 200};
-
+	ImVec2 min, max;
+	igGetWindowContentRegionMin(&min);
+	igGetWindowContentRegionMax(&max);
+	ImVec2 graph_size = {max.x - min.x, 200};
 
 	float stats_min = FLT_MAX;
 	float stats_max = 0;
@@ -401,17 +404,18 @@ on_ff_vec3_var(struct u_var_info *info, struct gui_program *p)
 	 */
 
 	struct plot_state state = {ff, os_monotonic_get_ns()};
-	ImPlotFlags flags = 0;
-	ImPlotAxisFlags x_flags = 0;
-	ImPlotAxisFlags y_flags = 0;
-	ImPlotAxisFlags y2_flags = 0;
-	ImPlotAxisFlags y3_flags = 0;
 
-	ImVec2 size = {igGetWindowContentRegionWidth(), 256};
-	bool shown = ImPlot_BeginPlot(name, "time", "value", size, flags, x_flags, y_flags, y2_flags, y3_flags);
+	ImVec2 min, max;
+	igGetWindowContentRegionMin(&min);
+	igGetWindowContentRegionMax(&max);
+	ImVec2 size = {max.x - min.x, 256};
+	bool shown = ImPlot_BeginPlot(name, size, 0);
 	if (!shown) {
 		return;
 	}
+
+	ImPlot_SetupAxis(ImAxis_X1, "time", 0);
+	ImPlot_SetupAxis(ImAxis_Y1, "value", 0);
 
 	size_t num = m_ff_vec3_f32_get_num(ff);
 	ImPlot_PlotLineG("z", plot_vec3_f32_z, &state, num, 0); // ZXY order to match RGB colors with default color map
@@ -433,7 +437,7 @@ on_sink_debug_var(const char *name, void *ptr, struct draw_state *state)
 
 	if (gui_header) {
 		const ImGuiTreeNodeFlags_ flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!igCollapsingHeaderBoolPtr(name, NULL, flags)) {
+		if (!igCollapsingHeader_BoolPtr(name, NULL, flags)) {
 			return;
 		}
 	}
@@ -451,7 +455,7 @@ on_native_images_debug_var(const char *name, void *ptr, struct draw_state *state
 
 	if (gui_header) {
 		const ImGuiTreeNodeFlags_ flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!igCollapsingHeaderBoolPtr(name, NULL, flags)) {
+		if (!igCollapsingHeader_BoolPtr(name, NULL, flags)) {
 			return;
 		}
 	}
@@ -474,7 +478,7 @@ on_button_var(const char *name, void *ptr)
 	bool disabled = btn->disabled;
 
 	if (disabled) {
-		igPushStyleVarFloat(ImGuiStyleVar_Alpha, 0.6f);
+		igPushStyleVar_Float(ImGuiStyleVar_Alpha, 0.6f);
 		igPushItemFlag(ImGuiItemFlags_Disabled, true);
 	}
 
@@ -492,7 +496,7 @@ static void
 on_combo_var(const char *name, void *ptr)
 {
 	struct u_var_combo *combo = (struct u_var_combo *)ptr;
-	igComboStr(name, combo->value, combo->options, combo->count);
+	igCombo_Str(name, combo->value, combo->options, combo->count);
 }
 
 static void
@@ -500,19 +504,26 @@ on_histogram_f32_var(const char *name, void *ptr)
 {
 	struct u_var_histogram_f32 *h = (struct u_var_histogram_f32 *)ptr;
 	ImVec2 zero = {h->width, h->height};
-	igPlotHistogramFloatPtr(name, h->values, h->count, 0, NULL, FLT_MAX, FLT_MAX, zero, sizeof(float));
+	igPlotHistogram_FloatPtr(name, h->values, h->count, 0, NULL, FLT_MAX, FLT_MAX, zero, sizeof(float));
 }
 
 static void
 on_curve_var(const char *name, void *ptr)
 {
 	struct u_var_curve *c = (struct u_var_curve *)ptr;
-	ImVec2 size = {igGetWindowContentRegionWidth(), 256};
 
-	bool shown = ImPlot_BeginPlot(name, c->xlabel, c->ylabel, size, 0, 0, 0, 0, 0);
+	ImVec2 min, max;
+	igGetWindowContentRegionMin(&min);
+	igGetWindowContentRegionMax(&max);
+	ImVec2 size = {max.x - min.x, 256};
+
+	bool shown = ImPlot_BeginPlot(name, size, 0);
 	if (!shown) {
 		return;
 	}
+
+	ImPlot_SetupAxis(ImAxis_X1, c->xlabel, 0);
+	ImPlot_SetupAxis(ImAxis_Y1, c->ylabel, 0);
 
 	ImPlot_PlotLineG(c->label, plot_curve_point, c, c->count, 0);
 	ImPlot_EndPlot();
@@ -522,12 +533,18 @@ static void
 on_curves_var(const char *name, void *ptr)
 {
 	struct u_var_curves *cs = (struct u_var_curves *)ptr;
-	ImVec2 size = {igGetWindowContentRegionWidth(), 256};
+	ImVec2 min, max;
+	igGetWindowContentRegionMin(&min);
+	igGetWindowContentRegionMax(&max);
+	ImVec2 size = {max.x - min.x, 256};
 
-	bool shown = ImPlot_BeginPlot(name, cs->xlabel, cs->ylabel, size, 0, 0, 0, 0, 0);
+	bool shown = ImPlot_BeginPlot(name, size, 0);
 	if (!shown) {
 		return;
 	}
+
+	ImPlot_SetupAxis(ImAxis_X1, cs->xlabel, 0);
+	ImPlot_SetupAxis(ImAxis_Y1, cs->ylabel, 0);
 
 	for (int i = 0; i < cs->curve_count; i++) {
 		struct u_var_curve *c = &cs->curves[i];
@@ -555,13 +572,13 @@ on_gui_header(const char *name, struct draw_state *state)
 {
 
 	assert(state->vis_i == 0 && "Do not mix GUI_HEADER with GUI_HEADER_BEGIN/END");
-	state->vis_stack[state->vis_i] = igCollapsingHeaderBoolPtr(name, NULL, 0);
+	state->vis_stack[state->vis_i] = igCollapsingHeader_BoolPtr(name, NULL, 0);
 }
 
 static void
 on_gui_header_begin(const char *name, struct draw_state *state)
 {
-	bool is_open = igCollapsingHeaderBoolPtr(name, NULL, 0);
+	bool is_open = igCollapsingHeader_BoolPtr(name, NULL, 0);
 	state->vis_stack[state->vis_i] = is_open;
 	if (is_open) {
 		igIndent(8.0f);
@@ -639,7 +656,7 @@ on_elem(struct u_var_info *info, void *priv)
 	case U_VAR_KIND_TIMING: on_timing(name, ptr); break;
 	case U_VAR_KIND_VEC3_F32: igInputFloat3(name, (float *)ptr, "%+f", i_flags); break;
 	case U_VAR_KIND_POSE: on_pose(name, ptr); break;
-	case U_VAR_KIND_LOG_LEVEL: igComboStr(name, (int *)ptr, "Trace\0Debug\0Info\0Warn\0Error\0\0", 5); break;
+	case U_VAR_KIND_LOG_LEVEL: igCombo_Str(name, (int *)ptr, "Trace\0Debug\0Info\0Warn\0Error\0\0", 5); break;
 	case U_VAR_KIND_RO_TEXT: igText("%s: '%s'", name, (char *)ptr); break;
 	case U_VAR_KIND_RO_FTEXT: igText(ptr ? (char *)ptr : "%s", name); break;
 	case U_VAR_KIND_RO_I32: igInputScalar(name, ImGuiDataType_S32, ptr, NULL, NULL, NULL, ro_i_flags); break;

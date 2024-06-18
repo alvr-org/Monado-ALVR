@@ -109,7 +109,7 @@ static bool
 handle_downable_button(const char *name)
 {
 	igButton(name, zero_dims);
-	return igIsItemHovered(ImGuiHoveredFlags_RectOnly) && igIsMouseDown(ImGuiMouseButton_Left);
+	return igIsItemHovered(ImGuiHoveredFlags_RectOnly) && igIsMouseDown_Nil(ImGuiMouseButton_Left);
 }
 
 static void
@@ -346,18 +346,18 @@ on_connected(struct gui_remote *gr, struct gui_program *p)
 	const struct r_remote_data *r = &gr->reset;
 	struct r_remote_data *d = &gr->data;
 
-	igPushIDPtr(&d->head); // Make all IDs unique.
+	igPushID_Ptr(&d->head); // Make all IDs unique.
 	POSE(head.center);
 	igPopID(); // Pop unique IDs
 
-	igPushIDPtr(&d->left); // Make all IDs unique.
+	igPushID_Ptr(&d->left); // Make all IDs unique.
 	POSE(left.pose);
 	LIN_ANG(left);
 	BUTTONS(left);
 	HAND(left);
 	igPopID(); // Pop unique IDs
 
-	igPushIDPtr(&d->right); // Make all IDs unique.
+	igPushID_Ptr(&d->right); // Make all IDs unique.
 	POSE(right.pose);
 	LIN_ANG(right);
 	BUTTONS(right);

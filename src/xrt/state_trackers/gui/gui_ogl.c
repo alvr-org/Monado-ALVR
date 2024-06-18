@@ -91,6 +91,6 @@ gui_ogl_draw_background(uint32_t width, uint32_t height, uint32_t tex_id, bool r
 	ImVec2 p_min = {translate_x, translate_y};
 	ImVec2 p_max = {translate_x + inside_w, translate_y + inside_h};
 
-	ImDrawList *bg = igGetBackgroundDrawList();
+	ImDrawList *bg = igGetBackgroundDrawList_Nil();
 	ImDrawList_AddImage(bg, id, p_min, p_max, uv0, uv1, white);
 }

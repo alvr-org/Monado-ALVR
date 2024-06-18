@@ -262,7 +262,7 @@ scene_render(struct gui_scene *scene, struct gui_program *p)
 	igText("Existing Overrides");
 	for (size_t i = 0; i < ts->num_overrides; i++) {
 		// make the delete buttons work
-		igPushIDInt(i);
+		igPushID_Int(i);
 
 		igSeparator();
 

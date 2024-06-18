@@ -129,7 +129,7 @@ draw_texture(struct gui_ogl_texture *tex, bool header)
 	}
 
 	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
-	if (header && !igCollapsingHeaderBoolPtr(tex->name, NULL, flags)) {
+	if (header && !igCollapsingHeader_BoolPtr(tex->name, NULL, flags)) {
 		return;
 	}
 
@@ -231,8 +231,8 @@ scene_render_select(struct gui_scene *scene, struct gui_program *p)
 #ifdef XRT_HAVE_OPENCV
 	igBegin("Params", NULL, 0);
 
-	igComboStr("Type", (int *)&cs->settings->camera_type,
-	           "Regular Mono\0Regular Stereo (Side-by-Side)\0SLAM Stereo\0PS4\0Leap Motion Controller\0\0", -1);
+	igCombo_Str("Type", (int *)&cs->settings->camera_type,
+	            "Regular Mono\0Regular Stereo (Side-by-Side)\0SLAM Stereo\0PS4\0Leap Motion Controller\0\0", -1);
 
 	switch (cs->settings->camera_type) {
 	case XRT_SETTINGS_CAMERA_TYPE_REGULAR_MONO:
@@ -274,8 +274,8 @@ scene_render_select(struct gui_scene *scene, struct gui_program *p)
 	igInputInt("Collect in groups of #", &cs->params.num_collect_restart, 1, 5, 0);
 
 	igSeparator();
-	igComboStr("Board type", (int *)&cs->params.pattern, "Checkers\0Corners SB\0Circles\0Asymmetric Circles\0\0",
-	           3);
+	igCombo_Str("Board type", (int *)&cs->params.pattern, "Checkers\0Corners SB\0Circles\0Asymmetric Circles\0\0",
+	            3);
 	switch (cs->params.pattern) {
 	case T_BOARD_CHECKERS:
 		igInputInt("Checkerboard Rows", &cs->params.checkers.rows, 1, 5, 0);
