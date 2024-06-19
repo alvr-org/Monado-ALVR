@@ -109,7 +109,6 @@ struct xrt_space_overseer
 
 	//! Ptrs to the localspace
 	struct xrt_space *localspace[XRT_MAX_CLIENT_SPACES];
-	struct xrt_device *head;
 
 	/*!
 	 * Create a space with a fixed offset to the parent space.

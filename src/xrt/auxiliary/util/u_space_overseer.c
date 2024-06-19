@@ -806,17 +806,17 @@ static xrt_result_t
 create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
 {
 	assert(xso->semantic.root != NULL);
-	struct xrt_space *xs = NULL;
-	struct xrt_space_relation xsr;
-	int64_t timestamp_ns = os_monotonic_get_ns();
-	xrt_device_get_tracked_pose(xso->head, XRT_INPUT_GENERIC_HEAD_POSE, timestamp_ns, &xsr);
+
+	struct xrt_pose identity = XRT_POSE_IDENTITY;
+	struct xrt_space_relation xsr = XRT_SPACE_RELATION_ZERO;
+	xrt_space_overseer_locate_space(xso, xso->semantic.root, &identity, os_monotonic_get_ns(), xso->semantic.view,
+	                                &identity, &xsr);
+
 	xsr.pose.orientation.x = 0;
 	xsr.pose.orientation.z = 0;
 	math_quat_normalize(&xsr.pose.orientation);
-	create_offset_space(xso, xso->semantic.root, &xsr.pose, &xs);
-	*out_space = xs;
-	U_LOG_D("u_space_overseer create_local_space!");
-	return XRT_SUCCESS;
+
+	return create_offset_space(xso, xso->semantic.root, &xsr.pose, out_space);
 }
 
 static void
@@ -941,8 +941,6 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	if (root_is_unbounded) {
 		xrt_space_reference(&uso->base.semantic.unbounded, uso->base.semantic.root);
 	}
-
-	uso->base.head = head;
 
 	// Set local to the local offset.
 	u_space_overseer_create_offset_space(uso, uso->base.semantic.root, local_offset, &uso->base.semantic.local);
