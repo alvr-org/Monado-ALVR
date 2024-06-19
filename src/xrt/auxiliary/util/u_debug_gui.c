@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -7,11 +7,13 @@
  * @author Moses Turner <moses@collabora.com>
  */
 
+#include "xrt/xrt_system.h"
+#include "xrt/xrt_instance.h"
 #include "xrt/xrt_config_build.h"
 
 #ifndef XRT_FEATURE_DEBUG_GUI
 
-#include "util/u_debug_gui.h"
+struct u_debug_gui;
 
 int
 u_debug_gui_create(struct u_debug_gui **out_debug_ui)
@@ -33,8 +35,6 @@ u_debug_gui_stop(struct u_debug_gui **debug_ui)
 
 #else /* XRT_FEATURE_DEBUG_GUI */
 
-#include "xrt/xrt_system.h"
-#include "xrt/xrt_instance.h"
 #include "xrt/xrt_config_have.h"
 #include "xrt/xrt_config_drivers.h"
 
