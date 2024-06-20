@@ -61,9 +61,16 @@ vk_implicit_wait_image(struct oxr_logger *log, struct oxr_swapchain *sc, const X
 	CHECK_OXR_RET(oxr_swapchain_verify_wait_state(log, sc));
 
 	uint32_t index = UINT32_MAX;
-	if (u_index_fifo_pop(&sc->acquired.fifo, &index) != 0) {
-		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_pop: failed!");
+	if (!WAIT_IN_ACQUIRE) {
+		if (u_index_fifo_peek(&sc->acquired.fifo, &index) != 0) {
+			return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_peek: failed!");
+		}
+	} else {
+		if (u_index_fifo_pop(&sc->acquired.fifo, &index) != 0) {
+			return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_pop: failed!");
+		}
 	}
+
 	assert(index < INT32_MAX);
 
 	struct xrt_swapchain *xsc = (struct xrt_swapchain *)sc->swapchain;
@@ -73,6 +80,15 @@ vk_implicit_wait_image(struct oxr_logger *log, struct oxr_swapchain *sc, const X
 
 		// We have already waited in acquire.
 		xrt_result_t xret = xrt_swapchain_wait_image(xsc, timeout, index);
+		if (xret == XRT_TIMEOUT) {
+			oxr_warn(log, "call to xrt_swapchain_wait_image timeout");
+			return XR_TIMEOUT_EXPIRED;
+		}
+
+		if (u_index_fifo_pop(&sc->acquired.fifo, &index) != 0) {
+			return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_pop: failed!");
+		}
+
 		OXR_CHECK_XRET(log, sc->sess, xret, xrt_swapchain_wait_image);
 	}
 

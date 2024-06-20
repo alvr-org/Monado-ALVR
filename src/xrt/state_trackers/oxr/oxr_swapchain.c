@@ -222,14 +222,23 @@ XrResult
 oxr_swapchain_common_wait(struct oxr_logger *log, struct oxr_swapchain *sc, XrDuration timeout)
 {
 	uint32_t index = UINT32_MAX;
-	if (u_index_fifo_pop(&sc->acquired.fifo, &index) != 0) {
-		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_pop: failed!");
+	if (u_index_fifo_peek(&sc->acquired.fifo, &index) != 0) {
+		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_peek: failed!");
 	}
 	assert(index < INT32_MAX);
 
 	struct xrt_swapchain *xsc = (struct xrt_swapchain *)sc->swapchain;
 
 	xrt_result_t xret = xrt_swapchain_wait_image(xsc, timeout, index);
+	if (xret == XRT_TIMEOUT) {
+		oxr_warn(log, "call to xrt_swapchain_wait_image timeout");
+		return XR_TIMEOUT_EXPIRED;
+	}
+
+	if (u_index_fifo_pop(&sc->acquired.fifo, &index) != 0) {
+		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "u_index_fifo_pop: failed!");
+	}
+
 	OXR_CHECK_XRET(log, sc->sess, xret, xrt_swapchain_wait_image);
 
 	// The app can only wait on one image.
