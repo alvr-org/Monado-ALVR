@@ -132,6 +132,13 @@ const uint8_t TRIGGER_FEEDBACK_MODE_CONSTANT = 0x01;
 //! A single point of resistance at the beginning of the trigger, right before the click flag is activated
 const uint8_t TRIGGER_FEEDBACK_MODE_CATCH = 0x02;
 
+const uint8_t CHARGE_STATE_DISCHARGING = 0x00;
+const uint8_t CHARGE_STATE_CHARGING = 0x01;
+const uint8_t CHARGE_STATE_FULL = 0x02;
+const uint8_t CHARGE_STATE_ABNORMAL_VOLTAGE = 0x0A;
+const uint8_t CHARGE_STATE_ABNORMAL_TEMP = 0x0B;
+const uint8_t CHARGE_STATE_CHARGING_ERROR = 0x0F;
+
 /**
  * 16-bit little-endian int
  */
@@ -171,12 +178,18 @@ struct pssense_input_report
 	struct pssense_i32_le seq_no;
 	struct pssense_i16_le gyro[3];
 	struct pssense_i16_le accel[3];
-	uint8_t unknown3[3];
-	uint8_t unknown4;      // Increments occasionally
-	uint8_t battery_level; // Range appears to be 0x00-0x0e
-	uint8_t unknown5[10];
-	uint8_t charging_state; // 0x00 when unplugged, 0x20 when charging
-	uint8_t unknown6[29];
+	struct pssense_i32_le imu_ticks;
+	uint8_t temperature;
+	uint8_t unknown3[9];
+	uint8_t battery_state; // High bits charge level 0x00-0x0a, low bits battery state
+	uint8_t plug_state;    // Flags for USB data and/or power connected
+	struct pssense_i32_le host_timestamp;
+	struct pssense_i32_le device_timestamp;
+	uint8_t unknown4[4];
+	uint8_t aes_cmac[8];
+	uint8_t unknown5;
+	uint8_t crc_failure_count;
+	uint8_t padding[7];
 	struct pssense_i32_le crc;
 };
 static_assert(sizeof(struct pssense_input_report) == INPUT_REPORT_LENGTH, "Incorrect input report struct length");
@@ -188,14 +201,18 @@ static_assert(sizeof(struct pssense_input_report) == INPUT_REPORT_LENGTH, "Incor
 struct pssense_output_report
 {
 	uint8_t report_id;
-	uint8_t seq_no;         // High bits only; low bits are always 0
-	uint8_t tag;            // Needs to be 0x10. Nobody seems to know why.
+	uint8_t bt_seq_no;      // High bits only; low bits are always 0
+	uint8_t tag;            // Needs to be 0x10 for this report
 	uint8_t feedback_flags; // Vibrate mode and enable flags to set vibrate and trigger feedback in this report
 	uint8_t unknown;
 	uint8_t vibration_amplitude; // Vibration amplitude from 0x00-0xff. Sending 0 turns vibration off.
 	uint8_t unknown2;
 	uint8_t trigger_feedback_mode; // Constant or sticky trigger resistance
-	uint8_t unknown3[66];
+	uint8_t ffb[10];
+	struct pssense_i32_le host_timestamp;
+	uint8_t unknown3[19];
+	uint8_t counter;
+	uint8_t haptics[32];
 	struct pssense_i32_le crc;
 };
 static_assert(sizeof(struct pssense_output_report) == OUTPUT_REPORT_LENGTH, "Incorrect output report struct length");
@@ -244,8 +261,15 @@ struct pssense_input_state
 	bool thumbstick_touch;
 	struct xrt_vec2 thumbstick;
 
+	uint32_t imu_ticks_last;
+	uint64_t imu_ticks_total;
 	struct xrt_vec3_i32 gyro_raw;
 	struct xrt_vec3_i32 accel_raw;
+
+	bool battery_state_valid;
+	bool battery_charging;
+	//! 0..1
+	float battery_charge_percent;
 };
 
 /*!
@@ -271,7 +295,7 @@ struct pssense_device
 
 	//! Input state parsed from most recent packet
 	struct pssense_input_state state;
-	//! Last output state sent to device
+	//! Pending output state to send to device
 	struct
 	{
 		uint8_t next_seq_no;
@@ -427,13 +451,60 @@ pssense_parse_packet(struct pssense_device *pssense,
 		input->thumbstick_click = (data->buttons[1] & 8) != 0;
 	}
 
-	input->gyro_raw.x = pssense_i16_le_to_i16(&data->gyro[0]);
-	input->gyro_raw.y = pssense_i16_le_to_i16(&data->gyro[1]);
-	input->gyro_raw.z = pssense_i16_le_to_i16(&data->gyro[2]);
+	uint32_t imu_ticks = pssense_i32_le_to_u32(&data->imu_ticks);
+	int64_t imu_ticks_delta = imu_ticks - input->imu_ticks_last;
+	if (imu_ticks_delta >= 0) {
+		input->imu_ticks_total += imu_ticks_delta;
+		input->imu_ticks_last = imu_ticks;
 
-	input->accel_raw.x = pssense_i16_le_to_i16(&data->accel[0]);
-	input->accel_raw.y = pssense_i16_le_to_i16(&data->accel[1]);
-	input->accel_raw.z = pssense_i16_le_to_i16(&data->accel[2]);
+		input->gyro_raw.x = pssense_i16_le_to_i16(&data->gyro[0]);
+		input->gyro_raw.y = pssense_i16_le_to_i16(&data->gyro[1]);
+		input->gyro_raw.z = pssense_i16_le_to_i16(&data->gyro[2]);
+
+		input->accel_raw.x = pssense_i16_le_to_i16(&data->accel[0]);
+		input->accel_raw.y = pssense_i16_le_to_i16(&data->accel[1]);
+		input->accel_raw.z = pssense_i16_le_to_i16(&data->accel[2]);
+	} else {
+		PSSENSE_WARN(pssense, "Time went backwards. Check your play area for black holes.");
+	}
+
+	uint8_t battery_state = data->battery_state >> 4;
+	// Charge values go from 0..10, so add 5% and cap at 100% so we never show 0% charge
+	float battery_percent = MIN(1.0f, (data->battery_state & 0xf) * .1f + .05);
+	bool valid, charging;
+	if (battery_state == CHARGE_STATE_DISCHARGING) {
+		valid = true;
+		charging = false;
+	} else if (battery_state == CHARGE_STATE_CHARGING) {
+		valid = true;
+		charging = true;
+	} else if (battery_state == CHARGE_STATE_FULL) {
+		valid = true;
+		charging = true;
+		battery_percent = 1.0f;
+	} else if (battery_state == CHARGE_STATE_ABNORMAL_VOLTAGE) {
+		valid = false;
+		PSSENSE_WARN(pssense, "Unable to determine charge state: abnormal voltage");
+	} else if (battery_state == CHARGE_STATE_ABNORMAL_TEMP) {
+		valid = false;
+		PSSENSE_WARN(pssense, "Unable to determine charge state: abnormal temp");
+	} else if (battery_state == CHARGE_STATE_CHARGING_ERROR) {
+		valid = false;
+		PSSENSE_WARN(pssense, "Unable to determine charge state: charging error");
+	} else {
+		valid = false;
+		PSSENSE_WARN(pssense, "Unable to determine charge state: unknown reason");
+	}
+
+	input->battery_state_valid = valid;
+	if (valid) {
+		if (charging != input->battery_charging || battery_percent != input->battery_charge_percent) {
+			PSSENSE_DEBUG(pssense, "Battery at %.f%%, %s", battery_percent * 100,
+			              charging ? "charging" : "discharging");
+		}
+		input->battery_charging = charging;
+		input->battery_charge_percent = battery_percent;
+	}
 
 	return true;
 }
@@ -453,7 +524,8 @@ pssense_update_fusion(struct pssense_device *pssense)
 
 	// TODO: Apply correction from calibration data
 
-	m_imu_3dof_update(&pssense->fusion, pssense->state.timestamp_ns, &accel, &gyro);
+	// Each IMU tick is .33μs
+	m_imu_3dof_update(&pssense->fusion, pssense->state.imu_ticks_total * 333, &accel, &gyro);
 	pssense->pose.orientation = pssense->fusion.rot;
 }
 
@@ -464,7 +536,7 @@ pssense_send_output_report_locked(struct pssense_device *pssense)
 
 	struct pssense_output_report report = {0};
 	report.report_id = OUTPUT_REPORT_ID;
-	report.seq_no = pssense->output.next_seq_no << 4;
+	report.bt_seq_no = pssense->output.next_seq_no << 4;
 	report.tag = OUTPUT_REPORT_TAG;
 
 	if (timestamp_ns >= pssense->output.vibration_end_timestamp_ns) {
@@ -713,6 +785,21 @@ pssense_get_tracked_pose(struct xrt_device *xdev,
 	m_relation_chain_resolve(&xrc, out_relation);
 }
 
+static xrt_result_t
+pssense_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
+{
+	struct pssense_device *pssense = (struct pssense_device *)xdev;
+	if (!pssense->state.battery_state_valid) {
+		*out_present = false;
+		return XRT_SUCCESS;
+	}
+
+	*out_present = true;
+	*out_charging = pssense->state.battery_charging;
+	*out_charge = pssense->state.battery_charge_percent;
+	return XRT_SUCCESS;
+}
+
 /**
  * Retrieving the calibration data report will switch the Sense controller from compat mode into full mode.
  */
@@ -802,8 +889,10 @@ pssense_found(struct xrt_prober *xp,
 	pssense->base.update_inputs = pssense_device_update_inputs;
 	pssense->base.set_output = pssense_set_output;
 	pssense->base.get_tracked_pose = pssense_get_tracked_pose;
+	pssense->base.get_battery_status = pssense_get_battery_status;
 	pssense->base.destroy = pssense_device_destroy;
 	pssense->base.orientation_tracking_supported = true;
+	pssense->base.battery_status_supported = true;
 
 	pssense->base.binding_profiles = binding_profiles_pssense;
 	pssense->base.binding_profile_count = ARRAY_SIZE(binding_profiles_pssense);
