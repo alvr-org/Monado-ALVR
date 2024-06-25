@@ -25,10 +25,18 @@ struct InputClass;
 
 struct DeviceBuilder
 {
-	std::shared_ptr<Context> ctx;
+	using ContextPtr = std::shared_ptr<Context>;
+	ContextPtr ctx;
 	vr::ITrackedDeviceServerDriver *driver;
 	const char *serial;
 	const std::string &steam_install;
+
+	DeviceBuilder(const ContextPtr &p_ctx,
+	              vr::ITrackedDeviceServerDriver *p_driver,
+	              const char *p_serial,
+	              const std::string &p_stream_install)
+	    : ctx{p_ctx}, driver{p_driver}, serial{p_serial}, steam_install{p_stream_install}
+	{}
 
 	// no copies!
 	DeviceBuilder(const DeviceBuilder &) = delete;
