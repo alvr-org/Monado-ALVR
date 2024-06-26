@@ -117,7 +117,8 @@ distributions:
               XRT_HAVE_OPENCV: "OFF"
 
       - codename: bullseye
-        tag: "2024-03-21"
+        tag: "2024-06-26"
+        script: bullseye_backports.sh
         deb_version_suffix: bpo11
         packages:
           <<: *default_debian_packages
