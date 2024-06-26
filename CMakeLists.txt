@@ -1,7 +1,7 @@
 # Copyright 2018-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.22)
 project(
 	XRT
 	VERSION 24.0.0
@@ -41,15 +41,13 @@ if(NOT WIN32 AND NOT ANDROID)
 		)
 endif()
 
-# We use C11
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# We use C++17
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# So that clangd/Intellisense/Sourcetrail know how to parse our code.
+# Generates a `compile_commands.json` to help IDE intergration
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 ###
