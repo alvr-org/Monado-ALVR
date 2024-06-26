@@ -176,6 +176,21 @@ oxr_xrEndFrame(XrSession session, const XrFrameEndInfo *frameEndInfo)
 	OXR_VERIFY_SESSION_RUNNING(&log, sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, frameEndInfo, XR_TYPE_FRAME_END_INFO);
 
+	// Get from compositor.
+	struct xrt_system_compositor_info *info = sess->sys->xsysc ? &sess->sys->xsysc->info : NULL;
+
+	// headless extension does not modify the 16 layer minimum.
+	uint32_t max_layers = 16;
+	if (info) {
+		max_layers = info->max_layers;
+	}
+
+	if (frameEndInfo->layerCount > max_layers) {
+		return oxr_error(&log, XR_ERROR_LAYER_LIMIT_EXCEEDED, "(layerCount == %u) exceeds limit %u",
+		                 frameEndInfo->layerCount, max_layers);
+	}
+
+
 #ifdef XRT_FEATURE_RENDERDOC
 	if (sess->sys->inst->rdoc_api) {
 #ifndef XR_USE_PLATFORM_ANDROID
