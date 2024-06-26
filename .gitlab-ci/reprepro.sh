@@ -50,16 +50,6 @@ else
     echo "Skipping bullseye - no artifact found"
 fi
 
-# focal
-if [ -f "incoming/focal.distro" ]; then
-    VERSION=$(cat incoming/focal.distro)
-    echo "Signing and processing focal: ${VERSION}"
-    debsign -k "${MONADO_GPG_FINGERPRINT}" -p "gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase ${MONADO_GPG_PASSPHRASE}" "incoming/monado_${VERSION}_amd64.changes"
-    reprepro -V --ignore=wrongdistribution -b repo include focal "incoming/monado_${VERSION}_amd64.changes"
-else
-    echo "Skipping focal - no artifact found"
-fi
-
 # jammy
 if [ -f "incoming/jammy.distro" ]; then
     VERSION=$(cat incoming/jammy.distro)

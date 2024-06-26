@@ -189,16 +189,6 @@ distributions:
   - name: ubuntu
     images:
       # LTS
-      - codename: focal
-        distro_version: "20.04"
-        tag: "2024-01-16"
-        deb_version_suffix: ubuntu2004
-        packages:
-          <<: *default_debian_packages
-        build_jobs:
-          - name: "ubuntu:focal:cmake"
-            cmake_defines:
-
       - codename: jammy
         distro_version: "22.04"
         tag: "2024-04-16"

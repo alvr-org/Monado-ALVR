@@ -141,12 +141,6 @@ win:container_prep:
     FDO_DISTRIBUTION_TAG: "2024-07-02"
     FDO_REPO_SUFFIX: ndk
 
-# Variables for build and usage of Ubuntu focal image
-.monado.variables.ubuntu:focal:
-  variables:
-    FDO_DISTRIBUTION_VERSION: "20.04"
-    FDO_DISTRIBUTION_TAG: "2024-01-16"
-
 # Variables for build and usage of Ubuntu jammy image
 .monado.variables.ubuntu:jammy:
   variables:
@@ -206,17 +200,6 @@ debian:bookworm-ndk:container_prep:
   variables:
     FDO_DISTRIBUTION_PACKAGES: 'ca-certificates cmake default-jdk-headless git glslang-tools libeigen3-dev meson ninja-build pkg-config python3 unzip wget'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/android_container_prep.sh'
-
-# Make Ubuntu focal image
-ubuntu:focal:container_prep:
-  stage: container_prep
-  extends:
-    - .container-rules
-    - .monado.variables.ubuntu:focal
-    - .fdo.container-build@ubuntu # from ci-templates
-
-  variables:
-    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
 
 # Make Ubuntu jammy image
 ubuntu:jammy:container_prep:
@@ -288,14 +271,6 @@ alpine:container_prep:
   extends:
     - .monado.variables.debian:bookworm-ndk
     - .fdo.suffixed-image@debian # from ci-templates
-    - .build-rules
-
-
-# Base for using Ubuntu focal image
-.monado.image.ubuntu:focal:
-  extends:
-    - .monado.variables.ubuntu:focal
-    - .fdo.distribution-image@ubuntu # from ci-templates
     - .build-rules
 
 
@@ -574,17 +549,6 @@ android:inProcessRelease:
     paths:
       - src/xrt/targets/openxr_android/build/outputs/apk/inProcess
 
-ubuntu:focal:cmake:
-  stage: build
-  extends:
-    - .monado.image.ubuntu:focal
-
-  script:
-
-    - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh
-    - cd build && ctest --output-on-failure
-
 ubuntu:jammy:cmake:
   stage: build
   extends:
@@ -709,33 +673,6 @@ debian:bullseye:package:
       - "incoming/"
     expire_in: 2 days
 
-ubuntu:focal:package:
-  extends:
-    - .monado.image.ubuntu:focal
-    - .monado.packaging.conditions
-  variables:
-    GIT_STRATEGY: clone
-    DEBFULLNAME: "Monado CI"
-    DEBEMAIL: "rylie.pavlik@collabora.com"
-    DISTRO: ubuntu
-    CODENAME: focal
-    DEB_VERSION_SUFFIX: ubuntu2004
-  stage: package
-  before_script:
-    - git config --global user.name Monado CI
-    - git config --global user.email rylie.pavlik@collabora.com
-  script:
-    - .gitlab-ci/prebuild.sh
-    # Prep the source tree
-    - git clean -dfx
-    # Call this script to build binary and source packages.
-    # Can try locally by exporting the right variables and passing -B to get only a binary package to avoid complaints.
-    - .gitlab-ci/build-and-submit-package.sh
-  artifacts:
-    paths:
-      - "incoming/"
-    expire_in: 2 days
-
 ubuntu:jammy:package:
   extends:
     - .monado.image.ubuntu:jammy
@@ -799,7 +736,6 @@ reprepro:package:
   needs:
     - debian:bookworm:package
     - debian:bullseye:package
-    - ubuntu:focal:package
     - ubuntu:jammy:package
     - ubuntu:noble:package
   script:
