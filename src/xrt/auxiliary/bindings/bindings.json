@@ -2947,7 +2947,7 @@
 		"/interaction_profiles/facebook/touch_controller_pro": {
 			"title": "Meta Quest Touch Pro Controller",
 			"type": "tracked_controller",
-			"extension": "XR_FB_touch_controller_pro",
+			"extension": "FB_touch_controller_pro",
 			"steamvr_controllertype": "oculus_touch",
 			"monado_device": "XRT_DEVICE_TOUCH_PRO_CONTROLLER",
 			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
@@ -3313,7 +3313,7 @@
 		"/interaction_profiles/facebook/touch_controller_plus": {
 			"title": "Meta Quest Touch Plus Controller",
 			"type": "tracked_controller",
-			"extension": "XR_META_touch_controller_plus",
+			"extension": "META_touch_controller_plus",
 			"steamvr_controllertype": "oculus_touch",
 			"monado_device": "XRT_DEVICE_TOUCH_PLUS_CONTROLLER",
 			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
