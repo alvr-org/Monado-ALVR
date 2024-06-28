@@ -7,7 +7,7 @@
  */
 
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "util/u_json.hpp"
 #include <string>
 
@@ -145,6 +145,6 @@ TEST_CASE("u_json")
 		constexpr float e = std::numeric_limits<float>::epsilon();
 
 		CHECK(stringToDouble.isDouble());
-		CHECK(stringToDouble.asDouble() == Approx(0.5).margin(e));
+		CHECK(stringToDouble.asDouble() == Catch::Approx(0.5).margin(e));
 	}
 }

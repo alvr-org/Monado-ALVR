@@ -17,7 +17,7 @@
 #include "kine_common.hpp"
 #include "lm_interface.hpp"
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <thread>
 #include <chrono>

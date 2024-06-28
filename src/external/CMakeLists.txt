@@ -2,8 +2,12 @@
 # SPDX-License-Identifier: BSL-1.0
 
 # Catch2
-add_library(xrt-external-catch2 INTERFACE)
-target_include_directories(xrt-external-catch2 SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Catch2)
+if(BUILD_TESTING)
+	add_library(xrt-external-catch2 STATIC Catch2/catch_amalgamated.cpp)
+	target_include_directories(
+		xrt-external-catch2 SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Catch2
+		)
+endif()
 
 # OpenVR
 add_library(xrt-external-openvr INTERFACE)

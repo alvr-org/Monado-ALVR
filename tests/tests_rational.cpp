@@ -8,7 +8,7 @@
 
 #include <math/m_rational.hpp>
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <iostream>
 #include <chrono>

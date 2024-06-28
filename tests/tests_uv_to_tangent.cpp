@@ -1,4 +1,4 @@
-// Copyright 2023, Collabora, Ltd.
+// Copyright 2023-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -6,7 +6,7 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  */
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include "math/m_mathinclude.h"
 #include "render/render_interface.h"
@@ -26,10 +26,10 @@ rect(float x, float y, float w, float h)
 static inline void
 check(xrt_normalized_rect &result, xrt_normalized_rect &&truth)
 {
-	REQUIRE_THAT(result.x, Catch::WithinAbs(truth.x, MARGIN));
-	REQUIRE_THAT(result.y, Catch::WithinAbs(truth.y, MARGIN));
-	REQUIRE_THAT(result.w, Catch::WithinAbs(truth.w, MARGIN));
-	REQUIRE_THAT(result.h, Catch::WithinAbs(truth.h, MARGIN));
+	REQUIRE_THAT(result.x, Catch::Matchers::WithinAbs(truth.x, MARGIN));
+	REQUIRE_THAT(result.y, Catch::Matchers::WithinAbs(truth.y, MARGIN));
+	REQUIRE_THAT(result.w, Catch::Matchers::WithinAbs(truth.w, MARGIN));
+	REQUIRE_THAT(result.h, Catch::Matchers::WithinAbs(truth.h, MARGIN));
 }
 
 #define CAPUTER_FOV(FOV) CAPTURE(FOV.angle_up, FOV.angle_down, FOV.angle_left, FOV.angle_right);
@@ -38,7 +38,7 @@ check(xrt_normalized_rect &result, xrt_normalized_rect &&truth)
 TEST_CASE("render_calc_uv_to_tangent_lengths_rect")
 {
 	// check assumptions
-	REQUIRE_THAT(tan(QUARTER_PI), Catch::WithinAbs(1.0, MARGIN));
+	REQUIRE_THAT(tan(QUARTER_PI), Catch::Matchers::WithinAbs(1.0, MARGIN));
 
 	SECTION("45_degrees")
 	{

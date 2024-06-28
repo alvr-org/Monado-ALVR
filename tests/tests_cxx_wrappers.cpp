@@ -9,7 +9,7 @@
 #include <iostream>
 #include <xrt/xrt_device.hpp>
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 
 struct silly_device

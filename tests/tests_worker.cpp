@@ -8,7 +8,7 @@
 
 #include <util/u_worker.hpp>
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <thread>
 #include <chrono>

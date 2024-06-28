@@ -8,7 +8,7 @@
 
 #include <util/u_pacing.h>
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include "time_utils.hpp"
 

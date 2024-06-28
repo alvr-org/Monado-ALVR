@@ -14,8 +14,9 @@
 
 #undef Always
 #undef None
+#undef Success
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "util/comp_vulkan.h"
 #include "util/u_logging.h"
 #include "util/u_string_list.h"

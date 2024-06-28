@@ -1,13 +1,6 @@
-# Copyright 2018-2022, Collabora, Ltd.
+# Copyright 2018-2024, Collabora, Ltd.
 #
 # SPDX-License-Identifier: BSL-1.0
-
-# Catch2 main test driver
-add_library(tests_main STATIC tests_main.cpp)
-target_link_libraries(tests_main PUBLIC xrt-external-catch2)
-if(ANDROID)
-	target_link_libraries(tests_main PUBLIC log)
-endif()
 
 set(tests
     tests_cxx_wrappers
@@ -53,7 +46,7 @@ endif()
 
 foreach(testname ${tests})
 	add_executable(${testname} ${testname}.cpp)
-	target_link_libraries(${testname} PRIVATE tests_main)
+	target_link_libraries(${testname} PRIVATE xrt-external-catch2)
 	target_link_libraries(${testname} PRIVATE aux_util)
 	add_test(NAME ${testname} COMMAND ${testname} --success)
 endforeach()

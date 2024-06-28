@@ -10,7 +10,7 @@
 
 
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 
 TEST_CASE("u_template_historybuf")

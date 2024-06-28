@@ -9,7 +9,7 @@
 #include <math/m_lowpass_integer.hpp>
 #include <math/m_lowpass_integer.h>
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 using xrt::auxiliary::math::IntegerLowPassIIRFilter;
 using xrt::auxiliary::math::Rational;

@@ -14,7 +14,7 @@
 #include <math/m_vec3.h>
 
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <random>
 

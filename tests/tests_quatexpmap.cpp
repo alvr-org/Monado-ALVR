@@ -6,7 +6,7 @@
  * @author Mateo de Mayo <mateo.demayo@collabora.com>
  */
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "math/m_api.h"
 #include "math/m_vec3.h"
 #include <vector>

@@ -6,7 +6,7 @@
  * @author Mateo de Mayo <mateo.demayo@collabora.com>
  */
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "util/u_vector.h"
 
 TEST_CASE("u_vector")

@@ -5,11 +5,11 @@
  * @brief Direct3D 11 tests.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
+#include "catch_amalgamated.hpp"
+
 #include "aux_d3d_dxgi_formats.hpp"
 
 #include <iostream>
-
-#include "catch/catch.hpp"
 
 #include <xrt/xrt_config_have.h>
 #include <d3d/d3d_dxgi_helpers.hpp>

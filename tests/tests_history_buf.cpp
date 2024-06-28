@@ -23,7 +23,7 @@ operator<<(std::ostream &os, const xrt::auxiliary::util::RandomAccessIteratorBas
 }
 
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 
 

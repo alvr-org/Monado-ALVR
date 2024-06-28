@@ -11,7 +11,7 @@
 #include "math/m_api.h"
 #include "math/m_space.h"
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 
 /*

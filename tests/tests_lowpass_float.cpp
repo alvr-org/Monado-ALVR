@@ -9,7 +9,7 @@
 #include <math/m_lowpass_float.hpp>
 #include <math/m_lowpass_float.h>
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 using xrt::auxiliary::math::LowPassIIRFilter;
 static constexpr float InitialState = 300;

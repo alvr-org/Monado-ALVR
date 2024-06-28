@@ -6,7 +6,7 @@
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <util/u_generic_callbacks.hpp>
 

@@ -8,7 +8,7 @@
 
 #include "math/m_mathinclude.h"
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 
 #include <xrt/xrt_defines.h>
 

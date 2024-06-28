@@ -10,7 +10,7 @@
 #include "mock/mock_compositor.h"
 #include "client/comp_d3d11_client.h"
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "util/u_handles.h"
 
 #include <d3d/d3d_dxgi_helpers.hpp>

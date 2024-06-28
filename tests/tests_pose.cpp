@@ -1,5 +1,5 @@
 // Copyright 2022, Campbell Suter
-// Copyright 2022, Collabora, Ltd.
+// Copyright 2022-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,7 +8,7 @@
  * @author Mateo de Mayo <mateo.demayo@collabora.com>
  */
 
-#include "catch/catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "math/m_api.h"
 #include "math/m_vec3.h"
 
@@ -58,11 +58,11 @@ TEST_CASE("Pose interpolation works")
 	math_pose_interpolate(&a, &b, 0.5, &res);
 
 	constexpr float e = std::numeric_limits<float>::epsilon();
-	CHECK(res.position.x == Approx(0).margin(e));
-	CHECK(res.position.y == Approx(0).margin(e));
-	CHECK(res.position.z == Approx(0).margin(e));
-	CHECK(res.orientation.x == Approx(0).margin(e));
-	CHECK(res.orientation.x == Approx(0).margin(e));
-	CHECK(res.orientation.y == Approx(0).margin(e));
-	CHECK(res.orientation.w == Approx(1).margin(e));
+	CHECK(res.position.x == Catch::Approx(0).margin(e));
+	CHECK(res.position.y == Catch::Approx(0).margin(e));
+	CHECK(res.position.z == Catch::Approx(0).margin(e));
+	CHECK(res.orientation.x == Catch::Approx(0).margin(e));
+	CHECK(res.orientation.x == Catch::Approx(0).margin(e));
+	CHECK(res.orientation.y == Catch::Approx(0).margin(e));
+	CHECK(res.orientation.w == Catch::Approx(1).margin(e));
 }
