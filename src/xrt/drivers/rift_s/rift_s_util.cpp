@@ -263,7 +263,7 @@ rift_s_get_cam_calib(struct rift_s_camera_calibration_block *camera_calibration,
 
 	/* Use the calculated distortion grid to solve for kb4 params */
 	{
-		Eigen::Matrix<double, N_KB4_DISTORT_PARAMS, 1> kb4_distort_params;
+		Eigen::Matrix<double, N_KB4_DISTORT_PARAMS, 1> kb4_distort_params{0, 0, 0, 0};
 
 		using AutoDiffDistortParamKB4Function =
 		    TinySolverAutoDiffFunction<DistortParamKB4CostFunctor, 2 * STEPS * STEPS, N_KB4_DISTORT_PARAMS>;
