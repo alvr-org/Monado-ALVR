@@ -44,7 +44,7 @@ u_visibility_mask_get_default(enum xrt_visibility_mask_type type,
                               struct xrt_visibility_mask **out_mask)
 {
 	struct xrt_visibility_mask *mask = NULL;
-	uint32_t nvertices, nindices;
+	uint32_t nvertices = 0, nindices = 0;
 
 	switch (type) {
 	case XRT_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH:
@@ -73,8 +73,8 @@ u_visibility_mask_get_default(enum xrt_visibility_mask_type type,
 	mask->index_count = nindices;
 	mask->vertex_count = nvertices;
 
-	const struct xrt_vec2 *vertices;
-	const uint32_t *indices;
+	const struct xrt_vec2 *vertices = NULL;
+	const uint32_t *indices = NULL;
 
 	switch (type) {
 	case XRT_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH:
