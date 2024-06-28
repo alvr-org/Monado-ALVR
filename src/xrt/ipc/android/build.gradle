@@ -21,6 +21,13 @@ android {
         minSdkVersion 26
         targetSdkVersion project.sharedTargetSdk
 
+        def defaultServiceLibName = "monado-service"
+        def serviceLibName = project.hasProperty("serviceLibName") ?
+            project.serviceLibName : defaultServiceLibName
+        if (serviceLibName == null || serviceLibName.length() == 0) {
+            serviceLibName = defaultServiceLibName
+        }
+
         // Single point of truth for these names.
         def serviceAction = "org.freedesktop.monado.ipc.CONNECT"
         def shutdownAction = "org.freedesktop.monado.ipc.SHUTDOWN"
@@ -31,6 +38,7 @@ android {
         buildConfigField("String", "SERVICE_ACTION", "\"${serviceAction}\"")
         buildConfigField("String", "SHUTDOWN_ACTION", "\"${shutdownAction}\"")
         buildConfigField("Long", "WATCHDOG_TIMEOUT_MILLISECONDS", "1500L")
+        buildConfigField("String", "SERVICE_LIB_NAME", "\"${serviceLibName}\"")
     }
 
     buildTypes {

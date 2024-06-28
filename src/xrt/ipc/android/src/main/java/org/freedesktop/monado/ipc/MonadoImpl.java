@@ -36,7 +36,7 @@ public class MonadoImpl extends IMonado.Stub {
     static {
         // Load the shared library with the native parts of this class
         // This is the service-lib target.
-        System.loadLibrary("monado-service");
+        System.loadLibrary(BuildConfig.SERVICE_LIB_NAME);
     }
 
     private final Context context;
