@@ -79,9 +79,9 @@ find_steamvr_install()
 	std::ifstream file(STEAM_INSTALL_DIR + "/steamapps/libraryfolders.vdf");
 	auto root = vdf::read(file);
 	assert(root.name == "libraryfolders");
-	for (auto &[_, child] : root.children) {
+	for (auto &[_, child] : root.childs) {
 		U_LOG_D("Found library folder %s", child->attribs["path"].c_str());
-		std::shared_ptr<vdf::object> apps = child->children["apps"];
+		std::shared_ptr<vdf::object> apps = child->childs["apps"];
 		for (auto &[appid, _] : apps->attribs) {
 			if (appid == STEAMVR_APPID) {
 				return child->attribs["path"] + "/steamapps/common/SteamVR";
