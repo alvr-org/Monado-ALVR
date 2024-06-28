@@ -136,7 +136,11 @@ ipc_client_system_create(struct ipc_connection *ipc_c, struct xrt_system_composi
 {
 	struct ipc_client_system *icsys = U_TYPED_CALLOC(struct ipc_client_system);
 	xrt_result_t xret = ipc_call_system_get_properties(ipc_c, &icsys->base.properties);
-	assert(xret == XRT_SUCCESS);
+	if (xret != XRT_SUCCESS) {
+		free(icsys);
+		return NULL;
+	}
+
 	icsys->base.create_session = ipc_client_system_create_session;
 	icsys->base.destroy = ipc_client_system_destroy;
 	icsys->ipc_c = ipc_c;
