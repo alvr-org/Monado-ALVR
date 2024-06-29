@@ -613,10 +613,10 @@ gatt_iface_get_uuid(const DBusMessageIter *iface_elm, const char **out_str)
 /*!
  * Returns positive value if the object implements the
  * `org.bluez.GattCharacteristic1` interface, its `UUID` matches the given @p
- * uuid and has the notify flag set.
+ * uuid.
  */
 static int
-gatt_char_has_uuid_and_notify(const DBusMessageIter *dict, const char *uuid, const char **out_path_str)
+gatt_char_has_uuid(const DBusMessageIter *dict, const char *uuid, const char **out_path_str, bool *out_notifiable)
 {
 	DBusMessageIter first_elm;
 	DBusMessageIter iface_elm;
@@ -645,13 +645,14 @@ gatt_char_has_uuid_and_notify(const DBusMessageIter *dict, const char *uuid, con
 			continue;
 		}
 
-		bool notifable = false;
-		ret = gatt_iface_get_flag_notifiable(&iface_elm, &notifable);
-		if (ret <= 0 || !notifable) {
+		bool notifiable = false;
+		ret = gatt_iface_get_flag_notifiable(&iface_elm, &notifiable);
+		if (ret <= 0) {
 			continue;
 		}
 
 		*out_path_str = path_str;
+		*out_notifiable = notifiable;
 		return 1;
 	}
 
@@ -904,6 +905,7 @@ get_path_to_notify_char(
 	{
 		const char *dev_path_str;
 		const char *char_path_str;
+		bool notifiable;
 		ret = device_has_uuid(&elm, dev_uuid, &dev_path_str);
 		if (ret <= 0) {
 			continue;
@@ -911,8 +913,8 @@ get_path_to_notify_char(
 
 		for_each(c, first_elm)
 		{
-			ret = gatt_char_has_uuid_and_notify(&c, char_uuid, &char_path_str);
-			if (ret <= 0) {
+			ret = gatt_char_has_uuid(&c, char_uuid, &char_path_str, &notifiable);
+			if (ret <= 0 || !notifiable) {
 				continue;
 			}
 			if (!starts_with_and_has_slash(char_path_str, dev_path_str)) {
@@ -1135,6 +1137,7 @@ os_ble_broadcast_write_value(const char *service_uuid, const char *char_uuid, ui
 	{
 		const char *dev_path_str;
 		const char *char_path_str;
+		bool notifiable;
 		ret = device_has_uuid(&elm, service_uuid, &dev_path_str);
 		if (ret <= 0) {
 			continue;
@@ -1142,7 +1145,7 @@ os_ble_broadcast_write_value(const char *service_uuid, const char *char_uuid, ui
 
 		for_each(c, first_elm)
 		{
-			ret = gatt_char_has_uuid_and_notify(&c, char_uuid, &char_path_str);
+			ret = gatt_char_has_uuid(&c, char_uuid, &char_path_str, &notifiable);
 			if (ret <= 0) {
 				continue;
 			}
