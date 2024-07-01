@@ -206,6 +206,7 @@ android {
     externalNativeBuild {
         cmake {
             path "${rootDir}/CMakeLists.txt"
+            version "${cmake_version}"
         }
     }
 
@@ -234,8 +235,8 @@ android {
         enableAggregatingTask = true
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     packagingOptions {
         resources {
@@ -249,17 +250,19 @@ android {
     lint {
         fatal 'StopShip'
     }
-
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 aboutLibraries {
     // Full license text for license IDs mentioned here
     // will be included, even if no detected dependency uses them.
-    additionalLicenses {
-        mit
-        mpl_2_0
-        bsl_1_0
-    }
+    additionalLicenses = [
+        "mit",
+        "mpl_2_0",
+        "bsl_1_0"
+    ]
 }
 
 dependencies {

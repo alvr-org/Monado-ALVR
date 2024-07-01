@@ -3,27 +3,27 @@
 
 buildscript {
     ext {
-        kotlinVersion = '1.7.10'
+        kotlinVersion = '2.0.0'
 
-        latestAboutLibsRelease = '8.9.4'
+        latestAboutLibsRelease = '11.2.2'
 
-        androidxCoreVersion = '1.8.0'
-        androidxAnnotationVersion = '1.3.0'
-        androidxAppCompatVersion = '1.5.1'
-        androidxLifecycleVersion = '2.5.1'
-        androidxConstraintLayoutVersion = '2.1.3'
+        androidxCoreVersion = '1.13.1'
+        androidxAnnotationVersion = '1.8.0'
+        androidxAppCompatVersion = '1.7.0'
+        androidxLifecycleVersion = '2.8.2'
+        androidxConstraintLayoutVersion = '2.1.4'
         androidxCardViewVersion = '1.0.0'
-        androidxRecyclerViewVersion = '1.2.1'
+        androidxRecyclerViewVersion = '1.3.2'
 
-        hiltVersion = '2.45'
+        hiltVersion = '2.51.1'
 
-        materialVersion = '1.8.0'
+        materialVersion = '1.12.0'
 
         // This is the version to download if we can't find it locally.
         eigenFetchVersion = '3.4.0'
 
         // If you update this, must also update .gitlab-ci/config.yml
-        buildToolsVersion = '32.0.0'
+        buildToolsVersion = '34.0.0'
     }
     repositories {
         google()
@@ -36,8 +36,8 @@ buildscript {
 }
 plugins {
     // Android Gradle Plugin
-    id 'com.android.application' version '8.1.0' apply false
-    id 'com.android.library' version '8.1.0' apply false
+    id 'com.android.application' version '8.5.0' apply false
+    id 'com.android.library' version '8.5.0' apply false
 
     id 'org.jetbrains.kotlin.android' version "$kotlinVersion" apply false
 
@@ -70,9 +70,10 @@ spotless {
 }
 
 ext {
-    ndk_version = '21.4.7075529'
+    cmake_version = '3.22.1'
+    ndk_version = '26.3.11579264'
     // If you update this, must also update .gitlab-ci/config.yml
-    sharedCompileSdk = 32
+    sharedCompileSdk = 34
     sharedTargetSdk = 31
     sharedMinSdk = 26
 

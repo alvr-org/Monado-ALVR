@@ -138,7 +138,7 @@ win:container_prep:
 .monado.variables.debian:bookworm-ndk:
   variables:
     FDO_DISTRIBUTION_VERSION: "bookworm"
-    FDO_DISTRIBUTION_TAG: "2024-01-16"
+    FDO_DISTRIBUTION_TAG: "2024-07-02"
     FDO_REPO_SUFFIX: ndk
 
 # Variables for build and usage of Ubuntu focal image

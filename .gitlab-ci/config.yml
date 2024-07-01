@@ -131,13 +131,15 @@ distributions:
         distro_version: bookworm
         repo_suffix: ndk
         script: android_container_prep.sh
-        tag: "2024-01-16"
+        tag: "2024-07-02"
         # This must match ext.sharedCompileSdk in build.gradle
-        android_compile_sdk: 32
+        android_compile_sdk: 34
         # This must match buildscript.ext.buildToolsVersion in build.gradle
-        android_build_tools: 32.0.0
+        android_build_tools: 34.0.0
+        # This must match ext.ndk_version in build.gradle
+        android_ndk_version: r26d
         # look up on https://developer.android.com/studio/index.html#downloads when updating other versions
-        android_cli_tools: 9477386
+        android_cli_tools: 11076708
 
         packages:
           git:

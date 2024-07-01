@@ -2,17 +2,22 @@
 # Copyright 2018-2020, 2022, 2024 Collabora, Ltd. and the Monado contributors
 # SPDX-License-Identifier: BSL-1.0
 
-##
+#{# ignore the warning, this is actually the template to edit. #}#
 #######################################################
 #                GENERATED - DO NOT EDIT              #
 # see .gitlab-ci/install-ndk.sh.jinja instead #
 #######################################################
-##
+#{#
+Please run the following after editing:
+  make -f .gitlab-ci/ci-scripts.mk
+#}#
 
 # Partially inspired by https://about.gitlab.com/blog/2018/10/24/setting-up-gitlab-ci-for-android-projects/
+{% for distro in distributions -%} {%- for image in distro.images if "android_ndk_version" in image %}
 
-VERSION=r26d
+VERSION={{image.android_ndk_version}}
 FN=android-ndk-${VERSION}-linux.zip
 wget https://dl.google.com/android/repository/$FN
 unzip $FN -d /opt
 mv /opt/android-ndk-${VERSION} /opt/android-ndk
+{% endfor -%} {%- endfor %}

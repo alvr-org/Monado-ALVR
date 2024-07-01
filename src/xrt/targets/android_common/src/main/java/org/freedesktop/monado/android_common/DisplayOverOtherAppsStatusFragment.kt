@@ -83,7 +83,7 @@ class DisplayOverOtherAppsStatusFragment : Fragment() {
         }
     }
 
-    @Suppress("DEPRECATION")
+    @Deprecated("DEPRECATION")
     private val isRuntimeServiceRunning: Boolean
         get() {
             var running = false
