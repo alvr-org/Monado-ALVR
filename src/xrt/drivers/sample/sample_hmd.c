@@ -85,7 +85,7 @@ sample_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&hmd->base);
 }
 
-static void
+static xrt_result_t
 sample_hmd_update_inputs(struct xrt_device *xdev)
 {
 	/*
@@ -93,6 +93,7 @@ sample_hmd_update_inputs(struct xrt_device *xdev)
 	 * put code to update the attached inputs fields. If not you can use
 	 * the u_device_noop_update_inputs helper to make it a no-op.
 	 */
+	return XRT_SUCCESS;
 }
 
 static void

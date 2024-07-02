@@ -103,12 +103,10 @@ qwerty_controller(struct xrt_device *xd)
 	return qc;
 }
 
-static void
+static xrt_result_t
 qwerty_update_inputs(struct xrt_device *xd)
 {
-	if (xd->name != XRT_DEVICE_SIMPLE_CONTROLLER) {
-		return;
-	}
+	assert(xd->name == XRT_DEVICE_SIMPLE_CONTROLLER);
 
 	struct qwerty_controller *qc = qwerty_controller(xd);
 	struct qwerty_device *qd = &qc->base;
@@ -119,6 +117,8 @@ qwerty_update_inputs(struct xrt_device *xd)
 	xd->inputs[QWERTY_SELECT].timestamp = qc->select_timestamp;
 	xd->inputs[QWERTY_MENU].value.boolean = qc->menu_clicked;
 	xd->inputs[QWERTY_MENU].timestamp = qc->menu_timestamp;
+
+	return XRT_SUCCESS;
 }
 
 static void
@@ -258,7 +258,7 @@ qwerty_hmd_create(void)
 
 	xd->inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 
-	xd->update_inputs = qwerty_update_inputs;
+	xd->update_inputs = u_device_noop_update_inputs;
 	xd->get_tracked_pose = qwerty_get_tracked_pose;
 	xd->get_view_poses = u_device_get_view_poses;
 	xd->destroy = qwerty_destroy;

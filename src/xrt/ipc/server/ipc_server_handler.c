@@ -1857,7 +1857,11 @@ ipc_handle_device_update_input(volatile struct ipc_client_state *ics, uint32_t i
 	struct ipc_shared_device *isdev = &ism->isdevs[device_id];
 
 	// Update inputs.
-	xrt_device_update_inputs(xdev);
+	xrt_result_t xret = xrt_device_update_inputs(xdev);
+	if (xret != XRT_SUCCESS) {
+		IPC_ERROR(ics->server, "Failed to update input");
+		return xret;
+	}
 
 	// Copy data into the shared memory.
 	struct xrt_input *src = xdev->inputs;

@@ -136,7 +136,7 @@ opengloves_device_get_hand_tracking(struct xrt_device *xdev,
 	out_joint_set->is_active = true;
 }
 
-static void
+static xrt_result_t
 opengloves_device_update_inputs(struct xrt_device *xdev)
 {
 	struct opengloves_device *od = opengloves_device(xdev);
@@ -155,6 +155,8 @@ opengloves_device_update_inputs(struct xrt_device *xdev)
 	    od->last_input->joysticks.main.pressed;
 
 	os_mutex_unlock(&od->lock);
+
+	return XRT_SUCCESS;
 }
 
 static void

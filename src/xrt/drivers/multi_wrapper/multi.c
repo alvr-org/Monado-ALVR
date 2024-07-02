@@ -209,12 +209,12 @@ compute_distortion(struct xrt_device *xdev, uint32_t view, float u, float v, str
 	return target->compute_distortion(target, view, u, v, result);
 }
 
-static void
+static xrt_result_t
 update_inputs(struct xrt_device *xdev)
 {
 	struct multi_device *d = (struct multi_device *)xdev;
 	struct xrt_device *target = d->tracking_override.target;
-	xrt_device_update_inputs(target);
+	return xrt_device_update_inputs(target);
 }
 
 

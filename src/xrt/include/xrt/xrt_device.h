@@ -293,7 +293,7 @@ struct xrt_device
 	 *
 	 * @param[in] xdev        The device.
 	 */
-	void (*update_inputs)(struct xrt_device *xdev);
+	xrt_result_t (*update_inputs)(struct xrt_device *xdev);
 
 	/*!
 	 * @brief Get relationship of a tracked device to the tracking origin
@@ -564,8 +564,7 @@ struct xrt_device
 static inline xrt_result_t
 xrt_device_update_inputs(struct xrt_device *xdev)
 {
-	xdev->update_inputs(xdev);
-	return XRT_SUCCESS;
+	return xdev->update_inputs(xdev);
 }
 
 /*!

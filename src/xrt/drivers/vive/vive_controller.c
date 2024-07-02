@@ -183,7 +183,7 @@ vive_controller_device_destroy(struct xrt_device *xdev)
 	free(d);
 }
 
-static void
+static xrt_result_t
 vive_controller_device_wand_update_inputs(struct xrt_device *xdev)
 {
 	struct vive_controller_device *d = vive_controller_device(xdev);
@@ -240,9 +240,11 @@ vive_controller_device_wand_update_inputs(struct xrt_device *xdev)
 	VIVE_TRACE(d, "Trigger: %f", d->state.trigger);
 
 	os_mutex_unlock(&d->lock);
+
+	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 vive_controller_device_index_update_inputs(struct xrt_device *xdev)
 {
 	XRT_TRACE_MARKER();
@@ -358,6 +360,8 @@ vive_controller_device_index_update_inputs(struct xrt_device *xdev)
 	}
 
 	os_mutex_unlock(&d->lock);
+
+	return XRT_SUCCESS;
 }
 
 static void

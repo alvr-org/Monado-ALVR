@@ -857,7 +857,7 @@ psmv_device_destroy(struct xrt_device *xdev)
 	free(psmv);
 }
 
-static void
+static xrt_result_t
 psmv_device_update_inputs(struct xrt_device *xdev)
 {
 	struct psmv_device *psmv = psmv_device(xdev);
@@ -883,6 +883,8 @@ psmv_device_update_inputs(struct xrt_device *xdev)
 
 	// Done now.
 	os_mutex_unlock(&psmv->lock);
+
+	return XRT_SUCCESS;
 }
 
 static xrt_result_t

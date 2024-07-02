@@ -300,13 +300,13 @@ update_ohmd_controller(struct oh_device *ohd, int control_count, float *control_
 	}
 }
 
-static void
+static xrt_result_t
 oh_device_update_inputs(struct xrt_device *xdev)
 {
 	struct oh_device *ohd = oh_device(xdev);
 
 	int control_count;
-	float control_state[256];
+	float control_state[256] = {0};
 
 	ohmd_device_geti(ohd->dev, OHMD_CONTROL_COUNT, &control_count);
 	if (control_count > 64)
@@ -322,6 +322,8 @@ oh_device_update_inputs(struct xrt_device *xdev)
 	for (int i = 0; i < 256; i++) {
 		ohd->last_control_state[i] = control_state[i];
 	}
+
+	return XRT_SUCCESS;
 }
 
 static void

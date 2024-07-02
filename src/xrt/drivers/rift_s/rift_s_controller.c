@@ -442,7 +442,7 @@ rift_s_update_input_vec2(struct rift_s_controller *ctrl, int index, int64_t when
 	ctrl->base.inputs[index].value.vec2.y = y;
 }
 
-static void
+static xrt_result_t
 rift_s_controller_update_inputs(struct xrt_device *xdev)
 {
 	struct rift_s_controller *ctrl = (struct rift_s_controller *)(xdev);
@@ -504,8 +504,9 @@ rift_s_controller_update_inputs(struct xrt_device *xdev)
 	/* FIXME: Output touch detections:
 	      OCULUS_TOUCH_THUMBREST_TOUCH, - does Rift S have a thumbrest?
 	*/
-
 	os_mutex_unlock(&ctrl->mutex);
+
+	return XRT_SUCCESS;
 }
 
 static void

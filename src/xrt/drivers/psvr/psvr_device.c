@@ -943,7 +943,7 @@ teardown(struct psvr_device *psvr)
  *
  */
 
-static void
+static xrt_result_t
 psvr_device_update_inputs(struct xrt_device *xdev)
 {
 	struct psvr_device *psvr = psvr_device(xdev);
@@ -953,6 +953,8 @@ psvr_device_update_inputs(struct xrt_device *xdev)
 	update_leds_if_changed(psvr);
 
 	os_mutex_unlock(&psvr->device_mutex);
+
+	return XRT_SUCCESS;
 }
 
 static void

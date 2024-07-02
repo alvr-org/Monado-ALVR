@@ -187,7 +187,7 @@ u_device_get_view_poses(struct xrt_device *xdev,
  *
  * @ingroup aux_util
  */
-void
+xrt_result_t
 u_device_noop_update_inputs(struct xrt_device *xdev);
 
 

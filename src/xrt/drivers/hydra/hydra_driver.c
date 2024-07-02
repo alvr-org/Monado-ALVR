@@ -443,7 +443,7 @@ hydra_device_update_input_click(struct hydra_device *hd, timepoint_ns now, int i
  *
  */
 
-static void
+static xrt_result_t
 hydra_device_update_inputs(struct xrt_device *xdev)
 {
 	struct hydra_device *hd = hydra_device(xdev);
@@ -478,6 +478,8 @@ hydra_device_update_inputs(struct xrt_device *xdev)
 		// inputs[HYDRA_INDEX_POSE].timestamp = now;
 		// inputs[HYDRA_INDEX_POSE].value.
 	}
+
+	return XRT_SUCCESS;
 }
 
 static void

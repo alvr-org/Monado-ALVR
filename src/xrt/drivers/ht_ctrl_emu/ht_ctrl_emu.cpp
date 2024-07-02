@@ -378,7 +378,7 @@ decide(xrt_vec3 one, xrt_vec3 two, bool *out)
 	*out = (dist < pinch_activation_dist);
 }
 
-static void
+static xrt_result_t
 cemu_device_update_inputs(struct xrt_device *xdev)
 {
 	struct cemu_device *dev = cemu_device(xdev);
@@ -388,11 +388,10 @@ cemu_device_update_inputs(struct xrt_device *xdev)
 
 	xrt_device_get_hand_tracking(dev->sys->in_hand, dev->ht_input_name, os_monotonic_get_ns(), &joint_set, &noop);
 
-
 	if (!joint_set.is_active) {
 		xdev->inputs[CEMU_INDEX_SELECT].value.boolean = false;
 		xdev->inputs[CEMU_INDEX_MENU].value.boolean = false;
-		return;
+		return XRT_SUCCESS;
 	}
 
 	decide(joint_set.values.hand_joint_set_default[XRT_HAND_JOINT_INDEX_TIP].relation.pose.position,
@@ -402,6 +401,8 @@ cemu_device_update_inputs(struct xrt_device *xdev)
 	// For now, all other inputs are off - detecting any gestures more complicated than pinch is too unreliable for
 	// now.
 	xdev->inputs[CEMU_INDEX_MENU].value.boolean = false;
+
+	return XRT_SUCCESS;
 }
 
 

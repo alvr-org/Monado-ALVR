@@ -874,7 +874,7 @@ _process_event(struct survive_system *ss, struct SurviveSimpleEvent *event)
 	}
 }
 
-static void
+static xrt_result_t
 survive_device_update_inputs(struct xrt_device *xdev)
 {
 	struct survive_device *survive = (struct survive_device *)xdev;
@@ -886,6 +886,8 @@ survive_device_update_inputs(struct xrt_device *xdev)
 	}
 
 	os_mutex_unlock(&survive->sys->lock);
+
+	return XRT_SUCCESS;
 }
 
 static bool

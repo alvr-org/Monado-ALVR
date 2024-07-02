@@ -278,7 +278,7 @@ handle_input_packet(struct wmr_controller_base *wcb, uint64_t time_ns, uint8_t *
 	return b;
 }
 
-static void
+static xrt_result_t
 wmr_controller_hp_update_inputs(struct xrt_device *xdev)
 {
 	DRV_TRACE_MARKER();
@@ -302,6 +302,8 @@ wmr_controller_hp_update_inputs(struct xrt_device *xdev)
 	xrt_inputs[WMR_CONTROLLER_INDEX_THUMBSTICK].value.vec2 = cur_inputs->thumbstick.values;
 
 	os_mutex_unlock(&wcb->data_lock);
+
+	return XRT_SUCCESS;
 }
 
 static void

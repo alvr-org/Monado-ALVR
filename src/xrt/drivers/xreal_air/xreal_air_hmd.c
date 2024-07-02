@@ -1031,7 +1031,7 @@ adjust_display_mode(struct xreal_air_hmd *hmd)
  *
  */
 
-static void
+static xrt_result_t
 xreal_air_hmd_update_inputs(struct xrt_device *xdev)
 {
 	struct xreal_air_hmd *hmd = xreal_air_hmd(xdev);
@@ -1045,6 +1045,8 @@ xreal_air_hmd_update_inputs(struct xrt_device *xdev)
 	adjust_display_mode(hmd);
 
 	os_mutex_unlock(&hmd->device_mutex);
+
+	return XRT_SUCCESS;
 }
 
 static void

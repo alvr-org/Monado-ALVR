@@ -140,13 +140,13 @@ ipc_client_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&ich->base);
 }
 
-static void
+static xrt_result_t
 ipc_client_hmd_update_inputs(struct xrt_device *xdev)
 {
 	ipc_client_hmd_t *ich = ipc_client_hmd(xdev);
 
 	xrt_result_t xret = ipc_call_device_update_input(ich->ipc_c, ich->device_id);
-	IPC_CHK_ONLY_PRINT(ich->ipc_c, xret, "ipc_call_device_update_input");
+	IPC_CHK_ALWAYS_RET(ich->ipc_c, xret, "ipc_call_device_update_input");
 }
 
 static void

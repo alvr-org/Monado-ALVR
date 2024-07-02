@@ -95,13 +95,15 @@ vive_device_destroy(struct xrt_device *xdev)
 	u_device_free(&d->base);
 }
 
-static void
+static xrt_result_t
 vive_device_update_inputs(struct xrt_device *xdev)
 {
 	XRT_TRACE_MARKER();
 
 	struct vive_device *d = vive_device(xdev);
 	VIVE_TRACE(d, "ENTER!");
+
+	return XRT_SUCCESS;
 }
 
 static void

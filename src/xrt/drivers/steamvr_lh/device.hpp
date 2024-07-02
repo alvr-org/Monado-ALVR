@@ -55,7 +55,7 @@ public:
 	xrt_input *
 	get_input_from_name(std::string_view name);
 
-	void
+	xrt_result_t
 	update_inputs();
 
 	void

@@ -472,10 +472,11 @@ u_device_get_view_poses(struct xrt_device *xdev,
  *
  */
 
-void
+xrt_result_t
 u_device_noop_update_inputs(struct xrt_device *xdev)
 {
 	// Empty, should only be used from a device without any inputs.
+	return XRT_SUCCESS;
 }
 
 

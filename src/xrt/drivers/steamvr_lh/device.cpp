@@ -209,8 +209,8 @@ Device::Device(const DeviceBuilder &builder) : xrt_device({}), ctx(builder.ctx),
 	this->form_factor_check_supported = false;
 	this->battery_status_supported = true;
 
+	this->xrt_device::update_inputs = &device_bouncer<Device, &Device::update_inputs, xrt_result_t>;
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<Device, &Device::name>
-	SETUP_MEMBER_FUNC(update_inputs);
 	SETUP_MEMBER_FUNC(get_tracked_pose);
 	SETUP_MEMBER_FUNC(get_battery_status);
 #undef SETUP_MEMBER_FUNC
@@ -379,11 +379,12 @@ ControllerDevice::set_haptic_handle(vr::VRInputComponentHandle_t handle)
 	this->outputs = output.get();
 }
 
-void
+xrt_result_t
 Device::update_inputs()
 {
 	std::lock_guard<std::mutex> lock(frame_mutex);
 	ctx->maybe_run_frame(++current_frame);
+	return XRT_SUCCESS;
 }
 
 IndexFingerInput *

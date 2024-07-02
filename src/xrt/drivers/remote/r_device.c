@@ -50,7 +50,7 @@ r_device_destroy(struct xrt_device *xdev)
 	u_device_free(&rd->base);
 }
 
-static void
+static xrt_result_t
 r_device_update_inputs(struct xrt_device *xdev)
 {
 	struct r_device *rd = r_device(xdev);
@@ -59,13 +59,14 @@ r_device_update_inputs(struct xrt_device *xdev)
 	uint64_t now = os_monotonic_get_ns();
 	struct r_remote_controller_data *latest = rd->is_left ? &r->latest.left : &r->latest.right;
 
+	// TODO: refactor those loops into one
 	if (!latest->active) {
 		for (uint32_t i = 0; i < xdev->input_count; i++) {
 			xdev->inputs[i].active = false;
 			xdev->inputs[i].timestamp = now;
 			U_ZERO(&xdev->inputs[i].value);
 		}
-		return;
+		return XRT_SUCCESS;
 	}
 
 	for (uint32_t i = 0; i < xdev->input_count; i++) {
@@ -92,6 +93,8 @@ r_device_update_inputs(struct xrt_device *xdev)
 	xdev->inputs[15].value.vec1    = latest->trackpad_force;
 	xdev->inputs[16].value.boolean = latest->trackpad_touch;
 	// clang-format on
+
+	return XRT_SUCCESS;
 }
 
 static void
