@@ -561,10 +561,11 @@ struct xrt_device
  *
  * @public @memberof xrt_device
  */
-static inline void
+static inline xrt_result_t
 xrt_device_update_inputs(struct xrt_device *xdev)
 {
 	xdev->update_inputs(xdev);
+	return XRT_SUCCESS;
 }
 
 /*!
