@@ -48,7 +48,7 @@ foreach(testname ${tests})
 	add_executable(${testname} ${testname}.cpp)
 	target_link_libraries(${testname} PRIVATE xrt-external-catch2)
 	target_link_libraries(${testname} PRIVATE aux_util)
-	add_test(NAME ${testname} COMMAND ${testname} --success)
+	add_test(NAME ${testname} COMMAND ${testname} --success --allow-running-no-tests)
 endforeach()
 
 # For tests that require more than just aux_util, link those other libs down here.
