@@ -539,7 +539,7 @@ rift_s_controller_get_fusion_pose(struct rift_s_controller *ctrl,
 	    XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT | XRT_SPACE_RELATION_LINEAR_VELOCITY_VALID_BIT);
 }
 
-static void
+static xrt_result_t
 rift_s_controller_get_tracked_pose(struct xrt_device *xdev,
                                    enum xrt_input_name name,
                                    int64_t at_timestamp_ns,
@@ -548,8 +548,8 @@ rift_s_controller_get_tracked_pose(struct xrt_device *xdev,
 	struct rift_s_controller *ctrl = (struct rift_s_controller *)(xdev);
 
 	if (name != XRT_INPUT_TOUCH_AIM_POSE && name != XRT_INPUT_TOUCH_GRIP_POSE) {
-		RIFT_S_ERROR("unknown pose name requested");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&ctrl->base, rift_s_log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	struct xrt_relation_chain xrc = {0};
@@ -571,6 +571,8 @@ rift_s_controller_get_tracked_pose(struct xrt_device *xdev,
 	os_mutex_unlock(&ctrl->mutex);
 
 	m_relation_chain_resolve(&xrc, out_relation);
+
+	return XRT_SUCCESS;
 }
 
 static void

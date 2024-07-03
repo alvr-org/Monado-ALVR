@@ -170,7 +170,7 @@ android_device_destroy(struct xrt_device *xdev)
 	free(android);
 }
 
-static void
+static xrt_result_t
 android_device_get_tracked_pose(struct xrt_device *xdev,
                                 enum xrt_input_name name,
                                 int64_t at_timestamp_ns,
@@ -189,6 +189,7 @@ android_device_get_tracked_pose(struct xrt_device *xdev,
 	                                                              XRT_SPACE_RELATION_POSITION_VALID_BIT);
 
 	*out_relation = new_relation;
+	return XRT_SUCCESS;
 }
 
 

@@ -14,7 +14,7 @@
 #include "util/u_distortion_mesh.h"
 
 
-static void
+static xrt_result_t
 sdl_hmd_get_tracked_pose(struct xrt_device *xdev,
                          enum xrt_input_name name,
                          int64_t at_timestamp_ns,
@@ -23,8 +23,8 @@ sdl_hmd_get_tracked_pose(struct xrt_device *xdev,
 	struct sdl_program *sp = from_xdev(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		U_LOG_E("Unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&sp->xdev_base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	struct xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
@@ -37,6 +37,8 @@ sdl_hmd_get_tracked_pose(struct xrt_device *xdev,
 	    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT; //
 
 	*out_relation = relation;
+
+	return XRT_SUCCESS;
 }
 
 static void

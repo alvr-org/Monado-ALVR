@@ -84,7 +84,7 @@ twrap_hmd_correct_pose_from_basalt(struct xrt_pose pose)
 }
 #endif
 
-static void
+static xrt_result_t
 twrap_slam_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             int64_t at_timestamp_ns,
@@ -93,8 +93,8 @@ twrap_slam_get_tracked_pose(struct xrt_device *xdev,
 	struct slam_device *dx = slam_device(xdev);
 
 	if (name != XRT_INPUT_GENERIC_TRACKER_POSE) {
-		SLAM_ERROR(dx, "unknown input name %d", name);
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&dx->base, dx->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 #ifdef XRT_FEATURE_SLAM
 	if (!dx->use_3dof) {
@@ -109,7 +109,7 @@ twrap_slam_get_tracked_pose(struct xrt_device *xdev,
 
 		if (!pose_tracked) {
 			U_ZERO(&out_relation->relation_flags);
-			return;
+			return XRT_SUCCESS;
 		}
 
 		basalt_rel.pose = twrap_hmd_correct_pose_from_basalt(basalt_rel.pose);
@@ -127,11 +127,12 @@ twrap_slam_get_tracked_pose(struct xrt_device *xdev,
 		}
 
 		m_relation_chain_resolve(&xrc, out_relation);
-		return;
+		return XRT_SUCCESS;
 	}
 
 #endif
 	m_relation_history_get(dx->dof3->rh, at_timestamp_ns, out_relation);
+	return XRT_SUCCESS;
 }
 
 static void

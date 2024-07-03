@@ -102,7 +102,7 @@ euroc_device(struct xrt_device *xdev)
 	return (struct euroc_device *)xdev;
 }
 
-static void
+static xrt_result_t
 euroc_device_get_tracked_pose(struct xrt_device *xdev,
                               enum xrt_input_name name,
                               int64_t at_timestamp_ns,
@@ -128,6 +128,8 @@ euroc_device_get_tracked_pose(struct xrt_device *xdev,
 	out_relation->relation_flags = (enum xrt_space_relation_flags)(
 	    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT |
 	    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT);
+
+	return XRT_SUCCESS;
 }
 
 static void

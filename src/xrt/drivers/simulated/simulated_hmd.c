@@ -85,7 +85,7 @@ simulated_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&dh->base);
 }
 
-static void
+static xrt_result_t
 simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
                                enum xrt_input_name name,
                                int64_t at_timestamp_ns,
@@ -94,8 +94,8 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
 	struct simulated_hmd *hmd = simulated_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		HMD_ERROR(hmd, "unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&hmd->base, hmd->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	const double time_s = time_ns_to_s(at_timestamp_ns - hmd->created_ns);
@@ -142,6 +142,8 @@ simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
 	out_relation->relation_flags = (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
 	                                                               XRT_SPACE_RELATION_POSITION_VALID_BIT |
 	                                                               XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT);
+
+	return XRT_SUCCESS;
 }
 
 static xrt_result_t

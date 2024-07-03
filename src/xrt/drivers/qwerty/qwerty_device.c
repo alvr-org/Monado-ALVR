@@ -136,7 +136,7 @@ qwerty_set_output(struct xrt_device *xd, enum xrt_output_name name, const union 
 	}
 }
 
-static void
+static xrt_result_t
 qwerty_get_tracked_pose(struct xrt_device *xd,
                         enum xrt_input_name name,
                         int64_t at_timestamp_ns,
@@ -146,8 +146,8 @@ qwerty_get_tracked_pose(struct xrt_device *xd,
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE && name != XRT_INPUT_SIMPLE_GRIP_POSE &&
 	    name != XRT_INPUT_SIMPLE_AIM_POSE) {
-		QWERTY_ERROR(qd, "Unexpected input name = 0x%04X", name >> 8);
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&qd->base, qd->sys->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	// Position
@@ -201,6 +201,8 @@ qwerty_get_tracked_pose(struct xrt_device *xd,
 	out_relation->relation_flags =
 	    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT |
 	    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
+
+	return XRT_SUCCESS;
 }
 
 static void

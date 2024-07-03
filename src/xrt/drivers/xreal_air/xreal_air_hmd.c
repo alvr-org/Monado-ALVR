@@ -1049,7 +1049,7 @@ xreal_air_hmd_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 xreal_air_hmd_get_tracked_pose(struct xrt_device *xdev,
                                enum xrt_input_name name,
                                int64_t at_timestamp_ns,
@@ -1058,8 +1058,8 @@ xreal_air_hmd_get_tracked_pose(struct xrt_device *xdev,
 	struct xreal_air_hmd *hmd = xreal_air_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		XREAL_AIR_ERROR(hmd, "unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&hmd->base, hmd->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	const enum xrt_space_relation_flags flags = (enum xrt_space_relation_flags)(
@@ -1076,6 +1076,7 @@ xreal_air_hmd_get_tracked_pose(struct xrt_device *xdev,
 
 	// Make sure that the orientation is valid.
 	math_quat_normalize(&out_relation->pose.orientation);
+	return XRT_SUCCESS;
 }
 
 static void

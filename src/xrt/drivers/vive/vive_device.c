@@ -106,7 +106,7 @@ vive_device_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 vive_device_get_3dof_tracked_pose(struct xrt_device *xdev,
                                   enum xrt_input_name name,
                                   uint64_t at_timestamp_ns,
@@ -117,8 +117,8 @@ vive_device_get_3dof_tracked_pose(struct xrt_device *xdev,
 	struct vive_device *d = vive_device(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		U_LOG_E("unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&d->base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	struct xrt_space_relation relation = {0};
@@ -131,6 +131,8 @@ vive_device_get_3dof_tracked_pose(struct xrt_device *xdev,
 
 	*out_relation = relation;
 	d->pose = out_relation->pose;
+
+	return XRT_SUCCESS;
 }
 
 //! Specific pose corrections for Basalt and a Valve Index headset
@@ -179,7 +181,7 @@ vive_device_get_slam_tracked_pose(struct xrt_device *xdev,
 	    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT);
 }
 
-static void
+static xrt_result_t
 vive_device_get_tracked_pose(struct xrt_device *xdev,
                              enum xrt_input_name name,
                              int64_t at_timestamp_ns,
@@ -192,12 +194,18 @@ vive_device_get_tracked_pose(struct xrt_device *xdev,
 	// Ajdust the timestamp with the offset.
 	at_timestamp_ns += (int64_t)(d->tracked_offset_ms.val * (double)U_TIME_1MS_IN_NS);
 
+	xrt_result_t xret = XRT_SUCCESS;
 	if (d->tracking.slam_enabled && d->slam_over_3dof) {
 		vive_device_get_slam_tracked_pose(xdev, name, at_timestamp_ns, out_relation);
 	} else {
-		vive_device_get_3dof_tracked_pose(xdev, name, at_timestamp_ns, out_relation);
+		xret = vive_device_get_3dof_tracked_pose(xdev, name, at_timestamp_ns, out_relation);
 	}
-	math_pose_transform(&d->offset, &out_relation->pose, &out_relation->pose);
+
+	if (xret == XRT_SUCCESS) {
+		math_pose_transform(&d->offset, &out_relation->pose, &out_relation->pose);
+	}
+
+	return xret;
 }
 
 static void

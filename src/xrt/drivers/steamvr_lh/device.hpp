@@ -69,7 +69,7 @@ public:
 	handle_properties(const vr::PropertyWrite_t *batch, uint32_t count);
 
 	//! Maps to @ref xrt_device::get_tracked_pose.
-	virtual void
+	virtual xrt_result_t
 	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) = 0;
 
 	xrt_result_t
@@ -116,7 +116,7 @@ public:
 
 	HmdDevice(const DeviceBuilder &builder);
 
-	void
+	xrt_result_t
 	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) override;
 
 	void
@@ -168,7 +168,7 @@ public:
 	void
 	set_haptic_handle(vr::VRInputComponentHandle_t handle);
 
-	void
+	xrt_result_t
 	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) override;
 
 	IndexFingerInput *

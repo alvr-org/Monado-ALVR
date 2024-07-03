@@ -957,7 +957,7 @@ psvr_device_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 psvr_device_get_tracked_pose(struct xrt_device *xdev,
                              enum xrt_input_name name,
                              int64_t at_timestamp_ns,
@@ -966,8 +966,8 @@ psvr_device_get_tracked_pose(struct xrt_device *xdev,
 	struct psvr_device *psvr = psvr_device(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		PSVR_ERROR(psvr, "unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&psvr->base, psvr->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	os_mutex_lock(&psvr->device_mutex);
@@ -993,6 +993,8 @@ psvr_device_get_tracked_pose(struct xrt_device *xdev,
 	//! @todo Move this to the tracker.
 	// Make sure that the orientation is valid.
 	math_quat_normalize(&out_relation->pose.orientation);
+
+	return XRT_SUCCESS;
 }
 
 static void

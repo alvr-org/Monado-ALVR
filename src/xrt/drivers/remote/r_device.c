@@ -97,7 +97,7 @@ r_device_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 r_device_get_tracked_pose(struct xrt_device *xdev,
                           enum xrt_input_name name,
                           int64_t at_timestamp_ns,
@@ -108,8 +108,8 @@ r_device_get_tracked_pose(struct xrt_device *xdev,
 
 	if (name != XRT_INPUT_INDEX_AIM_POSE && name != XRT_INPUT_INDEX_GRIP_POSE &&
 	    name != XRT_INPUT_GENERIC_PALM_POSE) {
-		U_LOG_E("Unknown input name: 0x%0x", name);
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&rd->base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	struct r_remote_controller_data *latest = rd->is_left ? &r->latest.left : &r->latest.right;
@@ -133,6 +133,8 @@ r_device_get_tracked_pose(struct xrt_device *xdev,
 	} else {
 		out_relation->relation_flags = 0;
 	}
+
+	return XRT_SUCCESS;
 }
 
 static void

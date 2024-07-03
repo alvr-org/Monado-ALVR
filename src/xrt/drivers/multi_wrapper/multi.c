@@ -79,7 +79,7 @@ attached_override(struct multi_device *d,
 	m_relation_chain_resolve(&xrc, out_relation);
 }
 
-static void
+static xrt_result_t
 get_tracked_pose(struct xrt_device *xdev,
                  enum xrt_input_name name,
                  int64_t at_timestamp_ns,
@@ -91,7 +91,11 @@ get_tracked_pose(struct xrt_device *xdev,
 
 	struct xrt_space_relation tracker_relation;
 
-	xrt_device_get_tracked_pose(tracker, tracker_input_name, at_timestamp_ns, &tracker_relation);
+	xrt_result_t xret =
+	    xrt_device_get_tracked_pose(tracker, tracker_input_name, at_timestamp_ns, &tracker_relation);
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
 
 	switch (d->override_type) {
 	case XRT_TRACKING_OVERRIDE_DIRECT: {
@@ -101,8 +105,10 @@ get_tracked_pose(struct xrt_device *xdev,
 		struct xrt_device *target = d->tracking_override.target;
 
 		struct xrt_space_relation target_relation;
-		xrt_device_get_tracked_pose(target, name, at_timestamp_ns, &target_relation);
-
+		xret = xrt_device_get_tracked_pose(target, name, at_timestamp_ns, &target_relation);
+		if (xret != XRT_SUCCESS) {
+			break;
+		}
 
 		// just use the origin of the tracker space as reference frame
 		struct xrt_space_relation in_target_space;
@@ -116,6 +122,8 @@ get_tracked_pose(struct xrt_device *xdev,
 		                  &in_target_space, out_relation);
 	} break;
 	}
+
+	return xret;
 }
 
 static void

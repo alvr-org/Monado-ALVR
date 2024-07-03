@@ -388,7 +388,7 @@ load_config(struct rs_ddev *rs)
  *
  */
 
-static void
+static xrt_result_t
 rs_ddev_get_tracked_pose(struct xrt_device *xdev,
                          enum xrt_input_name name,
                          int64_t at_timestamp_ns,
@@ -397,11 +397,12 @@ rs_ddev_get_tracked_pose(struct xrt_device *xdev,
 	struct rs_ddev *rs = rs_ddev(xdev);
 
 	if (name != XRT_INPUT_GENERIC_TRACKER_POSE) {
-		U_LOG_E("unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&rs->base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	m_relation_history_get(rs->relation_hist, at_timestamp_ns, out_relation);
+	return XRT_SUCCESS;
 }
 
 static void

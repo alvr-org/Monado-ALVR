@@ -1073,7 +1073,7 @@ wmr_read_config(struct wmr_hmd *wh)
  *
  */
 
-static void
+static xrt_result_t
 wmr_hmd_get_3dof_tracked_pose(struct xrt_device *xdev,
                               enum xrt_input_name name,
                               uint64_t at_timestamp_ns,
@@ -1084,8 +1084,8 @@ wmr_hmd_get_3dof_tracked_pose(struct xrt_device *xdev,
 	struct wmr_hmd *wh = wmr_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		WMR_ERROR(wh, "Unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&wh->base, wh->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	// Variables needed for prediction.
@@ -1105,7 +1105,7 @@ wmr_hmd_get_3dof_tracked_pose(struct xrt_device *xdev,
 	// No prediction needed.
 	if (at_timestamp_ns < last_imu_timestamp_ns) {
 		*out_relation = relation;
-		return;
+		return XRT_SUCCESS;
 	}
 
 	uint64_t prediction_ns = at_timestamp_ns - last_imu_timestamp_ns;
@@ -1113,6 +1113,8 @@ wmr_hmd_get_3dof_tracked_pose(struct xrt_device *xdev,
 
 	m_predict_relation(&relation, prediction_s, out_relation);
 	wh->pose = out_relation->pose;
+
+	return XRT_SUCCESS;
 }
 
 //! Specific pose corrections for Basalt and a WMR headset
@@ -1165,7 +1167,7 @@ wmr_hmd_get_slam_tracked_pose(struct xrt_device *xdev,
 	    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT);
 }
 
-static void
+static xrt_result_t
 wmr_hmd_get_tracked_pose(struct xrt_device *xdev,
                          enum xrt_input_name name,
                          int64_t at_timestamp_ns,
@@ -1177,12 +1179,18 @@ wmr_hmd_get_tracked_pose(struct xrt_device *xdev,
 
 	at_timestamp_ns += (int64_t)(wh->tracked_offset_ms.val * (double)U_TIME_1MS_IN_NS);
 
+	xrt_result_t xret = XRT_SUCCESS;
 	if (wh->tracking.slam_enabled && wh->slam_over_3dof) {
 		wmr_hmd_get_slam_tracked_pose(xdev, name, at_timestamp_ns, out_relation);
 	} else {
-		wmr_hmd_get_3dof_tracked_pose(xdev, name, at_timestamp_ns, out_relation);
+		xret = wmr_hmd_get_3dof_tracked_pose(xdev, name, at_timestamp_ns, out_relation);
 	}
-	math_pose_transform(&wh->offset, &out_relation->pose, &out_relation->pose);
+
+	if (xret == XRT_SUCCESS) {
+		math_pose_transform(&wh->offset, &out_relation->pose, &out_relation->pose);
+	}
+
+	return xret;
 }
 
 static void

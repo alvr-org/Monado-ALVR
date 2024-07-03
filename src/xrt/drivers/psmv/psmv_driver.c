@@ -794,32 +794,6 @@ psmv_get_fusion_pose(struct psmv_device *psmv,
 	    XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT | XRT_SPACE_RELATION_LINEAR_VELOCITY_VALID_BIT);
 }
 
-static void
-psmv_push_pose_offset(enum xrt_input_name name, struct xrt_relation_chain *xrc)
-{
-	/*
-	 * Both the grip and aim pose needs adjustments, the grip is a rotated
-	 * body center pose, while the aim pose needs to rotated and translated
-	 * to the tip of the ball.
-	 */
-	if (name != XRT_INPUT_PSMV_AIM_POSE && name != XRT_INPUT_PSMV_GRIP_POSE) {
-		return;
-	}
-
-	float y = 0.0;
-	if (name == XRT_INPUT_PSMV_AIM_POSE) {
-		y += PSMV_BALL_FROM_IMU_Y_M;
-		y += PSMV_BALL_DIAMETER_M / 2.0;
-	}
-
-	struct xrt_pose pose = {
-	    {0.7071068, 0, 0, 0.7071068},
-	    {0, y, 0},
-	};
-
-	m_relation_chain_push_pose(xrc, &pose);
-}
-
 
 /*
  *
@@ -888,16 +862,39 @@ psmv_device_update_inputs(struct xrt_device *xdev)
 }
 
 static xrt_result_t
-psmv_device_get_relation_chain(struct xrt_device *xdev,
-                               enum xrt_input_name name,
-                               uint64_t at_timestamp_ns,
-                               struct xrt_relation_chain *xrc)
+psmv_device_get_tracked_pose(struct xrt_device *xdev,
+                             enum xrt_input_name name,
+                             int64_t at_timestamp_ns,
+                             struct xrt_space_relation *out_relation)
 {
 	struct psmv_device *psmv = psmv_device(xdev);
 
-	psmv_push_pose_offset(name, xrc);
+	if (name != XRT_INPUT_PSMV_AIM_POSE && name != XRT_INPUT_PSMV_GRIP_POSE) {
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&psmv->base, psmv->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
+	}
 
-	struct xrt_space_relation *rel = m_relation_chain_reserve(xrc);
+	/*
+	 * Both the grip and aim pose needs adjustments, the grip is a rotated
+	 * body center pose, while the aim pose needs to rotated and translated
+	 * to the tip of the ball.
+	 */
+
+	float y = 0.0;
+	if (name == XRT_INPUT_PSMV_AIM_POSE) {
+		y += PSMV_BALL_FROM_IMU_Y_M;
+		y += PSMV_BALL_DIAMETER_M / 2.0;
+	}
+
+	struct xrt_pose pose = {
+	    {0.7071068, 0, 0, 0.7071068},
+	    {0, y, 0},
+	};
+
+	struct xrt_relation_chain xrc = {0};
+	m_relation_chain_push_pose(&xrc, &pose);
+
+	struct xrt_space_relation *rel = m_relation_chain_reserve(&xrc);
 
 	if (psmv->ball != NULL) {
 		xrt_tracked_psmv_get_tracked_pose(psmv->ball, name, at_timestamp_ns, rel);
@@ -905,20 +902,9 @@ psmv_device_get_relation_chain(struct xrt_device *xdev,
 		psmv_get_fusion_pose(psmv, name, at_timestamp_ns, rel);
 	}
 
-	return XRT_SUCCESS;
-}
-
-static void
-psmv_device_get_tracked_pose(struct xrt_device *xdev,
-                             enum xrt_input_name name,
-                             int64_t at_timestamp_ns,
-                             struct xrt_space_relation *out_relation)
-{
-	struct xrt_relation_chain xrc = {0};
-
-	psmv_device_get_relation_chain(xdev, name, at_timestamp_ns, &xrc);
-
 	m_relation_chain_resolve(&xrc, out_relation);
+
+	return XRT_SUCCESS;
 }
 
 static float

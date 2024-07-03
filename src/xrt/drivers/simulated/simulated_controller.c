@@ -46,8 +46,8 @@ struct simulated_device
 #define CHECK_THAT_NAME_IS_AND_ERROR(NAME)                                                                             \
 	do {                                                                                                           \
 		if (sd->base.name != NAME) {                                                                           \
-			U_LOG_E("Unknown input for controller %s 0x%02x", #NAME, name);                                \
-			return;                                                                                        \
+			U_LOG_XDEV_UNSUPPORTED_INPUT(&sd->base, u_log_get_global_level(), name);                       \
+			return XRT_ERROR_INPUT_UNSUPPORTED;                                                            \
 		}                                                                                                      \
 	} while (false)
 
@@ -118,7 +118,7 @@ simulated_device_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 simulated_device_get_tracked_pose(struct xrt_device *xdev,
                                   enum xrt_input_name name,
                                   int64_t at_timestamp_ns,
@@ -133,13 +133,15 @@ simulated_device_get_tracked_pose(struct xrt_device *xdev,
 	case XRT_INPUT_WMR_AIM_POSE: CHECK_THAT_NAME_IS_AND_ERROR(XRT_DEVICE_WMR_CONTROLLER); break;
 	case XRT_INPUT_ML2_CONTROLLER_GRIP_POSE:
 	case XRT_INPUT_ML2_CONTROLLER_AIM_POSE: CHECK_THAT_NAME_IS_AND_ERROR(XRT_DEVICE_ML2_CONTROLLER); break;
-	default: U_LOG_E("Unknown input name: 0x%0x", name); return;
+	default:
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&sd->base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	if (!sd->active) {
 		out_relation->pose = (struct xrt_pose)XRT_POSE_IDENTITY;
 		out_relation->relation_flags = 0;
-		return;
+		return XRT_SUCCESS;
 	}
 
 	struct xrt_pose pose = sd->center;
@@ -160,6 +162,8 @@ simulated_device_get_tracked_pose(struct xrt_device *xdev,
 	    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT |
 	    XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT |
 	    XRT_SPACE_RELATION_LINEAR_VELOCITY_VALID_BIT | XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT);
+
+	return XRT_SUCCESS;
 }
 
 static void

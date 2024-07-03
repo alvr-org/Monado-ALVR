@@ -43,7 +43,7 @@
 #define DEG_TO_RAD(D) ((D)*M_PI / 180.)
 
 
-static void
+static xrt_result_t
 rift_s_get_tracked_pose(struct xrt_device *xdev,
                         enum xrt_input_name name,
                         int64_t at_timestamp_ns,
@@ -52,13 +52,14 @@ rift_s_get_tracked_pose(struct xrt_device *xdev,
 	struct rift_s_hmd *hmd = (struct rift_s_hmd *)(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		RIFT_S_ERROR("Unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&hmd->base, rift_s_log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	U_ZERO(out_relation);
 
 	rift_s_tracker_get_tracked_pose(hmd->tracker, RIFT_S_TRACKER_POSE_DEVICE, at_timestamp_ns, out_relation);
+	return XRT_SUCCESS;
 }
 
 void

@@ -443,7 +443,7 @@ read_controller_config(struct wmr_controller_base *wcb)
 	return true;
 }
 
-static void
+static xrt_result_t
 wmr_controller_base_get_tracked_pose(struct xrt_device *xdev,
                                      enum xrt_input_name name,
                                      int64_t at_timestamp_ns,
@@ -479,13 +479,15 @@ wmr_controller_base_get_tracked_pose(struct xrt_device *xdev,
 	// No prediction needed.
 	if (at_timestamp_ns < last_imu_timestamp_ns) {
 		*out_relation = relation;
-		return;
+		return XRT_SUCCESS;
 	}
 
 	int64_t prediction_ns = at_timestamp_ns - last_imu_timestamp_ns;
 	double prediction_s = time_ns_to_s(prediction_ns);
 
 	m_predict_relation(&relation, prediction_s, out_relation);
+
+	return XRT_SUCCESS;
 }
 
 void

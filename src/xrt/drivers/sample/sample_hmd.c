@@ -96,7 +96,7 @@ sample_hmd_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 sample_hmd_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             int64_t at_timestamp_ns,
@@ -105,8 +105,8 @@ sample_hmd_get_tracked_pose(struct xrt_device *xdev,
 	struct sample_hmd *hmd = sample_hmd(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		HMD_ERROR(hmd, "unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&hmd->base, hmd->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	struct xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
@@ -125,6 +125,7 @@ sample_hmd_get_tracked_pose(struct xrt_device *xdev,
 	}
 
 	*out_relation = relation;
+	return XRT_SUCCESS;
 }
 
 static void

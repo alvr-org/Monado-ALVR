@@ -482,7 +482,7 @@ hydra_device_update_inputs(struct xrt_device *xdev)
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 hydra_device_get_tracked_pose(struct xrt_device *xdev,
                               enum xrt_input_name name,
                               int64_t at_timestamp_ns,
@@ -505,6 +505,8 @@ hydra_device_get_tracked_pose(struct xrt_device *xdev,
 	// HYDRA_SPEW(hd, "GET_TRACKED_POSE (%f, %f, %f) (%f, %f, %f, %f) ",
 	// pos.x,
 	//            pos.y, pos.z, quat.x, quat.y, quat.z, quat.w);
+
+	return XRT_SUCCESS;
 }
 
 static void

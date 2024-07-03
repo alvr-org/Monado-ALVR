@@ -213,7 +213,7 @@ hdk_device_update(struct hdk_device *hd)
 	return 1;
 }
 
-static void
+static xrt_result_t
 hdk_device_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             int64_t requested_timestamp_ns,
@@ -222,8 +222,8 @@ hdk_device_get_tracked_pose(struct xrt_device *xdev,
 	struct hdk_device *hd = hdk_device(xdev);
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
-		HDK_ERROR(hd, "unknown input name");
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&hd->base, hd->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	os_mutex_lock(&hd->lock);
@@ -231,7 +231,7 @@ hdk_device_get_tracked_pose(struct xrt_device *xdev,
 		out_relation->relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
 		HDK_TRACE(hd, "GET_TRACKED_POSE: No pose");
 		os_mutex_unlock(&hd->lock);
-		return;
+		return XRT_SUCCESS;
 	}
 
 	out_relation->pose.orientation = hd->quat;
@@ -248,6 +248,7 @@ hdk_device_get_tracked_pose(struct xrt_device *xdev,
 
 	HDK_TRACE(hd, "GET_TRACKED_POSE (%f, %f, %f, %f) ANG_VEL (%f, %f, %f)", hd->quat.x, hd->quat.y, hd->quat.z,
 	          hd->quat.w, hd->ang_vel_quat.x, hd->ang_vel_quat.y, hd->ang_vel_quat.z);
+	return XRT_SUCCESS;
 }
 
 static void *

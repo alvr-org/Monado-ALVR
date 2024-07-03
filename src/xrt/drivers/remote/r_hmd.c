@@ -56,7 +56,7 @@ r_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&rh->base);
 }
 
-static void
+static xrt_result_t
 r_hmd_get_tracked_pose(struct xrt_device *xdev,
                        enum xrt_input_name name,
                        int64_t at_timestamp_ns,
@@ -66,8 +66,12 @@ r_hmd_get_tracked_pose(struct xrt_device *xdev,
 
 	switch (name) {
 	case XRT_INPUT_GENERIC_HEAD_POSE: copy_head_center_to_relation(rh, out_relation); break;
-	default: U_LOG_E("Unknown input name"); break;
+	default:
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&rh->base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
+
+	return XRT_SUCCESS;
 }
 
 static void

@@ -82,7 +82,7 @@ ipc_client_device_update_inputs(struct xrt_device *xdev)
 	IPC_CHK_ALWAYS_RET(icd->ipc_c, xret, "ipc_call_device_update_input");
 }
 
-static void
+static xrt_result_t
 ipc_client_device_get_tracked_pose(struct xrt_device *xdev,
                                    enum xrt_input_name name,
                                    int64_t at_timestamp_ns,
@@ -96,7 +96,7 @@ ipc_client_device_get_tracked_pose(struct xrt_device *xdev,
 	    name,                                             //
 	    at_timestamp_ns,                                  //
 	    out_relation);                                    //
-	IPC_CHK_ONLY_PRINT(icd->ipc_c, xret, "ipc_call_device_get_tracked_pose");
+	IPC_CHK_ALWAYS_RET(icd->ipc_c, xret, "ipc_call_device_get_tracked_pose");
 }
 
 static void
