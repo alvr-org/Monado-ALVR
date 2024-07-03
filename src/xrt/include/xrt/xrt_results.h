@@ -189,6 +189,7 @@ typedef enum xrt_result
 	 * The supplied space type is not supported for this operation.
 	 */
 	XRT_ERROR_UNSUPPORTED_SPACE_TYPE = -30,
+
 	/*!
 	 * Some other Android error, typically a logic error that should be impossible to reach.
 	 */
@@ -198,4 +199,9 @@ typedef enum xrt_result
 	 * Returned when a feature is not supported by the device.
 	 */
 	XRT_ERROR_FEATURE_NOT_SUPPORTED = -32,
+
+	/*!
+	 * The input provided is a valid value from the enum xrt_input_name but is not supported by the driver.
+	 */
+	XRT_ERROR_INPUT_UNSUPPORTED = -33,
 } xrt_result_t;

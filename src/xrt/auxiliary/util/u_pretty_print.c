@@ -172,6 +172,7 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	case XRT_ERROR_UNSUPPORTED_SPACE_TYPE:               DG("XRT_ERROR_UNSUPPORTED_SPACE_TYPE"); return;
 	case XRT_ERROR_ANDROID:                              DG("XRT_ERROR_ANDROID"); return;
 	case XRT_ERROR_FEATURE_NOT_SUPPORTED:                DG("XRT_ERROR_FEATURE_NOT_SUPPORTED"); return;
+	case XRT_ERROR_INPUT_UNSUPPORTED:                    DG("XRT_ERROR_INPUT_UNSUPPORTED"); return;
 	}
 	// clang-format on
 
