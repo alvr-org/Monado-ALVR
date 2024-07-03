@@ -812,6 +812,13 @@ create_local_space(struct xrt_space_overseer *xso, struct xrt_space **out_space)
 	xrt_space_overseer_locate_space(xso, xso->semantic.root, &identity, os_monotonic_get_ns(), xso->semantic.view,
 	                                &identity, &xsr);
 
+	bool pos_valid = (xsr.relation_flags & XRT_SPACE_RELATION_POSITION_VALID_BIT) != 0;
+	bool ori_valid = (xsr.relation_flags & XRT_SPACE_RELATION_ORIENTATION_VALID_BIT) != 0;
+	if (!pos_valid || !ori_valid) {
+		xsr.pose = (struct xrt_pose)XRT_POSE_IDENTITY;
+		xsr.pose.position.y = 1.6;
+	}
+
 	xsr.pose.orientation.x = 0;
 	xsr.pose.orientation.z = 0;
 	math_quat_normalize(&xsr.pose.orientation);
