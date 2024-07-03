@@ -82,8 +82,6 @@ vk_result_string(VkResult code)
 		ENUM_TO_STR(VK_ERROR_UNKNOWN); // Only defined in 1.2 and above headers.
 		ENUM_TO_STR(VK_ERROR_FRAGMENTATION);
 		ENUM_TO_STR(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
-#else
-	case -13 /* VK_ERROR_UNKNOWN */: return "VK_ERROR_UNKNOWN"; // Has no guard.
 #endif
 #ifdef VK_VERSION_1_3
 		ENUM_TO_STR(VK_PIPELINE_COMPILE_REQUIRED);
