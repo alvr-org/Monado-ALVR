@@ -658,8 +658,8 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
 #define VK_NAME_OBJ(VK, TYPE, SUFFIX, OBJ, NAME)                                                                       \
 	do {                                                                                                           \
 		if ((VK)->has_EXT_debug_utils) {                                                                       \
-			TYPE _thing = OBJ;                                                                             \
-			vk_name_object(VK, VK_OBJECT_TYPE_##SUFFIX, (uint64_t)_thing, NAME);                           \
+			XRT_MAYBE_UNUSED TYPE _thing = (TYPE)(OBJ);                                                    \
+			vk_name_object(VK, VK_OBJECT_TYPE_##SUFFIX, (uint64_t)OBJ, NAME);                              \
 		}                                                                                                      \
 	} while (false)
 
@@ -687,17 +687,19 @@ vk_name_object(struct vk_bundle *vk, VkObjectType type, uint64_t object, const c
  */
 #define VK_NAME_OBJ_DISABLED(VK, TYPE, OBJ)                                                                            \
 	do {                                                                                                           \
-		XRT_MAYBE_UNUSED TYPE _thing = OBJ;                                                                    \
+		XRT_MAYBE_UNUSED TYPE _thing = (TYPE)(OBJ);                                                            \
 	} while (false)
 
 
 // clang-format off
-#define VK_NAME_INSTANCE(VK, OBJ, NAME) VK_NAME_OBJ_DISABLED(VK, VkInstance, OBJ)
-#define VK_NAME_PHYSICAL_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPhysicalDevice, PHYSICAL_DEVICE, OBJ, NAME)
-#define VK_NAME_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDevice, DEVICE, OBJ, NAME)
-#define VK_NAME_QUEUE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkQueue, QUEUE, OBJ, NAME)
+// VK_DEFINE_HANDLE types are always pointers
+#define VK_NAME_INSTANCE(VK, OBJ, NAME) VK_NAME_OBJ_DISABLED(VK, VkInstance, (uintptr_t)OBJ)
+#define VK_NAME_PHYSICAL_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkPhysicalDevice, PHYSICAL_DEVICE, (uintptr_t)OBJ, NAME)
+#define VK_NAME_DEVICE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDevice, DEVICE, (uintptr_t)OBJ, NAME)
+#define VK_NAME_QUEUE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkQueue, QUEUE, (uintptr_t)OBJ, NAME)
+#define VK_NAME_COMMAND_BUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkCommandBuffer, COMMAND_BUFFER, (uintptr_t)OBJ, NAME)
+// VK_DEFINE_NON_DISPATCHABLE_HANDLE types are pointers in 64-bits and uint64_t in 32-bits
 #define VK_NAME_SEMAPHORE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkSemaphore, SEMAPHORE, OBJ, NAME)
-#define VK_NAME_COMMAND_BUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkCommandBuffer, COMMAND_BUFFER, OBJ, NAME)
 #define VK_NAME_FENCE(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkFence, FENCE, OBJ, NAME)
 #define VK_NAME_DEVICE_MEMORY(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkDeviceMemory, DEVICE_MEMORY, OBJ, NAME)
 #define VK_NAME_BUFFER(VK, OBJ, NAME) VK_NAME_OBJ(VK, VkBuffer, BUFFER, OBJ, NAME)
