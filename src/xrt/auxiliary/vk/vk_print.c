@@ -12,6 +12,7 @@
 #include "util/u_pretty_print.h"
 #include "vk/vk_helpers.h"
 
+#include <inttypes.h>
 
 /*
  *
@@ -230,7 +231,7 @@ vk_print_swapchain_create_info(struct vk_bundle *vk, VkSwapchainCreateInfoKHR *i
 	struct u_pp_sink_stack_only sink;
 	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
 	P("VkSwapchainCreateInfoKHR:");
-	PNT("surface: %p", (void *)i->surface);
+	PNT("surface: %" PRIx64, (uint64_t)i->surface);
 	PNT("minImageCount: %u", i->minImageCount);
 	PNT("imageFormat: %s", vk_format_string(i->imageFormat));
 	PNT("imageColorSpace: %s", vk_color_space_string(i->imageColorSpace));
@@ -244,7 +245,7 @@ vk_print_swapchain_create_info(struct vk_bundle *vk, VkSwapchainCreateInfoKHR *i
 	PNT("compositeAlpha: %s", vk_composite_alpha_flag_string(i->compositeAlpha, false));
 	PNT("presentMode: %s", vk_present_mode_string(i->presentMode));
 	PNT("clipped: %s", i->clipped ? "VK_TRUE" : "VK_FALSE");
-	PNT("oldSwapchain: %p", (void *)i->oldSwapchain);
+	PNT("oldSwapchain: %" PRIx64, (uint64_t)i->oldSwapchain);
 
 	U_LOG_IFL(log_level, vk->log_level, "%s", sink.buffer);
 }
@@ -266,7 +267,7 @@ vk_print_display_surface_create_info(struct vk_bundle *vk,
 		// Field reserved for future use, just in case.
 		PNT("flags: UNKNOWN FLAG(S) 0x%x", i->flags);
 	}
-	PNT("displayMode: %p", (void *)i->displayMode);
+	PNT("displayMode: %" PRIx64, (uint64_t)i->displayMode);
 	PNT("planeIndex: %u", i->planeIndex);
 	PNT("planeStackIndex: %u", i->planeStackIndex);
 	PNT("transform: %s", vk_surface_transform_flag_string(i->transform, false));
