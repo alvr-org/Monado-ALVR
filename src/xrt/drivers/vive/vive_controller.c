@@ -731,7 +731,7 @@ vive_controller_decode_watchmanv1(struct vive_controller_device *d, struct vive_
 	}
 
 	if (buf > end)
-		VIVE_ERROR(d, "overshoot: %ld\n", buf - end);
+		VIVE_ERROR(d, "overshoot: %td\n", (ptrdiff_t)(buf - end));
 
 	if (buf < end)
 		vive_controller_handle_lighthousev1(d, buf, end - buf);
@@ -899,10 +899,11 @@ vive_controller_decode_watchmanv2(struct vive_controller_device *d, struct vive_
 #endif
 
 	if (buf < end) {
-		VIVE_TRACE(d, "%ld bytes unparsed data in message\n", message->len - (buf - message->payload) - 1);
+		VIVE_TRACE(d, "%td bytes unparsed data in message\n",
+		           (ptrdiff_t)(message->len - (buf - message->payload) - 1));
 	}
 	if (buf > end)
-		VIVE_ERROR(d, "overshoot: %ld\n", buf - end);
+		VIVE_ERROR(d, "overshoot: %td\n", (ptrdiff_t)(buf - end));
 
 	//! @todo: Parse lighthouse v2 data
 }

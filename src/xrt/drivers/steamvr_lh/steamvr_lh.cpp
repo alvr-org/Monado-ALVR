@@ -570,11 +570,10 @@ Context::UpdateScalarComponent(vr::VRInputComponentHandle_t ulComponent, float f
 			} else if (components->y == ulComponent) {
 				input->value.vec2.y = fNewValue;
 			} else {
-				CTX_WARN(
-				    "Attempted to update component with handle %lu"
-				    " but it was neither the x nor y "
-				    "component of its associated input",
-				    ulComponent);
+				CTX_WARN("Attempted to update component with handle %" PRIu64
+				         " but it was neither the x nor y "
+				         "component of its associated input",
+				         ulComponent);
 			}
 
 		} else {
@@ -592,7 +591,7 @@ Context::UpdateScalarComponent(vr::VRInputComponentHandle_t ulComponent, float f
 				finger_input->second->timestamp = timestamp;
 				finger_input->second->value = fNewValue;
 			} else {
-				CTX_WARN("Unmapped component %lu", ulComponent);
+				CTX_WARN("Unmapped component %" PRIu64, ulComponent);
 			}
 		}
 	}

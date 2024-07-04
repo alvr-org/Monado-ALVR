@@ -54,7 +54,8 @@ android_sensor_callback(int fd, int events, void *data)
 			accel.y = -event.acceleration.x;
 			accel.z = event.acceleration.z;
 
-			ANDROID_TRACE(d, "accel %ld %.2f %.2f %.2f", event.timestamp, accel.x, accel.y, accel.z);
+			ANDROID_TRACE(d, "accel %" PRId64 " %.2f %.2f %.2f", event.timestamp, accel.x, accel.y,
+			              accel.z);
 			break;
 		}
 		case ASENSOR_TYPE_GYROSCOPE: {
@@ -62,7 +63,7 @@ android_sensor_callback(int fd, int events, void *data)
 			gyro.y = event.data[0];
 			gyro.z = event.data[2];
 
-			ANDROID_TRACE(d, "gyro %ld %.2f %.2f %.2f", event.timestamp, gyro.x, gyro.y, gyro.z);
+			ANDROID_TRACE(d, "gyro %" PRId64 " %.2f %.2f %.2f", event.timestamp, gyro.x, gyro.y, gyro.z);
 
 			// TODO: Make filter handle accelerometer
 			struct xrt_vec3 null_accel;

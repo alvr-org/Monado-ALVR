@@ -558,7 +558,7 @@ handle_sensor_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
 	// If this is larger then one second something bad is going on.
 	if (hmd->fusion.state != M_IMU_3DOF_STATE_START &&
 	    inter_sample_duration_ns >= (time_duration_ns)U_TIME_1S_IN_NS) {
-		XREAL_AIR_ERROR(hmd, "Drop packet (sensor too slow): %lu", inter_sample_duration_ns);
+		XREAL_AIR_ERROR(hmd, "Drop packet (sensor too slow): %" PRId64, inter_sample_duration_ns);
 		return;
 	}
 

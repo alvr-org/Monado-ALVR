@@ -353,7 +353,7 @@ ControllerDevice::set_haptic_handle(vr::VRInputComponentHandle_t handle)
 {
 	// this should only be set once
 	assert(output == nullptr);
-	DEV_DEBUG("setting haptic handle for %lu", handle);
+	DEV_DEBUG("setting haptic handle for %" PRIu64, handle);
 	haptic_handle = handle;
 	xrt_output_name name;
 	switch (this->name) {

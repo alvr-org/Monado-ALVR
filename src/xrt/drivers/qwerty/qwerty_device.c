@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-
 #define QWERTY_HMD_INITIAL_MOVEMENT_SPEED 0.002f // in meters per frame
 #define QWERTY_HMD_INITIAL_LOOK_SPEED 0.02f      // in radians per frame
 #define QWERTY_CONTROLLER_INITIAL_MOVEMENT_SPEED 0.005f
@@ -132,7 +131,7 @@ qwerty_set_output(struct xrt_device *xd, enum xrt_output_name name, const union 
 	if (amplitude || duration || frequency) {
 		QWERTY_INFO(qd,
 		            "[%s] Haptic output: \n"
-		            "\tfrequency=%.2f amplitude=%.2f duration=%ld",
+		            "\tfrequency=%.2f amplitude=%.2f duration=%" PRId64,
 		            xd->str, frequency, amplitude, duration);
 	}
 }

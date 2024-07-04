@@ -130,11 +130,11 @@ vive_source_receive_sbs_frame(struct xrt_frame_sink *sink, struct xrt_frame *xf)
 	bool should_push = vive_source_try_convert_v4l2_timestamp(vs, xf);
 
 	if (!should_push) {
-		VIVE_TRACE(vs, "skipped sbs img t=%ld source_t=%ld", xf->timestamp, xf->source_timestamp);
+		VIVE_TRACE(vs, "skipped sbs img t=%" PRId64 " source_t=%" PRId64, xf->timestamp, xf->source_timestamp);
 		return;
 	}
 
-	VIVE_TRACE(vs, "sbs img t=%ld source_t=%ld", xf->timestamp, xf->source_timestamp);
+	VIVE_TRACE(vs, "sbs img t=%" PRId64 " source_t=%" PRId64, xf->timestamp, xf->source_timestamp);
 
 	if (vs->out_sinks.cams[0]) { // The split into left right will happen downstream
 		xrt_sink_push_frame(vs->out_sinks.cams[0], xf);
@@ -149,7 +149,7 @@ vive_source_receive_imu_sample(struct xrt_imu_sink *sink, struct xrt_imu_sample 
 	timepoint_ns ts = s->timestamp_ns;
 	struct xrt_vec3_f64 a = s->accel_m_s2;
 	struct xrt_vec3_f64 w = s->gyro_rad_secs;
-	VIVE_TRACE(vs, "imu t=%ld a=(%f %f %f) w=(%f %f %f)", ts, a.x, a.y, a.z, w.x, w.y, w.z);
+	VIVE_TRACE(vs, "imu t=%" PRId64 " a=(%f %f %f) w=(%f %f %f)", ts, a.x, a.y, a.z, w.x, w.y, w.z);
 
 	if (vs->out_sinks.imu) {
 		xrt_sink_push_imu(vs->out_sinks.imu, s);
