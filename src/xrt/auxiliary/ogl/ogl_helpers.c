@@ -98,6 +98,12 @@ ogl_import_from_native(struct xrt_image_native *natives,
                        const struct xrt_swapchain_create_info *info,
                        struct ogl_import_results *results)
 {
+#if defined(XRT_OS_ANDROID_USE_AHB)
+	// Function is disabled for AHardwareBuffer, glImportMemoryFdEXT requires an actual FD and requires more work
+	// to handle AHardwareBuffer.
+	return false;
+#endif
+
 	// Setup fields.
 	results->width = info->width;
 	results->height = info->height;
