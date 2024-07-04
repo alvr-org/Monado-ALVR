@@ -126,7 +126,7 @@ win:container_prep:
 .monado.variables.debian:bookworm:
   variables:
     FDO_DISTRIBUTION_VERSION: "bookworm"
-    FDO_DISTRIBUTION_TAG: "2024-07-18"
+    FDO_DISTRIBUTION_TAG: "2024-08-16"
 
 # Variables for build and usage of Debian bullseye image
 .monado.variables.debian:bullseye:
