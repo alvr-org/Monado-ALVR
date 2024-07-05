@@ -30,7 +30,6 @@
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
 
-#include <inttypes.h>
 
 
 /*

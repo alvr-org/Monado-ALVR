@@ -17,7 +17,6 @@
  */
 #include <asm/byteorder.h>
 #include <string.h>
-#include <inttypes.h>
 
 #include "rift_s.h"
 #include "rift_s_camera.h"

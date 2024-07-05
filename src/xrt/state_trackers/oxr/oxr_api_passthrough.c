@@ -20,7 +20,6 @@
 #include "oxr_subaction.h"
 
 #include <stdio.h>
-#include <inttypes.h>
 
 XrResult
 oxr_xrCreateGeometryInstanceFB(XrSession session,

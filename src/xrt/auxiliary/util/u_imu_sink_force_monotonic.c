@@ -11,7 +11,6 @@
 #include "util/u_trace_marker.h"
 #include "util/u_logging.h"
 
-#include <inttypes.h>
 
 /*!
  * An @ref xrt_imu_sink splitter.

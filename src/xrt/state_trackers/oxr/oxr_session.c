@@ -49,7 +49,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <inttypes.h>
 
 
 DEBUG_GET_ONCE_NUM_OPTION(ipd, "OXR_DEBUG_IPD_MM", 63)

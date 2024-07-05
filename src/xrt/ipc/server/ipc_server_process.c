@@ -34,7 +34,6 @@
 #include "server/ipc_server_interface.h"
 
 #include <stdlib.h>
-#include <inttypes.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>

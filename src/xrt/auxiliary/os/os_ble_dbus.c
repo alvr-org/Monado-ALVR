@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include <inttypes.h>
 #include <dbus/dbus.h>
 
 

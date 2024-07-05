@@ -19,7 +19,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <inttypes.h>
 
 DEBUG_GET_ONCE_LOG_OPTION(log_level, "U_PACING_COMPOSITOR_LOG", U_LOGGING_WARN)
 

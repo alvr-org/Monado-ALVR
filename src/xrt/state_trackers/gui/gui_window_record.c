@@ -42,7 +42,6 @@
 #include "stb_image_write.h"
 
 #include <assert.h>
-#include <inttypes.h>
 
 
 /*

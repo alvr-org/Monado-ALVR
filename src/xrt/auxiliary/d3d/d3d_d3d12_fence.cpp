@@ -23,7 +23,6 @@
 #include <wil/com.h>
 #include <wil/result.h>
 
-#include <inttypes.h>
 #include <memory>
 
 using namespace std::chrono;

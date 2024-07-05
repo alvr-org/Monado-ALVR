@@ -18,7 +18,6 @@
 #include "gui_widget_native_images.h"
 
 #include <assert.h>
-#include <inttypes.h>
 
 
 /*

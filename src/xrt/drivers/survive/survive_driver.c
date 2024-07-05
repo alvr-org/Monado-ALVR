@@ -15,7 +15,6 @@
 #include <string.h>
 #include <assert.h>
 #include <string.h>
-#include <inttypes.h>
 
 #include "math/m_api.h"
 #include "math/m_space.h"

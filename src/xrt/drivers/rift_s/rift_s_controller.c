@@ -20,7 +20,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
-#include <inttypes.h>
 
 #include "math/m_api.h"
 #include "math/m_space.h"

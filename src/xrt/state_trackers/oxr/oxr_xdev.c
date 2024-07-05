@@ -21,7 +21,6 @@
 #include "xrt/xrt_defines.h"
 
 #include <stdio.h>
-#include <inttypes.h>
 
 
 /*

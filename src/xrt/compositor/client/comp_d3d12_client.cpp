@@ -37,7 +37,6 @@
 #include <wil/result_macros.h>
 
 #include <assert.h>
-#include <inttypes.h>
 #include <memory>
 #include <stdio.h>
 #include <stdlib.h>

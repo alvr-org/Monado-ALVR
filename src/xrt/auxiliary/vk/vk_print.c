@@ -12,7 +12,6 @@
 #include "util/u_pretty_print.h"
 #include "vk/vk_helpers.h"
 
-#include <inttypes.h>
 
 /*
  *

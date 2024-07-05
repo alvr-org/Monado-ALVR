@@ -22,7 +22,6 @@
 #include "oxr_api_funcs.h"
 #include "oxr_api_verify.h"
 
-#include <inttypes.h>
 
 
 #ifdef OXR_HAVE_MNDX_xdev_space

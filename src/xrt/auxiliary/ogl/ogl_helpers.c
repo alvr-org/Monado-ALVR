@@ -13,7 +13,6 @@
 #include "ogl_helpers.h"
 #include "ogl_api.h" // IWYU pragma: keep
 
-#include <inttypes.h>
 
 /*!
  * Check for OpenGL errors, context needs to be current.

@@ -16,7 +16,6 @@
 #include "util/u_debug.h"
 #include "util/u_trace_marker.h"
 
-#include <inttypes.h>
 
 
 #ifdef U_TRACE_PERCETTO

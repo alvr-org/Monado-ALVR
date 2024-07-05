@@ -17,7 +17,6 @@
 
 #ifdef XRT_OS_WINDOWS
 
-#include <inttypes.h>
 #include <chrono>
 
 extern "C" uint64_t

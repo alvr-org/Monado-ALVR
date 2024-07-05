@@ -13,7 +13,6 @@
 #include "util/u_logging.h"
 #include "util/u_time.h"
 
-#include <inttypes.h>
 
 
 #define D3D_COMMON_SPEW(log_level, ...) U_LOG_IFL_T(log_level, __VA_ARGS__);

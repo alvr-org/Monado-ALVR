@@ -35,7 +35,6 @@
 #include <Hungarian.hpp>
 #include <Eigen/Eigen>
 #include <opencv2/opencv.hpp>
-#include <inttypes.h>
 
 
 DEBUG_GET_ONCE_LOG_OPTION(psvr_log, "PSVR_TRACKING_LOG", U_LOGGING_WARN)

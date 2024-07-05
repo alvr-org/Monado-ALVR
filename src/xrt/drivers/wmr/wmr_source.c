@@ -23,7 +23,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <inttypes.h>
 
 #define WMR_SOURCE_STR "WMR Source"
 

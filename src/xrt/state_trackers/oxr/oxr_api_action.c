@@ -22,7 +22,6 @@
 #include "oxr_subaction.h"
 
 #include <stdio.h>
-#include <inttypes.h>
 
 #include "bindings/b_generated_bindings.h"
 

@@ -14,7 +14,6 @@
 #include <libusb.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <inttypes.h>
 
 #include "math/m_api.h"
 #include "os/os_threading.h"

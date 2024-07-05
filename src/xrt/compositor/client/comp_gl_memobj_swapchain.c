@@ -23,7 +23,6 @@
 #include "client/comp_gl_client.h"
 #include "client/comp_gl_memobj_swapchain.h"
 
-#include <inttypes.h>
 
 /*!
  * Down-cast helper.

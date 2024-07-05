@@ -14,7 +14,6 @@
 #include <assert.h>
 #include <string.h>
 #include <libudev.h>
-#include <inttypes.h>
 #include <linux/hidraw.h>
 
 

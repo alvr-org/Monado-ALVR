@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #ifdef _MSC_VER
 #include <intrin.h>

@@ -9,7 +9,6 @@
 
 #include "u_live_stats.h"
 
-#include <inttypes.h>
 #include <algorithm>
 
 

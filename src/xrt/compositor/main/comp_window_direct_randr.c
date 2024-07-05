@@ -17,7 +17,6 @@
 
 #include "main/comp_window_direct.h"
 
-#include <inttypes.h>
 
 /*
  *

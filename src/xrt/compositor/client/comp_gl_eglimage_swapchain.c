@@ -31,7 +31,6 @@
 #include "client/comp_egl_client.h"
 #include "client/comp_gl_eglimage_swapchain.h"
 
-#include <inttypes.h>
 
 #ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
 #include <android/hardware_buffer.h>

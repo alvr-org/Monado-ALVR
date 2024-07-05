@@ -31,7 +31,6 @@
 #include <fstream>
 #include <future>
 #include <thread>
-#include <inttypes.h>
 
 //! @see euroc_player_playback_config
 DEBUG_GET_ONCE_LOG_OPTION(euroc_log, "EUROC_LOG", U_LOGGING_WARN)

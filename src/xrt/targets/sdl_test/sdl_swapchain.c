@@ -12,7 +12,6 @@
 #include "util/u_handles.h"
 #include "ogl/ogl_helpers.h"
 
-#include <inttypes.h>
 
 
 static void

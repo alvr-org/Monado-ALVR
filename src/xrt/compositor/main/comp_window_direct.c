@@ -8,7 +8,6 @@
  * @ingroup comp_main
  */
 
-#include <inttypes.h>
 
 #include "comp_window_direct.h"
 
