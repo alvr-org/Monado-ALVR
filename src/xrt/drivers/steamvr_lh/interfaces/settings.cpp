@@ -13,6 +13,8 @@
 #include "settings.hpp"
 #include "util/u_json.hpp"
 
+DEBUG_GET_ONCE_FLOAT_OPTION(lh_default_brightness, "LH_DEFAULT_BRIGHTNESS", 1.0)
+
 using xrt::auxiliary::util::json::JSONNode;
 
 Settings::Settings(const std::string &steam_install, const std::string &steamvr_install)
@@ -65,7 +67,7 @@ Settings::GetFloat(const char *pchSection, const char *pchSettingsKey, vr::EVRSe
 	if (!strcmp(pchSection, "steamvr")) {
 		if (!strcmp(pchSettingsKey, "analogGain")) {
 			// Return 100% brightness.
-			return 1.0;
+			return debug_get_float_option_lh_default_brightness();
 		}
 		if (!strcmp(pchSettingsKey, "ipd")) {
 			// Inform the SteamVR driver we have 0 ipd (in case) it factors this into the eye matrix.
