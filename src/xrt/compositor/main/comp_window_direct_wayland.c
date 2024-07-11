@@ -67,6 +67,10 @@ struct comp_window_direct_wayland
 	struct direct_wayland_lease_device *devices;
 	struct direct_wayland_lease *lease;
 
+	// The device and connector to use
+	struct direct_wayland_lease_device *selected_device;
+	struct direct_wayland_lease_connector *selected_connector;
+
 	VkDisplayKHR vk_display;
 };
 
@@ -165,40 +169,21 @@ comp_window_direct_wayland_create_surface(struct comp_window_direct_wayland *w,
 	w->vk_display = VK_NULL_HANDLE;
 	VkResult ret = VK_ERROR_INCOMPATIBLE_DISPLAY_KHR;
 
-	/* TODO: Choose the connector with an environment variable or from `ct->c->settings.display` */
-
-	/* Pick the first connector available */
-	struct direct_wayland_lease_device *dev = w->devices;
-	struct direct_wayland_lease_connector *conn = NULL;
-	while (dev) {
-		if (dev->connectors) {
-			conn = dev->connectors;
-
-			COMP_INFO(w->base.base.c, "Using DRM node %s", dev->path);
-			COMP_INFO(w->base.base.c, "Connector id %d %s (%s)", conn->id, conn->name, conn->description);
-			break;
-		}
-		dev = dev->next;
-	}
-
-	if (!conn) {
-		COMP_ERROR(w->base.base.c, "Attempted to create wayland direct surface with no connectors");
-		return VK_ERROR_INITIALIZATION_FAILED;
-	}
-
-	ret = vk->vkGetDrmDisplayEXT(vk->physical_device, dev->drm_fd, conn->id, &w->vk_display);
+	ret = vk->vkGetDrmDisplayEXT(vk->physical_device, w->selected_device->drm_fd, w->selected_connector->id,
+	                             &w->vk_display);
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(w->base.base.c, "vkGetDrmDisplayEXT failed: %s", vk_result_string(ret));
 		return ret;
 	}
 
-	struct wp_drm_lease_request_v1 *request = wp_drm_lease_device_v1_create_lease_request(dev->device);
+	struct wp_drm_lease_request_v1 *request =
+	    wp_drm_lease_device_v1_create_lease_request(w->selected_device->device);
 	if (!request) {
 		COMP_ERROR(w->base.base.c, "Failed to create lease request");
 		return VK_ERROR_OUT_OF_HOST_MEMORY;
 	}
 
-	wp_drm_lease_request_v1_request_connector(request, conn->connector);
+	wp_drm_lease_request_v1_request_connector(request, w->selected_connector->connector);
 
 	struct direct_wayland_lease *lease = calloc(1, sizeof(struct direct_wayland_lease));
 	lease->w = w;
@@ -323,6 +308,9 @@ _lease_connector_withdrawn(void *data, struct wp_drm_lease_connector_v1 *wp_drm_
 {
 	struct direct_wayland_lease_connector *conn = data;
 	COMP_DEBUG(conn->w->base.base.c, "Connector %s has been withdrawn by the compositor", conn->name);
+	if (conn == conn->w->selected_connector) {
+		conn->w->selected_connector = NULL;
+	}
 }
 
 static const struct wp_drm_lease_connector_v1_listener lease_connector_listener = {
@@ -372,6 +360,10 @@ _drm_lease_device_released(void *data, struct wp_drm_lease_device_v1 *wp_drm_lea
 	struct direct_wayland_lease_device *dev = data;
 	COMP_ERROR(dev->w->base.base.c, "Releasing lease device %s", dev->path);
 	direct_wayland_lease_device_destroy(dev);
+	if (dev == dev->w->selected_device) {
+		dev->w->selected_device = NULL;
+		dev->w->selected_connector = NULL;
+	}
 }
 
 static const struct wp_drm_lease_device_v1_listener drm_lease_device_listener = {
@@ -434,7 +426,25 @@ comp_window_direct_wayland_init(struct comp_target *w)
 			wl_display_dispatch(w_wayland->display);
 			continue;
 		}
+		/* TODO: Choose the connector with an environment variable
+		 * or from `ct->c->settings.display` */
+
+		/* Pick the first connector available */
+		if (dev->connectors) {
+			w_wayland->selected_device = dev;
+			w_wayland->selected_connector = dev->connectors;
+
+			COMP_INFO(w->c, "Using DRM node %s", dev->path);
+			COMP_INFO(w->c, "Connector id %d %s (%s)", w_wayland->selected_connector->id,
+			          w_wayland->selected_connector->name, w_wayland->selected_connector->description);
+			break;
+		}
 		dev = dev->next;
+	}
+
+	if (!w_wayland->selected_connector) {
+		COMP_INFO(w->c, "Found no connectors available for direct mode");
+		return false;
 	}
 
 	return true;
