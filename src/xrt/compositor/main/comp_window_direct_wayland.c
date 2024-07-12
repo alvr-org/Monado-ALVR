@@ -163,11 +163,14 @@ comp_window_direct_wayland_create_surface(struct comp_window_direct_wayland *w,
                                           uint32_t width,
                                           uint32_t height)
 {
-	assert(!w->lease);
-
 	struct vk_bundle *vk = get_vk(w);
 	w->vk_display = VK_NULL_HANDLE;
 	VkResult ret = VK_ERROR_INCOMPATIBLE_DISPLAY_KHR;
+
+	if (w->selected_device == NULL || w->selected_connector == NULL || w->lease == NULL) {
+		COMP_ERROR(w->base.base.c, "Connector disconnected before it could be acquired");
+		return VK_ERROR_INITIALIZATION_FAILED;
+	}
 
 	ret = vk->vkGetDrmDisplayEXT(vk->physical_device, w->selected_device->drm_fd, w->selected_connector->id,
 	                             &w->vk_display);
@@ -176,38 +179,7 @@ comp_window_direct_wayland_create_surface(struct comp_window_direct_wayland *w,
 		return ret;
 	}
 
-	struct wp_drm_lease_request_v1 *request =
-	    wp_drm_lease_device_v1_create_lease_request(w->selected_device->device);
-	if (!request) {
-		COMP_ERROR(w->base.base.c, "Failed to create lease request");
-		return VK_ERROR_OUT_OF_HOST_MEMORY;
-	}
-
-	wp_drm_lease_request_v1_request_connector(request, w->selected_connector->connector);
-
-	struct direct_wayland_lease *lease = calloc(1, sizeof(struct direct_wayland_lease));
-	lease->w = w;
-	lease->leased_fd = -1;
-	lease->finished = false;
-	lease->lease = wp_drm_lease_request_v1_submit(request);
-
-	w->lease = lease;
-
-	wp_drm_lease_v1_add_listener(lease->lease, &lease_listener, lease);
-
-	while (lease->leased_fd < 0 && !lease->finished) {
-		if (wl_display_dispatch(w->display) == -1) {
-			COMP_ERROR(w->base.base.c, "wl_display roundtrip failed");
-			return VK_ERROR_UNKNOWN;
-		}
-	}
-
-	if (lease->finished) {
-		COMP_ERROR(w->base.base.c, "Failed to lease connector");
-		return VK_ERROR_UNKNOWN;
-	}
-
-	ret = vk->vkAcquireDrmDisplayEXT(vk->physical_device, lease->leased_fd, w->vk_display);
+	ret = vk->vkAcquireDrmDisplayEXT(vk->physical_device, w->lease->leased_fd, w->vk_display);
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(w->base.base.c, "vkAcquireDrmDisplayEXT failed: %s", vk_result_string(ret));
 		return ret;
@@ -446,6 +418,38 @@ comp_window_direct_wayland_init(struct comp_target *w)
 		COMP_INFO(w->c, "Found no connectors available for direct mode");
 		return false;
 	}
+
+	struct wp_drm_lease_request_v1 *request =
+	    wp_drm_lease_device_v1_create_lease_request(w_wayland->selected_device->device);
+	if (!request) {
+		COMP_ERROR(w->c, "Failed to create lease request");
+		return false;
+	}
+
+	wp_drm_lease_request_v1_request_connector(request, w_wayland->selected_connector->connector);
+
+	struct direct_wayland_lease *lease = calloc(1, sizeof(struct direct_wayland_lease));
+	lease->w = w_wayland;
+	lease->leased_fd = -1;
+	lease->finished = false;
+	lease->lease = wp_drm_lease_request_v1_submit(request);
+
+	w_wayland->lease = lease;
+
+	wp_drm_lease_v1_add_listener(lease->lease, &lease_listener, lease);
+
+	while (lease->leased_fd < 0 && !lease->finished) {
+		if (wl_display_dispatch(w_wayland->display) == -1) {
+			COMP_ERROR(w->c, "wl_display roundtrip failed");
+			return false;
+		}
+	}
+
+	if (lease->finished) {
+		COMP_ERROR(w->c, "Failed to lease connector");
+		return false;
+	}
+
 
 	return true;
 }
