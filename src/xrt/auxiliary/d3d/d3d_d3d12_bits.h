@@ -58,17 +58,49 @@ d3d_convert_usage_bits_to_d3d12_app_resource_state(enum xrt_swapchain_usage_bits
 {
 	D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATES(0);
 
-	if ((xsub & XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS) != 0) {
-		state |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-	}
-	if ((xsub & XRT_SWAPCHAIN_USAGE_COLOR) != 0) {
+	bool use_color = (xsub & XRT_SWAPCHAIN_USAGE_COLOR) != 0;
+	bool use_unordered = (xsub & XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS) != 0;
+	bool use_depth = (xsub & XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL) != 0;
+	bool use_transfer_src = (xsub & XRT_SWAPCHAIN_USAGE_TRANSFER_SRC) != 0;
+	bool use_transfer_dst = (xsub & XRT_SWAPCHAIN_USAGE_TRANSFER_DST) != 0;
+	bool use_mutable = (xsub & XRT_SWAPCHAIN_USAGE_MUTABLE_FORMAT) != 0;
+	bool use_input_attachment = (xsub & XRT_SWAPCHAIN_USAGE_INPUT_ATTACHMENT) != 0;
+
+	/*
+	 * When an application acquires a swapchain image by calling xrAcquireSwapchainImage in a session create using
+	 * XrGraphicsBindingD3D12KHR, the OpenXR runtime must guarantee that:
+	 *
+	 * The color rendering target image has a resource state match with D3D12_RESOURCE_STATE_RENDER_TARGET
+	 *
+	 * The depth rendering target image has a resource state match with D3D12_RESOURCE_STATE_DEPTH_WRITE
+	 */
+
+	if (use_color) {
 		// since we are treating these as mutually exclusive
-		assert((xsub & XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL) == 0);
-		state |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+		assert(!use_depth);
+		state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	} else if (use_depth) {
+		state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+	} else {
+		//! @todo If neither color nor depth use is specified, we set an initial state that is not clearly
+		//! defined in the spec, but most likely expected by the application. Note that the order here
+		//! translates to precedence if multiple are set.
+		if (use_unordered) {
+			state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		} else if (use_transfer_src) {
+			state = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		} else if (use_transfer_dst) {
+			state = D3D12_RESOURCE_STATE_COPY_DEST;
+		} else if (use_mutable) {
+			state = D3D12_RESOURCE_STATE_COMMON;
+		} else if (use_input_attachment) {
+			state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		} else {
+			//! @todo unspecified fallback
+			state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		}
 	}
-	if ((xsub & XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL) != 0) {
-		state |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
-	}
+
 	return state;
 }
 
