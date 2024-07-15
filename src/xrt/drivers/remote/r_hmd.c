@@ -66,11 +66,6 @@ r_hmd_get_tracked_pose(struct xrt_device *xdev,
 
 	switch (name) {
 	case XRT_INPUT_GENERIC_HEAD_POSE: copy_head_center_to_relation(rh, out_relation); break;
-	case XRT_INPUT_GENERIC_STAGE_SPACE_POSE:
-		// STAGE is implicitly defined as the space poses are returned in, therefore STAGE origin is (0, 0, 0).
-		*out_relation = (struct xrt_space_relation)XRT_SPACE_RELATION_ZERO;
-		out_relation->relation_flags = XRT_SPACE_RELATION_BITMASK_ALL;
-		break;
 	default: U_LOG_E("Unknown input name"); break;
 	}
 }
@@ -154,7 +149,6 @@ r_hmd_create(struct r_hub *r)
 	rh->base.orientation_tracking_supported = true;
 	rh->base.position_tracking_supported = true;
 	rh->base.hand_tracking_supported = false;
-	rh->base.stage_supported = true;
 	rh->base.name = XRT_DEVICE_GENERIC_HMD;
 	rh->base.device_type = XRT_DEVICE_TYPE_HMD;
 	rh->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;

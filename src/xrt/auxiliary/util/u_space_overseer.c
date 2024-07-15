@@ -936,12 +936,12 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 	xrt_space_reference(&uso->base.semantic.unbounded, NULL);
 
 	if (head != NULL && head->stage_supported) {
-		// stage space is a pose space
+		// stage poses are polled from the driver
 		u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_STAGE_SPACE_POSE,
 		                                   &uso->base.semantic.stage);
 	} else {
-		// Assume the root space is the center of the stage space.
-		xrt_space_reference(&uso->base.semantic.stage, uso->base.semantic.root);
+		// stage offset is managed by space overseer
+		u_space_overseer_create_null_space(uso, uso->base.semantic.root, &uso->base.semantic.stage);
 	}
 
 	// If the system wants to support the space, set root as unbounded.
