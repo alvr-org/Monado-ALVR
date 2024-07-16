@@ -743,9 +743,18 @@ steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
                           struct xrt_space_overseer **out_xso)
 {
 	u_logging_level level = debug_get_log_option_lh_log();
-	// The driver likes to create a bunch of transient folder - lets make sure they're created where they normally
-	// are.
-	std::filesystem::current_path(STEAM_INSTALL_DIR + "/config/lighthouse");
+	// The driver likes to create a bunch of transient folders -
+	// let's try to make sure they're created where they normally are.
+	std::filesystem::path dir = STEAM_INSTALL_DIR + "/config/lighthouse";
+	if (!std::filesystem::exists(dir)) {
+		U_LOG_IFL_W(level,
+		            "Couldn't find lighthouse config folder (%s)- transient folders will be created in current "
+		            "working directory (%s)",
+		            dir.c_str(), std::filesystem::current_path().c_str());
+	} else {
+		std::filesystem::current_path(dir);
+	}
+
 	std::string steamvr{};
 	if (getenv("STEAMVR_PATH") != nullptr) {
 		steamvr = getenv("STEAMVR_PATH");
