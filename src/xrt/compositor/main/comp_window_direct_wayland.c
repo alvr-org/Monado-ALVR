@@ -371,6 +371,44 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = _registry_global_remove_cb,
 };
 
+// Find the connector matching name, return the first available if no match
+static bool
+get_named_connector_or_first(struct comp_window_direct_wayland *w, const char *name)
+{
+	struct direct_wayland_lease_device *dev = w->devices;
+	struct direct_wayland_lease_connector *conn = NULL;
+
+	while (dev) {
+		if (!dev->done) {
+			wl_display_dispatch(w->display);
+			continue;
+		}
+		if (dev->connectors) {
+			/* Use the first connector available as default */
+			if (!w->selected_connector) {
+				w->selected_device = dev;
+				w->selected_connector = dev->connectors;
+				if (!name) {
+					return false;
+				}
+			}
+
+			// If no connector is chosen, we're done.
+			conn = dev->connectors;
+			while (conn) {
+				if (!strcmp(name, conn->name)) {
+					w->selected_device = dev;
+					w->selected_connector = conn;
+					return true;
+				}
+				conn = conn->next;
+			}
+		}
+		dev = dev->next;
+	}
+	return false;
+}
+
 static bool
 comp_window_direct_wayland_init(struct comp_target *w)
 {
@@ -392,32 +430,28 @@ comp_window_direct_wayland_init(struct comp_target *w)
 		return false;
 	}
 
-	struct direct_wayland_lease_device *dev = w_wayland->devices;
-	while (dev) {
-		if (!dev->done) {
-			wl_display_dispatch(w_wayland->display);
-			continue;
-		}
-		/* TODO: Choose the connector with an environment variable
-		 * or from `ct->c->settings.display` */
+	// Replace this with the value of an env variable
+	const char *connector_name = NULL;
 
-		/* Pick the first connector available */
-		if (dev->connectors) {
-			w_wayland->selected_device = dev;
-			w_wayland->selected_connector = dev->connectors;
-
-			COMP_INFO(w->c, "Using DRM node %s", dev->path);
-			COMP_INFO(w->c, "Connector id %d %s (%s)", w_wayland->selected_connector->id,
-			          w_wayland->selected_connector->name, w_wayland->selected_connector->description);
-			break;
-		}
-		dev = dev->next;
+	if (!connector_name) {
+		COMP_INFO(w->c, "No connector was chosen, will use first available connector");
 	}
+
+	bool found = get_named_connector_or_first(w_wayland, connector_name);
 
 	if (!w_wayland->selected_connector) {
 		COMP_INFO(w->c, "Found no connectors available for direct mode");
 		return false;
 	}
+
+	// Inform when chosen connector was not found
+	if (connector_name && !found) {
+		COMP_INFO(w->c, "Could not find requested connector, selected first available connector");
+	}
+
+	COMP_INFO(w->c, "Using DRM node %s", w_wayland->selected_device->path);
+	COMP_INFO(w->c, "Connector id %d %s (%s)", w_wayland->selected_connector->id,
+	          w_wayland->selected_connector->name, w_wayland->selected_connector->description);
 
 	struct wp_drm_lease_request_v1 *request =
 	    wp_drm_lease_device_v1_create_lease_request(w_wayland->selected_device->device);
@@ -449,7 +483,6 @@ comp_window_direct_wayland_init(struct comp_target *w)
 		COMP_ERROR(w->c, "Failed to lease connector");
 		return false;
 	}
-
 
 	return true;
 }
