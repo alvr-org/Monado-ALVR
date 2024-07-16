@@ -17,6 +17,7 @@ extern "C" {
 
 #define XRT_MAX_CLIENT_SPACES 128
 struct xrt_device;
+struct xrt_tracking_origin;
 
 /*!
  * A space very similar to a OpenXR XrSpace but not a full one-to-one mapping,
@@ -240,6 +241,56 @@ struct xrt_space_overseer
 	xrt_result_t (*recenter_local_spaces)(struct xrt_space_overseer *xso);
 
 	/*!
+	 * Read the offset from a tracking origin, not all
+	 * implementations of @ref xrt_space_overseer may support this.
+	 * Outputs are only valid if XRT_SUCCESS is returned.
+	 *
+	 * @param[in] xso The space overseer.
+	 * @param[in] xto The tracking origin.
+	 * @param[out] out_offset Pointer to an xrt_pose to write the offset to
+	 */
+	xrt_result_t (*get_tracking_origin_offset)(struct xrt_space_overseer *xso,
+	                                           struct xrt_tracking_origin *xto,
+	                                           struct xrt_pose *out_offset);
+
+	/*!
+	 * Apply an offset to a tracking origin, not all
+	 * implementations of @ref xrt_space_overseer may support this.
+	 *
+	 * @param[in] xso The space overseer.
+	 * @param[in] xto The tracking origin.
+	 * @param[in] offset The offset to apply.
+	 */
+	xrt_result_t (*set_tracking_origin_offset)(struct xrt_space_overseer *xso,
+	                                           struct xrt_tracking_origin *xto,
+	                                           const struct xrt_pose *offset);
+
+	/*!
+	 * Read the offset from the given reference space, not all
+	 * implementations of @ref xrt_space_overseer may support this.
+	 * Outputs are only valid if XRT_SUCCESS is returned.
+	 *
+	 * @param[in] xso The space overseer.
+	 * @param[in] type The reference space.
+	 * @param[out] out_offset Pointer to write the offset to.
+	 */
+	xrt_result_t (*get_reference_space_offset)(struct xrt_space_overseer *xso,
+	                                           enum xrt_reference_space_type type,
+	                                           struct xrt_pose *out_offset);
+
+	/*!
+	 * Apply an offset to the given reference space, not all
+	 * implementations of @ref xrt_space_overseer may support this.
+	 *
+	 * @param[in] xso The space overseer.
+	 * @param[in] type The reference space.
+	 * @param[in] offset The offset to apply.
+	 */
+	xrt_result_t (*set_reference_space_offset)(struct xrt_space_overseer *xso,
+	                                           enum xrt_reference_space_type type,
+	                                           const struct xrt_pose *offset);
+
+	/*!
 	 * Create a localspace.
 	 *
 	 * @param[in] xso        Owning space overseer.
@@ -382,6 +433,66 @@ static inline xrt_result_t
 xrt_space_overseer_recenter_local_spaces(struct xrt_space_overseer *xso)
 {
 	return xso->recenter_local_spaces(xso);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::get_tracking_origin_offset
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_get_tracking_origin_offset(struct xrt_space_overseer *xso,
+                                              struct xrt_tracking_origin *torig,
+                                              struct xrt_pose *out_offset)
+{
+	return xso->get_tracking_origin_offset(xso, torig, out_offset);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::set_tracking_origin_offset
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_set_tracking_origin_offset(struct xrt_space_overseer *xso,
+                                              struct xrt_tracking_origin *torig,
+                                              const struct xrt_pose *offset)
+{
+	return xso->set_tracking_origin_offset(xso, torig, offset);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::get_reference_space_offset
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_get_reference_space_offset(struct xrt_space_overseer *xso,
+                                              enum xrt_reference_space_type type,
+                                              struct xrt_pose *out_offset)
+{
+	return xso->get_reference_space_offset(xso, type, out_offset);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::set_reference_space_offset
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+static inline xrt_result_t
+xrt_space_overseer_set_reference_space_offset(struct xrt_space_overseer *xso,
+                                              enum xrt_reference_space_type type,
+                                              const struct xrt_pose *offset)
+{
+	return xso->set_reference_space_offset(xso, type, offset);
 }
 
 /*!

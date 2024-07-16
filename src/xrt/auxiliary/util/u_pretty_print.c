@@ -168,7 +168,8 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
 	case XRT_ERROR_RECENTERING_NOT_SUPPORTED:            DG("XRT_ERROR_RECENTERING_NOT_SUPPORTED"); return;
 	case XRT_ERROR_COMPOSITOR_NOT_SUPPORTED:             DG("XRT_ERROR_COMPOSITOR_NOT_SUPPORTED"); return;
 	case XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED:           DG("XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED"); return;
-	case XRT_ERROR_NOT_IMPLEMENTED:      DG("XRT_ERROR_NOT_IMPLEMENTED"); return;
+	case XRT_ERROR_NOT_IMPLEMENTED:                      DG("XRT_ERROR_NOT_IMPLEMENTED"); return;
+	case XRT_ERROR_UNSUPPORTED_SPACE_TYPE:               DG("XRT_ERROR_UNSUPPORTED_SPACE_TYPE"); return;
 	}
 	// clang-format on
 

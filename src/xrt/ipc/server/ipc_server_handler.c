@@ -49,6 +49,25 @@ validate_device_id(volatile struct ipc_client_state *ics, int64_t device_id, str
 }
 
 static xrt_result_t
+validate_origin_id(volatile struct ipc_client_state *ics, int64_t origin_id, struct xrt_tracking_origin **out_xtrack)
+{
+	if (origin_id >= XRT_SYSTEM_MAX_DEVICES) {
+		IPC_ERROR(ics->server, "Invalid origin ID (origin_id >= XRT_SYSTEM_MAX_DEVICES)!");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	struct xrt_tracking_origin *xtrack = ics->server->xtracks[origin_id];
+	if (xtrack == NULL) {
+		IPC_ERROR(ics->server, "Invalid origin ID (xtrack is NULL)!");
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	*out_xtrack = xtrack;
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
 validate_swapchain_state(volatile struct ipc_client_state *ics, uint32_t *out_index)
 {
 	// Our handle is just the index for now.
@@ -773,6 +792,52 @@ ipc_handle_space_recenter_local_spaces(volatile struct ipc_client_state *ics)
 	struct xrt_space_overseer *xso = ics->server->xso;
 
 	return xrt_space_overseer_recenter_local_spaces(xso);
+}
+
+xrt_result_t
+ipc_handle_space_get_tracking_origin_offset(volatile struct ipc_client_state *ics,
+                                            uint32_t origin_id,
+                                            struct xrt_pose *out_offset)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+	struct xrt_tracking_origin *xto;
+	xrt_result_t xret = validate_origin_id(ics, origin_id, &xto);
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
+	return xrt_space_overseer_get_tracking_origin_offset(xso, xto, out_offset);
+}
+
+xrt_result_t
+ipc_handle_space_set_tracking_origin_offset(volatile struct ipc_client_state *ics,
+                                            uint32_t origin_id,
+                                            const struct xrt_pose *offset)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+	struct xrt_tracking_origin *xto;
+	xrt_result_t xret = validate_origin_id(ics, origin_id, &xto);
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
+	return xrt_space_overseer_set_tracking_origin_offset(xso, xto, offset);
+}
+
+xrt_result_t
+ipc_handle_space_get_reference_space_offset(volatile struct ipc_client_state *ics,
+                                            enum xrt_reference_space_type type,
+                                            struct xrt_pose *out_offset)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+	return xrt_space_overseer_get_reference_space_offset(xso, type, out_offset);
+}
+
+xrt_result_t
+ipc_handle_space_set_reference_space_offset(volatile struct ipc_client_state *ics,
+                                            enum xrt_reference_space_type type,
+                                            const struct xrt_pose *offset)
+{
+	struct xrt_space_overseer *xso = ics->server->xso;
+	return xrt_space_overseer_set_reference_space_offset(xso, type, offset);
 }
 
 xrt_result_t

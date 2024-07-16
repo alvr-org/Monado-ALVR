@@ -25,7 +25,7 @@ extern "C" {
 //! Major version of the API.
 #define MND_API_VERSION_MAJOR 1
 //! Minor version of the API.
-#define MND_API_VERSION_MINOR 2
+#define MND_API_VERSION_MINOR 3
 //! Patch version of the API.
 #define MND_API_VERSION_PATCH 0
 
@@ -44,6 +44,8 @@ typedef enum mnd_result
 	MND_ERROR_RECENTERING_NOT_SUPPORTED = -5,
 	//! Supported in version 1.2 and above.
 	MND_ERROR_INVALID_PROPERTY = -6,
+	//! Supported in version 1.3 and above.
+	MND_ERROR_INVALID_OPERATION = -7,
 } mnd_result_t;
 
 /*!
@@ -77,6 +79,32 @@ typedef enum mnd_property
  */
 typedef struct mnd_root mnd_root_t;
 
+/*!
+ * A pose composed of a position and orientation.
+ */
+typedef struct mnd_pose
+{
+	struct
+	{
+		float x, y, z, w;
+	} orientation;
+	struct
+	{
+		float x, y, z;
+	} position;
+} mnd_pose_t;
+
+/*!
+ * Types of reference space.
+ */
+typedef enum mnd_reference_space_type
+{
+	MND_SPACE_REFERENCE_TYPE_VIEW,
+	MND_SPACE_REFERENCE_TYPE_LOCAL,
+	MND_SPACE_REFERENCE_TYPE_LOCAL_FLOOR,
+	MND_SPACE_REFERENCE_TYPE_STAGE,
+	MND_SPACE_REFERENCE_TYPE_UNBOUNDED,
+} mnd_reference_space_type_t;
 
 /*
  *
@@ -349,6 +377,88 @@ mnd_root_get_device_from_role(mnd_root_t *root, const char *role_name, int32_t *
 mnd_result_t
 mnd_root_recenter_local_spaces(mnd_root_t *root);
 
+/*!
+ * Get the current offset value of the specified reference space.
+ *
+ * Supported in version 1.3 and above.
+ *
+ * @param root The libmonado state.
+ * @param type The reference space.
+ * @param offset A pointer to where the offset should be written.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_reference_space_offset(mnd_root_t *root, mnd_reference_space_type_t type, mnd_pose_t *out_offset);
+
+/*!
+ * Apply an offset to the specified reference space.
+ *
+ * Supported in version 1.3 and above.
+ *
+ * @param root The libmonado state.
+ * @param type The reference space.
+ * @param offset A pointer to valid xrt_pose.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_set_reference_space_offset(mnd_root_t *root, mnd_reference_space_type_t type, const mnd_pose_t *offset);
+
+/*!
+ * Read the current offset of a tracking origin.
+ *
+ * Supported in version 1.3 and above.
+ *
+ * @param root The libmonado state.
+ * @param origin_id The ID of the tracking origin.
+ * @param offset A pointer to where the offset should be written.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_tracking_origin_offset(mnd_root_t *root, uint32_t origin_id, mnd_pose_t *out_offset);
+
+/*!
+ * Apply an offset to the specified tracking origin.
+ *
+ * Supported in version 1.3 and above.
+ *
+ * @param root The libmonado state.
+ * @param origin_id The ID of the tracking origin.
+ * @param offset A pointer to valid xrt_pose.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_set_tracking_origin_offset(mnd_root_t *root, uint32_t origin_id, const mnd_pose_t *offset);
+
+/*!
+ * Retrieve the number of tracking origins available.
+ *
+ * Supported in version 1.3 and above.
+ *
+ * @param root The libmonado state.
+ * @param out_track_count Pointer to where the count should be written.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_tracking_origin_count(mnd_root_t *root, uint32_t *out_track_count);
+
+/*!
+ * Retrieve the name of the indicated tracking origin.
+ *
+ * Supported in version 1.3 and above.
+ *
+ * @param root The libmonado state.
+ * @param origin_id The ID of a tracking origin.
+ * @param out_string The pointer to write the name's pointer to.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_tracking_origin_name(mnd_root_t *root, uint32_t origin_id, const char **out_string);
 
 #ifdef __cplusplus
 }

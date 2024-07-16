@@ -184,4 +184,9 @@ typedef enum xrt_result
 	 * The interface function called is not implemented by its interface.
 	 */
 	XRT_ERROR_NOT_IMPLEMENTED = -29,
+
+	/*!
+	 * The supplied space type is not supported for this operation.
+	 */
+	XRT_ERROR_UNSUPPORTED_SPACE_TYPE = -30,
 } xrt_result_t;
