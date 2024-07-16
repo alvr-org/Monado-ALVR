@@ -1789,7 +1789,7 @@ oxr_session_frame_end(struct oxr_logger *log, struct oxr_session *sess, const Xr
 	do_synchronize_state_change(log, sess);
 
 	struct xrt_pose inv_offset = {0};
-	math_pose_invert(&xdev->tracking_origin->offset, &inv_offset);
+	math_pose_invert(&xdev->tracking_origin->initial_offset, &inv_offset);
 
 	struct xrt_layer_frame_data data = {
 	    .frame_id = sess->frame_id.begun,

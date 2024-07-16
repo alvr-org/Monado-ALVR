@@ -595,9 +595,9 @@ hydra_found(struct xrt_prober *xp,
 	hs->base.type = XRT_TRACKING_TYPE_HYDRA;
 	snprintf(hs->base.name, XRT_TRACKING_NAME_LEN, "%s", "Razer Hydra magnetic tracking");
 	// Arbitrary static transform from local space to base.
-	hs->base.offset.position.y = 1.0f;
-	hs->base.offset.position.z = -0.25f;
-	hs->base.offset.orientation.w = 1.0f;
+	hs->base.initial_offset.position.y = 1.0f;
+	hs->base.initial_offset.position.z = -0.25f;
+	hs->base.initial_offset.orientation.w = 1.0f;
 
 	hs->data_hid = data_hid;
 	hs->command_hid = command_hid;

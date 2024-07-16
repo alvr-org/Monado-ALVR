@@ -1233,7 +1233,7 @@ oh_device_create(ohmd_context *ctx, bool no_hmds, struct xrt_device **out_xdevs)
 	//! @todo: support mix of 3dof and 6dof OpenHMD devices
 	struct oh_system *sys = U_TYPED_CALLOC(struct oh_system);
 	sys->base.type = XRT_TRACKING_TYPE_NONE;
-	sys->base.offset.orientation.w = 1.0f;
+	sys->base.initial_offset.orientation.w = 1.0f;
 
 	u_var_add_root(sys, "OpenHMD Wrapper", false);
 

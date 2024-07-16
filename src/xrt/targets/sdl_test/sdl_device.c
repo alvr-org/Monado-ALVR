@@ -120,7 +120,7 @@ sdl_device_init(struct sdl_program *sp)
 	u_distortion_mesh_set_none(xdev);
 
 	// Tracking origin.
-	xdev->tracking_origin->offset = (struct xrt_pose)XRT_POSE_IDENTITY;
+	xdev->tracking_origin->initial_offset = (struct xrt_pose)XRT_POSE_IDENTITY;
 	xdev->tracking_origin->type = XRT_TRACKING_TYPE_OTHER;
 	snprintf(xdev->tracking_origin->name, XRT_TRACKING_NAME_LEN, "SDL Tracking");
 }

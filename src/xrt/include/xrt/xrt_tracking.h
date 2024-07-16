@@ -76,10 +76,10 @@ struct xrt_tracking_origin
 	enum xrt_tracking_type type;
 
 	/*!
-	 * Read and written to by the state-tracker using the device(s)
-	 * this tracking system is tracking.
+	 * Read-only. Set once by the builder, or in some cases, the driver.
+	 * With some systems, the offset may be changed at runtime using the space overseer.
 	 */
-	struct xrt_pose offset;
+	struct xrt_pose initial_offset;
 };
 
 /*!

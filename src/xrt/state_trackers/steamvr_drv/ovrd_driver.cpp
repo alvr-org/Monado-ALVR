@@ -881,7 +881,7 @@ public:
 		struct xrt_space_relation rel;
 		xrt_device_get_tracked_pose(m_xdev, grip_name, now_ns, &rel);
 
-		struct xrt_pose *offset = &m_xdev->tracking_origin->offset;
+		struct xrt_pose *offset = &m_xdev->tracking_origin->initial_offset;
 
 		struct xrt_relation_chain chain = {};
 		m_relation_chain_push_relation(&chain, &rel);
@@ -1268,7 +1268,7 @@ CDeviceDriver_Monado::GetPose()
 	struct xrt_space_relation rel;
 	xrt_device_get_tracked_pose(m_xdev, XRT_INPUT_GENERIC_HEAD_POSE, now_ns, &rel);
 
-	struct xrt_pose *offset = &m_xdev->tracking_origin->offset;
+	struct xrt_pose *offset = &m_xdev->tracking_origin->initial_offset;
 
 	struct xrt_relation_chain chain = {};
 	m_relation_chain_push_relation(&chain, &rel);

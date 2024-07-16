@@ -158,7 +158,7 @@ rift_s_system_create(struct xrt_prober *xp,
 
 	struct rift_s_system *sys = U_TYPED_CALLOC(struct rift_s_system);
 	sys->base.type = XRT_TRACKING_TYPE_NONE;
-	sys->base.offset.orientation.w = 1.0f;
+	sys->base.initial_offset.orientation.w = 1.0f;
 
 	/* Init refcount */
 	sys->ref.count = 1;

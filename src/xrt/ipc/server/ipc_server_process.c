@@ -322,7 +322,7 @@ init_shm(struct ipc_server *s)
 		struct ipc_shared_tracking_origin *itrack = &ism->itracks[count++];
 		memcpy(itrack->name, xtrack->name, sizeof(itrack->name));
 		itrack->type = xtrack->type;
-		itrack->offset = xtrack->offset;
+		itrack->offset = xtrack->initial_offset;
 	}
 
 	ism->itrack_count = count;

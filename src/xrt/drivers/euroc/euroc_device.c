@@ -196,7 +196,7 @@ euroc_device_create(struct xrt_prober *xp)
 
 	xd->tracking_origin = &ed->tracking_origin;
 	xd->tracking_origin->type = XRT_TRACKING_TYPE_EXTERNAL_SLAM;
-	xd->tracking_origin->offset.orientation.w = 1.0f;
+	xd->tracking_origin->initial_offset.orientation.w = 1.0f;
 	snprintf(xd->tracking_origin->name, XRT_TRACKING_NAME_LEN, "%s %s", dev_name, "SLAM Tracker");
 
 	if (is_hmd) {
@@ -217,7 +217,7 @@ euroc_device_create(struct xrt_prober *xp)
 	u_var_add_root(ed, dev_name, false);
 	u_var_add_pose(ed, &ed->pose, "pose");
 	u_var_add_pose(ed, &ed->offset, "offset");
-	u_var_add_pose(ed, &ed->tracking_origin.offset, "tracking offset");
+	u_var_add_pose(ed, &ed->tracking_origin.initial_offset, "tracking offset");
 
 	bool tracked = xp->tracking->create_tracked_slam(xp->tracking, &ed->slam) >= 0;
 	if (!tracked) {

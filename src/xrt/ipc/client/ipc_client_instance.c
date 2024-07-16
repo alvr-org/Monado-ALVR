@@ -283,12 +283,12 @@ ipc_instance_create(struct xrt_instance_info *i_info, struct xrt_instance **out_
 		memcpy(xtrack->name, ism->itracks[i].name, sizeof(xtrack->name));
 
 		xtrack->type = ism->itracks[i].type;
-		xtrack->offset = ism->itracks[i].offset;
+		xtrack->initial_offset = ism->itracks[i].offset;
 		ii->xtracks[count++] = xtrack;
 
 		u_var_add_root(xtrack, "Tracking origin", true);
 		u_var_add_ro_text(xtrack, xtrack->name, "name");
-		u_var_add_pose(xtrack, &xtrack->offset, "offset");
+		u_var_add_pose(xtrack, &xtrack->initial_offset, "offset");
 	}
 
 	ii->xtrack_count = count;

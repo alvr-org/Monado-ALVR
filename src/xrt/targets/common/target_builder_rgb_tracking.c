@@ -301,9 +301,9 @@ rgb_open_system_impl(struct xrt_builder *xb,
 		build.xfctx = xfctx;
 		build.origin = origin;
 		build.origin->type = XRT_TRACKING_TYPE_RGB;
-		build.origin->offset.orientation.y = 1.0f;
-		build.origin->offset.position.z = -2.0f;
-		build.origin->offset.position.y = 1.0f;
+		build.origin->initial_offset.orientation.y = 1.0f;
+		build.origin->initial_offset.position.z = -2.0f;
+		build.origin->initial_offset.position.y = 1.0f;
 
 		setup_pipeline(xp, &build);
 #else

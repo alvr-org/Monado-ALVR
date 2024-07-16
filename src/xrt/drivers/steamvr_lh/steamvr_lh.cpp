@@ -115,7 +115,7 @@ Context::create(const std::string &steam_install,
 	c->providers = std::move(providers);
 	std::strncpy(c->name, "SteamVR Lighthouse Tracking", XRT_TRACKING_NAME_LEN);
 	c->type = XRT_TRACKING_TYPE_LIGHTHOUSE;
-	c->offset = XRT_POSE_IDENTITY;
+	c->initial_offset = XRT_POSE_IDENTITY;
 	for (vr::IServerTrackedDeviceProvider *const &driver : c->providers) {
 		vr::EVRInitError err = driver->Init(c.get());
 		if (err != vr::VRInitError_None) {

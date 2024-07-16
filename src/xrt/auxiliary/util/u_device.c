@@ -316,7 +316,7 @@ u_device_allocate(enum u_device_alloc_flags flags, size_t size, size_t input_cou
 	if (alloc_tracking) {
 		xdev->tracking_origin = (struct xrt_tracking_origin *)(ptr + offset_tracking);
 		xdev->tracking_origin->type = XRT_TRACKING_TYPE_NONE;
-		xdev->tracking_origin->offset.orientation.w = 1.0f;
+		xdev->tracking_origin->initial_offset.orientation.w = 1.0f;
 		snprintf(xdev->tracking_origin->name, XRT_TRACKING_NAME_LEN, "%s", "No tracking");
 	}
 

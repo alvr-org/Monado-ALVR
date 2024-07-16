@@ -387,7 +387,7 @@ ulv2_create_device(struct xrt_device **out_xdev)
 	ulv2d->base.tracking_origin = &ulv2d->tracking_origin;
 	ulv2d->base.tracking_origin->type = XRT_TRACKING_TYPE_OTHER;
 
-	math_pose_identity(&ulv2d->base.tracking_origin->offset);
+	math_pose_identity(&ulv2d->base.tracking_origin->initial_offset);
 
 	ulv2d->log_level = debug_get_log_option_ulv2_log();
 

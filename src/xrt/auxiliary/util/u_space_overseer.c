@@ -914,7 +914,7 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
 		if (ptr != NULL) {
 			xs = (struct xrt_space *)ptr;
 		} else {
-			u_space_overseer_create_offset_space(uso, root, &torig->offset, &xs);
+			u_space_overseer_create_offset_space(uso, root, &torig->initial_offset, &xs);
 			u_hashmap_int_insert(torig_map, key, xs);
 		}
 

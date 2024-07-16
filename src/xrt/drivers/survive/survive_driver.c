@@ -1336,10 +1336,10 @@ survive_get_devices(struct xrt_device **out_xdevs, struct vive_config **out_vive
 	ss->ctx = actx;
 	ss->base.type = XRT_TRACKING_TYPE_LIGHTHOUSE;
 	snprintf(ss->base.name, XRT_TRACKING_NAME_LEN, "%s", "Libsurvive Tracking");
-	ss->base.offset.position.x = 0.0f;
-	ss->base.offset.position.y = 0.0f;
-	ss->base.offset.position.z = 0.0f;
-	ss->base.offset.orientation.w = 1.0f;
+	ss->base.initial_offset.position.x = 0.0f;
+	ss->base.initial_offset.position.y = 0.0f;
+	ss->base.initial_offset.position.z = 0.0f;
+	ss->base.initial_offset.orientation.w = 1.0f;
 	ss->timecode_offset_ms = (struct u_var_draggable_f32){
 	    .val = debug_get_float_option_survive_timecode_offset_ms(),
 	    .min = -20.0,

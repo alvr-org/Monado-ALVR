@@ -109,8 +109,8 @@ get_tracked_pose(struct xrt_device *xdev,
 		m_space_relation_ident(&in_target_space);
 		in_target_space.relation_flags = tracker_relation.relation_flags;
 
-		struct xrt_pose *target_offset = &d->tracking_override.target->tracking_origin->offset;
-		struct xrt_pose *tracker_offset = &d->tracking_override.tracker->tracking_origin->offset;
+		struct xrt_pose *target_offset = &d->tracking_override.target->tracking_origin->initial_offset;
+		struct xrt_pose *tracker_offset = &d->tracking_override.tracker->tracking_origin->initial_offset;
 
 		attached_override(d, &target_relation, target_offset, &tracker_relation, tracker_offset,
 		                  &in_target_space, out_relation);
@@ -163,8 +163,8 @@ get_hand_tracking(struct xrt_device *xdev,
 		m_space_relation_ident(&in_target_space);
 		in_target_space.relation_flags = tracker_relation.relation_flags;
 
-		struct xrt_pose *target_offset = &d->tracking_override.target->tracking_origin->offset;
-		struct xrt_pose *tracker_offset = &d->tracking_override.tracker->tracking_origin->offset;
+		struct xrt_pose *target_offset = &d->tracking_override.target->tracking_origin->initial_offset;
+		struct xrt_pose *tracker_offset = &d->tracking_override.tracker->tracking_origin->initial_offset;
 
 		attached_override(d, &out_value->hand_pose, target_offset, &tracker_relation, tracker_offset,
 		                  &in_target_space, &out_value->hand_pose);

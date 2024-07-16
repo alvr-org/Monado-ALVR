@@ -415,7 +415,7 @@ r_create_devices(uint16_t port,
 	r->base.destroy = r_hub_system_devices_destroy;
 	r->base.get_roles = r_hub_system_devices_get_roles;
 	r->origin.type = XRT_TRACKING_TYPE_RGB;
-	r->origin.offset = (struct xrt_pose)XRT_POSE_IDENTITY;
+	r->origin.initial_offset = (struct xrt_pose)XRT_POSE_IDENTITY;
 	r->reset.head.center = (struct xrt_pose)XRT_POSE_IDENTITY;
 	r->reset.head.center.position.y = 1.6f;
 	r->reset.left.active = true;
@@ -487,7 +487,7 @@ r_create_devices(uint16_t port,
 
 	struct xrt_space *root = xso->semantic.root; // Convenience
 	struct xrt_space *offset = NULL;
-	u_space_overseer_create_offset_space(uso, root, &r->origin.offset, &offset);
+	u_space_overseer_create_offset_space(uso, root, &r->origin.initial_offset, &offset);
 
 	for (uint32_t i = 0; i < r->base.xdev_count; i++) {
 		u_space_overseer_link_space_to_device(uso, offset, r->base.xdevs[i]);
