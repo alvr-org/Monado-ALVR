@@ -168,7 +168,7 @@ comp_window_direct_wayland_create_surface(struct comp_window_direct_wayland *w,
 	VkResult ret = VK_ERROR_INCOMPATIBLE_DISPLAY_KHR;
 
 	if (w->selected_device == NULL || w->selected_connector == NULL || w->lease == NULL) {
-		COMP_ERROR(w->base.base.c, "Connector disconnected before it could be acquired");
+		COMP_ERROR(w->base.base.c, "Connector was disconnected before it could be acquired");
 		return VK_ERROR_INITIALIZATION_FAILED;
 	}
 
@@ -280,7 +280,7 @@ _lease_connector_withdrawn(void *data, struct wp_drm_lease_connector_v1 *wp_drm_
 {
 	struct direct_wayland_lease_connector *conn = data;
 	COMP_DEBUG(conn->w->base.base.c, "Connector %s has been withdrawn by the compositor", conn->name);
-	if (conn == conn->w->selected_connector) {
+	if (conn == conn->w->selected_connector && !conn->w->lease->lease) {
 		conn->w->selected_connector = NULL;
 	}
 }
