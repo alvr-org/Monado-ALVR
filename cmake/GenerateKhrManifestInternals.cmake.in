@@ -23,6 +23,7 @@ set(TARGET_DIR_RELATIVE_TO_MANIFEST
     @_genmanifest_TARGET_DIR_RELATIVE_TO_MANIFEST@)
 # Config option
 set(ABSOLUTE_TARGET_PATH @_genmanifest_ABSOLUTE_TARGET_PATH@)
+set(LIBMONADO @LIBMONADO@)
 
 if(TARGET_PATH)
     # This is at build time, not install time
@@ -36,6 +37,12 @@ elseif(ABSOLUTE_TARGET_PATH)
     if(NOT IS_ABSOLUTE ${RELATIVE_TARGET_DIR})
         set(TARGET_PATH ${CMAKE_INSTALL_PREFIX}/${TARGET_PATH})
     endif()
+    if(LIBMONADO)
+        set(LIBMONADO ${RELATIVE_TARGET_DIR}/${LIBMONADO})
+        if(NOT IS_ABSOLUTE ${RELATIVE_TARGET_DIR})
+            set(LIBMONADO ${CMAKE_INSTALL_PREFIX}/${LIBMONADO})
+        endif()
+    endif()
 elseif(TARGET_DIR_RELATIVE_TO_MANIFEST)
     # Relative path to target.
     message(
@@ -43,6 +50,10 @@ elseif(TARGET_DIR_RELATIVE_TO_MANIFEST)
             "Installing ${MANIFEST_DESCRIPTION} with JSON-relative path to library"
     )
     set(TARGET_PATH ${TARGET_DIR_RELATIVE_TO_MANIFEST}/${TARGET_FILENAME})
+    if(LIBMONADO)
+        get_filename_component(LIBMONADO ${LIBMONADO} NAME)
+        set(LIBMONADO ${TARGET_DIR_RELATIVE_TO_MANIFEST}/${LIBMONADO})
+    endif()
 else()
     # Unqualified filename: requires it exist on the system shared library search path.
     message(
@@ -50,6 +61,13 @@ else()
             "Installing ${MANIFEST_DESCRIPTION} with unqualified library filename (uses system search path)"
     )
     set(TARGET_PATH ${TARGET_FILENAME})
+    if(LIBMONADO)
+        get_filename_component(LIBMONADO ${LIBMONADO} NAME)
+    endif()
+endif()
+
+if(LIBMONADO)
+    set(extra_fields ",\n        \"MND_libmonado_path\": \"${LIBMONADO}\"")
 endif()
 
 if(WIN32)

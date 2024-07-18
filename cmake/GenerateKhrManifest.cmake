@@ -59,7 +59,7 @@ set(_KHR_MANIFEST_SCRIPT
 
 function(generate_khr_manifest_buildtree)
     set(options)
-    set(oneValueArgs MANIFEST_TEMPLATE TARGET OUT_FILE MANIFEST_DESCRIPTION)
+    set(oneValueArgs MANIFEST_TEMPLATE TARGET OUT_FILE MANIFEST_DESCRIPTION LIBMONADO)
     set(multiValueArgs)
     cmake_parse_arguments(_genmanifest "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN})
@@ -75,6 +75,9 @@ function(generate_khr_manifest_buildtree)
     endif()
     if(NOT _genmanifest_MANIFEST_DESCRIPTION)
         message(FATAL_ERROR "Need MANIFEST_DESCRIPTION specified!")
+    endif()
+    if(_genmanifest_LIBMONADO)
+        set(_libmonado $<TARGET_FILE:${_genmanifest_LIBMONADO}>)
     endif()
 
     # Set template values
@@ -93,6 +96,7 @@ function(generate_khr_manifest_buildtree)
         BYPRODUCTS "${_genmanifest_OUT_FILE}"
         COMMAND
             "${CMAKE_COMMAND}" "-DOUT_FILE=${_genmanifest_OUT_FILE}"
+            "-DLIBMONADO=${_libmonado}"
             "-DTARGET_PATH=$<TARGET_FILE:${_genmanifest_TARGET}>" -P
             "${_script}" DEPENDS "${_script}"
         COMMENT
@@ -110,7 +114,9 @@ function(generate_khr_manifest_at_install)
         TARGET_DIR_RELATIVE_TO_MANIFEST
         RELATIVE_TARGET_DIR
         MANIFEST_DESCRIPTION
-        COMPONENT)
+        COMPONENT
+        LIBMONADO
+    )
     set(multiValueArgs)
     cmake_parse_arguments(_genmanifest "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN})
@@ -140,6 +146,9 @@ function(generate_khr_manifest_at_install)
     set(TARGET_FILENAME
         ${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_TARGET}${CMAKE_SHARED_MODULE_SUFFIX}
     )
+    if(_genmanifest_LIBMONADO)
+        set(LIBMONADO ${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_LIBMONADO}${CMAKE_SHARED_MODULE_SUFFIX})
+    endif()
 
     set(_script
         ${CMAKE_CURRENT_BINARY_DIR}/make_manifest_${_genmanifest_TARGET}.cmake)

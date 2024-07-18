@@ -42,6 +42,7 @@ The following functions are provided by this module:
                                            # runtime directory relative to the manifest directory in the installed layout
         [OUT_FILENAME <outfilename>        # Optional: Alternate name of the manifest file to generate
         [MANIFEST_TEMPLATE <template>]     # Optional: Specify an alternate template to use
+        [LIBMONADO <path>]                 # Optional: path to libmonado to include in manifest
         )
 #]]
 
@@ -57,7 +58,7 @@ set(_OXR_MANIFEST_TEMPLATE
 
 function(generate_openxr_runtime_manifest_buildtree)
     set(options)
-    set(oneValueArgs MANIFEST_TEMPLATE RUNTIME_TARGET OUT_FILE)
+    set(oneValueArgs MANIFEST_TEMPLATE RUNTIME_TARGET OUT_FILE LIBMONADO)
     set(multiValueArgs)
     cmake_parse_arguments(_genmanifest "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN})
@@ -80,7 +81,10 @@ function(generate_openxr_runtime_manifest_buildtree)
         TARGET
         "${_genmanifest_RUNTIME_TARGET}"
         OUT_FILE
-        "${_genmanifest_OUT_FILE}")
+        "${_genmanifest_OUT_FILE}"
+        LIBMONADO
+        "${_genmanifest_LIBMONADO}"
+    )
 
 endfunction()
 
@@ -93,7 +97,9 @@ function(generate_openxr_runtime_manifest_at_install)
         COMPONENT
         RUNTIME_TARGET
         RUNTIME_DIR_RELATIVE_TO_MANIFEST
-        RELATIVE_RUNTIME_DIR)
+        RELATIVE_RUNTIME_DIR
+        LIBMONADO
+    )
     set(multiValueArgs)
     cmake_parse_arguments(_genmanifest "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN})
@@ -141,5 +147,8 @@ function(generate_openxr_runtime_manifest_at_install)
         RELATIVE_TARGET_DIR
         "${_genmanifest_RELATIVE_RUNTIME_DIR}"
         OUT_FILENAME
-        "${_genmanifest_OUT_FILENAME}")
+        "${_genmanifest_OUT_FILENAME}"
+        LIBMONADO
+        "${_genmanifest_LIBMONADO}"
+    )
 endfunction()

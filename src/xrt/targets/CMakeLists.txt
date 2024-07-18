@@ -7,6 +7,11 @@
 
 add_subdirectory(common)
 
+# Monado management library
+if(XRT_FEATURE_SERVICE AND XRT_HAVE_LINUX)
+	add_subdirectory(libmonado)
+endif()
+
 if(XRT_FEATURE_OPENXR)
 	add_subdirectory(openxr)
 endif()
@@ -40,9 +45,4 @@ if(XRT_FEATURE_SERVICE
    AND XRT_HAVE_VULKAN
 	)
 	add_subdirectory(sdl_test)
-endif()
-
-# Monado management library
-if(XRT_FEATURE_SERVICE AND XRT_HAVE_LINUX)
-	add_subdirectory(libmonado)
 endif()
