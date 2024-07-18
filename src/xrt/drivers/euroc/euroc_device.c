@@ -196,7 +196,6 @@ euroc_device_create(struct xrt_prober *xp)
 
 	xd->tracking_origin = &ed->tracking_origin;
 	xd->tracking_origin->type = XRT_TRACKING_TYPE_EXTERNAL_SLAM;
-	xd->tracking_origin->initial_offset.orientation.w = 1.0f;
 	snprintf(xd->tracking_origin->name, XRT_TRACKING_NAME_LEN, "%s %s", dev_name, "SLAM Tracker");
 
 	if (is_hmd) {

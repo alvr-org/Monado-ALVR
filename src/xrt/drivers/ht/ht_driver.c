@@ -203,10 +203,6 @@ ht_device_create_common(struct t_stereo_camera_calibration *calib,
 	}
 
 	htd->base.tracking_origin->type = XRT_TRACKING_TYPE_RGB;
-	htd->base.tracking_origin->initial_offset.position.x = 0.0f;
-	htd->base.tracking_origin->initial_offset.position.y = 0.0f;
-	htd->base.tracking_origin->initial_offset.position.z = 0.0f;
-	htd->base.tracking_origin->initial_offset.orientation.w = 1.0f;
 
 	htd->base.update_inputs = u_device_noop_update_inputs;
 	htd->base.get_hand_tracking = ht_device_get_hand_tracking;

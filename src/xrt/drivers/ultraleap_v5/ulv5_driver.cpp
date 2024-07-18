@@ -310,8 +310,6 @@ ulv5_create_device(struct xrt_device **out_xdev)
 	ulv5d->base.tracking_origin = &ulv5d->tracking_origin;
 	ulv5d->base.tracking_origin->type = XRT_TRACKING_TYPE_OTHER;
 
-	math_pose_identity(&ulv5d->base.tracking_origin->initial_offset);
-
 	ulv5d->log_level = debug_get_log_option_ulv5_log();
 
 	ulv5d->base.update_inputs = ulv5_device_update_inputs;

@@ -176,7 +176,6 @@ twrap_slam_create_device(struct xrt_frame_context *xfctx,
 	dx->base.destroy = twrap_slam_destroy;
 	dx->base.name = name;
 	dx->base.tracking_origin->type = XRT_TRACKING_TYPE_OTHER;
-	dx->base.tracking_origin->initial_offset = (struct xrt_pose)XRT_POSE_IDENTITY;
 	dx->base.inputs[0].name = XRT_INPUT_GENERIC_TRACKER_POSE;
 	dx->base.orientation_tracking_supported = true;
 	dx->base.position_tracking_supported = true;
