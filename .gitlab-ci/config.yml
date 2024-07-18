@@ -53,6 +53,7 @@ fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
   devscripts:
   dput-ng:
   gettext-base:
+  libdistro-info-perl:
   pandoc:
 
 # These config defines are used for all NDK builds
@@ -72,7 +73,7 @@ distributions:
       # This image does some extra work.
       - codename: bookworm
         script: i386_and_proclamation_container_prep.sh
-        tag: "2024-04-16"
+        tag: "2024-07-18"
         deb_version_suffix: bpo12
         packages:
           <<: *default_debian_packages
@@ -117,7 +118,7 @@ distributions:
               XRT_HAVE_OPENCV: "OFF"
 
       - codename: bullseye
-        tag: "2024-06-26"
+        tag: "2024-07-18"
         script: bullseye_backports.sh
         deb_version_suffix: bpo11
         packages:
@@ -132,7 +133,7 @@ distributions:
         distro_version: bookworm
         repo_suffix: ndk
         script: android_container_prep.sh
-        tag: "2024-07-02"
+        tag: "2024-07-18"
         # This must match ext.sharedCompileSdk in build.gradle
         android_compile_sdk: 34
         # This must match buildscript.ext.buildToolsVersion in build.gradle
@@ -192,7 +193,7 @@ distributions:
       # LTS
       - codename: jammy
         distro_version: "22.04"
-        tag: "2024-04-16"
+        tag: "2024-07-18"
         deb_version_suffix: ubuntu2204
         packages:
           <<: *default_debian_packages
@@ -202,7 +203,7 @@ distributions:
 
       - codename: noble
         distro_version: "24.04"
-        tag: "2024-05-11"
+        tag: "2024-07-18"
         deb_version_suffix: ubuntu2404
         packages:
           <<: *default_debian_packages
