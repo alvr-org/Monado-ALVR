@@ -25,6 +25,7 @@ DEBUG_GET_ONCE_LOG_OPTION(log_level, "U_PACING_APP_LOG", U_LOGGING_WARN)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_app_time_ms, "U_PACING_APP_MIN_TIME_MS", 1.0f)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_margin_ms, "U_PACING_APP_MIN_MARGIN_MS", 2.0f)
 DEBUG_GET_ONCE_BOOL_OPTION(use_min_frame_period, "U_PACING_APP_USE_MIN_FRAME_PERIOD", false)
+DEBUG_GET_ONCE_BOOL_OPTION(immediate_wait_frame_return, "U_PACING_APP_IMMEDIATE_WAIT_FRAME_RETURN", false)
 
 #define UPA_LOG_T(...) U_LOG_IFL_T(debug_get_log_option_log_level(), __VA_ARGS__)
 #define UPA_LOG_D(...) U_LOG_IFL_D(debug_get_log_option_log_level(), __VA_ARGS__)
@@ -462,7 +463,20 @@ pa_predict(struct u_pacing_app *upa,
 	// How long we think the frame should take.
 	int64_t frame_time_ns = total_app_time_ns(pa);
 	// When should the client wake up.
-	int64_t wake_up_time_ns = predict_ns - total_app_and_compositor_time_ns(pa);
+	int64_t wake_up_time_ns;
+
+	/*
+	 * We can either wake the app to render as fast as possible or at the
+	 * predicted time period minus some app and compositor time.
+	 * The former uses substantially more power but is sometimes useful in debugging
+	 *.or as a workaround.
+	 */
+	if (debug_get_bool_option_immediate_wait_frame_return()) {
+		wake_up_time_ns = now_ns;
+	} else {
+		wake_up_time_ns = predict_ns - total_app_and_compositor_time_ns(pa);
+	}
+
 	// When the client's GPU work should have completed.
 	int64_t gpu_done_time_ns = predict_ns - total_compositor_time_ns(pa);
 
