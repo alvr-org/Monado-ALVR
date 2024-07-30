@@ -10,3 +10,5 @@
 #pragma once
 
 #cmakedefine XRT_ANDROID_PACKAGE "@XRT_ANDROID_PACKAGE@"
+
+#cmakedefine XRT_FEATURE_AHARDWARE_BUFFER

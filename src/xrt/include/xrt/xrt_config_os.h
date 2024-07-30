@@ -17,8 +17,11 @@
  */
 
 #if defined(__ANDROID__)
+#include "xrt/xrt_config_android.h"
 #define XRT_OS_ANDROID
+#if defined(XRT_FEATURE_AHARDWARE_BUFFER)
 #define XRT_OS_ANDROID_USE_AHB
+#endif
 #define XRT_OS_LINUX
 #define XRT_OS_UNIX
 #define XRT_OS_WAS_AUTODETECTED

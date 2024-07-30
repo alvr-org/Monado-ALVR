@@ -19,6 +19,7 @@
 { include: ["@[<\"]openxr/openxr_platform.h.*", "private", "\"xrt/xrt_openxr_includes.h\"", "public"] },
 { include: ["@[<\"]openxr/openxr_platform_defines.h.*", "private", "\"xrt/xrt_openxr_includes.h\"", "public"] },
 { symbol: ["XRT_ANDROID_PACKAGE", "public", "\"xrt/xrt_config_android.h\"", "public"] },
+{ symbol: ["XRT_FEATURE_AHARDWARE_BUFFER", "public", "\"xrt/xrt_config_android.h\"", "public"] },
 { symbol: ["XRT_MODULE_AUX_VIVE", "public", "\"xrt/xrt_config_build.h\"", "public"] },
 { symbol: ["XRT_MODULE_COMPOSITOR", "public", "\"xrt/xrt_config_build.h\"", "public"] },
 { symbol: ["XRT_MODULE_COMPOSITOR_MAIN", "public", "\"xrt/xrt_config_build.h\"", "public"] },
