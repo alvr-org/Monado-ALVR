@@ -359,6 +359,23 @@ survive_device_get_tracked_pose(struct xrt_device *xdev,
 	              p->position.z, p->orientation.x, p->orientation.y, p->orientation.z, p->orientation.w);
 }
 
+static xrt_result_t
+survive_device_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
+{
+	struct survive_device *survive = (struct survive_device *)xdev;
+	if (!survive->survive_obj) {
+		// U_LOG_D("Obj not set for %p", (void*)survive);
+		*out_present = false;
+		return XRT_SUCCESS;
+	}
+
+	*out_present = true;
+	*out_charging = survive_simple_object_charging(survive->survive_obj);
+	*out_charge = survive_simple_object_charge_percet(survive->survive_obj) * 0.01F;
+	SURVIVE_TRACE(survive, "Charging: %s, charge: %f", *out_charging ? "true" : "false", *out_charge);
+	return XRT_SUCCESS;
+}
+
 static int
 survive_controller_haptic_pulse(struct survive_device *survive, const union xrt_output_value *value)
 {
@@ -966,10 +983,12 @@ _create_hmd_device(struct survive_system *sys, const struct SurviveSimpleObject 
 	survive->base.hmd->distortion.models = XRT_DISTORTION_MODEL_COMPUTE;
 	survive->base.hmd->distortion.preferred = XRT_DISTORTION_MODEL_COMPUTE;
 	survive->base.compute_distortion = compute_distortion;
+	survive->base.get_battery_status = survive_device_get_battery_status;
 
 	survive->base.orientation_tracking_supported = true;
 	survive->base.position_tracking_supported = true;
 	survive->base.device_type = XRT_DEVICE_TYPE_HMD;
+	survive->base.battery_status_supported = true;
 
 	survive->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 
@@ -1075,6 +1094,7 @@ _create_controller_device(struct survive_system *sys,
 	survive->base.update_inputs = survive_device_update_inputs;
 	survive->base.get_tracked_pose = survive_device_get_tracked_pose;
 	survive->base.set_output = survive_controller_device_set_output;
+	survive->base.get_battery_status = survive_device_get_battery_status;
 	snprintf(survive->base.serial, XRT_DEVICE_NAME_LEN, "%s", survive->ctrl.config.firmware.device_serial_number);
 
 	if (variant == CONTROLLER_INDEX_LEFT || variant == CONTROLLER_INDEX_RIGHT) {
@@ -1168,6 +1188,7 @@ _create_controller_device(struct survive_system *sys,
 
 	survive->base.orientation_tracking_supported = true;
 	survive->base.position_tracking_supported = true;
+	survive->base.battery_status_supported = true;
 
 	survive->last_inputs = U_TYPED_ARRAY_CALLOC(struct xrt_input, survive->base.input_count);
 	survive->num_last_inputs = survive->base.input_count;
