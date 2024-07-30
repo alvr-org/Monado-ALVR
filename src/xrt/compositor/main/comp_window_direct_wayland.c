@@ -22,10 +22,13 @@
 #include "xrt/xrt_compiler.h"
 #include "main/comp_window.h"
 #include "main/comp_window_direct.h"
+#include "util/u_debug.h"
 
 #ifndef VK_EXT_acquire_drm_display
 #error "Wayland direct requires the Vulkan extension VK_EXT_acquire_drm_display"
 #endif
+
+DEBUG_GET_ONCE_OPTION(requested_connector, "XRT_COMPOSITOR_WAYLAND_CONNECTOR", NULL)
 
 struct direct_wayland_lease
 {
@@ -430,14 +433,14 @@ comp_window_direct_wayland_init(struct comp_target *w)
 		return false;
 	}
 
-	// Replace this with the value of an env variable
-	const char *connector_name = NULL;
-
-	if (!connector_name) {
+	const char *requested_connector = debug_get_option_requested_connector();
+	if (requested_connector) {
+		COMP_INFO(w->c, "Requesting connector %s", requested_connector);
+	} else {
 		COMP_INFO(w->c, "No connector was chosen, will use first available connector");
 	}
 
-	bool found = get_named_connector_or_first(w_wayland, connector_name);
+	bool found = get_named_connector_or_first(w_wayland, requested_connector);
 
 	if (!w_wayland->selected_connector) {
 		COMP_INFO(w->c, "Found no connectors available for direct mode");
@@ -445,8 +448,9 @@ comp_window_direct_wayland_init(struct comp_target *w)
 	}
 
 	// Inform when chosen connector was not found
-	if (connector_name && !found) {
-		COMP_INFO(w->c, "Could not find requested connector, selected first available connector");
+	if (requested_connector && !found) {
+		COMP_WARN(w->c, "Could not find requested connector %s, selected first available connector %s",
+		          requested_connector, w_wayland->selected_connector->name);
 	}
 
 	COMP_INFO(w->c, "Using DRM node %s", w_wayland->selected_device->path);
