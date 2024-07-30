@@ -460,6 +460,21 @@ mnd_root_get_tracking_origin_count(mnd_root_t *root, uint32_t *out_track_count);
 mnd_result_t
 mnd_root_get_tracking_origin_name(mnd_root_t *root, uint32_t origin_id, const char **out_string);
 
+/*!
+ * Get battery status of a device.
+ *
+ * @param root               The libmonado state.
+ * @param device_index       Index of device to retrieve battery info from.
+ * @param[out] out_present   Pointer to value to populate with whether the device provides battery status info.
+ * @param[out] out_charging  Pointer to value to populate with whether the device is currently being charged.
+ * @param[out] out_charge    Pointer to value to populate with the battery charge as a value between 0 and 1.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_battery_status(
+    mnd_root_t *root, uint32_t device_index, bool *out_present, bool *out_charging, float *out_charge);
+
 #ifdef __cplusplus
 }
 #endif

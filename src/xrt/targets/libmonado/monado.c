@@ -546,3 +546,32 @@ mnd_root_get_tracking_origin_name(mnd_root_t *root, uint32_t origin_id, const ch
 
 	return MND_SUCCESS;
 }
+
+mnd_result_t
+mnd_root_get_device_battery_status(
+    mnd_root_t *root, uint32_t device_index, bool *out_present, bool *out_charging, float *out_charge)
+{
+	CHECK_NOT_NULL(root);
+	CHECK_NOT_NULL(out_present);
+	CHECK_NOT_NULL(out_charging);
+	CHECK_NOT_NULL(out_charge);
+
+	if (device_index >= root->ipc_c.ism->isdev_count) {
+		PE("Invalid device index (%u)", device_index);
+		return MND_ERROR_INVALID_VALUE;
+	}
+
+	const struct ipc_shared_device *shared_device = &root->ipc_c.ism->isdevs[device_index];
+
+	if (!shared_device->battery_status_supported) {
+		return MND_ERROR_OPERATION_FAILED;
+	}
+
+	xrt_result_t xret =
+	    ipc_call_device_get_battery_status(&root->ipc_c, device_index, out_present, out_charging, out_charge);
+	switch (xret) {
+	case XRT_SUCCESS: return MND_SUCCESS;
+	case XRT_ERROR_IPC_FAILURE: PE("Connection error!"); return MND_ERROR_OPERATION_FAILED;
+	default: PE("Internal error, shouldn't get here"); return MND_ERROR_OPERATION_FAILED;
+	}
+}
