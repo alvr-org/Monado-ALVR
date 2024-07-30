@@ -61,7 +61,7 @@ EXTENSIONS = (
     ['XR_EXT_dpad_binding'],
     ['XR_EXT_eye_gaze_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE'],
     ['XR_EXT_hand_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_EXT_HAND'],
-    ['XR_EXT_hand_tracking'],
+    ['XR_EXT_hand_tracking', 'XRT_FEATURE_OPENXR_HAND_TRACKING_EXT'],
     ['XR_EXT_hp_mixed_reality_controller', 'XRT_FEATURE_OPENXR_INTERACTION_WINMR'],
     ['XR_EXT_local_floor', 'XRT_FEATURE_OPENXR_SPACE_LOCAL_FLOOR'],
     ['XR_EXT_palm_pose', 'XRT_FEATURE_OPENXR_INTERACTION_EXT_PALM_POSE'],

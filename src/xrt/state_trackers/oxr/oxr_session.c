@@ -231,7 +231,9 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 
 		const struct xrt_begin_session_info begin_session_info = {
 		    .view_type = (enum xrt_view_type)beginInfo->primaryViewConfigurationType,
+#ifdef OXR_HAVE_EXT_hand_tracking
 		    .ext_hand_tracking_enabled = extensions->EXT_hand_tracking,
+#endif
 #ifdef OXR_HAVE_EXT_eye_gaze_interaction
 		    .ext_eye_gaze_interaction_enabled = extensions->EXT_eye_gaze_interaction,
 #endif

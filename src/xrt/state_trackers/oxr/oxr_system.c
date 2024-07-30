@@ -395,6 +395,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	properties->trackingProperties.orientationTracking = xdev->orientation_tracking_supported;
 	properties->trackingProperties.positionTracking = xdev->position_tracking_supported;
 
+#ifdef OXR_HAVE_EXT_hand_tracking
 	XrSystemHandTrackingPropertiesEXT *hand_tracking_props = NULL;
 	// We should only be looking for extension structs if the extension has been enabled.
 	if (sys->inst->extensions.EXT_hand_tracking) {
@@ -405,6 +406,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 	if (hand_tracking_props) {
 		hand_tracking_props->supportsHandTracking = oxr_system_get_hand_tracking_support(log, sys->inst);
 	}
+#endif
 
 #ifdef OXR_HAVE_EXT_eye_gaze_interaction
 	XrSystemEyeGazeInteractionPropertiesEXT *eye_gaze_props = NULL;

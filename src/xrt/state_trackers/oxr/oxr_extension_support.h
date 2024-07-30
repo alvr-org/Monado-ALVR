@@ -340,7 +340,7 @@
 /*
  * XR_EXT_hand_tracking
  */
-#if defined(XR_EXT_hand_tracking)
+#if defined(XR_EXT_hand_tracking) && defined(XRT_FEATURE_OPENXR_HAND_TRACKING_EXT)
 #define OXR_HAVE_EXT_hand_tracking
 #define OXR_EXTENSION_SUPPORT_EXT_hand_tracking(_) _(EXT_hand_tracking, EXT_HAND_TRACKING)
 #else
