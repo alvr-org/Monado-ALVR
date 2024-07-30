@@ -539,3 +539,10 @@ u_device_ni_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_fact
 	E(is_form_factor_available);
 	return false;
 }
+
+xrt_result_t
+u_device_ni_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
+{
+	E(get_battery_status);
+	return XRT_ERROR_NOT_IMPLEMENTED;
+}

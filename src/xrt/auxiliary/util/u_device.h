@@ -259,6 +259,14 @@ u_device_ni_get_visibility_mask(struct xrt_device *xdev,
 bool
 u_device_ni_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor);
 
+/*!
+ * Not implemented function for @ref xrt_device::get_battery_status.
+ *
+ * @ingroup aux_util
+ */
+xrt_result_t
+u_device_ni_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge);
+
 
 #ifdef __cplusplus
 }

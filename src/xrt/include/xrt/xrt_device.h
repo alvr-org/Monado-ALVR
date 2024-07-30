@@ -269,6 +269,7 @@ struct xrt_device
 	bool stage_supported;
 	bool face_tracking_supported;
 	bool body_tracking_supported;
+	bool battery_status_supported;
 
 	/*
 	 *
@@ -503,6 +504,19 @@ struct xrt_device
 	bool (*is_form_factor_available)(struct xrt_device *xdev, enum xrt_form_factor form_factor);
 
 	/*!
+	 * @brief Get battery status information.
+	 *
+	 * @param[in] xdev          The device.
+	 * @param[out] out_present  Whether battery status information exist for this device.
+	 * @param[out] out_charging Whether the device's battery is being charged.
+	 * @param[out] out_charge   Battery charge as a value between 0 and 1.
+	 */
+	xrt_result_t (*get_battery_status)(struct xrt_device *xdev,
+	                                   bool *out_present,
+	                                   bool *out_charging,
+	                                   float *out_charge);
+
+	/*!
 	 * Destroy device.
 	 */
 	void (*destroy)(struct xrt_device *xdev);
@@ -700,6 +714,22 @@ static inline bool
 xrt_device_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
 {
 	return xdev->is_form_factor_available(xdev, form_factor);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_battery_status.
+ *
+ * @copydoc xrt_device::get_battery_status
+ *
+ * @public @memberof xrt_device
+ */
+static inline xrt_result_t
+xrt_device_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
+{
+	if (xdev->get_battery_status == NULL) {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+	return xdev->get_battery_status(xdev, out_present, out_charging, out_charge);
 }
 
 /*!
