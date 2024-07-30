@@ -512,6 +512,17 @@
 		"out": [
 			{"name": "value", "type": "struct xrt_body_joint_set"}
 		]
+	},
+
+	"device_get_battery_status": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "present", "type": "bool"},
+			{"name": "charging", "type": "bool"},
+			{"name": "charge", "type": "float"}
+		]
 	}
 
 }

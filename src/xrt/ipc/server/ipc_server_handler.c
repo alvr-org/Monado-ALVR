@@ -2140,3 +2140,11 @@ ipc_handle_device_get_body_joints(volatile struct ipc_client_state *ics,
 	struct xrt_device *xdev = get_xdev(ics, id);
 	return xrt_device_get_body_joints(xdev, body_tracking_type, desired_timestamp_ns, out_value);
 }
+
+xrt_result_t
+ipc_handle_device_get_battery_status(
+    volatile struct ipc_client_state *ics, uint32_t id, bool *out_present, bool *out_charging, float *out_charge)
+{
+	struct xrt_device *xdev = get_xdev(ics, id);
+	return xrt_device_get_battery_status(xdev, out_present, out_charging, out_charge);
+}

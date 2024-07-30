@@ -137,6 +137,7 @@ struct ipc_shared_device
 	bool force_feedback_supported;
 	bool form_factor_check_supported;
 	bool stage_supported;
+	bool battery_status_supported;
 };
 
 /*!
