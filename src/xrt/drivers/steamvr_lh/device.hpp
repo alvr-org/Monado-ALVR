@@ -72,6 +72,9 @@ public:
 	virtual void
 	get_tracked_pose(xrt_input_name name, uint64_t at_timestamp_ns, xrt_space_relation *out_relation) = 0;
 
+	xrt_result_t
+	get_battery_status(bool *out_present, bool *out_charging, float *out_charge);
+
 protected:
 	Device(const DeviceBuilder &builder);
 	std::shared_ptr<Context> ctx;
@@ -83,6 +86,9 @@ protected:
 	std::string manufacturer;
 	std::string model;
 	float vsync_to_photon_ns{0.f};
+	bool provides_battery_status{false};
+	bool charging{false};
+	float charge{1.0F};
 
 	virtual void
 	handle_property_write(const vr::PropertyWrite_t &prop);

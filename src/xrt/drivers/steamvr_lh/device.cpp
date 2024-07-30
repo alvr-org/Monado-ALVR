@@ -184,6 +184,7 @@ ControllerDevice::ControllerDevice(vr::PropertyContainerHandle_t handle, const D
 {
 	this->device_type = XRT_DEVICE_TYPE_UNKNOWN;
 	this->container_handle = handle;
+
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<ControllerDevice, &ControllerDevice::name>
 	SETUP_MEMBER_FUNC(set_output);
 	SETUP_MEMBER_FUNC(get_hand_tracking);
@@ -206,10 +207,12 @@ Device::Device(const DeviceBuilder &builder) : xrt_device({}), ctx(builder.ctx),
 	this->hand_tracking_supported = true;
 	this->force_feedback_supported = false;
 	this->form_factor_check_supported = false;
+	this->battery_status_supported = true;
 
 #define SETUP_MEMBER_FUNC(name) this->xrt_device::name = &device_bouncer<Device, &Device::name>
 	SETUP_MEMBER_FUNC(update_inputs);
 	SETUP_MEMBER_FUNC(get_tracked_pose);
+	SETUP_MEMBER_FUNC(get_battery_status);
 #undef SETUP_MEMBER_FUNC
 
 	this->xrt_device::destroy = [](xrt_device *xdev) {
@@ -412,6 +415,15 @@ void
 Device::get_pose(uint64_t at_timestamp_ns, xrt_space_relation *out_relation)
 {
 	m_relation_history_get(this->relation_hist, at_timestamp_ns, out_relation);
+}
+
+xrt_result_t
+Device::get_battery_status(bool *out_present, bool *out_charging, float *out_charge)
+{
+	*out_present = this->provides_battery_status;
+	*out_charging = this->charging;
+	*out_charge = this->charge;
+	return XRT_SUCCESS;
 }
 
 void
@@ -781,6 +793,24 @@ HmdDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		vsync_to_photon_ns = *static_cast<float *>(prop.pvBuffer) * 1e9f;
 		break;
 	}
+	case vr::Prop_DeviceProvidesBatteryStatus_Bool: {
+		float supported = *static_cast<bool *>(prop.pvBuffer);
+		this->provides_battery_status = supported;
+		DEV_DEBUG("Has battery status: HMD: %s", supported ? "true" : "false");
+		break;
+	}
+	case vr::Prop_DeviceIsCharging_Bool: {
+		float charging = *static_cast<bool *>(prop.pvBuffer);
+		this->charging = charging;
+		DEV_DEBUG("Charging: HMD: %s", charging ? "true" : "false");
+		break;
+	}
+	case vr::Prop_DeviceBatteryPercentage_Float: {
+		float bat = *static_cast<float *>(prop.pvBuffer);
+		this->charge = bat;
+		DEV_DEBUG("Battery: HMD: %f", bat);
+		break;
+	}
 	default: {
 		Device::handle_property_write(prop);
 		break;
@@ -850,6 +880,27 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 		}
 		break;
 	}
+	case vr::Prop_DeviceProvidesBatteryStatus_Bool: {
+		float supported = *static_cast<bool *>(prop.pvBuffer);
+		const char *name;
+		switch (this->device_type) {
+		case XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER: {
+			name = "Left";
+			break;
+		}
+		case XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER: {
+			name = "Right";
+			break;
+		}
+		default: {
+			name = "Unknown";
+			break;
+		}
+		}
+		this->provides_battery_status = supported;
+		DEV_DEBUG("Has battery status: %s: %s", name, supported ? "true" : "false");
+		break;
+	}
 	case vr::Prop_DeviceIsCharging_Bool: {
 		float charging = *static_cast<bool *>(prop.pvBuffer);
 		const char *name;
@@ -866,6 +917,7 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 			name = "Unknown";
 		}
 		}
+		this->charging = charging;
 		DEV_DEBUG("Charging: %s: %s", name, charging ? "true" : "false");
 		break;
 	}
@@ -885,6 +937,7 @@ ControllerDevice::handle_property_write(const vr::PropertyWrite_t &prop)
 			name = "Unknown";
 		}
 		}
+		this->charge = bat;
 		DEV_DEBUG("Battery: %s: %f", name, bat);
 		break;
 	}
