@@ -274,15 +274,15 @@ static void
 _lease_connector_done(void *data, struct wp_drm_lease_connector_v1 *wp_drm_lease_connector_v1)
 {
 	struct direct_wayland_lease_connector *conn = data;
-	COMP_DEBUG(conn->w->base.base.c, "[%s] connector %s (%s) id: %d", conn->dev->path, conn->name,
-	           conn->description, conn->id);
+	COMP_INFO(conn->w->base.base.c, "[%s] connector %s (%s) id: %d", conn->dev->path, conn->name, conn->description,
+	          conn->id);
 }
 
 static void
 _lease_connector_withdrawn(void *data, struct wp_drm_lease_connector_v1 *wp_drm_lease_connector_v1)
 {
 	struct direct_wayland_lease_connector *conn = data;
-	COMP_DEBUG(conn->w->base.base.c, "Connector %s has been withdrawn by the compositor", conn->name);
+	COMP_INFO(conn->w->base.base.c, "Connector %s has been withdrawn by the compositor", conn->name);
 	if (conn == conn->w->selected_connector && !conn->w->lease->lease) {
 		conn->w->selected_connector = NULL;
 	}
@@ -302,7 +302,7 @@ _drm_lease_device_drm_fd(void *data, struct wp_drm_lease_device_v1 *drm_lease_de
 	struct direct_wayland_lease_device *dev = data;
 	dev->drm_fd = fd;
 	dev->path = drmGetDeviceNameFromFd2(fd);
-	COMP_DEBUG(dev->w->base.base.c, "Available DRM lease device: %s", dev->path);
+	COMP_INFO(dev->w->base.base.c, "Available DRM lease device: %s", dev->path);
 }
 
 static void
