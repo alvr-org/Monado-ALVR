@@ -332,6 +332,12 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrLocateBodyJointsFB, FB_body_tracking);
 #endif
 
+#ifdef OXR_HAVE_FB_face_tracking2
+	ENTRY_IF_EXT(xrCreateFaceTracker2FB, FB_face_tracking2);
+	ENTRY_IF_EXT(xrDestroyFaceTracker2FB, FB_face_tracking2);
+	ENTRY_IF_EXT(xrGetFaceExpressionWeights2FB, FB_face_tracking2);
+#endif
+
 #ifdef OXR_HAVE_MNDX_xdev_space
 	ENTRY_IF_EXT(xrCreateXDevListMNDX, MNDX_xdev_space);
 	ENTRY_IF_EXT(xrGetXDevListGenerationNumberMNDX, MNDX_xdev_space);

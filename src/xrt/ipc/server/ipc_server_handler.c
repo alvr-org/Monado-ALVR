@@ -280,6 +280,9 @@ ipc_handle_instance_describe_client(volatile struct ipc_client_state *ics,
 #ifdef OXR_HAVE_FB_body_tracking
 	EXT(fb_body_tracking_enabled);
 #endif
+#ifdef OXR_HAVE_FB_face_tracking2
+	EXT(fb_face_tracking2_enabled);
+#endif
 
 #undef EXT
 #undef PTT
@@ -373,6 +376,7 @@ ipc_handle_session_begin(volatile struct ipc_client_state *ics)
 	    .ext_hand_interaction_enabled = ics->client_state.info.ext_hand_interaction_enabled,
 	    .htc_facial_tracking_enabled = ics->client_state.info.htc_facial_tracking_enabled,
 	    .fb_body_tracking_enabled = ics->client_state.info.fb_body_tracking_enabled,
+	    .fb_face_tracking2_enabled = ics->client_state.info.fb_face_tracking2_enabled,
 	};
 
 	return xrt_comp_begin_session(ics->xc, &begin_session_info);

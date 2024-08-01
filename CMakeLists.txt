@@ -353,6 +353,7 @@ option(XRT_FEATURE_OPENXR_PERFORMANCE_SETTINGS "Enable XR_EXT_performance_settin
 option(XRT_FEATURE_OPENXR_VULKAN_SWAPCHAIN_FORMAT_LIST "Enable XR_KHR_vulkan_swapchain_format_list" ON)
 option(XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC "Enable XR_HTC_facial_tracking" OFF)
 option(XRT_FEATURE_OPENXR_BODY_TRACKING_FB "Enable XR_FB_body_tracking" OFF)
+option(XRT_FEATURE_OPENXR_FACE_TRACKING2_FB "Enable XR_FB_face_tracking2" OFF)
 option(XRT_FEATURE_OPENXR_XDEV_SPACE "Enable XR_MNDX_xdev_space" ON)
 
 # Interaction extension support.
@@ -578,6 +579,7 @@ message(STATUS "#    FEATURE_COLOR_LOG:                            ${XRT_FEATURE
 message(STATUS "#    FEATURE_DEBUG_GUI:                            ${XRT_FEATURE_DEBUG_GUI}")
 message(STATUS "#    FEATURE_OPENXR:                               ${XRT_FEATURE_OPENXR}")
 message(STATUS "#    FEATURE_OPENXR_BODY_TRACKING_FB:              ${XRT_FEATURE_OPENXR_BODY_TRACKING_FB}")
+message(STATUS "#    FEATURE_OPENXR_FACE_TRACKING2_FB:             ${XRT_FEATURE_OPENXR_FACE_TRACKING2_FB}")
 message(STATUS "#    FEATURE_OPENXR_DEBUG_UTILS:                   ${XRT_FEATURE_OPENXR_DEBUG_UTILS}")
 message(STATUS "#    FEATURE_OPENXR_DISPLAY_REFRESH_RATE:          ${XRT_FEATURE_OPENXR_DISPLAY_REFRESH_RATE}")
 message(STATUS "#    FEATURE_OPENXR_FACIAL_TRACKING_HTC:           ${XRT_FEATURE_OPENXR_FACIAL_TRACKING_HTC}")

@@ -122,7 +122,7 @@ struct oxr_action_set_ref;
 struct oxr_action_ref;
 struct oxr_hand_tracker;
 struct oxr_facial_tracker_htc;
-struct oxr_facial_tracker_fb;
+struct oxr_face_tracker2_fb;
 struct oxr_body_tracker_fb;
 struct oxr_xdev_list;
 
@@ -413,6 +413,18 @@ oxr_body_tracker_fb_to_openxr(struct oxr_body_tracker_fb *body_tracker_fb)
 }
 #endif
 
+#ifdef OXR_HAVE_FB_face_tracking2
+/*!
+ * To go back to a OpenXR object.
+ *
+ * @relates oxr_face_tracker2_fb
+ */
+static inline XrFaceTracker2FB
+oxr_face_tracker2_fb_to_openxr(struct oxr_face_tracker2_fb *face_tracker2_fb)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrFaceTracker2FB, face_tracker2_fb);
+}
+#endif
 /*!
  *
  * @name oxr_input.c
@@ -1034,6 +1046,12 @@ oxr_system_get_face_tracking_htc_support(struct oxr_logger *log,
                                          struct oxr_instance *inst,
                                          bool *supports_eye,
                                          bool *supports_lip);
+
+void
+oxr_system_get_face_tracking2_fb_support(struct oxr_logger *log,
+                                         struct oxr_instance *inst,
+                                         bool *supports_audio,
+                                         bool *supports_visual);
 
 bool
 oxr_system_get_body_tracking_fb_support(struct oxr_logger *log, struct oxr_instance *inst);
@@ -2742,6 +2760,43 @@ oxr_locate_body_joints_fb(struct oxr_logger *log,
                           struct oxr_space *base_spc,
                           const XrBodyJointsLocateInfoFB *locateInfo,
                           XrBodyJointLocationsFB *locations);
+#endif
+
+#ifdef OXR_HAVE_FB_face_tracking2
+/*!
+ * FB specific Face tracker2.
+ *
+ * Parent type/handle is @ref oxr_instance
+ *
+ * @obj{XrFaceTracker2FB}
+ * @extends oxr_handle_base
+ */
+struct oxr_face_tracker2_fb
+{
+	//! Common structure for things referred to by OpenXR handles.
+	struct oxr_handle_base handle;
+
+	//! Owner of this face tracker.
+	struct oxr_session *sess;
+
+	//! xrt_device backing this face tracker
+	struct xrt_device *xdev;
+
+	bool audio_enabled;
+	bool visual_enabled;
+};
+
+XrResult
+oxr_face_tracker2_fb_create(struct oxr_logger *log,
+                            struct oxr_session *sess,
+                            const XrFaceTrackerCreateInfo2FB *createInfo,
+                            struct oxr_face_tracker2_fb **out_face_tracker2_fb);
+
+XrResult
+oxr_get_face_expression_weights2_fb(struct oxr_logger *log,
+                                    struct oxr_face_tracker2_fb *face_tracker2_fb,
+                                    const XrFaceExpressionInfo2FB *expression_info,
+                                    XrFaceExpressionWeights2FB *expression_weights);
 #endif
 
 #ifdef OXR_HAVE_MNDX_xdev_space

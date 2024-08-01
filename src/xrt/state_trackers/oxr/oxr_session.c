@@ -237,6 +237,9 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 #ifdef OXR_HAVE_FB_body_tracking
 		    .fb_body_tracking_enabled = extensions->FB_body_tracking,
 #endif
+#ifdef OXR_HAVE_FB_face_tracking2
+		    .fb_face_tracking2_enabled = extensions->FB_face_tracking2,
+#endif
 		};
 
 		xrt_result_t xret = xrt_comp_begin_session(xc, &begin_session_info);

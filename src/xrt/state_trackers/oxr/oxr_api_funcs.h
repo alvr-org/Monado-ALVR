@@ -655,6 +655,23 @@ oxr_xrLocateBodyJointsFB(XrBodyTrackerFB bodyTracker,
                          XrBodyJointLocationsFB *locations);
 #endif
 
+#ifdef OXR_HAVE_FB_face_tracking2
+//! OpenXR API function @ep{xrCreateFaceTracker2FB}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateFaceTracker2FB(XrSession session,
+                           const XrFaceTrackerCreateInfo2FB *createInfo,
+                           XrFaceTracker2FB *faceTracker);
+
+//! OpenXR API function @ep{xrDestroyFaceTracker2FB}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyFaceTracker2FB(XrFaceTracker2FB faceTracker);
+
+//! OpenXR API function @ep{xrGetFaceExpressionWeights2FB}
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetFaceExpressionWeights2FB(XrFaceTracker2FB faceTracker,
+                                  const XrFaceExpressionInfo2FB *expressionInfo,
+                                  XrFaceExpressionWeights2FB *expressionWeights);
+#endif
 
 /*
  *
