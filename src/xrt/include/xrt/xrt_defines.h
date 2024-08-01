@@ -1614,7 +1614,7 @@ enum xrt_facial_tracking_type_htc
 
 struct xrt_facial_base_expression_set_htc
 {
-	uint64_t sample_time_ns;
+	int64_t sample_time_ns;
 	bool is_active;
 };
 
@@ -1769,7 +1769,7 @@ struct xrt_body_joint_location_fb
 
 struct xrt_base_body_joint_set_meta
 {
-	uint64_t sample_time_ns;
+	int64_t sample_time_ns;
 	float confidence;
 	uint32_t skeleton_changed_count;
 	bool is_active;

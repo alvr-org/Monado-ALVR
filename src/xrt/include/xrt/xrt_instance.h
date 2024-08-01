@@ -185,7 +185,7 @@ struct xrt_instance
 	/*!
 	 * CLOCK_MONOTONIC timestamp of the instance startup.
 	 */
-	uint64_t startup_timestamp;
+	int64_t startup_timestamp;
 
 	/*!
 	 * An "aspect" of the xrt_instance interface, used only on Android.

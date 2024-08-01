@@ -36,8 +36,8 @@ struct xrt_frame
 	enum xrt_format format;
 	enum xrt_stereo_format stereo_format;
 
-	uint64_t timestamp;
-	uint64_t source_timestamp;
+	int64_t timestamp;
+	int64_t source_timestamp;
 	uint64_t source_sequence; //!< sequence id
 	uint64_t source_id;       //!< Which @ref xrt_fs this frame originated from.
 };

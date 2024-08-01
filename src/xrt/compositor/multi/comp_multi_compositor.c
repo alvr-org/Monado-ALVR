@@ -179,7 +179,7 @@ wait_for_scheduled_free(struct multi_compositor *mc)
 
 	// Block here if the scheduled slot is not clear.
 	while (v_mc->scheduled.active) {
-		uint64_t now_ns = os_monotonic_get_ns();
+		int64_t now_ns = os_monotonic_get_ns();
 
 		// This frame is for the next frame, drop the old one no matter what.
 		if (time_is_within_half_ms(mc->progress.data.display_time_ns, mc->slot_next_frame_display)) {

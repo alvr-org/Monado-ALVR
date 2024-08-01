@@ -408,7 +408,7 @@ struct xrt_layer_data
 	 * The layer may be displayed after this point, but must never be
 	 * displayed before.
 	 */
-	uint64_t timestamp;
+	int64_t timestamp;
 
 	/*!
 	 * Composition flags
@@ -477,7 +477,7 @@ struct xrt_layer_data
 struct xrt_layer_frame_data
 {
 	int64_t frame_id;
-	uint64_t display_time_ns;
+	int64_t display_time_ns;
 	enum xrt_blend_mode env_blend_mode;
 };
 

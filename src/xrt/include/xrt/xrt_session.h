@@ -101,7 +101,7 @@ struct xrt_session_event_overlay
 struct xrt_session_event_loss_pending
 {
 	enum xrt_session_event_type type;
-	uint64_t loss_time_ns;
+	int64_t loss_time_ns;
 };
 
 /*!
@@ -141,7 +141,7 @@ struct xrt_session_event_reference_space_change_pending
 {
 	enum xrt_session_event_type event_type;
 	enum xrt_reference_space_type ref_type;
-	uint64_t timestamp_ns;
+	int64_t timestamp_ns;
 	struct xrt_pose pose_in_previous_space;
 	bool pose_valid;
 };
