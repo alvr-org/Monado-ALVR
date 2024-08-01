@@ -125,8 +125,8 @@ wmr_controller_send_fw_cmd(struct wmr_controller_base *wcb,
 	// comms timeout. Replies are usually in 10ms or so but the first can take longer
 	const int timeout_ms = 250;
 	const int timeout_ns = timeout_ms * U_TIME_1MS_IN_NS;
-	uint64_t timeout_start = os_monotonic_get_ns();
-	uint64_t timeout_end_ns = timeout_start + timeout_ns;
+	int64_t timeout_start = os_monotonic_get_ns();
+	int64_t timeout_end_ns = timeout_start + timeout_ns;
 
 	if (!wmr_controller_send_bytes(wcb, fw_cmd->buf, sizeof(fw_cmd->buf))) {
 		return -1;

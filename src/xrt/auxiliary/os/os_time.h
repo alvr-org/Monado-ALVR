@@ -75,7 +75,7 @@ extern "C" {
  * Return a monotonic clock in nanoseconds.
  * @ingroup aux_os_time
  */
-static inline uint64_t
+static inline int64_t
 os_monotonic_get_ns(void);
 
 /*!
@@ -133,7 +133,7 @@ os_precise_sleeper_nanosleep(struct os_precise_sleeper *ops, int32_t nsec);
  *
  * @ingroup aux_os_time_extra
  */
-static inline uint64_t
+static inline int64_t
 os_timespec_to_ns(const struct timespec *spec);
 
 /*!
@@ -143,7 +143,7 @@ os_timespec_to_ns(const struct timespec *spec);
  * @ingroup aux_os_time_extra
  */
 static inline void
-os_ns_to_timespec(uint64_t ns, struct timespec *spec);
+os_ns_to_timespec(int64_t ns, struct timespec *spec);
 #endif
 
 #if defined(XRT_HAVE_TIMEVAL) || defined(XRT_DOXYGEN)
@@ -151,7 +151,7 @@ os_ns_to_timespec(uint64_t ns, struct timespec *spec);
  * Convert a timeval struct to nanoseconds.
  * @ingroup aux_os_time_extra
  */
-static inline uint64_t
+static inline int64_t
 os_timeval_to_ns(struct timeval *val);
 #endif
 
@@ -161,7 +161,7 @@ os_timeval_to_ns(struct timeval *val);
  *
  * @ingroup aux_os_time_extra
  */
-static inline uint64_t
+static inline int64_t
 os_realtime_get_ns(void);
 #endif
 
@@ -171,7 +171,7 @@ os_realtime_get_ns(void);
  *
  * @ingroup aux_os_time_extra
  */
-uint64_t
+int64_t
 os_realtime_get_ns(void);
 #endif
 
@@ -258,17 +258,17 @@ os_precise_sleeper_nanosleep(struct os_precise_sleeper *ops, int32_t nsec)
 }
 
 #if defined(XRT_HAVE_TIMESPEC)
-static inline uint64_t
+static inline int64_t
 os_timespec_to_ns(const struct timespec *spec)
 {
-	uint64_t ns = 0;
-	ns += (uint64_t)spec->tv_sec * U_1_000_000_000;
-	ns += (uint64_t)spec->tv_nsec;
+	int64_t ns = 0;
+	ns += (int64_t)spec->tv_sec * U_1_000_000_000;
+	ns += (int64_t)spec->tv_nsec;
 	return ns;
 }
 
 static inline void
-os_ns_to_timespec(uint64_t ns, struct timespec *spec)
+os_ns_to_timespec(int64_t ns, struct timespec *spec)
 {
 	spec->tv_sec = (ns / U_1_000_000_000);
 	spec->tv_nsec = (ns % U_1_000_000_000);
@@ -280,12 +280,12 @@ os_ns_to_timespec(uint64_t ns, struct timespec *spec)
 
 #define OS_NS_PER_USEC (1000)
 
-static inline uint64_t
+static inline int64_t
 os_timeval_to_ns(struct timeval *val)
 {
-	uint64_t ns = 0;
-	ns += (uint64_t)val->tv_sec * U_1_000_000_000;
-	ns += (uint64_t)val->tv_usec * OS_NS_PER_USEC;
+	int64_t ns = 0;
+	ns += (int64_t)val->tv_sec * U_1_000_000_000;
+	ns += (int64_t)val->tv_usec * OS_NS_PER_USEC;
 	return ns;
 }
 #endif // defined(XRT_HAVE_TIMEVAL) && defined(XRT_OS_LINUX)
@@ -305,7 +305,7 @@ os_ns_per_qpc_tick_get(void)
 }
 #endif // defined(XRT_OS_WINDOWS)
 
-static inline uint64_t
+static inline int64_t
 os_monotonic_get_ns(void)
 {
 #if defined(XRT_OS_LINUX)
@@ -326,7 +326,7 @@ os_monotonic_get_ns(void)
 }
 
 #ifdef XRT_OS_LINUX
-static inline uint64_t
+static inline int64_t
 os_realtime_get_ns(void)
 {
 	struct timespec ts;

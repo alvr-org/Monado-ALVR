@@ -882,8 +882,8 @@ vive_sensors_run_thread(void *ptr)
 	 * read packets with a noop function for 50ms.
 	 */
 
-	uint64_t then_ns = os_monotonic_get_ns();
-	uint64_t future_50ms_ns = then_ns + U_TIME_1MS_IN_NS * (uint64_t)50;
+	int64_t then_ns = os_monotonic_get_ns();
+	int64_t future_50ms_ns = then_ns + U_TIME_1MS_IN_NS * (int64_t)50;
 
 	while (future_50ms_ns > os_monotonic_get_ns() && os_thread_helper_is_running(&d->sensors_thread)) {
 		// Lock not held.
