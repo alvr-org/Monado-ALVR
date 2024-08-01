@@ -126,7 +126,7 @@ struct t_hand_tracking_sync
 	                struct xrt_frame *right_frame,
 	                struct xrt_hand_joint_set *out_left_hand,
 	                struct xrt_hand_joint_set *out_right_hand,
-	                uint64_t *out_timestamp_ns);
+	                int64_t *out_timestamp_ns);
 
 	/*!
 	 * Destroy this hand tracker sync object.
@@ -145,7 +145,7 @@ t_ht_sync_process(struct t_hand_tracking_sync *ht_sync,
                   struct xrt_frame *right_frame,
                   struct xrt_hand_joint_set *out_left_hand,
                   struct xrt_hand_joint_set *out_right_hand,
-                  uint64_t *out_timestamp_ns)
+                  int64_t *out_timestamp_ns)
 {
 	ht_sync->process(ht_sync, left_frame, right_frame, out_left_hand, out_right_hand, out_timestamp_ns);
 }
@@ -179,9 +179,9 @@ struct t_hand_tracking_async
 
 	void (*get_hand)(struct t_hand_tracking_async *ht_async,
 	                 enum xrt_input_name name,
-	                 uint64_t desired_timestamp_ns,
+	                 int64_t desired_timestamp_ns,
 	                 struct xrt_hand_joint_set *out_value,
-	                 uint64_t *out_timestamp_ns);
+	                 int64_t *out_timestamp_ns);
 };
 
 struct t_hand_tracking_async *

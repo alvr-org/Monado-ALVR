@@ -44,7 +44,7 @@ struct ht_async_impl
 	struct
 	{
 		struct xrt_hand_joint_set hands[2];
-		uint64_t timestamp;
+		int64_t timestamp;
 	} working;
 
 	struct
@@ -52,7 +52,7 @@ struct ht_async_impl
 		struct os_mutex mutex;
 		struct xrt_hand_joint_set hands[2];
 		struct m_relation_history *relation_hist[2];
-		uint64_t timestamp;
+		int64_t timestamp;
 	} present;
 
 	// in here:
@@ -259,9 +259,9 @@ ht_async_destroy(struct xrt_frame_node *node)
 static void
 ht_async_get_hand(struct t_hand_tracking_async *ht_async,
                   enum xrt_input_name name,
-                  uint64_t desired_timestamp_ns,
+                  int64_t desired_timestamp_ns,
                   struct xrt_hand_joint_set *out_value,
-                  uint64_t *out_timestamp_ns)
+                  int64_t *out_timestamp_ns)
 {
 	struct ht_async_impl *hta = ht_async_impl(ht_async);
 	assert(name == XRT_INPUT_GENERIC_HAND_TRACKING_LEFT || name == XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
