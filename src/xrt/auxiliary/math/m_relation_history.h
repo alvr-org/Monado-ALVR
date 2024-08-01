@@ -60,9 +60,7 @@ m_relation_history_create(struct m_relation_history **rh);
  * @public @memberof m_relation_history
  */
 bool
-m_relation_history_push(struct m_relation_history *rh,
-                        struct xrt_space_relation const *in_relation,
-                        uint64_t timestamp);
+m_relation_history_push(struct m_relation_history *rh, struct xrt_space_relation const *in_relation, int64_t timestamp);
 
 /*!
  * Interpolates or extrapolates to the desired timestamp.
@@ -74,7 +72,7 @@ m_relation_history_push(struct m_relation_history *rh,
  */
 enum m_relation_history_result
 m_relation_history_get(const struct m_relation_history *rh,
-                       uint64_t at_timestamp_ns,
+                       int64_t at_timestamp_ns,
                        struct xrt_space_relation *out_relation);
 
 /*!
@@ -90,7 +88,7 @@ m_relation_history_get(const struct m_relation_history *rh,
 bool
 m_relation_history_estimate_motion(struct m_relation_history *rh,
                                    const struct xrt_space_relation *in_relation,
-                                   uint64_t timestamp,
+                                   int64_t timestamp,
                                    struct xrt_space_relation *out_relation);
 
 /*!
@@ -106,7 +104,7 @@ m_relation_history_estimate_motion(struct m_relation_history *rh,
  */
 bool
 m_relation_history_get_latest(const struct m_relation_history *rh,
-                              uint64_t *out_time_ns,
+                              int64_t *out_time_ns,
                               struct xrt_space_relation *out_relation);
 
 /*!
@@ -178,7 +176,7 @@ public:
 	 * @copydoc m_relation_history_push
 	 */
 	bool
-	push(xrt_space_relation const &relation, uint64_t ts) noexcept
+	push(xrt_space_relation const &relation, int64_t ts) noexcept
 	{
 		return m_relation_history_push(mPtr, &relation, ts);
 	}
@@ -187,7 +185,7 @@ public:
 	 * @copydoc m_relation_history_get
 	 */
 	Result
-	get(uint64_t at_time_ns, xrt_space_relation *out_relation) const noexcept
+	get(int64_t at_time_ns, xrt_space_relation *out_relation) const noexcept
 	{
 		return m_relation_history_get(mPtr, at_time_ns, out_relation);
 	}
@@ -196,7 +194,7 @@ public:
 	 * @copydoc m_relation_history_get_latest
 	 */
 	bool
-	get_latest(uint64_t *out_time_ns, xrt_space_relation *out_relation) const noexcept
+	get_latest(int64_t *out_time_ns, xrt_space_relation *out_relation) const noexcept
 	{
 		return m_relation_history_get_latest(mPtr, out_time_ns, out_relation);
 	}

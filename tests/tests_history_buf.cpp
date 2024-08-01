@@ -57,7 +57,7 @@ TEST_CASE("m_relation_history")
 		constexpr auto T2 = T1 + (uint64_t)U_TIME_1S_IN_NS;
 
 		xrt_space_relation out_relation = XRT_SPACE_RELATION_ZERO;
-		uint64_t out_time = 0;
+		int64_t out_time = 0;
 
 		CHECK(m_relation_history_get_size(rh) == 0);
 		CHECK_FALSE(m_relation_history_get_latest(rh, &out_time, &out_relation));
@@ -152,7 +152,7 @@ TEST_CASE("RelationHistory")
 		constexpr auto T2 = T1 + (uint64_t)U_TIME_1S_IN_NS;
 
 		xrt_space_relation out_relation = XRT_SPACE_RELATION_ZERO;
-		uint64_t out_time = 0;
+		int64_t out_time = 0;
 
 		CHECK(rh.size() == 0);
 		CHECK_FALSE(rh.get_latest(&out_time, &out_relation));

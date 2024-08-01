@@ -762,7 +762,7 @@ flush_poses(TrackerSlam &t)
 
 		// Last relation
 		xrt_space_relation lr = XRT_SPACE_RELATION_ZERO;
-		uint64_t lts;
+		int64_t lts;
 		t.slam_rels.get_latest(&lts, &lr);
 		xrt_vec3 lpos = lr.pose.position;
 		xrt_quat lrot = lr.pose.orientation;
@@ -907,7 +907,7 @@ predict_pose(TrackerSlam &t, timepoint_ns when_ns, struct xrt_space_relation *ou
 
 	// Get last relation computed purely from SLAM data
 	xrt_space_relation rel{};
-	uint64_t rel_ts;
+	int64_t rel_ts;
 	bool empty = !t.slam_rels.get_latest(&rel_ts, &rel);
 
 	// Stop if there is no previous relation to use for prediction

@@ -146,11 +146,11 @@ const std::unordered_map<std::string_view, InputClass> controller_classes{
     },
 };
 
-uint64_t
+int64_t
 chrono_timestamp_ns()
 {
 	auto now = std::chrono::steady_clock::now().time_since_epoch();
-	uint64_t ts = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+	int64_t ts = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
 	return ts;
 }
 
@@ -317,7 +317,7 @@ ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
 	auto curl_values = u_hand_tracking_curl_values{pinky, ring, middle, index, thumb};
 
 	struct xrt_space_relation hand_relation = {};
-	uint64_t ts = chrono_timestamp_ns();
+	int64_t ts = chrono_timestamp_ns();
 	m_relation_history_get_latest(relation_hist, &ts, &hand_relation);
 
 	u_hand_sim_simulate_for_valve_index_knuckles(&curl_values, get_xrt_hand(), &hand_relation, out);

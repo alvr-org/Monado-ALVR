@@ -37,7 +37,7 @@ namespace os = xrt::auxiliary::os;
 struct relation_history_entry
 {
 	struct xrt_space_relation relation;
-	uint64_t timestamp;
+	int64_t timestamp;
 };
 
 static constexpr size_t BufLen = 4096;
@@ -57,7 +57,7 @@ m_relation_history_create(struct m_relation_history **rh_ptr)
 }
 
 bool
-m_relation_history_push(struct m_relation_history *rh, struct xrt_space_relation const *in_relation, uint64_t timestamp)
+m_relation_history_push(struct m_relation_history *rh, struct xrt_space_relation const *in_relation, int64_t timestamp)
 {
 	XRT_TRACE_MARKER();
 	struct relation_history_entry rhe;
@@ -82,7 +82,7 @@ m_relation_history_push(struct m_relation_history *rh, struct xrt_space_relation
 
 enum m_relation_history_result
 m_relation_history_get(const struct m_relation_history *rh,
-                       uint64_t at_timestamp_ns,
+                       int64_t at_timestamp_ns,
                        struct xrt_space_relation *out_relation)
 {
 	XRT_TRACE_MARKER();
@@ -99,7 +99,7 @@ m_relation_history_get(const struct m_relation_history *rh,
 		// Find the first element *not less than* our value. the lambda we pass is the comparison
 		// function, to compare against timestamps.
 		const auto it =
-		    std::lower_bound(b, e, at_timestamp_ns, [](const relation_history_entry &rhe, uint64_t timestamp) {
+		    std::lower_bound(b, e, at_timestamp_ns, [](const relation_history_entry &rhe, int64_t timestamp) {
 			    return rhe.timestamp < timestamp;
 		    });
 
@@ -183,11 +183,11 @@ m_relation_history_get(const struct m_relation_history *rh,
 bool
 m_relation_history_estimate_motion(struct m_relation_history *rh,
                                    const struct xrt_space_relation *in_relation,
-                                   uint64_t timestamp,
+                                   int64_t timestamp,
                                    struct xrt_space_relation *out_relation)
 {
 
-	uint64_t last_time_ns;
+	int64_t last_time_ns;
 	struct xrt_space_relation last_relation;
 	if (!m_relation_history_get_latest(rh, &last_time_ns, &last_relation)) {
 		return false;
@@ -229,7 +229,7 @@ m_relation_history_estimate_motion(struct m_relation_history *rh,
 
 bool
 m_relation_history_get_latest(const struct m_relation_history *rh,
-                              uint64_t *out_time_ns,
+                              int64_t *out_time_ns,
                               struct xrt_space_relation *out_relation)
 {
 	std::unique_lock<os::Mutex> lock(rh->mutex);
