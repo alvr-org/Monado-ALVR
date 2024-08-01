@@ -136,10 +136,10 @@ time_ms_f_to_ns(double ms_f)
  * @ingroup aux_util
  */
 static inline bool
-time_is_within_range_of_each_other(timepoint_ns a, timepoint_ns b, uint64_t range)
+time_is_within_range_of_each_other(timepoint_ns a, timepoint_ns b, int64_t range)
 {
-	int64_t t = (int64_t)a - (int64_t)b;
-	return (-(int64_t)range < t) && (t < (int64_t)range);
+	int64_t t = a - b;
+	return (-range < t) && (t < range);
 }
 
 /*!
@@ -161,7 +161,7 @@ time_is_within_half_ms(timepoint_ns a, timepoint_ns b)
  * @ingroup aux_util
  */
 static inline bool
-time_is_less_then_or_within_range(timepoint_ns a, timepoint_ns b, uint64_t range)
+time_is_less_then_or_within_range(timepoint_ns a, timepoint_ns b, int64_t range)
 {
 	return a < b || time_is_within_range_of_each_other(a, b, range);
 }
@@ -185,7 +185,7 @@ time_is_less_then_or_within_half_ms(timepoint_ns a, timepoint_ns b)
  * @ingroup aux_util
  */
 static inline bool
-time_is_greater_then_or_within_range(timepoint_ns a, timepoint_ns b, uint64_t range)
+time_is_greater_then_or_within_range(timepoint_ns a, timepoint_ns b, int64_t range)
 {
 	return a > b || time_is_within_range_of_each_other(a, b, range);
 }
@@ -220,7 +220,7 @@ struct time_state;
  * @ingroup aux_util
  */
 struct time_state *
-time_state_create(uint64_t offset);
+time_state_create(int64_t offset);
 
 
 /*!
@@ -295,7 +295,7 @@ time_state_from_timespec(struct time_state const *state, const struct timespec *
  * @ingroup aux_util
  */
 timepoint_ns
-time_state_monotonic_to_ts_ns(struct time_state const *state, uint64_t monotonic_ns);
+time_state_monotonic_to_ts_ns(struct time_state const *state, int64_t monotonic_ns);
 
 /*!
  * Convert a adjusted integer timestamp to an monotonic system time (such as
@@ -306,7 +306,7 @@ time_state_monotonic_to_ts_ns(struct time_state const *state, uint64_t monotonic
  * @public @memberof time_state
  * @ingroup aux_util
  */
-uint64_t
+int64_t
 time_state_ts_to_monotonic_ns(struct time_state const *state, timepoint_ns timestamp);
 
 #if defined(XRT_OS_WINDOWS) || defined(XRT_DOXYGEN)

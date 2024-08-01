@@ -39,7 +39,7 @@ struct time_state
  */
 
 extern "C" struct time_state *
-time_state_create(uint64_t offset)
+time_state_create(int64_t offset)
 {
 	time_state *state = new (std::nothrow) time_state;
 	if (!state) {
@@ -84,7 +84,7 @@ time_state_to_timespec(struct time_state const *state, timepoint_ns timestamp, s
 	assert(state != NULL);
 	assert(out != NULL);
 
-	uint64_t ns = time_state_ts_to_monotonic_ns(state, timestamp);
+	int64_t ns = time_state_ts_to_monotonic_ns(state, timestamp);
 
 	out->tv_sec = ns / (U_1_000_000_000);
 	out->tv_nsec = ns % (U_1_000_000_000);
@@ -96,7 +96,7 @@ time_state_from_timespec(struct time_state const *state, const struct timespec *
 	assert(state != NULL);
 	assert(timespecTime != NULL);
 
-	uint64_t ns = 0;
+	int64_t ns = 0;
 	ns += timespecTime->tv_nsec;
 	ns += timespecTime->tv_sec * U_1_000_000_000;
 
@@ -104,14 +104,14 @@ time_state_from_timespec(struct time_state const *state, const struct timespec *
 }
 
 extern "C" timepoint_ns
-time_state_monotonic_to_ts_ns(struct time_state const *state, uint64_t monotonic_ns)
+time_state_monotonic_to_ts_ns(struct time_state const *state, int64_t monotonic_ns)
 {
 	assert(state != NULL);
 
 	return monotonic_ns - state->offset;
 }
 
-extern "C" uint64_t
+extern "C" int64_t
 time_state_ts_to_monotonic_ns(struct time_state const *state, timepoint_ns timestamp)
 {
 	assert(state != NULL);
@@ -126,7 +126,7 @@ time_state_to_win32perfcounter(struct time_state const *state, timepoint_ns time
 	assert(state != NULL);
 	assert(out_qpc_ticks != NULL);
 
-	uint64_t ns = time_state_ts_to_monotonic_ns(state, timestamp);
+	int64_t ns = time_state_ts_to_monotonic_ns(state, timestamp);
 
 	out_qpc_ticks->QuadPart = ns / os_ns_per_qpc_tick_get();
 }
@@ -137,7 +137,7 @@ time_state_from_win32perfcounter(struct time_state const *state, const LARGE_INT
 	assert(state != NULL);
 	assert(qpc_ticks != NULL);
 
-	uint64_t ns = qpc_ticks->QuadPart * os_ns_per_qpc_tick_get();
+	int64_t ns = qpc_ticks->QuadPart * os_ns_per_qpc_tick_get();
 
 	return time_state_monotonic_to_ts_ns(state, ns);
 }
