@@ -312,7 +312,7 @@ notify_ref_space_usage_device(struct u_space_overseer *uso, enum xrt_reference_s
  * order.
  */
 static void
-push_then_traverse(struct xrt_relation_chain *xrc, struct u_space *space, uint64_t at_timestamp_ns)
+push_then_traverse(struct xrt_relation_chain *xrc, struct u_space *space, int64_t at_timestamp_ns)
 {
 	switch (space->type) {
 	case U_SPACE_TYPE_NULL: break; // No-op
@@ -340,7 +340,7 @@ push_then_traverse(struct xrt_relation_chain *xrc, struct u_space *space, uint64
  * the reversed order.
  */
 static void
-traverse_then_push_inverse(struct xrt_relation_chain *xrc, struct u_space *space, uint64_t at_timestamp_ns)
+traverse_then_push_inverse(struct xrt_relation_chain *xrc, struct u_space *space, int64_t at_timestamp_ns)
 {
 	// Done traversing.
 	switch (space->type) {
@@ -374,7 +374,7 @@ build_relation_chain_read_locked(struct u_space_overseer *uso,
                                  struct xrt_relation_chain *xrc,
                                  struct u_space *base,
                                  struct u_space *target,
-                                 uint64_t at_timestamp_ns)
+                                 int64_t at_timestamp_ns)
 {
 	assert(xrc != NULL);
 	assert(base != NULL);
@@ -389,7 +389,7 @@ build_relation_chain(struct u_space_overseer *uso,
                      struct xrt_relation_chain *xrc,
                      struct u_space *base,
                      struct u_space *target,
-                     uint64_t at_timestamp_ns)
+                     int64_t at_timestamp_ns)
 {
 	pthread_rwlock_rdlock(&uso->lock);
 	build_relation_chain_read_locked(uso, xrc, base, target, at_timestamp_ns);
@@ -531,7 +531,7 @@ static xrt_result_t
 locate_space(struct xrt_space_overseer *xso,
              struct xrt_space *base_space,
              const struct xrt_pose *base_offset,
-             uint64_t at_timestamp_ns,
+             int64_t at_timestamp_ns,
              struct xrt_space *space,
              const struct xrt_pose *offset,
              struct xrt_space_relation *out_relation)
@@ -587,7 +587,7 @@ static xrt_result_t
 locate_spaces(struct xrt_space_overseer *xso,
               struct xrt_space *base_space,
               const struct xrt_pose *base_offset,
-              uint64_t at_timestamp_ns,
+              int64_t at_timestamp_ns,
               struct xrt_space **spaces,
               uint32_t space_count,
               const struct xrt_pose *offsets,
@@ -637,7 +637,7 @@ static xrt_result_t
 locate_device(struct xrt_space_overseer *xso,
               struct xrt_space *base_space,
               const struct xrt_pose *base_offset,
-              uint64_t at_timestamp_ns,
+              int64_t at_timestamp_ns,
               struct xrt_device *xdev,
               struct xrt_space_relation *out_relation)
 {

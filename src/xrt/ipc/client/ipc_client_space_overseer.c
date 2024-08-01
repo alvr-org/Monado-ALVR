@@ -131,7 +131,7 @@ static xrt_result_t
 locate_space(struct xrt_space_overseer *xso,
              struct xrt_space *base_space,
              const struct xrt_pose *base_offset,
-             uint64_t at_timestamp_ns,
+             int64_t at_timestamp_ns,
              struct xrt_space *space,
              const struct xrt_pose *offset,
              struct xrt_space_relation *out_relation)
@@ -157,7 +157,7 @@ static xrt_result_t
 locate_spaces(struct xrt_space_overseer *xso,
               struct xrt_space *base_space,
               const struct xrt_pose *base_offset,
-              uint64_t at_timestamp_ns,
+              int64_t at_timestamp_ns,
               struct xrt_space **spaces,
               uint32_t space_count,
               const struct xrt_pose *offsets,
@@ -218,7 +218,7 @@ static xrt_result_t
 locate_device(struct xrt_space_overseer *xso,
               struct xrt_space *base_space,
               const struct xrt_pose *base_offset,
-              uint64_t at_timestamp_ns,
+              int64_t at_timestamp_ns,
               struct xrt_device *xdev,
               struct xrt_space_relation *out_relation)
 {

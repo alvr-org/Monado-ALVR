@@ -533,7 +533,7 @@ xrt_result_t
 ipc_handle_space_locate_space(volatile struct ipc_client_state *ics,
                               uint32_t base_space_id,
                               const struct xrt_pose *base_offset,
-                              uint64_t at_timestamp,
+                              int64_t at_timestamp,
                               uint32_t space_id,
                               const struct xrt_pose *offset,
                               struct xrt_space_relation *out_relation)
@@ -572,7 +572,7 @@ ipc_handle_space_locate_spaces(volatile struct ipc_client_state *ics,
                                uint32_t base_space_id,
                                const struct xrt_pose *base_offset,
                                uint32_t space_count,
-                               uint64_t at_timestamp)
+                               int64_t at_timestamp)
 {
 	IPC_TRACE_MARKER();
 	struct ipc_message_channel *imc = (struct ipc_message_channel *)&ics->imc;
@@ -673,7 +673,7 @@ xrt_result_t
 ipc_handle_space_locate_device(volatile struct ipc_client_state *ics,
                                uint32_t base_space_id,
                                const struct xrt_pose *base_offset,
-                               uint64_t at_timestamp,
+                               int64_t at_timestamp,
                                uint32_t xdev_id,
                                struct xrt_space_relation *out_relation)
 {
