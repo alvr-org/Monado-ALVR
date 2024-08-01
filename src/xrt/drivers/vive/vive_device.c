@@ -180,7 +180,7 @@ vive_device_get_slam_tracked_pose(struct xrt_device *xdev,
 static void
 vive_device_get_tracked_pose(struct xrt_device *xdev,
                              enum xrt_input_name name,
-                             uint64_t at_timestamp_ns,
+                             int64_t at_timestamp_ns,
                              struct xrt_space_relation *out_relation)
 {
 	XRT_TRACE_MARKER();
@@ -188,7 +188,7 @@ vive_device_get_tracked_pose(struct xrt_device *xdev,
 	struct vive_device *d = vive_device(xdev);
 
 	// Ajdust the timestamp with the offset.
-	at_timestamp_ns += (uint64_t)(d->tracked_offset_ms.val * (double)U_TIME_1MS_IN_NS);
+	at_timestamp_ns += (int64_t)(d->tracked_offset_ms.val * (double)U_TIME_1MS_IN_NS);
 
 	if (d->tracking.slam_enabled && d->slam_over_3dof) {
 		vive_device_get_slam_tracked_pose(xdev, name, at_timestamp_ns, out_relation);

@@ -54,7 +54,7 @@ struct rokid_fusion
 	struct os_mutex mutex;
 	struct m_imu_3dof i3dof;
 	struct xrt_space_relation last_relation;
-	uint64_t last_update;
+	int64_t last_update;
 	struct xrt_vec3 last_gyro;
 	struct xrt_vec3 last_accel;
 	uint64_t gyro_ts_device;
@@ -232,7 +232,7 @@ rokid_fusion_parse_usb_packet(struct rokid_fusion *fusion, unsigned char usb_buf
 
 
 static void
-rokid_fusion_get_pose(struct rokid_fusion *fusion, uint64_t at_timestamp_ns, struct xrt_space_relation *out_relation)
+rokid_fusion_get_pose(struct rokid_fusion *fusion, int64_t at_timestamp_ns, struct xrt_space_relation *out_relation)
 {
 	if (at_timestamp_ns > fusion->last_update) {
 		double time_diff = time_ns_to_s(at_timestamp_ns - fusion->last_update);
@@ -261,7 +261,7 @@ rokid_fusion_add_vars(struct rokid_fusion *fusion, void *root)
 	u_var_add_pose(root, &fusion->last_relation.pose, "last_pose");
 	u_var_add_ro_vec3_f32(root, &fusion->last_gyro, "gyro");
 	u_var_add_ro_vec3_f32(root, &fusion->last_accel, "accel");
-	u_var_add_ro_u64(root, &fusion->last_update, "timestamp");
+	u_var_add_ro_i64(root, &fusion->last_update, "timestamp");
 }
 
 
@@ -433,7 +433,7 @@ rokid_hmd_destroy(struct xrt_device *xdev)
 static void
 rokid_hmd_get_tracked_pose(struct xrt_device *xdev,
                            enum xrt_input_name name,
-                           uint64_t at_timestamp_ns,
+                           int64_t at_timestamp_ns,
                            struct xrt_space_relation *out_relation)
 {
 	struct rokid_hmd *rokid = rokid_hmd(xdev);

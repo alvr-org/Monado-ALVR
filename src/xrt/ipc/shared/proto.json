@@ -395,7 +395,7 @@
 		"in": [
 			{"name": "id", "type": "uint32_t"},
 			{"name": "name", "type": "enum xrt_input_name"},
-			{"name": "at_timestamp", "type": "uint64_t"}
+			{"name": "at_timestamp", "type": "int64_t"}
 		],
 		"out": [
 			{"name": "relation", "type": "struct xrt_space_relation"}

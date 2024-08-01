@@ -517,7 +517,7 @@ rift_s_controller_set_output(struct xrt_device *xdev, enum xrt_output_name name,
 static void
 rift_s_controller_get_fusion_pose(struct rift_s_controller *ctrl,
                                   enum xrt_input_name name,
-                                  uint64_t at_timestamp_ns,
+                                  int64_t at_timestamp_ns,
                                   struct xrt_space_relation *out_relation)
 {
 	out_relation->pose = ctrl->pose;
@@ -541,7 +541,7 @@ rift_s_controller_get_fusion_pose(struct rift_s_controller *ctrl,
 static void
 rift_s_controller_get_tracked_pose(struct xrt_device *xdev,
                                    enum xrt_input_name name,
-                                   uint64_t at_timestamp_ns,
+                                   int64_t at_timestamp_ns,
                                    struct xrt_space_relation *out_relation)
 {
 	struct rift_s_controller *ctrl = (struct rift_s_controller *)(xdev);

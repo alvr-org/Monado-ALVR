@@ -216,7 +216,7 @@ hdk_device_update(struct hdk_device *hd)
 static void
 hdk_device_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
-                            uint64_t requested_timestamp_ns,
+                            int64_t requested_timestamp_ns,
                             struct xrt_space_relation *out_relation)
 {
 	struct hdk_device *hd = hdk_device(xdev);

@@ -446,7 +446,7 @@ read_controller_config(struct wmr_controller_base *wcb)
 static void
 wmr_controller_base_get_tracked_pose(struct xrt_device *xdev,
                                      enum xrt_input_name name,
-                                     uint64_t at_timestamp_ns,
+                                     int64_t at_timestamp_ns,
                                      struct xrt_space_relation *out_relation)
 {
 	DRV_TRACE_MARKER();
@@ -454,7 +454,7 @@ wmr_controller_base_get_tracked_pose(struct xrt_device *xdev,
 	struct wmr_controller_base *wcb = wmr_controller_base(xdev);
 
 	// Variables needed for prediction.
-	uint64_t last_imu_timestamp_ns = 0;
+	int64_t last_imu_timestamp_ns = 0;
 	struct xrt_space_relation relation = {0};
 	relation.relation_flags = (enum xrt_space_relation_flags)(
 	    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
@@ -482,7 +482,7 @@ wmr_controller_base_get_tracked_pose(struct xrt_device *xdev,
 		return;
 	}
 
-	uint64_t prediction_ns = at_timestamp_ns - last_imu_timestamp_ns;
+	int64_t prediction_ns = at_timestamp_ns - last_imu_timestamp_ns;
 	double prediction_s = time_ns_to_s(prediction_ns);
 
 	m_predict_relation(&relation, prediction_s, out_relation);

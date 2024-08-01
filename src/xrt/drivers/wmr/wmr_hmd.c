@@ -1168,14 +1168,14 @@ wmr_hmd_get_slam_tracked_pose(struct xrt_device *xdev,
 static void
 wmr_hmd_get_tracked_pose(struct xrt_device *xdev,
                          enum xrt_input_name name,
-                         uint64_t at_timestamp_ns,
+                         int64_t at_timestamp_ns,
                          struct xrt_space_relation *out_relation)
 {
 	DRV_TRACE_MARKER();
 
 	struct wmr_hmd *wh = wmr_hmd(xdev);
 
-	at_timestamp_ns += (uint64_t)(wh->tracked_offset_ms.val * (double)U_TIME_1MS_IN_NS);
+	at_timestamp_ns += (int64_t)(wh->tracked_offset_ms.val * (double)U_TIME_1MS_IN_NS);
 
 	if (wh->tracking.slam_enabled && wh->slam_over_3dof) {
 		wmr_hmd_get_slam_tracked_pose(xdev, name, at_timestamp_ns, out_relation);

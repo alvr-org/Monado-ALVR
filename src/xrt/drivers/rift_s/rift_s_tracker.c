@@ -70,7 +70,7 @@ DEBUG_GET_ONCE_BOOL_OPTION(rift_s_handtracking, "RIFT_S_HANDTRACKING", true)
 static void
 rift_s_tracker_get_tracked_pose_imu(struct xrt_device *xdev,
                                     enum xrt_input_name name,
-                                    uint64_t at_timestamp_ns,
+                                    int64_t at_timestamp_ns,
                                     struct xrt_space_relation *out_relation);
 
 static void
@@ -611,7 +611,7 @@ rift_s_tracker_correct_pose_from_basalt(struct xrt_pose *pose)
 static void
 rift_s_tracker_get_tracked_pose_imu(struct xrt_device *xdev,
                                     enum xrt_input_name name,
-                                    uint64_t at_timestamp_ns,
+                                    int64_t at_timestamp_ns,
                                     struct xrt_space_relation *out_relation)
 {
 	struct rift_s_tracker *tracker = (struct rift_s_tracker *)(xdev);

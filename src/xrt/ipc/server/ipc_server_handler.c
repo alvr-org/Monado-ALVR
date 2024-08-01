@@ -1854,7 +1854,7 @@ xrt_result_t
 ipc_handle_device_get_tracked_pose(volatile struct ipc_client_state *ics,
                                    uint32_t id,
                                    enum xrt_input_name name,
-                                   uint64_t at_timestamp,
+                                   int64_t at_timestamp,
                                    struct xrt_space_relation *out_relation)
 {
 	// To make the code a bit more readable.

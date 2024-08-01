@@ -310,7 +310,7 @@ struct xrt_device
 	 */
 	void (*get_tracked_pose)(struct xrt_device *xdev,
 	                         enum xrt_input_name name,
-	                         uint64_t at_timestamp_ns,
+	                         int64_t at_timestamp_ns,
 	                         struct xrt_space_relation *out_relation);
 
 	/*!
@@ -547,7 +547,7 @@ xrt_device_update_inputs(struct xrt_device *xdev)
 static inline void
 xrt_device_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
-                            uint64_t at_timestamp_ns,
+                            int64_t at_timestamp_ns,
                             struct xrt_space_relation *out_relation)
 {
 	xdev->get_tracked_pose(xdev, name, at_timestamp_ns, out_relation);

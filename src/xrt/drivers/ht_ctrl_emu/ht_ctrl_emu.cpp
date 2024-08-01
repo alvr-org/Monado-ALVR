@@ -217,8 +217,8 @@ do_grip_pose(struct xrt_hand_joint_set *joint_set,
 
 static void
 get_other_two(struct cemu_device *dev,
-              uint64_t head_timestamp_ns,
-              uint64_t hand_timestamp_ns,
+              int64_t head_timestamp_ns,
+              int64_t hand_timestamp_ns,
               xrt_pose *out_head,
               xrt_hand_joint_set *out_secondary)
 {
@@ -242,8 +242,8 @@ get_other_two(struct cemu_device *dev,
 static void
 do_aim_pose(struct cemu_device *dev,
             struct xrt_hand_joint_set *joint_set_primary,
-            uint64_t head_timestamp_ns,
-            uint64_t hand_timestamp_ns,
+            int64_t head_timestamp_ns,
+            int64_t hand_timestamp_ns,
             struct xrt_space_relation *out_relation)
 {
 	struct xrt_vec3 vec3_up = {0, 1, 0};
@@ -319,7 +319,7 @@ do_aim_pose(struct cemu_device *dev,
 static void
 cemu_device_get_tracked_pose(struct xrt_device *xdev,
                              enum xrt_input_name name,
-                             uint64_t at_timestamp_ns,
+                             int64_t at_timestamp_ns,
                              struct xrt_space_relation *out_relation)
 {
 	struct cemu_device *dev = cemu_device(xdev);

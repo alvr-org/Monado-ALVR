@@ -46,7 +46,7 @@
 static void
 rift_s_get_tracked_pose(struct xrt_device *xdev,
                         enum xrt_input_name name,
-                        uint64_t at_timestamp_ns,
+                        int64_t at_timestamp_ns,
                         struct xrt_space_relation *out_relation)
 {
 	struct rift_s_hmd *hmd = (struct rift_s_hmd *)(xdev);

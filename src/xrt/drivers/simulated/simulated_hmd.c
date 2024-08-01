@@ -88,7 +88,7 @@ simulated_hmd_destroy(struct xrt_device *xdev)
 static void
 simulated_hmd_get_tracked_pose(struct xrt_device *xdev,
                                enum xrt_input_name name,
-                               uint64_t at_timestamp_ns,
+                               int64_t at_timestamp_ns,
                                struct xrt_space_relation *out_relation)
 {
 	struct simulated_hmd *hmd = simulated_hmd(xdev);

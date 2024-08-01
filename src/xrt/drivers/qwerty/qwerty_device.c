@@ -139,7 +139,7 @@ qwerty_set_output(struct xrt_device *xd, enum xrt_output_name name, const union 
 static void
 qwerty_get_tracked_pose(struct xrt_device *xd,
                         enum xrt_input_name name,
-                        uint64_t at_timestamp_ns,
+                        int64_t at_timestamp_ns,
                         struct xrt_space_relation *out_relation)
 {
 	struct qwerty_device *qd = qwerty_device(xd);

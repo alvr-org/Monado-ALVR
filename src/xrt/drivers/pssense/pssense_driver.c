@@ -733,7 +733,7 @@ pssense_set_output(struct xrt_device *xdev, enum xrt_output_name name, const uni
 static void
 pssense_get_fusion_pose(struct pssense_device *pssense,
                         enum xrt_input_name name,
-                        uint64_t at_timestamp_ns,
+                        int64_t at_timestamp_ns,
                         struct xrt_space_relation *out_relation)
 {
 	out_relation->pose = pssense->pose;
@@ -758,7 +758,7 @@ pssense_get_fusion_pose(struct pssense_device *pssense,
 static void
 pssense_get_tracked_pose(struct xrt_device *xdev,
                          enum xrt_input_name name,
-                         uint64_t at_timestamp_ns,
+                         int64_t at_timestamp_ns,
                          struct xrt_space_relation *out_relation)
 {
 	struct pssense_device *pssense = (struct pssense_device *)xdev;
