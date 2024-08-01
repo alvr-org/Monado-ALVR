@@ -406,11 +406,11 @@
 		"in": [
 			{"name": "id", "type": "uint32_t"},
 			{"name": "name", "type": "enum xrt_input_name"},
-			{"name": "at_timestamp", "type": "uint64_t"}
+			{"name": "at_timestamp", "type": "int64_t"}
 		],
 		"out": [
 			{"name": "value", "type": "struct xrt_hand_joint_set"},
-			{"name": "timestamp", "type": "uint64_t"}
+			{"name": "timestamp", "type": "int64_t"}
 		]
 	},
 

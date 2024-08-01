@@ -338,9 +338,9 @@ struct xrt_device
 	 */
 	void (*get_hand_tracking)(struct xrt_device *xdev,
 	                          enum xrt_input_name name,
-	                          uint64_t desired_timestamp_ns,
+	                          int64_t desired_timestamp_ns,
 	                          struct xrt_hand_joint_set *out_value,
-	                          uint64_t *out_timestamp_ns);
+	                          int64_t *out_timestamp_ns);
 
 	/*!
 	 * @brief Get the requested blend shape properties & weights for a face tracker
@@ -563,9 +563,9 @@ xrt_device_get_tracked_pose(struct xrt_device *xdev,
 static inline void
 xrt_device_get_hand_tracking(struct xrt_device *xdev,
                              enum xrt_input_name name,
-                             uint64_t desired_timestamp_ns,
+                             int64_t desired_timestamp_ns,
                              struct xrt_hand_joint_set *out_value,
-                             uint64_t *out_timestamp_ns)
+                             int64_t *out_timestamp_ns)
 {
 	xdev->get_hand_tracking(xdev, name, desired_timestamp_ns, out_value, out_timestamp_ns);
 }

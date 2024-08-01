@@ -1892,9 +1892,9 @@ xrt_result_t
 ipc_handle_device_get_hand_tracking(volatile struct ipc_client_state *ics,
                                     uint32_t id,
                                     enum xrt_input_name name,
-                                    uint64_t at_timestamp,
+                                    int64_t at_timestamp,
                                     struct xrt_hand_joint_set *out_value,
-                                    uint64_t *out_timestamp)
+                                    int64_t *out_timestamp)
 {
 
 	// To make the code a bit more readable.

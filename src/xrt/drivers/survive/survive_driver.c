@@ -458,9 +458,9 @@ struct Button buttons[255] = {
 static void
 survive_controller_get_hand_tracking(struct xrt_device *xdev,
                                      enum xrt_input_name name,
-                                     uint64_t at_timestamp_ns,
+                                     int64_t at_timestamp_ns,
                                      struct xrt_hand_joint_set *out_value,
-                                     uint64_t *out_timestamp_ns)
+                                     int64_t *out_timestamp_ns)
 {
 	struct survive_device *survive = (struct survive_device *)xdev;
 

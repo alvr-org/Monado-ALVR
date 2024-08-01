@@ -135,9 +135,9 @@ r_device_get_tracked_pose(struct xrt_device *xdev,
 static void
 r_device_get_hand_tracking(struct xrt_device *xdev,
                            enum xrt_input_name name,
-                           uint64_t requested_timestamp_ns,
+                           int64_t requested_timestamp_ns,
                            struct xrt_hand_joint_set *out_value,
-                           uint64_t *out_timestamp_ns)
+                           int64_t *out_timestamp_ns)
 {
 	struct r_device *rd = r_device(xdev);
 	struct r_hub *r = rd->r;

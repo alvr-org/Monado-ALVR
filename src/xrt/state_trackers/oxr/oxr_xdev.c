@@ -122,11 +122,11 @@ oxr_xdev_get_hand_tracking_at(struct oxr_logger *log,
                               struct xrt_hand_joint_set *out_value)
 {
 	//! Convert at_time to monotonic and give to device.
-	uint64_t at_timestamp_ns = time_state_ts_to_monotonic_ns(inst->timekeeping, at_time);
+	int64_t at_timestamp_ns = time_state_ts_to_monotonic_ns(inst->timekeeping, at_time);
 
 	struct xrt_hand_joint_set value;
 
-	uint64_t ignored;
+	int64_t ignored;
 
 	xrt_device_get_hand_tracking(xdev, name, at_timestamp_ns, &value, &ignored);
 

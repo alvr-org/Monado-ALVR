@@ -176,9 +176,9 @@ public:
 
 	void
 	get_hand_tracking(enum xrt_input_name name,
-	                  uint64_t desired_timestamp_ns,
+	                  int64_t desired_timestamp_ns,
 	                  struct xrt_hand_joint_set *out_value,
-	                  uint64_t *out_timestamp_ns);
+	                  int64_t *out_timestamp_ns);
 
 	xrt_hand
 	get_xrt_hand();

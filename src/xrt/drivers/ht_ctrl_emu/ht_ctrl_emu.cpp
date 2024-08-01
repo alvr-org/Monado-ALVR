@@ -134,9 +134,9 @@ cemu_device_destroy(struct xrt_device *xdev)
 static void
 cemu_device_get_hand_tracking(struct xrt_device *xdev,
                               enum xrt_input_name name,
-                              uint64_t requested_timestamp_ns,
+                              int64_t requested_timestamp_ns,
                               struct xrt_hand_joint_set *out_value,
-                              uint64_t *out_timestamp_ns)
+                              int64_t *out_timestamp_ns)
 {
 	// Shadows normal hand tracking - does nothing differently
 
@@ -231,8 +231,8 @@ get_other_two(struct cemu_device *dev,
 	} else {
 		other = 0;
 	}
-	uint64_t noop;
 
+	int64_t noop;
 	xrt_device_get_hand_tracking(dev->sys->in_hand, dev->sys->out_hand[other]->ht_input_name, hand_timestamp_ns,
 	                             out_secondary, &noop);
 }
@@ -329,7 +329,7 @@ cemu_device_get_tracked_pose(struct xrt_device *xdev,
 		CEMU_ERROR(dev, "unknown input name %d for controller pose", name);
 		return;
 	}
-	static uint64_t hand_timestamp_ns;
+	static int64_t hand_timestamp_ns;
 
 	struct xrt_hand_joint_set joint_set;
 	sys->in_hand->get_hand_tracking(sys->in_hand, dev->ht_input_name, at_timestamp_ns, &joint_set,
@@ -384,7 +384,7 @@ cemu_device_update_inputs(struct xrt_device *xdev)
 	struct cemu_device *dev = cemu_device(xdev);
 
 	struct xrt_hand_joint_set joint_set;
-	uint64_t noop;
+	int64_t noop;
 
 	xrt_device_get_hand_tracking(dev->sys->in_hand, dev->ht_input_name, os_monotonic_get_ns(), &joint_set, &noop);
 

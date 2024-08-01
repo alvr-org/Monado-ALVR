@@ -970,7 +970,7 @@ public:
 
 			timepoint_ns now_ns = os_monotonic_get_ns();
 			struct xrt_hand_joint_set out_joint_set_value;
-			uint64_t out_timestamp_ns;
+			int64_t out_timestamp_ns;
 
 			m_xdev->get_hand_tracking(m_xdev,
 			                          m_hand == XRT_HAND_LEFT ? XRT_INPUT_GENERIC_HAND_TRACKING_LEFT

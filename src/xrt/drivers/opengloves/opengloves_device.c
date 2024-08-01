@@ -89,9 +89,9 @@ opengloves_device(struct xrt_device *xdev)
 static void
 opengloves_device_get_hand_tracking(struct xrt_device *xdev,
                                     enum xrt_input_name name,
-                                    uint64_t requested_timestamp_ns,
+                                    int64_t requested_timestamp_ns,
                                     struct xrt_hand_joint_set *out_joint_set,
-                                    uint64_t *out_timestamp_ns)
+                                    int64_t *out_timestamp_ns)
 {
 	struct opengloves_device *od = opengloves_device(xdev);
 
