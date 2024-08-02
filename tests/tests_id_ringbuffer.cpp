@@ -32,8 +32,8 @@ TEST_CASE("u_template_historybuf")
 	}
 	SECTION("behavior with one")
 	{
-		int64_t zero_inner_index;
-		REQUIRE((zero_inner_index = u_id_ringbuffer_push_back(buffer, 0)) >= 0);
+		int64_t zero_inner_index = u_id_ringbuffer_push_back(buffer, 0);
+		REQUIRE(zero_inner_index >= 0);
 		CHECK_FALSE(u_id_ringbuffer_is_empty(buffer));
 		CHECK(1 == u_id_ringbuffer_get_size(buffer));
 		CAPTURE(zero_inner_index);
@@ -94,10 +94,10 @@ TEST_CASE("u_template_historybuf")
 
 	SECTION("behavior with two")
 	{
-		int64_t zero_inner_index;
-		int64_t one_inner_index;
-		REQUIRE((zero_inner_index = u_id_ringbuffer_push_back(buffer, 0)) >= 0);
-		REQUIRE((one_inner_index = u_id_ringbuffer_push_back(buffer, 1)) >= 0);
+		int64_t zero_inner_index = u_id_ringbuffer_push_back(buffer, 0);
+		int64_t one_inner_index = u_id_ringbuffer_push_back(buffer, 1);
+		REQUIRE(zero_inner_index >= 0);
+		REQUIRE(one_inner_index >= 0);
 		REQUIRE(zero_inner_index != one_inner_index);
 		CAPTURE(zero_inner_index);
 		CAPTURE(one_inner_index);
@@ -187,12 +187,12 @@ TEST_CASE("u_template_historybuf")
 
 	SECTION("algorithm behavior with 3")
 	{
-		int64_t zero_inner_index;
-		int64_t two_inner_index;
-		int64_t four_inner_index;
-		REQUIRE((zero_inner_index = u_id_ringbuffer_push_back(buffer, 0)) >= 0);
-		REQUIRE((two_inner_index = u_id_ringbuffer_push_back(buffer, 2)) >= 0);
-		REQUIRE((four_inner_index = u_id_ringbuffer_push_back(buffer, 4)) >= 0);
+		int64_t zero_inner_index = u_id_ringbuffer_push_back(buffer, 0);
+		int64_t two_inner_index = u_id_ringbuffer_push_back(buffer, 2);
+		int64_t four_inner_index = u_id_ringbuffer_push_back(buffer, 4);
+		REQUIRE(zero_inner_index >= 0);
+		REQUIRE(two_inner_index >= 0);
+		REQUIRE(four_inner_index >= 0);
 		CAPTURE(zero_inner_index);
 		CAPTURE(two_inner_index);
 		CAPTURE(four_inner_index);
