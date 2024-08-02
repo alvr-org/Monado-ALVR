@@ -222,7 +222,8 @@ quotas and limits on allocation, etc, the client side allocates the buffer using
 a @ref xrt_image_native_allocator (aka XINA) and shares it to the server. When
 using D3D11 or D3D12 on Windows, buffers are allocated by the client compositor
 and imported into the native compositor, because Vulkan can import buffers from
-D3D, but D3D cannot import buffers allocated by Vulkan.
+D3D, but D3D cannot import buffers allocated by Vulkan. See @ref swapchains-ipc
+for details.
 
 [SCM_RIGHTS]: https://man7.org/linux/man-pages/man3/cmsg.3.html
 [win32handles]: https://lackingrhoticity.blogspot.com/2015/05/passing-fds-handles-between-processes.html

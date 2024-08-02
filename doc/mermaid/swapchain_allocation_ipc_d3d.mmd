@@ -1,0 +1,27 @@
+%% Copyright 2024, Collabora, Ltd. and the Monado contributors
+%% SPDX-License-Identifier: BSL-1.0
+
+%% Out of process, D3D client API
+sequenceDiagram
+    box Client Process
+        participant app
+        participant cc as D3D client compositor
+        participant client_native as client process<br/>native compositor<br/>(IPC Stub)
+    end
+    box Server Process
+        participant server_ipc_handler as Server IPC handler
+        participant server_comp as Server xrt_compositor_native
+    end
+
+    app->>+cc: xrCreateSwapchain
+    Note over cc: create images<br/>(because d3d cannot reliably import from Vulkan)
+    Note over cc: export images to handles
+    Note over cc: import handles to images for app
+    cc->>+client_native: xrt_comp_import_swapchain(xrt_image_native[])<br/>(import handles into xrt_swapchain_native)
+    client_native->>+server_ipc_handler: swapchain_import<br/>(IPC call, copies handles)
+    server_ipc_handler->>+server_comp: xrt_comp_import_swapchain(xrt_image_native[])
+    server_comp->>-server_ipc_handler: xrt_swapchain impl
+    server_ipc_handler->>-client_native: swapchain ID (over IPC)
+    client_native->>-cc: return ipc_swapchain<br/>as inner xrt_swapchain
+    Note over cc: Keep reference to inner xrt_swapchain in<br>the object we create
+    cc->>-app: return swapchain

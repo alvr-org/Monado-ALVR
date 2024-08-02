@@ -1,0 +1,25 @@
+%% Copyright 2024, Collabora, Ltd. and the Monado contributors
+%% SPDX-License-Identifier: BSL-1.0
+
+%% Out of process, typical behavior (server-side allocation)
+sequenceDiagram
+    box Client Process
+        participant app
+        participant cc as client compositor
+        participant client_native as client process<br/>native compositor<br/>(IPC Stub)
+    end
+    box Server Process
+        participant server_ipc_handler as Server IPC handler
+        participant server_comp as Server xrt_compositor_native
+    end
+
+    app->>+cc: xrCreateSwapchain
+    cc->>+client_native: xrt_comp_create_swapchain
+    client_native->>+server_ipc_handler: xrt_comp_create_swapchain<br/>(IPC call)
+    server_ipc_handler->>+server_comp: xrt_comp_create_swapchain
+    server_comp->>-server_ipc_handler: xrt_swapchain impl
+    server_ipc_handler->>-client_native: swapchain ID and<br/>image handles<br/>(over IPC)
+    client_native->>-cc: return ipc_swapchain<br/>as inner xrt_swapchain
+    Note over cc: Keep reference to inner xrt_swapchain in<br>the object we create
+    Note over cc: Import handles from<br/>inner xrt_swapchain into client API
+    cc->>-app: return swapchain

@@ -1,0 +1,16 @@
+%% Copyright 2024, Collabora, Ltd. and the Monado contributors
+%% SPDX-License-Identifier: BSL-1.0
+
+%% Simple in-process case
+sequenceDiagram
+        participant app
+        participant cc as client compositor
+        participant native_comp as xrt_compositor_native
+
+
+    app->>+cc: xrCreateSwapchain
+    cc->>+native_comp: xrt_comp_create_swapchain
+    native_comp->>-cc: xrt_swapchain impl
+    Note over cc: Keep reference to inner xrt_swapchain in<br>the object we create
+    Note over cc: Import handles from<br/>inner xrt_swapchain into client API
+    cc->>-app: return swapchain

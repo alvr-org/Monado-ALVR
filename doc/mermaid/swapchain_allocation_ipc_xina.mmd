@@ -1,0 +1,28 @@
+%% Copyright 2024, Collabora, Ltd. and the Monado contributors
+%% SPDX-License-Identifier: BSL-1.0
+
+%% Out of process, with a "xina" in the IPC client (currently only android with AHB)
+sequenceDiagram
+    box Client Process
+        participant app
+        participant cc as client compositor
+        participant client_native as client process<br/>native compositor<br>(IPC Stub)
+        participant xina as xrt_image_native_allocator
+    end
+    box Server Process
+        participant server_ipc_handler as Server IPC handler
+        participant server_comp as Server xrt_compositor_native
+    end
+
+    app->>+cc: xrCreateSwapchain
+    cc->>+client_native: xrt_comp_create_swapchain
+    client_native->>+xina: create native images
+    xina->>-client_native: collection of<br/>native image handles
+    client_native->>+server_ipc_handler: swapchain_import<br/>(IPC call, passing handles)
+    server_ipc_handler->>+server_comp: xrt_comp_import_swapchain
+    server_comp->>-server_ipc_handler: xrt_swapchain impl
+    server_ipc_handler->>-client_native: swapchain ID<br/>(over IPC)
+    client_native->>-cc: return ipc_swapchain<br>(handles allocated in client process)<br>as inner xrt_swapchain
+    Note over cc: Keep reference to inner xrt_swapchain in<br>the object we create
+    Note over cc: Import handles from<br/>inner xrt_swapchain into client API
+    cc->>-app: return swapchain
