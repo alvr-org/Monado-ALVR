@@ -45,44 +45,44 @@ struct frame
 	int64_t frame_id;
 
 	//! When should the compositor wake up. Set in `pc_predict`.
-	uint64_t predicted_wake_up_time_ns;
+	int64_t predicted_wake_up_time_ns;
 
 	//! When should the compositor present the frame.
-	uint64_t predicted_present_time_ns;
+	int64_t predicted_present_time_ns;
 
 	//! When should the frame be displayed.
-	uint64_t predicted_display_time_ns;
+	int64_t predicted_display_time_ns;
 
 	//! The period that the pacer used for this frame.
-	uint64_t predicted_display_period_ns;
+	int64_t predicted_display_period_ns;
 
 	//! When this frame was last used for a prediction. Set in `pc_predict`.
-	uint64_t when_predict_ns;
+	int64_t when_predict_ns;
 
 	/*!
 	 * When the compositor woke up after its equivalent of wait_frame.
 	 * Set in `pc_mark_point` with `U_TIMING_POINT_WAKE_UP`.
 	 */
-	uint64_t when_woke_ns;
+	int64_t when_woke_ns;
 
 	/*!
 	 * When the compositor began rendering a frame. Set in `pc_mark_point`
 	 * with `U_TIMING_POINT_BEGIN`.
 	 */
-	uint64_t when_began_ns;
+	int64_t when_began_ns;
 
 	/*!
 	 * When the compositor began submitting the work to the GPU, after
 	 * it completed building the command buffers. Set in `pc_mark_point`
 	 * with `U_TIMING_POINT_SUBMIT_BEGIN`.
 	 */
-	uint64_t when_submit_began_ns;
+	int64_t when_submit_began_ns;
 
 	/*!
 	 * When the compositor completed submitting the work to the GPU. Set in
 	 * `pc_mark_point` with `U_TIMING_POINT_SUBMIT_END`.
 	 */
-	uint64_t when_submit_end_ns;
+	int64_t when_submit_end_ns;
 };
 
 /*!
@@ -97,12 +97,12 @@ struct fake_timing
 	/*!
 	 * The periodicity of the display.
 	 */
-	uint64_t frame_period_ns;
+	int64_t frame_period_ns;
 
 	/*!
 	 * When the last frame was presented, not displayed.
 	 */
-	uint64_t last_present_time_ns;
+	int64_t last_present_time_ns;
 
 	/*!
 	 * Very often the present time that we get from the system is only when
@@ -112,7 +112,7 @@ struct fake_timing
 	struct u_var_draggable_f32 present_to_display_offset_ms;
 
 	//! The amount of time that the application needs to render frame.
-	uint64_t comp_time_ns;
+	int64_t comp_time_ns;
 
 	//! This won't run out, trust me.
 	int64_t frame_id_generator;
@@ -165,11 +165,11 @@ get_new_frame(struct fake_timing *ft)
 	return f;
 }
 
-static uint64_t
-predict_next_frame_present_time(struct fake_timing *ft, uint64_t now_ns)
+static int64_t
+predict_next_frame_present_time(struct fake_timing *ft, int64_t now_ns)
 {
-	uint64_t time_needed_ns = ft->comp_time_ns;
-	uint64_t predicted_present_time_ns = ft->last_present_time_ns + ft->frame_period_ns;
+	int64_t time_needed_ns = ft->comp_time_ns;
+	int64_t predicted_present_time_ns = ft->last_present_time_ns + ft->frame_period_ns;
 
 	while (now_ns + time_needed_ns > predicted_present_time_ns) {
 		predicted_present_time_ns += ft->frame_period_ns;
@@ -178,16 +178,16 @@ predict_next_frame_present_time(struct fake_timing *ft, uint64_t now_ns)
 	return predicted_present_time_ns;
 }
 
-static uint64_t
-calc_display_time(struct fake_timing *ft, uint64_t present_time_ns)
+static int64_t
+calc_display_time(struct fake_timing *ft, int64_t present_time_ns)
 {
 	double offset_ms = ft->present_to_display_offset_ms.val;
-	uint64_t offset_ns = time_ms_f_to_ns(offset_ms);
+	int64_t offset_ns = time_ms_f_to_ns(offset_ms);
 	return present_time_ns + offset_ns;
 }
 
-static uint64_t
-get_percent_of_time(uint64_t time_ns, uint32_t fraction_percent)
+static int64_t
+get_percent_of_time(int64_t time_ns, uint32_t fraction_percent)
 {
 	double fraction = (double)fraction_percent / 100.0;
 	return time_s_to_ns(time_ns_to_s(time_ns) * fraction);
@@ -224,9 +224,9 @@ calc_frame_stats(struct fake_timing *ft, struct frame *f)
 		return;
 	}
 
-	uint64_t cpu_ns = f->when_began_ns - f->when_woke_ns;
-	uint64_t draw_ns = f->when_submit_began_ns - f->when_began_ns;
-	uint64_t submit_ns = f->when_submit_end_ns - f->when_submit_began_ns;
+	int64_t cpu_ns = f->when_began_ns - f->when_woke_ns;
+	int64_t draw_ns = f->when_submit_began_ns - f->when_began_ns;
+	int64_t submit_ns = f->when_submit_end_ns - f->when_submit_began_ns;
 
 	bool full = false;
 	full |= u_ls_ns_add(&ft->cpu, cpu_ns);
@@ -239,16 +239,16 @@ calc_frame_stats(struct fake_timing *ft, struct frame *f)
 }
 
 static void
-calc_gpu_stats(struct fake_timing *ft, struct frame *f, uint64_t gpu_start_ns, uint64_t gpu_end_ns)
+calc_gpu_stats(struct fake_timing *ft, struct frame *f, int64_t gpu_start_ns, int64_t gpu_end_ns)
 {
 	if (!debug_get_bool_option_live_stats()) {
 		return;
 	}
 
-	uint64_t then_ns = f->when_submit_began_ns;
-	uint64_t delay_ns = gpu_start_ns > then_ns ? gpu_start_ns - then_ns : 0;
-	uint64_t gpu_ns = gpu_end_ns - gpu_start_ns;
-	uint64_t frame_ns = gpu_end_ns - f->when_woke_ns;
+	int64_t then_ns = f->when_submit_began_ns;
+	int64_t delay_ns = gpu_start_ns > then_ns ? gpu_start_ns - then_ns : 0;
+	int64_t gpu_ns = gpu_end_ns - gpu_start_ns;
+	int64_t frame_ns = gpu_end_ns - f->when_woke_ns;
 
 	bool full = false;
 	full |= u_ls_ns_add(&ft->gpu, gpu_ns);
@@ -269,27 +269,27 @@ calc_gpu_stats(struct fake_timing *ft, struct frame *f, uint64_t gpu_start_ns, u
 
 static void
 pc_predict(struct u_pacing_compositor *upc,
-           uint64_t now_ns,
+           int64_t now_ns,
            int64_t *out_frame_id,
-           uint64_t *out_wake_up_time_ns,
-           uint64_t *out_desired_present_time_ns,
-           uint64_t *out_present_slop_ns,
-           uint64_t *out_predicted_display_time_ns,
-           uint64_t *out_predicted_display_period_ns,
-           uint64_t *out_min_display_period_ns)
+           int64_t *out_wake_up_time_ns,
+           int64_t *out_desired_present_time_ns,
+           int64_t *out_present_slop_ns,
+           int64_t *out_predicted_display_time_ns,
+           int64_t *out_predicted_display_period_ns,
+           int64_t *out_min_display_period_ns)
 {
 	struct fake_timing *ft = fake_timing(upc);
 
 	struct frame *f = get_new_frame(ft);
 
 	int64_t frame_id = f->frame_id;
-	uint64_t desired_present_time_ns = predict_next_frame_present_time(ft, now_ns);
-	uint64_t predicted_display_time_ns = calc_display_time(ft, desired_present_time_ns);
+	int64_t desired_present_time_ns = predict_next_frame_present_time(ft, now_ns);
+	int64_t predicted_display_time_ns = calc_display_time(ft, desired_present_time_ns);
 
-	uint64_t wake_up_time_ns = desired_present_time_ns - ft->comp_time_ns;
-	uint64_t present_slop_ns = U_TIME_HALF_MS_IN_NS;
-	uint64_t predicted_display_period_ns = ft->frame_period_ns;
-	uint64_t min_display_period_ns = ft->frame_period_ns;
+	int64_t wake_up_time_ns = desired_present_time_ns - ft->comp_time_ns;
+	int64_t present_slop_ns = U_TIME_HALF_MS_IN_NS;
+	int64_t predicted_display_period_ns = ft->frame_period_ns;
+	int64_t min_display_period_ns = ft->frame_period_ns;
 
 	// Set the frame info.
 	f->predicted_wake_up_time_ns = wake_up_time_ns;
@@ -322,7 +322,7 @@ pc_predict(struct u_pacing_compositor *upc,
 }
 
 static void
-pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_t frame_id, uint64_t when_ns)
+pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_t frame_id, int64_t when_ns)
 {
 	struct fake_timing *ft = fake_timing(upc);
 	struct frame *f = get_frame_or_null(ft, frame_id);
@@ -348,11 +348,11 @@ pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_
 static void
 pc_info(struct u_pacing_compositor *upc,
         int64_t frame_id,
-        uint64_t desired_present_time_ns,
-        uint64_t actual_present_time_ns,
-        uint64_t earliest_present_time_ns,
-        uint64_t present_margin_ns,
-        uint64_t when_ns)
+        int64_t desired_present_time_ns,
+        int64_t actual_present_time_ns,
+        int64_t earliest_present_time_ns,
+        int64_t present_margin_ns,
+        int64_t when_ns)
 {
 	/*
 	 * The compositor might call this function because it selected the
@@ -362,7 +362,7 @@ pc_info(struct u_pacing_compositor *upc,
 
 static void
 pc_info_gpu(
-    struct u_pacing_compositor *upc, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns)
+    struct u_pacing_compositor *upc, int64_t frame_id, int64_t gpu_start_ns, int64_t gpu_end_ns, int64_t when_ns)
 {
 	struct fake_timing *ft = fake_timing(upc);
 
@@ -396,13 +396,13 @@ pc_info_gpu(
 #endif
 
 #ifdef U_TRACE_TRACY
-	uint64_t diff_ns = gpu_end_ns - gpu_start_ns;
+	int64_t diff_ns = gpu_end_ns - gpu_start_ns;
 	TracyCPlot("Compositor GPU(ms)", time_ns_to_ms_f(diff_ns));
 #endif
 }
 
 static void
-pc_update_vblank_from_display_control(struct u_pacing_compositor *upc, uint64_t last_vblank_ns)
+pc_update_vblank_from_display_control(struct u_pacing_compositor *upc, int64_t last_vblank_ns)
 {
 	struct fake_timing *ft = fake_timing(upc);
 
@@ -411,7 +411,7 @@ pc_update_vblank_from_display_control(struct u_pacing_compositor *upc, uint64_t 
 }
 
 static void
-pc_update_present_offset(struct u_pacing_compositor *upc, int64_t frame_id, uint64_t present_to_display_offset_ns)
+pc_update_present_offset(struct u_pacing_compositor *upc, int64_t frame_id, int64_t present_to_display_offset_ns)
 {
 	struct fake_timing *ft = fake_timing(upc);
 
@@ -441,7 +441,7 @@ pc_destroy(struct u_pacing_compositor *upc)
  */
 
 xrt_result_t
-u_pc_fake_create(uint64_t estimated_frame_period_ns, uint64_t now_ns, struct u_pacing_compositor **out_upc)
+u_pc_fake_create(int64_t estimated_frame_period_ns, int64_t now_ns, struct u_pacing_compositor **out_upc)
 {
 	struct fake_timing *ft = U_TYPED_CALLOC(struct fake_timing);
 	ft->base.predict = pc_predict;
@@ -479,7 +479,7 @@ u_pc_fake_create(uint64_t estimated_frame_period_ns, uint64_t now_ns, struct u_p
 
 	// Or at least a certain amount of time.
 	float min_comp_time_ms_f = debug_get_float_option_min_comp_time_ms();
-	uint64_t min_comp_time_ns = time_ms_f_to_ns(min_comp_time_ms_f);
+	int64_t min_comp_time_ns = time_ms_f_to_ns(min_comp_time_ms_f);
 
 	if (ft->comp_time_ns < min_comp_time_ns) {
 		ft->comp_time_ns = min_comp_time_ns;
@@ -491,9 +491,9 @@ u_pc_fake_create(uint64_t estimated_frame_period_ns, uint64_t now_ns, struct u_p
 	// U variable tracking.
 	u_var_add_root(ft, "Compositor timing info", true);
 	u_var_add_draggable_f32(ft, &ft->present_to_display_offset_ms, "Present to display offset(ms)");
-	u_var_add_ro_u64(ft, &ft->frame_period_ns, "Frame period(ns)");
-	u_var_add_ro_u64(ft, &ft->comp_time_ns, "Compositor time(ns)");
-	u_var_add_ro_u64(ft, &ft->last_present_time_ns, "Last present time(ns)");
+	u_var_add_ro_i64(ft, &ft->frame_period_ns, "Frame period(ns)");
+	u_var_add_ro_i64(ft, &ft->comp_time_ns, "Compositor time(ns)");
+	u_var_add_ro_i64(ft, &ft->last_present_time_ns, "Last present time(ns)");
 
 	// Return value.
 	*out_upc = &ft->base;

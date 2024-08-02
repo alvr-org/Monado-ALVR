@@ -83,14 +83,14 @@ struct u_pacing_compositor
 	 * @see @ref frame-pacing.
 	 */
 	void (*predict)(struct u_pacing_compositor *upc,
-	                uint64_t now_ns,
+	                int64_t now_ns,
 	                int64_t *out_frame_id,
-	                uint64_t *out_wake_up_time_ns,
-	                uint64_t *out_desired_present_time_ns,
-	                uint64_t *out_present_slop_ns,
-	                uint64_t *out_predicted_display_time_ns,
-	                uint64_t *out_predicted_display_period_ns,
-	                uint64_t *out_min_display_period_ns);
+	                int64_t *out_wake_up_time_ns,
+	                int64_t *out_desired_present_time_ns,
+	                int64_t *out_present_slop_ns,
+	                int64_t *out_predicted_display_time_ns,
+	                int64_t *out_predicted_display_period_ns,
+	                int64_t *out_min_display_period_ns);
 
 	/*!
 	 * Mark a point on the frame's lifetime.
@@ -108,7 +108,7 @@ struct u_pacing_compositor
 	void (*mark_point)(struct u_pacing_compositor *upc,
 	                   enum u_timing_point point,
 	                   int64_t frame_id,
-	                   uint64_t when_ns);
+	                   int64_t when_ns);
 
 	/*!
 	 * Provide frame timing information about a delivered frame.
@@ -136,11 +136,11 @@ struct u_pacing_compositor
 	 */
 	void (*info)(struct u_pacing_compositor *upc,
 	             int64_t frame_id,
-	             uint64_t desired_present_time_ns,
-	             uint64_t actual_present_time_ns,
-	             uint64_t earliest_present_time_ns,
-	             uint64_t present_margin_ns,
-	             uint64_t when_ns);
+	             int64_t desired_present_time_ns,
+	             int64_t actual_present_time_ns,
+	             int64_t earliest_present_time_ns,
+	             int64_t present_margin_ns,
+	             int64_t when_ns);
 
 	/*!
 	 * Provide frame timing information about GPU start and stop time.
@@ -159,9 +159,9 @@ struct u_pacing_compositor
 	 */
 	void (*info_gpu)(struct u_pacing_compositor *upc,
 	                 int64_t frame_id,
-	                 uint64_t gpu_start_ns,
-	                 uint64_t gpu_end_ns,
-	                 uint64_t when_ns);
+	                 int64_t gpu_start_ns,
+	                 int64_t gpu_end_ns,
+	                 int64_t when_ns);
 
 	/*!
 	 * Provide a vblank timing information, derived from the
@@ -174,7 +174,7 @@ struct u_pacing_compositor
 	 *
 	 * @see @ref frame-pacing.
 	 */
-	void (*update_vblank_from_display_control)(struct u_pacing_compositor *upc, uint64_t last_vblank_ns);
+	void (*update_vblank_from_display_control)(struct u_pacing_compositor *upc, int64_t last_vblank_ns);
 
 	/*!
 	 * Provide an updated estimate of the present offset.
@@ -189,7 +189,7 @@ struct u_pacing_compositor
 	 */
 	void (*update_present_offset)(struct u_pacing_compositor *upc,
 	                              int64_t frame_id,
-	                              uint64_t present_to_display_offset_ns);
+	                              int64_t present_to_display_offset_ns);
 
 	/*!
 	 * Destroy this u_pacing_compositor.
@@ -207,14 +207,14 @@ struct u_pacing_compositor
  */
 static inline void
 u_pc_predict(struct u_pacing_compositor *upc,
-             uint64_t now_ns,
+             int64_t now_ns,
              int64_t *out_frame_id,
-             uint64_t *out_wake_up_time_ns,
-             uint64_t *out_desired_present_time_ns,
-             uint64_t *out_present_slop_ns,
-             uint64_t *out_predicted_display_time_ns,
-             uint64_t *out_predicted_display_period_ns,
-             uint64_t *out_min_display_period_ns)
+             int64_t *out_wake_up_time_ns,
+             int64_t *out_desired_present_time_ns,
+             int64_t *out_present_slop_ns,
+             int64_t *out_predicted_display_time_ns,
+             int64_t *out_predicted_display_period_ns,
+             int64_t *out_min_display_period_ns)
 {
 	upc->predict(upc,                             //
 	             now_ns,                          //
@@ -236,7 +236,7 @@ u_pc_predict(struct u_pacing_compositor *upc,
  * @ingroup aux_pacing
  */
 static inline void
-u_pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_t frame_id, uint64_t when_ns)
+u_pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int64_t frame_id, int64_t when_ns)
 {
 	upc->mark_point(upc, point, frame_id, when_ns);
 }
@@ -252,11 +252,11 @@ u_pc_mark_point(struct u_pacing_compositor *upc, enum u_timing_point point, int6
 static inline void
 u_pc_info(struct u_pacing_compositor *upc,
           int64_t frame_id,
-          uint64_t desired_present_time_ns,
-          uint64_t actual_present_time_ns,
-          uint64_t earliest_present_time_ns,
-          uint64_t present_margin_ns,
-          uint64_t when_ns)
+          int64_t desired_present_time_ns,
+          int64_t actual_present_time_ns,
+          int64_t earliest_present_time_ns,
+          int64_t present_margin_ns,
+          int64_t when_ns)
 {
 	upc->info(upc, frame_id, desired_present_time_ns, actual_present_time_ns, earliest_present_time_ns,
 	          present_margin_ns, when_ns);
@@ -273,7 +273,7 @@ u_pc_info(struct u_pacing_compositor *upc,
  */
 static inline void
 u_pc_info_gpu(
-    struct u_pacing_compositor *upc, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns)
+    struct u_pacing_compositor *upc, int64_t frame_id, int64_t gpu_start_ns, int64_t gpu_end_ns, int64_t when_ns)
 {
 	upc->info_gpu(upc, frame_id, gpu_start_ns, gpu_end_ns, when_ns);
 }
@@ -287,7 +287,7 @@ u_pc_info_gpu(
  * @ingroup aux_pacing
  */
 static inline void
-u_pc_update_vblank_from_display_control(struct u_pacing_compositor *upc, uint64_t last_vblank_ns)
+u_pc_update_vblank_from_display_control(struct u_pacing_compositor *upc, int64_t last_vblank_ns)
 {
 	upc->update_vblank_from_display_control(upc, last_vblank_ns);
 }
@@ -301,7 +301,7 @@ u_pc_update_vblank_from_display_control(struct u_pacing_compositor *upc, uint64_
  * @ingroup aux_pacing
  */
 static inline void
-u_pc_update_present_offset(struct u_pacing_compositor *upc, int64_t frame_id, uint64_t present_to_display_offset_ns)
+u_pc_update_present_offset(struct u_pacing_compositor *upc, int64_t frame_id, int64_t present_to_display_offset_ns)
 {
 	upc->update_present_offset(upc, frame_id, present_to_display_offset_ns);
 }
@@ -362,11 +362,11 @@ struct u_pacing_app
 	 * @param[out] out_predicted_display_period Predicted display period.
 	 */
 	void (*predict)(struct u_pacing_app *upa,
-	                uint64_t now_ns,
+	                int64_t now_ns,
 	                int64_t *out_frame_id,
-	                uint64_t *out_wake_up_time,
-	                uint64_t *out_predicted_display_time,
-	                uint64_t *out_predicted_display_period);
+	                int64_t *out_wake_up_time,
+	                int64_t *out_predicted_display_time,
+	                int64_t *out_predicted_display_period);
 
 	/*!
 	 * Mark a point on the frame's lifetime.
@@ -378,7 +378,7 @@ struct u_pacing_app
 	 *
 	 * @see @ref frame-pacing.
 	 */
-	void (*mark_point)(struct u_pacing_app *upa, int64_t frame_id, enum u_timing_point point, uint64_t when_ns);
+	void (*mark_point)(struct u_pacing_app *upa, int64_t frame_id, enum u_timing_point point, int64_t when_ns);
 
 	/*!
 	 * When a frame has been discarded.
@@ -387,7 +387,7 @@ struct u_pacing_app
 	 * @param[in] frame_id The frame ID to mark as discarded.
 	 * @param[in] when_ns  The time when it was discarded, nominally from @ref os_monotonic_get_ns
 	 */
-	void (*mark_discarded)(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns);
+	void (*mark_discarded)(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns);
 
 	/*!
 	 * A frame has been delivered from the client, see `xrEndFrame`. The GPU might
@@ -398,7 +398,7 @@ struct u_pacing_app
 	 * @param[in] when_ns         The time when it was delivered, nominally from @ref os_monotonic_get_ns
 	 * @param[in] display_time_ns The time the frame is to be displayed.
 	 */
-	void (*mark_delivered)(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns, uint64_t display_time_ns);
+	void (*mark_delivered)(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns, int64_t display_time_ns);
 
 	/*!
 	 * A frame has been completed rendered by the GPU, this can happen after `xrEndFrame` has returned.
@@ -407,7 +407,7 @@ struct u_pacing_app
 	 * @param[in] frame_id The frame ID to mark as delivered.
 	 * @param[in] when_ns  The time when it the gpu was finished, nominally from @ref os_monotonic_get_ns
 	 */
-	void (*mark_gpu_done)(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns);
+	void (*mark_gpu_done)(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns);
 
 	/*!
 	 * Latch a frame for rendering for delivery to the native compositor,
@@ -420,7 +420,7 @@ struct u_pacing_app
 	 * @param[in] system_frame_id The ID of the system frame that is
 	 *                            latching the app's frame.
 	 */
-	void (*latched)(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns, int64_t system_frame_id);
+	void (*latched)(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns, int64_t system_frame_id);
 
 	/*!
 	 * Mark a frame as completely retired, will never be latched (used by
@@ -431,7 +431,7 @@ struct u_pacing_app
 	 * @param[in] frame_id            The frame ID of the latched frame.
 	 * @param[in] when_ns             Time when the latching happened.
 	 */
-	void (*retired)(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns);
+	void (*retired)(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns);
 
 	/*!
 	 * Add a new sample point from the main render loop.
@@ -452,9 +452,9 @@ struct u_pacing_app
 	 *                                    was woken up by the main compositor.
 	 */
 	void (*info)(struct u_pacing_app *upa,
-	             uint64_t predicted_display_time_ns,
-	             uint64_t predicted_display_period_ns,
-	             uint64_t extra_ns);
+	             int64_t predicted_display_time_ns,
+	             int64_t predicted_display_period_ns,
+	             int64_t extra_ns);
 
 	/*!
 	 * Destroy this u_pacing_app.
@@ -472,11 +472,11 @@ struct u_pacing_app
  */
 static inline void
 u_pa_predict(struct u_pacing_app *upa,
-             uint64_t now_ns,
+             int64_t now_ns,
              int64_t *out_frame_id,
-             uint64_t *out_wake_up_time,
-             uint64_t *out_predicted_display_time,
-             uint64_t *out_predicted_display_period)
+             int64_t *out_wake_up_time,
+             int64_t *out_predicted_display_time,
+             int64_t *out_predicted_display_period)
 {
 	upa->predict(upa, now_ns, out_frame_id, out_wake_up_time, out_predicted_display_time,
 	             out_predicted_display_period);
@@ -491,7 +491,7 @@ u_pa_predict(struct u_pacing_app *upa,
  * @ingroup aux_pacing
  */
 static inline void
-u_pa_mark_point(struct u_pacing_app *upa, int64_t frame_id, enum u_timing_point point, uint64_t when_ns)
+u_pa_mark_point(struct u_pacing_app *upa, int64_t frame_id, enum u_timing_point point, int64_t when_ns)
 {
 	upa->mark_point(upa, frame_id, point, when_ns);
 }
@@ -505,7 +505,7 @@ u_pa_mark_point(struct u_pacing_app *upa, int64_t frame_id, enum u_timing_point 
  * @ingroup aux_pacing
  */
 static inline void
-u_pa_mark_discarded(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns)
+u_pa_mark_discarded(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns)
 {
 	upa->mark_discarded(upa, frame_id, when_ns);
 }
@@ -519,7 +519,7 @@ u_pa_mark_discarded(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns
  * @ingroup aux_pacing
  */
 static inline void
-u_pa_mark_delivered(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns, uint64_t display_time_ns)
+u_pa_mark_delivered(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns, int64_t display_time_ns)
 {
 	upa->mark_delivered(upa, frame_id, when_ns, display_time_ns);
 }
@@ -533,7 +533,7 @@ u_pa_mark_delivered(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns
  * @ingroup aux_pacing
  */
 static inline void
-u_pa_mark_gpu_done(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns)
+u_pa_mark_gpu_done(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns)
 {
 	upa->mark_gpu_done(upa, frame_id, when_ns);
 }
@@ -548,9 +548,9 @@ u_pa_mark_gpu_done(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns)
  */
 static inline void
 u_pa_info(struct u_pacing_app *upa,
-          uint64_t predicted_display_time_ns,
-          uint64_t predicted_display_period_ns,
-          uint64_t extra_ns)
+          int64_t predicted_display_time_ns,
+          int64_t predicted_display_period_ns,
+          int64_t extra_ns)
 {
 	upa->info(upa, predicted_display_time_ns, predicted_display_period_ns, extra_ns);
 }
@@ -564,7 +564,7 @@ u_pa_info(struct u_pacing_app *upa,
  * @ingroup aux_pacing
  */
 static inline void
-u_pa_latched(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns, int64_t system_frame_id)
+u_pa_latched(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns, int64_t system_frame_id)
 {
 	upa->latched(upa, frame_id, when_ns, system_frame_id);
 }
@@ -578,7 +578,7 @@ u_pa_latched(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns, int64
  * @ingroup aux_pacing
  */
 static inline void
-u_pa_retired(struct u_pacing_app *upa, int64_t frame_id, uint64_t when_ns)
+u_pa_retired(struct u_pacing_app *upa, int64_t frame_id, int64_t when_ns)
 {
 	upa->retired(upa, frame_id, when_ns);
 }
@@ -680,9 +680,9 @@ u_paf_destroy(struct u_pacing_app_factory **upaf_ptr)
 struct u_pc_display_timing_config
 {
 	//! How long after "present" is the image actually displayed
-	uint64_t present_to_display_offset_ns;
+	int64_t present_to_display_offset_ns;
 	//! Extra margin that is added to compositor time, between end of draw and present
-	uint64_t margin_ns;
+	int64_t margin_ns;
 	/*!
 	 * @name Frame-Relative Values
 	 * All these values are in "percentage points of the nominal frame period" so they can work across
@@ -725,7 +725,7 @@ extern const struct u_pc_display_timing_config U_PC_DISPLAY_TIMING_CONFIG_DEFAUL
  * @see u_pacing_compositor
  */
 xrt_result_t
-u_pc_display_timing_create(uint64_t estimated_frame_period_ns,
+u_pc_display_timing_create(int64_t estimated_frame_period_ns,
                            const struct u_pc_display_timing_config *config,
                            struct u_pacing_compositor **out_upc);
 
@@ -742,7 +742,7 @@ u_pc_display_timing_create(uint64_t estimated_frame_period_ns,
  * @see u_pacing_compositor
  */
 xrt_result_t
-u_pc_fake_create(uint64_t estimated_frame_period_ns, uint64_t now_ns, struct u_pacing_compositor **out_upc);
+u_pc_fake_create(int64_t estimated_frame_period_ns, int64_t now_ns, struct u_pacing_compositor **out_upc);
 
 /*!
  * Creates a new application pacing factory helper.

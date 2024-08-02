@@ -25,8 +25,8 @@ static constexpr unanoseconds frame_interval_ns(16ms);
 
 namespace {
 
-uint64_t
-getNextPresentAfterTimestampAndKnownPresent(uint64_t timestamp_ns, uint64_t known_present_ns)
+int64_t
+getNextPresentAfterTimestampAndKnownPresent(int64_t timestamp_ns, int64_t known_present_ns)
 {
 
 	while (known_present_ns < timestamp_ns) {
@@ -34,8 +34,8 @@ getNextPresentAfterTimestampAndKnownPresent(uint64_t timestamp_ns, uint64_t know
 	}
 	return known_present_ns;
 }
-uint64_t
-getPresentBefore(uint64_t timestamp_ns, uint64_t known_present_ns)
+int64_t
+getPresentBefore(int64_t timestamp_ns, int64_t known_present_ns)
 {
 
 	while (known_present_ns >= timestamp_ns && known_present_ns > frame_interval_ns.count()) {
@@ -43,8 +43,8 @@ getPresentBefore(uint64_t timestamp_ns, uint64_t known_present_ns)
 	}
 	return known_present_ns;
 }
-uint64_t
-getNextPresentAfterTimestamp(uint64_t timestamp_ns, uint64_t known_present_ns)
+int64_t
+getNextPresentAfterTimestamp(int64_t timestamp_ns, int64_t known_present_ns)
 {
 	auto present_before_ns = getPresentBefore(timestamp_ns, known_present_ns);
 	return getNextPresentAfterTimestampAndKnownPresent(timestamp_ns, present_before_ns);
@@ -53,17 +53,17 @@ getNextPresentAfterTimestamp(uint64_t timestamp_ns, uint64_t known_present_ns)
 struct CompositorPredictions
 {
 	int64_t frame_id{0};
-	uint64_t wake_up_time_ns{0};
-	uint64_t desired_present_time_ns{0};
-	uint64_t present_slop_ns{0};
-	uint64_t predicted_display_time_ns{0};
-	uint64_t predicted_display_period_ns{0};
-	uint64_t min_display_period_ns{0};
+	int64_t wake_up_time_ns{0};
+	int64_t desired_present_time_ns{0};
+	int64_t present_slop_ns{0};
+	int64_t predicted_display_time_ns{0};
+	int64_t predicted_display_period_ns{0};
+	int64_t min_display_period_ns{0};
 };
 } // namespace
 
 static void
-basicPredictionConsistencyChecks(uint64_t now_ns, CompositorPredictions const &predictions)
+basicPredictionConsistencyChecks(int64_t now_ns, CompositorPredictions const &predictions)
 {
 	INFO(predictions.frame_id);
 	INFO(now_ns);
@@ -79,7 +79,7 @@ basicPredictionConsistencyChecks(uint64_t now_ns, CompositorPredictions const &p
 
 struct SimulatedDisplayTimingData
 {
-	SimulatedDisplayTimingData(int64_t id, uint64_t desired_present_time, uint64_t gpu_finish, uint64_t now)
+	SimulatedDisplayTimingData(int64_t id, int64_t desired_present_time, int64_t gpu_finish, int64_t now)
 	    : frame_id(id), desired_present_time_ns(desired_present_time),
 	      actual_present_time_ns(getNextPresentAfterTimestampAndKnownPresent(gpu_finish, desired_present_time)),
 	      earliest_present_time_ns(getNextPresentAfterTimestamp(gpu_finish, desired_present_time)),
@@ -87,11 +87,11 @@ struct SimulatedDisplayTimingData
 	{}
 
 	int64_t frame_id;
-	uint64_t desired_present_time_ns;
-	uint64_t actual_present_time_ns;
-	uint64_t earliest_present_time_ns;
-	uint64_t present_margin_ns;
-	uint64_t now_ns;
+	int64_t desired_present_time_ns;
+	int64_t actual_present_time_ns;
+	int64_t earliest_present_time_ns;
+	int64_t present_margin_ns;
+	int64_t now_ns;
 	void
 	call_u_pc_info(u_pacing_compositor *upc) const
 	{
@@ -116,7 +116,7 @@ using SimulatedDisplayTimingQueue = std::priority_queue<SimulatedDisplayTimingDa
 
 //! Process all simulated timing data in the queue that should be processed by now.
 static void
-processDisplayTimingQueue(SimulatedDisplayTimingQueue &display_timing_queue, uint64_t now_ns, u_pacing_compositor *upc)
+processDisplayTimingQueue(SimulatedDisplayTimingQueue &display_timing_queue, int64_t now_ns, u_pacing_compositor *upc)
 {
 	while (!display_timing_queue.empty() && display_timing_queue.top().now_ns <= now_ns) {
 		display_timing_queue.top().call_u_pc_info(upc);
@@ -124,8 +124,8 @@ processDisplayTimingQueue(SimulatedDisplayTimingQueue &display_timing_queue, uin
 	}
 }
 //! Process all remaining simulated timing data in the queue and return the timestamp of the last one.
-static uint64_t
-drainDisplayTimingQueue(SimulatedDisplayTimingQueue &display_timing_queue, uint64_t now_ns, u_pacing_compositor *upc)
+static int64_t
+drainDisplayTimingQueue(SimulatedDisplayTimingQueue &display_timing_queue, int64_t now_ns, u_pacing_compositor *upc)
 {
 	while (!display_timing_queue.empty()) {
 		now_ns = display_timing_queue.top().now_ns;
@@ -139,8 +139,8 @@ static void
 doFrame(SimulatedDisplayTimingQueue &display_timing_queue,
         u_pacing_compositor *upc,
         MockClock &clock,
-        uint64_t wake_time_ns,
-        uint64_t desired_present_time_ns,
+        int64_t wake_time_ns,
+        int64_t desired_present_time_ns,
         int64_t frame_id,
         unanoseconds wake_delay,
         unanoseconds begin_delay,
