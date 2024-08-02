@@ -384,7 +384,7 @@ struct xrt_device
 	 */
 	xrt_result_t (*get_body_joints)(struct xrt_device *xdev,
 	                                enum xrt_input_name body_tracking_type,
-	                                uint64_t desired_timestamp_ns,
+	                                int64_t desired_timestamp_ns,
 	                                struct xrt_body_joint_set *out_value);
 
 	/*!
@@ -613,7 +613,7 @@ xrt_device_get_body_skeleton(struct xrt_device *xdev,
 static inline xrt_result_t
 xrt_device_get_body_joints(struct xrt_device *xdev,
                            enum xrt_input_name body_tracking_type,
-                           uint64_t desired_timestamp_ns,
+                           int64_t desired_timestamp_ns,
                            struct xrt_body_joint_set *out_value)
 {
 	if (xdev->get_body_joints == NULL) {

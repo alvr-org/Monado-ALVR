@@ -2138,7 +2138,7 @@ xrt_result_t
 ipc_handle_device_get_body_joints(volatile struct ipc_client_state *ics,
                                   uint32_t id,
                                   enum xrt_input_name body_tracking_type,
-                                  uint64_t desired_timestamp_ns,
+                                  int64_t desired_timestamp_ns,
                                   struct xrt_body_joint_set *out_value)
 {
 	struct xrt_device *xdev = get_xdev(ics, id);

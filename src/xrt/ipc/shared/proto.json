@@ -507,7 +507,7 @@
 		"in": [
 			{"name": "id", "type": "uint32_t"},
 			{"name": "body_tracking_type", "type": "enum xrt_input_name"},
-			{"name": "desired_timestamp_ns", "type": "uint64_t"}
+			{"name": "desired_timestamp_ns", "type": "int64_t"}
 		],
 		"out": [
 			{"name": "value", "type": "struct xrt_body_joint_set"}
