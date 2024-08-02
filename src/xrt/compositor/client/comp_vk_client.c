@@ -319,7 +319,7 @@ client_vk_swapchain_acquire_image(struct xrt_swapchain *xsc, uint32_t *out_index
 }
 
 static xrt_result_t
-client_vk_swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t index)
+client_vk_swapchain_wait_image(struct xrt_swapchain *xsc, int64_t timeout_ns, uint32_t index)
 {
 	COMP_TRACE_MARKER();
 
@@ -438,8 +438,8 @@ client_vk_compositor_end_session(struct xrt_compositor *xc)
 static xrt_result_t
 client_vk_compositor_wait_frame(struct xrt_compositor *xc,
                                 int64_t *out_frame_id,
-                                uint64_t *predicted_display_time,
-                                uint64_t *predicted_display_period)
+                                int64_t *predicted_display_time,
+                                int64_t *predicted_display_period)
 {
 	COMP_TRACE_MARKER();
 

@@ -215,9 +215,9 @@
 	"compositor_predict_frame": {
 		"out": [
 			{"name": "frame_id", "type": "int64_t"},
-			{"name": "wake_up_time", "type": "uint64_t"},
-			{"name": "predicted_display_time", "type": "uint64_t"},
-			{"name": "predicted_display_period", "type": "uint64_t"}
+			{"name": "wake_up_time", "type": "int64_t"},
+			{"name": "predicted_display_time", "type": "int64_t"},
+			{"name": "predicted_display_period", "type": "int64_t"}
 		]
 	},
 
@@ -345,7 +345,7 @@
 	"swapchain_wait_image": {
 		"in": [
 			{"name": "id", "type": "uint32_t"},
-			{"name": "timeout_ns", "type": "uint64_t"},
+			{"name": "timeout_ns", "type": "int64_t"},
 			{"name": "index", "type": "uint32_t"}
 		]
 	},

@@ -329,7 +329,7 @@ do_update_timings_google_display_timing(struct comp_target_swapchain *cts)
 	    cts->swapchain.handle,             //
 	    &count,                            //
 	    timings);                          //
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 	for (uint32_t i = 0; i < count; i++) {
 		u_pc_info(cts->upc,                       //
 		          timings[i].presentID,           //
@@ -350,7 +350,7 @@ do_update_timings_vblank_thread(struct comp_target_swapchain *cts)
 		return;
 	}
 
-	uint64_t last_vblank_ns;
+	int64_t last_vblank_ns;
 
 	os_thread_helper_lock(&cts->vblank.event_thread);
 	last_vblank_ns = cts->vblank.last_vblank_ns;
@@ -416,7 +416,7 @@ get_surface_counter_val(struct comp_target *ct)
 }
 
 static bool
-vblank_event_func(struct comp_target *ct, uint64_t *out_timestamp_ns)
+vblank_event_func(struct comp_target *ct, int64_t *out_timestamp_ns)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 
@@ -449,7 +449,7 @@ vblank_event_func(struct comp_target *ct, uint64_t *out_timestamp_ns)
 	ret = vk->vkWaitForFences(vk->device, 1, &vblank_event_fence, true, time_s_to_ns(1));
 
 	// As quickly as possible after the fence has fired.
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	bool valid = false;
 	if (ret == VK_SUCCESS) {
@@ -520,7 +520,7 @@ run_vblank_event_thread(void *ptr)
 		// Unlock while waiting.
 		os_thread_helper_unlock(&cts->vblank.event_thread);
 
-		uint64_t when_ns = 0;
+		int64_t when_ns = 0;
 		bool valid = vblank_event_func(ct, &when_ns);
 
 		// Just keep swimming.
@@ -619,7 +619,7 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	VkBool32 supported;
 	VkResult ret;
 
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 	// Some platforms really don't like the pacing_compositor code.
 	bool use_display_timing_if_available = cts->timing_usage == COMP_TARGET_USE_DISPLAY_IF_AVAILABLE;
 	if (cts->upc == NULL && use_display_timing_if_available && vk->has_GOOGLE_display_timing) {
@@ -846,8 +846,8 @@ comp_target_swapchain_present(struct comp_target *ct,
                               VkQueue queue,
                               uint32_t index,
                               uint64_t timeline_semaphore_value,
-                              uint64_t desired_present_time_ns,
-                              uint64_t present_slop_ns)
+                              int64_t desired_present_time_ns,
+                              int64_t present_slop_ns)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 	struct vk_bundle *vk = get_vk(cts);
@@ -914,21 +914,21 @@ comp_target_swapchain_check_ready(struct comp_target *ct)
 static void
 comp_target_swapchain_calc_frame_pacing(struct comp_target *ct,
                                         int64_t *out_frame_id,
-                                        uint64_t *out_wake_up_time_ns,
-                                        uint64_t *out_desired_present_time_ns,
-                                        uint64_t *out_present_slop_ns,
-                                        uint64_t *out_predicted_display_time_ns)
+                                        int64_t *out_wake_up_time_ns,
+                                        int64_t *out_desired_present_time_ns,
+                                        int64_t *out_present_slop_ns,
+                                        int64_t *out_predicted_display_time_ns)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 
 	int64_t frame_id = -1;
-	uint64_t wake_up_time_ns = 0;
-	uint64_t desired_present_time_ns = 0;
-	uint64_t present_slop_ns = 0;
-	uint64_t predicted_display_time_ns = 0;
-	uint64_t predicted_display_period_ns = 0;
-	uint64_t min_display_period_ns = 0;
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t wake_up_time_ns = 0;
+	int64_t desired_present_time_ns = 0;
+	int64_t present_slop_ns = 0;
+	int64_t predicted_display_time_ns = 0;
+	int64_t predicted_display_period_ns = 0;
+	int64_t min_display_period_ns = 0;
+	int64_t now_ns = os_monotonic_get_ns();
 
 	u_pc_predict(cts->upc,                     //
 	             now_ns,                       //
@@ -953,7 +953,7 @@ static void
 comp_target_swapchain_mark_timing_point(struct comp_target *ct,
                                         enum comp_target_timing_point point,
                                         int64_t frame_id,
-                                        uint64_t when_ns)
+                                        int64_t when_ns)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 	assert(frame_id == cts->current_frame_id);
@@ -990,7 +990,7 @@ comp_target_swapchain_update_timings(struct comp_target *ct)
 
 static void
 comp_target_swapchain_info_gpu(
-    struct comp_target *ct, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns)
+    struct comp_target *ct, int64_t frame_id, int64_t gpu_start_ns, int64_t gpu_end_ns, int64_t when_ns)
 {
 	COMP_TRACE_MARKER();
 

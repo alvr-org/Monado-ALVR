@@ -341,20 +341,20 @@ null_compositor_end_session(struct xrt_compositor *xc)
 static xrt_result_t
 null_compositor_predict_frame(struct xrt_compositor *xc,
                               int64_t *out_frame_id,
-                              uint64_t *out_wake_time_ns,
-                              uint64_t *out_predicted_gpu_time_ns,
-                              uint64_t *out_predicted_display_time_ns,
-                              uint64_t *out_predicted_display_period_ns)
+                              int64_t *out_wake_time_ns,
+                              int64_t *out_predicted_gpu_time_ns,
+                              int64_t *out_predicted_display_time_ns,
+                              int64_t *out_predicted_display_period_ns)
 {
 	COMP_TRACE_MARKER();
 
 	struct null_compositor *c = null_compositor(xc);
 	NULL_TRACE(c, "PREDICT_FRAME");
 
-	uint64_t now_ns = os_monotonic_get_ns();
-	uint64_t null_desired_present_time_ns = 0;
-	uint64_t null_present_slop_ns = 0;
-	uint64_t null_min_display_period_ns = 0;
+	int64_t now_ns = os_monotonic_get_ns();
+	int64_t null_desired_present_time_ns = 0;
+	int64_t null_present_slop_ns = 0;
+	int64_t null_min_display_period_ns = 0;
 
 	u_pc_predict(                        //
 	    c->upc,                          // upc
@@ -374,7 +374,7 @@ static xrt_result_t
 null_compositor_mark_frame(struct xrt_compositor *xc,
                            int64_t frame_id,
                            enum xrt_compositor_frame_point point,
-                           uint64_t when_ns)
+                           int64_t when_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -442,13 +442,13 @@ null_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle
 
 	// When we begin rendering.
 	{
-		uint64_t now_ns = os_monotonic_get_ns();
+		int64_t now_ns = os_monotonic_get_ns();
 		u_pc_mark_point(c->upc, U_TIMING_POINT_BEGIN, frame_id, now_ns);
 	}
 
 	// When we are submitting to the GPU.
 	{
-		uint64_t now_ns = os_monotonic_get_ns();
+		int64_t now_ns = os_monotonic_get_ns();
 		u_pc_mark_point(c->upc, U_TIMING_POINT_SUBMIT_BEGIN, frame_id, now_ns);
 
 		now_ns = os_monotonic_get_ns();

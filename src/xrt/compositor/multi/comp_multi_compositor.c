@@ -49,7 +49,7 @@ static void
 slot_clear_locked(struct multi_compositor *mc, struct multi_layer_slot *slot)
 {
 	if (slot->active) {
-		uint64_t now_ns = os_monotonic_get_ns();
+		int64_t now_ns = os_monotonic_get_ns();
 		u_pa_retired(mc->upa, slot->data.frame_id, now_ns);
 	}
 
@@ -125,7 +125,7 @@ wait_fence(struct xrt_compositor_fence **xcf_ptr)
 	xrt_result_t ret = XRT_SUCCESS;
 
 	// 100ms
-	uint64_t timeout_ns = 100 * U_TIME_1MS_IN_NS;
+	int64_t timeout_ns = 100 * U_TIME_1MS_IN_NS;
 
 	do {
 		ret = xrt_compositor_fence_wait(*xcf_ptr, timeout_ns);
@@ -150,7 +150,7 @@ wait_semaphore(struct xrt_compositor_semaphore **xcsem_ptr, uint64_t value)
 	xrt_result_t ret = XRT_SUCCESS;
 
 	// 100ms
-	uint64_t timeout_ns = 100 * U_TIME_1MS_IN_NS;
+	int64_t timeout_ns = 100 * U_TIME_1MS_IN_NS;
 
 	do {
 		ret = xrt_compositor_semaphore_wait(*xcsem_ptr, value, timeout_ns);
@@ -291,7 +291,7 @@ run_func(void *ptr)
 		}
 
 		// Sample time outside of lock.
-		uint64_t now_ns = os_monotonic_get_ns();
+		int64_t now_ns = os_monotonic_get_ns();
 
 		os_mutex_lock(&mc->msc->list_and_timing_lock);
 		u_pa_mark_gpu_done(mc->upa, frame_id, now_ns);
@@ -496,15 +496,15 @@ multi_compositor_end_session(struct xrt_compositor *xc)
 static xrt_result_t
 multi_compositor_predict_frame(struct xrt_compositor *xc,
                                int64_t *out_frame_id,
-                               uint64_t *out_wake_time_ns,
-                               uint64_t *out_predicted_gpu_time_ns,
-                               uint64_t *out_predicted_display_time_ns,
-                               uint64_t *out_predicted_display_period_ns)
+                               int64_t *out_wake_time_ns,
+                               int64_t *out_predicted_gpu_time_ns,
+                               int64_t *out_predicted_display_time_ns,
+                               int64_t *out_predicted_display_period_ns)
 {
 	COMP_TRACE_MARKER();
 
 	struct multi_compositor *mc = multi_compositor(xc);
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 	os_mutex_lock(&mc->msc->list_and_timing_lock);
 
 	u_pa_predict(                         //
@@ -526,13 +526,13 @@ static xrt_result_t
 multi_compositor_mark_frame(struct xrt_compositor *xc,
                             int64_t frame_id,
                             enum xrt_compositor_frame_point point,
-                            uint64_t when_ns)
+                            int64_t when_ns)
 {
 	COMP_TRACE_MARKER();
 
 	struct multi_compositor *mc = multi_compositor(xc);
 
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	switch (point) {
 	case XRT_COMPOSITOR_FRAME_POINT_WOKE:
@@ -549,16 +549,16 @@ multi_compositor_mark_frame(struct xrt_compositor *xc,
 static xrt_result_t
 multi_compositor_wait_frame(struct xrt_compositor *xc,
                             int64_t *out_frame_id,
-                            uint64_t *out_predicted_display_time_ns,
-                            uint64_t *out_predicted_display_period_ns)
+                            int64_t *out_predicted_display_time_ns,
+                            int64_t *out_predicted_display_period_ns)
 {
 	COMP_TRACE_MARKER();
 
 	struct multi_compositor *mc = multi_compositor(xc);
 
 	int64_t frame_id = -1;
-	uint64_t wake_up_time_ns = 0;
-	uint64_t predicted_gpu_time_ns = 0;
+	int64_t wake_up_time_ns = 0;
+	int64_t predicted_gpu_time_ns = 0;
 
 	xrt_comp_predict_frame(               //
 	    xc,                               //
@@ -571,7 +571,7 @@ multi_compositor_wait_frame(struct xrt_compositor *xc,
 	// Wait until the given wake up time.
 	u_wait_until(&mc->frame_sleeper, wake_up_time_ns);
 
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	// Signal that we woke up.
 	xrt_comp_mark_frame(xc, frame_id, XRT_COMPOSITOR_FRAME_POINT_WOKE, now_ns);
@@ -589,7 +589,7 @@ multi_compositor_begin_frame(struct xrt_compositor *xc, int64_t frame_id)
 	struct multi_compositor *mc = multi_compositor(xc);
 
 	os_mutex_lock(&mc->msc->list_and_timing_lock);
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 	u_pa_mark_point(mc->upa, frame_id, U_TIMING_POINT_BEGIN, now_ns);
 	os_mutex_unlock(&mc->msc->list_and_timing_lock);
 
@@ -602,7 +602,7 @@ multi_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 	COMP_TRACE_MARKER();
 
 	struct multi_compositor *mc = multi_compositor(xc);
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	os_mutex_lock(&mc->msc->list_and_timing_lock);
 	u_pa_mark_discarded(mc->upa, frame_id, now_ns);
@@ -617,7 +617,7 @@ multi_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_f
 	struct multi_compositor *mc = multi_compositor(xc);
 
 	// As early as possible.
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 	os_mutex_lock(&mc->msc->list_and_timing_lock);
 	u_pa_mark_delivered(mc->upa, data->frame_id, now_ns, data->display_time_ns);
 	os_mutex_unlock(&mc->msc->list_and_timing_lock);
@@ -797,7 +797,7 @@ multi_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handl
 		push_fence_to_wait_thread(mc, frame_id, xcf);
 	} else {
 		// Assume that the app side compositor waited.
-		uint64_t now_ns = os_monotonic_get_ns();
+		int64_t now_ns = os_monotonic_get_ns();
 
 		os_mutex_lock(&mc->msc->list_and_timing_lock);
 		u_pa_mark_gpu_done(mc->upa, frame_id, now_ns);
@@ -898,7 +898,7 @@ multi_compositor_destroy(struct xrt_compositor *xc)
 }
 
 static void
-log_frame_time_diff(uint64_t frame_time_ns, uint64_t display_time_ns)
+log_frame_time_diff(int64_t frame_time_ns, int64_t display_time_ns)
 {
 	int64_t diff_ns = (int64_t)frame_time_ns - (int64_t)display_time_ns;
 	bool late = false;
@@ -911,7 +911,7 @@ log_frame_time_diff(uint64_t frame_time_ns, uint64_t display_time_ns)
 }
 
 void
-multi_compositor_deliver_any_frames(struct multi_compositor *mc, uint64_t display_time_ns)
+multi_compositor_deliver_any_frames(struct multi_compositor *mc, int64_t display_time_ns)
 {
 	os_mutex_lock(&mc->slot_lock);
 
@@ -923,7 +923,7 @@ multi_compositor_deliver_any_frames(struct multi_compositor *mc, uint64_t displa
 	if (time_is_greater_then_or_within_half_ms(display_time_ns, mc->scheduled.data.display_time_ns)) {
 		slot_move_and_clear_locked(mc, &mc->delivered, &mc->scheduled);
 
-		uint64_t frame_time_ns = mc->delivered.data.display_time_ns;
+		int64_t frame_time_ns = mc->delivered.data.display_time_ns;
 		if (!time_is_within_half_ms(frame_time_ns, display_time_ns)) {
 			log_frame_time_diff(frame_time_ns, display_time_ns);
 		}
@@ -933,13 +933,13 @@ multi_compositor_deliver_any_frames(struct multi_compositor *mc, uint64_t displa
 }
 
 void
-multi_compositor_latch_frame_locked(struct multi_compositor *mc, uint64_t when_ns, int64_t system_frame_id)
+multi_compositor_latch_frame_locked(struct multi_compositor *mc, int64_t when_ns, int64_t system_frame_id)
 {
 	u_pa_latched(mc->upa, mc->delivered.data.frame_id, when_ns, system_frame_id);
 }
 
 void
-multi_compositor_retire_delivered_locked(struct multi_compositor *mc, uint64_t when_ns)
+multi_compositor_retire_delivered_locked(struct multi_compositor *mc, int64_t when_ns)
 {
 	slot_clear_locked(mc, &mc->delivered);
 }

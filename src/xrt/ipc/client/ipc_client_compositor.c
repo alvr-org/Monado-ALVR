@@ -183,7 +183,7 @@ ipc_compositor_swapchain_destroy(struct xrt_swapchain *xsc)
 }
 
 static xrt_result_t
-ipc_compositor_swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t index)
+ipc_compositor_swapchain_wait_image(struct xrt_swapchain *xsc, int64_t timeout_ns, uint32_t index)
 {
 	struct ipc_client_swapchain *ics = ipc_client_swapchain(xsc);
 	struct ipc_client_compositor *icc = ics->icc;
@@ -522,17 +522,17 @@ ipc_compositor_end_session(struct xrt_compositor *xc)
 static xrt_result_t
 ipc_compositor_wait_frame(struct xrt_compositor *xc,
                           int64_t *out_frame_id,
-                          uint64_t *out_predicted_display_time,
-                          uint64_t *out_predicted_display_period)
+                          int64_t *out_predicted_display_time,
+                          int64_t *out_predicted_display_period)
 {
 	IPC_TRACE_MARKER();
 	struct ipc_client_compositor *icc = ipc_client_compositor(xc);
 	xrt_result_t xret;
 
 	int64_t frame_id = -1;
-	uint64_t wake_up_time_ns = 0;
-	uint64_t predicted_display_time = 0;
-	uint64_t predicted_display_period = 0;
+	int64_t wake_up_time_ns = 0;
+	int64_t predicted_display_time = 0;
+	int64_t predicted_display_period = 0;
 
 	xret = ipc_call_compositor_predict_frame( //
 	    icc->ipc_c,                           // Connection

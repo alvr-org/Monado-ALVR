@@ -221,8 +221,8 @@ struct comp_target
 	                    VkQueue queue,
 	                    uint32_t index,
 	                    uint64_t timeline_semaphore_value,
-	                    uint64_t desired_present_time_ns,
-	                    uint64_t present_slop_ns);
+	                    int64_t desired_present_time_ns,
+	                    int64_t present_slop_ns);
 
 	/*!
 	 * Flush any WSI state before rendering.
@@ -242,10 +242,10 @@ struct comp_target
 	 */
 	void (*calc_frame_pacing)(struct comp_target *ct,
 	                          int64_t *out_frame_id,
-	                          uint64_t *out_wake_up_time_ns,
-	                          uint64_t *out_desired_present_time_ns,
-	                          uint64_t *out_present_slop_ns,
-	                          uint64_t *out_predicted_display_time_ns);
+	                          int64_t *out_wake_up_time_ns,
+	                          int64_t *out_desired_present_time_ns,
+	                          int64_t *out_present_slop_ns,
+	                          int64_t *out_predicted_display_time_ns);
 
 	/*!
 	 * The compositor tells the target a timing information about a single
@@ -254,7 +254,7 @@ struct comp_target
 	void (*mark_timing_point)(struct comp_target *ct,
 	                          enum comp_target_timing_point point,
 	                          int64_t frame_id,
-	                          uint64_t when_ns);
+	                          int64_t when_ns);
 
 	/*!
 	 * Update timing information for this target, this function should be
@@ -279,7 +279,7 @@ struct comp_target
 	 * @see @ref frame-pacing.
 	 */
 	void (*info_gpu)(
-	    struct comp_target *ct, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns);
+	    struct comp_target *ct, int64_t frame_id, int64_t gpu_start_ns, int64_t gpu_end_ns, int64_t when_ns);
 
 	/*
 	 *
@@ -393,8 +393,8 @@ comp_target_present(struct comp_target *ct,
                     VkQueue queue,
                     uint32_t index,
                     uint64_t timeline_semaphore_value,
-                    uint64_t desired_present_time_ns,
-                    uint64_t present_slop_ns)
+                    int64_t desired_present_time_ns,
+                    int64_t present_slop_ns)
 
 {
 	COMP_TRACE_MARKER();
@@ -431,10 +431,10 @@ comp_target_flush(struct comp_target *ct)
 static inline void
 comp_target_calc_frame_pacing(struct comp_target *ct,
                               int64_t *out_frame_id,
-                              uint64_t *out_wake_up_time_ns,
-                              uint64_t *out_desired_present_time_ns,
-                              uint64_t *out_present_slop_ns,
-                              uint64_t *out_predicted_display_time_ns)
+                              int64_t *out_wake_up_time_ns,
+                              int64_t *out_desired_present_time_ns,
+                              int64_t *out_present_slop_ns,
+                              int64_t *out_predicted_display_time_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -455,7 +455,7 @@ comp_target_calc_frame_pacing(struct comp_target *ct,
  * @ingroup comp_main
  */
 static inline void
-comp_target_mark_wake_up(struct comp_target *ct, int64_t frame_id, uint64_t when_woke_ns)
+comp_target_mark_wake_up(struct comp_target *ct, int64_t frame_id, int64_t when_woke_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -470,7 +470,7 @@ comp_target_mark_wake_up(struct comp_target *ct, int64_t frame_id, uint64_t when
  * @ingroup comp_main
  */
 static inline void
-comp_target_mark_begin(struct comp_target *ct, int64_t frame_id, uint64_t when_began_ns)
+comp_target_mark_begin(struct comp_target *ct, int64_t frame_id, int64_t when_began_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -485,7 +485,7 @@ comp_target_mark_begin(struct comp_target *ct, int64_t frame_id, uint64_t when_b
  * @ingroup comp_main
  */
 static inline void
-comp_target_mark_submit_begin(struct comp_target *ct, int64_t frame_id, uint64_t when_submit_began_ns)
+comp_target_mark_submit_begin(struct comp_target *ct, int64_t frame_id, int64_t when_submit_began_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -500,7 +500,7 @@ comp_target_mark_submit_begin(struct comp_target *ct, int64_t frame_id, uint64_t
  * @ingroup comp_main
  */
 static inline void
-comp_target_mark_submit_end(struct comp_target *ct, int64_t frame_id, uint64_t when_submit_end_ns)
+comp_target_mark_submit_end(struct comp_target *ct, int64_t frame_id, int64_t when_submit_end_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -529,7 +529,7 @@ comp_target_update_timings(struct comp_target *ct)
  */
 static inline void
 comp_target_info_gpu(
-    struct comp_target *ct, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns)
+    struct comp_target *ct, int64_t frame_id, int64_t gpu_start_ns, int64_t gpu_end_ns, int64_t when_ns)
 {
 	COMP_TRACE_MARKER();
 

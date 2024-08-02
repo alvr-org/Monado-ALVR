@@ -861,9 +861,9 @@ ipc_handle_compositor_get_info(volatile struct ipc_client_state *ics, struct xrt
 xrt_result_t
 ipc_handle_compositor_predict_frame(volatile struct ipc_client_state *ics,
                                     int64_t *out_frame_id,
-                                    uint64_t *out_wake_up_time_ns,
-                                    uint64_t *out_predicted_display_time_ns,
-                                    uint64_t *out_predicted_display_period_ns)
+                                    int64_t *out_wake_up_time_ns,
+                                    int64_t *out_predicted_display_time_ns,
+                                    int64_t *out_predicted_display_period_ns)
 {
 	IPC_TRACE_MARKER();
 
@@ -877,7 +877,7 @@ ipc_handle_compositor_predict_frame(volatile struct ipc_client_state *ics,
 	 */
 	ipc_server_activate_session(ics);
 
-	uint64_t gpu_time_ns = 0;
+	int64_t gpu_time_ns = 0;
 	return xrt_comp_predict_frame(        //
 	    ics->xc,                          //
 	    out_frame_id,                     //
@@ -1656,7 +1656,7 @@ ipc_handle_swapchain_import(volatile struct ipc_client_state *ics,
 }
 
 xrt_result_t
-ipc_handle_swapchain_wait_image(volatile struct ipc_client_state *ics, uint32_t id, uint64_t timeout_ns, uint32_t index)
+ipc_handle_swapchain_wait_image(volatile struct ipc_client_state *ics, uint32_t id, int64_t timeout_ns, uint32_t index)
 {
 	if (ics->xc == NULL) {
 		return XRT_ERROR_IPC_SESSION_NOT_CREATED;

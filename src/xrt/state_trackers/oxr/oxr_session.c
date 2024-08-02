@@ -695,15 +695,15 @@ static XrResult
 do_wait_frame_and_checks(struct oxr_logger *log,
                          struct oxr_session *sess,
                          int64_t *out_frame_id,
-                         uint64_t *out_predicted_display_time,
-                         uint64_t *out_predicted_display_period,
+                         int64_t *out_predicted_display_time,
+                         int64_t *out_predicted_display_period,
                          XrTime *out_converted_time)
 {
 	assert(sess->compositor != NULL);
 
 	int64_t frame_id = -1;
-	uint64_t predicted_display_time = 0;
-	uint64_t predicted_display_period = 0;
+	int64_t predicted_display_time = 0;
+	int64_t predicted_display_period = 0;
 
 	xrt_result_t xret = xrt_comp_wait_frame( //
 	    sess->compositor,                    // compositor
@@ -765,8 +765,8 @@ oxr_session_frame_wait(struct oxr_logger *log, struct oxr_session *sess, XrFrame
 	}
 
 	int64_t frame_id = -1;
-	uint64_t predicted_display_time = 0;
-	uint64_t predicted_display_period = 0;
+	int64_t predicted_display_time = 0;
+	int64_t predicted_display_period = 0;
 	XrTime converted_time = 0;
 
 	XrResult ret = do_wait_frame_and_checks( //
@@ -811,7 +811,7 @@ oxr_session_frame_wait(struct oxr_logger *log, struct oxr_session *sess, XrFrame
 	}
 
 	if (sess->frame_timing_wait_sleep_ms > 0) {
-		uint64_t sleep_ns = U_TIME_1MS_IN_NS * sess->frame_timing_wait_sleep_ms;
+		int64_t sleep_ns = U_TIME_1MS_IN_NS * sess->frame_timing_wait_sleep_ms;
 		os_precise_sleeper_nanosleep(&sess->sleeper, sleep_ns);
 	}
 

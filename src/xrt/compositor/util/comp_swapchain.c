@@ -106,7 +106,7 @@ swapchain_dec_image_use(struct xrt_swapchain *xsc, uint32_t index)
 }
 
 static xrt_result_t
-swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t index)
+swapchain_wait_image(struct xrt_swapchain *xsc, int64_t timeout_ns, uint32_t index)
 {
 	struct comp_swapchain *sc = comp_swapchain(xsc);
 
@@ -124,12 +124,12 @@ swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t in
 	}
 
 	// on windows pthread_cond_timedwait can not be used with monotonic time
-	uint64_t start_wait_rt = os_realtime_get_ns();
+	int64_t start_wait_rt = os_realtime_get_ns();
 
-	uint64_t end_wait_rt;
+	int64_t end_wait_rt;
 	// don't wrap on big or indefinite timeout
-	if (start_wait_rt > UINT64_MAX - timeout_ns) {
-		end_wait_rt = UINT64_MAX;
+	if (start_wait_rt > INT64_MAX - timeout_ns) {
+		end_wait_rt = INT64_MAX;
 	} else {
 		end_wait_rt = start_wait_rt + timeout_ns;
 	}
@@ -145,7 +145,7 @@ swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t in
 		// use pthread_cond_timedwait to implement timeout behavior
 		ret = pthread_cond_timedwait(&sc->images[index].use_cond, &sc->images[index].use_mutex.mutex, &spec);
 
-		uint64_t now_rt = os_realtime_get_ns();
+		int64_t now_rt = os_realtime_get_ns();
 		double diff = time_ns_to_ms_f(now_rt - start_wait_rt);
 
 		if (ret == 0) {

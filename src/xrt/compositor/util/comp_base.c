@@ -207,16 +207,16 @@ base_layer_equirect2(struct xrt_compositor *xc,
 static xrt_result_t
 base_wait_frame(struct xrt_compositor *xc,
                 int64_t *out_frame_id,
-                uint64_t *out_predicted_display_time_ns,
-                uint64_t *out_predicted_display_period_ns)
+                int64_t *out_predicted_display_time_ns,
+                int64_t *out_predicted_display_period_ns)
 {
 	COMP_TRACE_MARKER();
 
 	struct comp_base *cb = comp_base(xc);
 
 	int64_t frame_id = -1;
-	uint64_t wake_up_time_ns = 0;
-	uint64_t predicted_gpu_time_ns = 0;
+	int64_t wake_up_time_ns = 0;
+	int64_t predicted_gpu_time_ns = 0;
 
 	xrt_comp_predict_frame(               //
 	    xc,                               //
@@ -229,7 +229,7 @@ base_wait_frame(struct xrt_compositor *xc,
 	// Wait until the given wake up time.
 	u_wait_until(&cb->sleeper, wake_up_time_ns);
 
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	// Signal that we woke up.
 	xrt_comp_mark_frame(xc, frame_id, XRT_COMPOSITOR_FRAME_POINT_WOKE, now_ns);

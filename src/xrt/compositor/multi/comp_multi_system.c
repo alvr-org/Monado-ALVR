@@ -251,7 +251,7 @@ find_active_blend_mode(struct multi_compositor **overlay_sorted_clients, size_t 
 }
 
 static void
-transfer_layers_locked(struct multi_system_compositor *msc, uint64_t display_time_ns, int64_t system_frame_id)
+transfer_layers_locked(struct multi_system_compositor *msc, int64_t display_time_ns, int64_t system_frame_id)
 {
 	COMP_TRACE_MARKER();
 
@@ -260,7 +260,7 @@ transfer_layers_locked(struct multi_system_compositor *msc, uint64_t display_tim
 	struct multi_compositor *array[MULTI_MAX_CLIENTS] = {0};
 
 	// To mark latching.
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	size_t count = 0;
 	for (size_t k = 0; k < ARRAY_SIZE(array); k++) {
@@ -337,7 +337,7 @@ transfer_layers_locked(struct multi_system_compositor *msc, uint64_t display_tim
 }
 
 static void
-broadcast_timings_to_clients(struct multi_system_compositor *msc, uint64_t predicted_display_time_ns)
+broadcast_timings_to_clients(struct multi_system_compositor *msc, int64_t predicted_display_time_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -359,9 +359,9 @@ broadcast_timings_to_clients(struct multi_system_compositor *msc, uint64_t predi
 
 static void
 broadcast_timings_to_pacers(struct multi_system_compositor *msc,
-                            uint64_t predicted_display_time_ns,
-                            uint64_t predicted_display_period_ns,
-                            uint64_t diff_ns)
+                            int64_t predicted_display_time_ns,
+                            int64_t predicted_display_period_ns,
+                            int64_t diff_ns)
 {
 	COMP_TRACE_MARKER();
 
@@ -392,14 +392,14 @@ broadcast_timings_to_pacers(struct multi_system_compositor *msc,
 }
 
 static void
-wait_frame(struct os_precise_sleeper *sleeper, struct xrt_compositor *xc, int64_t frame_id, uint64_t wake_up_time_ns)
+wait_frame(struct os_precise_sleeper *sleeper, struct xrt_compositor *xc, int64_t frame_id, int64_t wake_up_time_ns)
 {
 	COMP_TRACE_MARKER();
 
 	// Wait until the given wake up time.
 	u_wait_until(sleeper, wake_up_time_ns);
 
-	uint64_t now_ns = os_monotonic_get_ns();
+	int64_t now_ns = os_monotonic_get_ns();
 
 	// Signal that we woke up.
 	xrt_comp_mark_frame(xc, frame_id, XRT_COMPOSITOR_FRAME_POINT_WOKE, now_ns);
@@ -507,10 +507,10 @@ multi_main_loop(struct multi_system_compositor *msc)
 		os_thread_helper_unlock(&msc->oth);
 
 		int64_t frame_id = -1;
-		uint64_t wake_up_time_ns = 0;
-		uint64_t predicted_gpu_time_ns = 0;
-		uint64_t predicted_display_time_ns = 0;
-		uint64_t predicted_display_period_ns = 0;
+		int64_t wake_up_time_ns = 0;
+		int64_t predicted_gpu_time_ns = 0;
+		int64_t predicted_display_time_ns = 0;
+		int64_t predicted_display_period_ns = 0;
 
 		// Get the information for the next frame.
 		xrt_comp_predict_frame(            //
@@ -527,8 +527,8 @@ multi_main_loop(struct multi_system_compositor *msc)
 		// Now we can wait.
 		wait_frame(&sleeper, xc, frame_id, wake_up_time_ns);
 
-		uint64_t now_ns = os_monotonic_get_ns();
-		uint64_t diff_ns = predicted_display_time_ns - now_ns;
+		int64_t now_ns = os_monotonic_get_ns();
+		int64_t diff_ns = predicted_display_time_ns - now_ns;
 
 		// Now we know the diff, broadcast to pacers.
 		broadcast_timings_to_pacers(msc, predicted_display_time_ns, predicted_display_period_ns, diff_ns);
@@ -630,7 +630,7 @@ system_compositor_set_main_app_visibility(struct xrt_system_compositor *xsc, str
 static xrt_result_t
 system_compositor_notify_loss_pending(struct xrt_system_compositor *xsc,
                                       struct xrt_compositor *xc,
-                                      uint64_t loss_time_ns)
+                                      int64_t loss_time_ns)
 {
 	struct multi_system_compositor *msc = multi_system_compositor(xsc);
 	struct multi_compositor *mc = multi_compositor(xc);

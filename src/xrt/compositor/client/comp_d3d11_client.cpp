@@ -171,9 +171,9 @@ static_assert(std::is_standard_layout<client_d3d11_compositor>::value);
 struct client_d3d11_swapchain;
 
 static inline DWORD
-convertTimeoutToWindowsMilliseconds(uint64_t timeout_ns)
+convertTimeoutToWindowsMilliseconds(int64_t timeout_ns)
 {
-	return (timeout_ns == XRT_INFINITE_DURATION) ? INFINITE : (DWORD)(timeout_ns / (uint64_t)U_TIME_1MS_IN_NS);
+	return (timeout_ns == XRT_INFINITE_DURATION) ? INFINITE : (DWORD)(timeout_ns / (int64_t)U_TIME_1MS_IN_NS);
 }
 
 /*!
@@ -275,7 +275,7 @@ client_d3d11_swapchain_acquire_image(struct xrt_swapchain *xsc, uint32_t *out_in
 }
 
 static xrt_result_t
-client_d3d11_swapchain_wait_image(struct xrt_swapchain *xsc, uint64_t timeout_ns, uint32_t index)
+client_d3d11_swapchain_wait_image(struct xrt_swapchain *xsc, int64_t timeout_ns, uint32_t index)
 {
 	struct client_d3d11_swapchain *sc = as_client_d3d11_swapchain(xsc);
 
@@ -516,8 +516,8 @@ client_d3d11_compositor_end_session(struct xrt_compositor *xc)
 static xrt_result_t
 client_d3d11_compositor_wait_frame(struct xrt_compositor *xc,
                                    int64_t *out_frame_id,
-                                   uint64_t *predicted_display_time,
-                                   uint64_t *predicted_display_period)
+                                   int64_t *predicted_display_time,
+                                   int64_t *predicted_display_period)
 {
 	struct client_d3d11_compositor *c = as_client_d3d11_compositor(xc);
 
