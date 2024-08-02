@@ -436,7 +436,7 @@ struct xrt_device
 	 */
 	void (*get_view_poses)(struct xrt_device *xdev,
 	                       const struct xrt_vec3 *default_eye_relation,
-	                       uint64_t at_timestamp_ns,
+	                       int64_t at_timestamp_ns,
 	                       uint32_t view_count,
 	                       struct xrt_space_relation *out_head_relation,
 	                       struct xrt_fov *out_fovs,
@@ -644,7 +644,7 @@ xrt_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const 
 static inline void
 xrt_device_get_view_poses(struct xrt_device *xdev,
                           const struct xrt_vec3 *default_eye_relation,
-                          uint64_t at_timestamp_ns,
+                          int64_t at_timestamp_ns,
                           uint32_t view_count,
                           struct xrt_space_relation *out_head_relation,
                           struct xrt_fov *out_fovs,

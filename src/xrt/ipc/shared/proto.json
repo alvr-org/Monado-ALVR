@@ -419,7 +419,7 @@
 		"in": [
 			{"name": "id", "type": "uint32_t"},
 			{"name": "fallback_eye_relation", "type": "struct xrt_vec3"},
-			{"name": "at_timestamp_ns", "type": "uint64_t"},
+			{"name": "at_timestamp_ns", "type": "int64_t"},
 			{"name": "view_count", "type": "uint32_t"}
 		],
 		"out": [
@@ -432,7 +432,7 @@
 		"in": [
 			{"name": "id", "type": "uint32_t"},
 			{"name": "fallback_eye_relation", "type": "struct xrt_vec3"},
-			{"name": "at_timestamp_ns", "type": "uint64_t"},
+			{"name": "at_timestamp_ns", "type": "int64_t"},
 			{"name": "view_count", "type": "uint32_t"}
 		],
 		"out": [

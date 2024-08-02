@@ -1911,7 +1911,7 @@ xrt_result_t
 ipc_handle_device_get_view_poses(volatile struct ipc_client_state *ics,
                                  uint32_t id,
                                  const struct xrt_vec3 *fallback_eye_relation,
-                                 uint64_t at_timestamp_ns,
+                                 int64_t at_timestamp_ns,
                                  uint32_t view_count)
 {
 	struct ipc_message_channel *imc = (struct ipc_message_channel *)&ics->imc;
@@ -1990,7 +1990,7 @@ xrt_result_t
 ipc_handle_device_get_view_poses_2(volatile struct ipc_client_state *ics,
                                    uint32_t id,
                                    const struct xrt_vec3 *default_eye_relation,
-                                   uint64_t at_timestamp_ns,
+                                   int64_t at_timestamp_ns,
                                    uint32_t view_count,
                                    struct ipc_info_get_view_poses_2 *out_info)
 {
