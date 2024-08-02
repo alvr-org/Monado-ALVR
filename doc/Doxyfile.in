@@ -10,6 +10,7 @@ INPUT                  = \
 
 
 IMAGE_PATH             = @SRCDIR@/doc
+EXAMPLE_PATH           = @SRCDIR@/doc/mermaid
 
 USE_MDFILE_AS_MAINPAGE = @SRCDIR@/doc/mainpage.md
 
@@ -54,6 +55,7 @@ PREDEFINED             = VK_USE_PLATFORM_XCB_KHR \
 ALIASES                += TODO=todo
 ALIASES                += ep{1}="<b>\1</b>. \xrefitem entrypoints \"OpenXR Entry Point\" \"OpenXR Entry Points\" \1"
 ALIASES                += obj{1}="\xrefitem objects \"OpenXR Object\" \"OpenXR Objects\" \1"
+ALIASES                += mermaid{1}="@htmlonly <div class=\"mermaid\"> ^^ @endhtmlonly @htmlinclude \"\1.mmd\" @htmlonly ^^ </div> @endhtmlonly"
 
 SHOW_GROUPED_MEMB_INC  = YES
 STRIP_CODE_COMMENTS    = NO
@@ -102,9 +104,11 @@ DISABLE_INDEX          = NO
 FULL_SIDEBAR           = NO
 HTML_COLORSTYLE        = LIGHT # required with Doxygen >= 1.9.5
 HTML_HEADER            = @SRCDIR@/doc/header.html
+HTML_FOOTER            = @SRCDIR@/doc/footer.html
 HTML_EXTRA_STYLESHEET  = @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome.css
 HTML_EXTRA_FILES       = @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js \
                          @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome-fragment-copy-button.js \
                          @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome-paragraph-link.js \
                          @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome-interactive-toc.js \
-                         @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome-tabs.js
+                         @SRCDIR@/doc/doxygen-awesome-css/doxygen-awesome-tabs.js \
+                         @SRCDIR@/src/external/mermaid/mermaid.min.js
