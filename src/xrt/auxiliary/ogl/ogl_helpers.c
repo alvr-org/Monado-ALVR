@@ -123,11 +123,19 @@ ogl_import_from_native(struct xrt_image_native *natives,
 		// The below function consumes the handle, need to reference it.
 		xrt_graphics_buffer_handle_t handle = u_graphics_buffer_ref(natives[i].handle);
 
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_WIN32_HANDLE)
+		glImportMemoryWin32HandleEXT(        //
+		    results->memories[i],            //
+		    natives[i].size,                 //
+		    GL_HANDLE_TYPE_OPAQUE_WIN32_EXT, //
+		    (GLint)handle);                  //
+#else
 		glImportMemoryFdEXT(              //
 		    results->memories[i],         //
 		    natives[i].size,              //
 		    GL_HANDLE_TYPE_OPAQUE_FD_EXT, //
 		    (GLint)handle);               //
+#endif
 		CHECK_GL();
 
 		if (info->array_size == 1) {
