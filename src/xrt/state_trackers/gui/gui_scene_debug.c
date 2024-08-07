@@ -444,8 +444,17 @@ on_sink_debug_var(const char *name, void *ptr, struct draw_state *state)
 static void
 on_native_images_debug_var(const char *name, void *ptr, struct draw_state *state)
 {
+	bool gui_header = !state->inhibit_sink_headers;
+
 	struct debug_scene *ds = state->ds;
 	struct u_native_images_debug *unid = (struct u_native_images_debug *)ptr;
+
+	if (gui_header) {
+		const ImGuiTreeNodeFlags_ flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!igCollapsingHeaderBoolPtr(name, NULL, flags)) {
+			return;
+		}
+	}
 
 	struct gui_widget_native_images *gwni = gui_widget_native_images_storage_ensure(&ds->gwnis, unid);
 	if (gwni == NULL) {

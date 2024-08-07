@@ -42,6 +42,12 @@ struct gui_widget_native_images
 	//! Dimensions.
 	uint32_t width, height;
 
+	//! Scale
+	float scale;
+
+	//! Rotate the image by 180 degrees
+	bool rotate_180;
+
 	//! Set to GUI_WIDGET_SWAPCHAIN_INVALID_INDEX on invalid.
 	uint32_t active_index;
 

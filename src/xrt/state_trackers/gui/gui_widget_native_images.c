@@ -15,6 +15,7 @@
 #include "util/u_native_images_debug.h"
 
 #include "gui_ogl.h"
+#include "gui_imgui.h"
 #include "gui_widget_native_images.h"
 
 #include <assert.h>
@@ -71,6 +72,52 @@ recreate_locked(struct gui_widget_native_images *gwni, struct u_native_images_de
 	gwni->flip_y = unid->flip_y;
 }
 
+/*
+ *
+ * Misc helpers and interface functions.
+ *
+ */
+
+static void
+window_draw_misc(struct gui_widget_native_images *gwni)
+{
+	igSliderFloat("", &gwni->scale, 20.0, 300.f, "Scale %f%%", ImGuiSliderFlags_None);
+
+	static ImVec2 button_dims = {0, 0};
+
+	igSameLine(0.0f, 4.0f);
+	bool minus = igButton("-", button_dims);
+
+	igSameLine(0.0f, 4.0f);
+	bool plus = igButton("+", button_dims);
+
+	static const double scales[] = {
+	    25.0, 50.0, 100.0, 200.0, 300.0,
+	};
+
+	if (plus) {
+		for (uint32_t i = 0; i < ARRAY_SIZE(scales); i++) {
+			if (gwni->scale >= scales[i]) {
+				continue;
+			}
+			gwni->scale = scales[i];
+			break;
+		}
+	} else if (minus) {
+		// Initial length always greater then 0 so safe.
+		for (uint32_t i = ARRAY_SIZE(scales); i-- > 0;) {
+			if (gwni->scale <= scales[i]) {
+				continue;
+			}
+			gwni->scale = scales[i];
+			break;
+		}
+	}
+
+	igSameLine(0, 30);
+
+	igCheckbox("Rotate 180 degrees", &gwni->rotate_180);
+}
 
 /*
  *
@@ -83,6 +130,7 @@ gui_widget_native_images_init(struct gui_widget_native_images *gwni)
 {
 	U_ZERO(gwni);
 	gwni->active_index = GUI_WIDGET_SWAPCHAIN_INVALID_INDEX;
+	gwni->scale = 50.0f;
 }
 
 void
@@ -115,15 +163,21 @@ gui_widget_native_images_render(struct gui_widget_native_images *gwni, struct gu
 		return;
 	}
 
+	igPushIDPtr(gwni);
+
+	window_draw_misc(gwni);
+
 	uint32_t tex_id = gwni->textures[gwni->active_index];
 
-	gui_ogl_draw_image( //
-	    gwni->width,    // width
-	    gwni->height,   // height
-	    tex_id,         // tex_id
-	    0.5f,           // scale
-	    false,          // rotate_180
-	    gwni->flip_y);  // flip_y
+	gui_ogl_draw_image(       //
+	    gwni->width,          // width
+	    gwni->height,         // height
+	    tex_id,               // tex_id
+	    gwni->scale / 100.0f, // scale
+	    gwni->rotate_180,     // rotate_180
+	    gwni->flip_y);        // flip_y
+
+	igPopID();
 }
 
 void
