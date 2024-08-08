@@ -1293,12 +1293,12 @@ submit_projection_layer(struct oxr_session *sess,
                         uint64_t xrt_timestamp)
 {
 	struct oxr_space *spc = XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_space *, proj->space);
-	struct oxr_swapchain *d_scs[XRT_MAX_VIEWS];
-	struct oxr_swapchain *scs[XRT_MAX_VIEWS];
-	struct xrt_pose *pose_ptr;
-	struct xrt_pose pose[XRT_MAX_VIEWS];
-	struct xrt_swapchain *swapchains[XRT_MAX_VIEWS];
-	struct xrt_swapchain *d_swapchains[XRT_MAX_VIEWS];
+	struct oxr_swapchain *d_scs[XRT_MAX_VIEWS] = {0};
+	struct oxr_swapchain *scs[XRT_MAX_VIEWS] = {0};
+	struct xrt_pose *pose_ptr = NULL;
+	struct xrt_pose pose[XRT_MAX_VIEWS] = {0};
+	struct xrt_swapchain *swapchains[XRT_MAX_VIEWS] = {0};
+	struct xrt_swapchain *d_swapchains[XRT_MAX_VIEWS] = {0};
 
 	enum xrt_layer_composition_flags flags = convert_layer_flags(proj->layerFlags);
 
