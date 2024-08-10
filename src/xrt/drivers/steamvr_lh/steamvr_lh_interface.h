@@ -34,9 +34,7 @@ extern "C" {
  * @ingroup drv_steamvr_lh
  */
 enum xrt_result
-steamvr_lh_create_devices(struct xrt_session_event_sink *broadcast,
-                          struct xrt_system_devices **out_xsysd,
-                          struct xrt_space_overseer **out_xso);
+steamvr_lh_create_devices(struct xrt_system_devices **out_xsysd);
 
 
 #ifdef __cplusplus

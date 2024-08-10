@@ -8,19 +8,20 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup xrt_iface
  */
+#include "util/u_builders.h"
+#include "xrt/xrt_config_drivers.h"
 
-#include "tracking/t_hand_tracking.h"
+
+#include <assert.h>
+#include <stdbool.h>
+
 #include "tracking/t_tracking.h"
 
 #include "xrt/xrt_config_drivers.h"
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_prober.h"
 
-#include "util/u_builders.h"
-#include "util/u_config_json.h"
 #include "util/u_debug.h"
-#include "util/u_device.h"
-#include "util/u_sink.h"
 #include "util/u_system_helpers.h"
 
 #include "vive/vive_builder.h"
@@ -28,10 +29,32 @@
 #include "target_builder_interface.h"
 
 #include "steamvr_lh/steamvr_lh_interface.h"
+#include "xrt/xrt_results.h"
+
+#include "xrt/xrt_space.h"
+#include "util/u_space_overseer.h"
 
 #ifndef XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE
 #error "This builder requires the SteamVR Lighthouse driver"
 #endif
+
+DEBUG_GET_ONCE_LOG_OPTION(svr_log, "STEAMVR_LH_LOG", U_LOGGING_INFO)
+
+#define SVR_TRACE(...) U_LOG_IFL_T(debug_get_log_option_svr_log(), __VA_ARGS__)
+#define SVR_DEBUG(...) U_LOG_IFL_D(debug_get_log_option_svr_log(), __VA_ARGS__)
+#define SVR_INFO(...) U_LOG_IFL_I(debug_get_log_option_svr_log(), __VA_ARGS__)
+#define SVR_WARN(...) U_LOG_IFL_W(debug_get_log_option_svr_log(), __VA_ARGS__)
+#define SVR_ERROR(...) U_LOG_IFL_E(debug_get_log_option_svr_log(), __VA_ARGS__)
+#define SVR_ASSERT(predicate, ...)                                                                                     \
+	do {                                                                                                           \
+		bool p = predicate;                                                                                    \
+		if (!p) {                                                                                              \
+			U_LOG(U_LOGGING_ERROR, __VA_ARGS__);                                                           \
+			assert(false && "SVR_ASSERT failed: " #predicate);                                             \
+			exit(EXIT_FAILURE);                                                                            \
+		}                                                                                                      \
+	} while (false);
+#define SVR_ASSERT_(predicate) SVR_ASSERT(predicate, "Assertion failed " #predicate)
 
 
 /*
@@ -50,12 +73,11 @@ struct steamvr_builder
 {
 	struct xrt_builder base;
 
-	/*!
-	 * Is our HMD a Valve Index?
-	 */
+	struct xrt_device *head;
+	struct xrt_device *left_ht, *right_ht;
+
 	bool is_valve_index;
 };
-
 
 /*
  *
@@ -86,6 +108,13 @@ steamvr_estimate_system(struct xrt_builder *xb,
 	}
 }
 
+static void
+steamvr_destroy(struct xrt_builder *xb)
+{
+	struct steamvr_builder *svrb = (struct steamvr_builder *)xb;
+	free(svrb);
+}
+
 static xrt_result_t
 steamvr_open_system(struct xrt_builder *xb,
                     cJSON *config,
@@ -94,17 +123,55 @@ steamvr_open_system(struct xrt_builder *xb,
                     struct xrt_system_devices **out_xsysd,
                     struct xrt_space_overseer **out_xso)
 {
+	struct steamvr_builder *svrb = (struct steamvr_builder *)xb;
+
 	assert(out_xsysd != NULL);
 	assert(*out_xsysd == NULL);
 
-	return steamvr_lh_create_devices(broadcast, out_xsysd, out_xso);
-}
+	enum xrt_result result = steamvr_lh_create_devices(out_xsysd);
 
-static void
-steamvr_destroy(struct xrt_builder *xb)
-{
-	struct steamvr_builder *svrb = (struct steamvr_builder *)xb;
-	free(svrb);
+	if (result != XRT_SUCCESS) {
+		SVR_ERROR("Unable to create devices");
+		steamvr_destroy(xb);
+		return result;
+	}
+
+	struct xrt_system_devices *xsysd = NULL;
+	xsysd = *out_xsysd;
+
+	if (xsysd->static_roles.head == NULL) {
+		SVR_ERROR("Unable to find HMD");
+		steamvr_destroy(xb);
+		return XRT_ERROR_DEVICE_CREATION_FAILED;
+	}
+
+	svrb->head = xsysd->static_roles.head;
+
+	svrb->left_ht = u_system_devices_get_ht_device_left(xsysd);
+	xsysd->static_roles.hand_tracking.left = svrb->left_ht;
+
+	svrb->right_ht = u_system_devices_get_ht_device_right(xsysd);
+	xsysd->static_roles.hand_tracking.right = svrb->right_ht;
+
+	/*
+	 * Space overseer.
+	 */
+
+	struct u_space_overseer *uso = u_space_overseer_create(broadcast);
+
+	struct xrt_pose T_stage_local = XRT_POSE_IDENTITY;
+
+	u_space_overseer_legacy_setup( //
+	    uso,                       // uso
+	    xsysd->xdevs,              // xdevs
+	    xsysd->xdev_count,         // xdev_count
+	    svrb->head,                // head
+	    &T_stage_local,            // local_offset
+	    false);                    // root_is_unbounded
+
+	*out_xso = (struct xrt_space_overseer *)uso;
+
+	return result;
 }
 
 
