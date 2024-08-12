@@ -67,8 +67,7 @@ oxr_xrGetFacialExpressionsHTC(XrFacialTrackerHTC facialTracker, XrFacialExpressi
 
 	struct oxr_logger log;
 	struct oxr_facial_tracker_htc *facial_tracker_htc = NULL;
-	OXR_VERIFY_FACE_TRACKER_HTC_AND_INIT_LOG(&log, facialExpressions, facial_tracker_htc,
-	                                         "xrGetFacialExpressionsHTC");
+	OXR_VERIFY_FACE_TRACKER_HTC_AND_INIT_LOG(&log, facialTracker, facial_tracker_htc, "xrGetFacialExpressionsHTC");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, facial_tracker_htc->sess);
 	OXR_VERIFY_ARG_NOT_NULL(&log, facial_tracker_htc->xdev);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, facialExpressions, XR_TYPE_FACIAL_EXPRESSIONS_HTC);
