@@ -53,7 +53,7 @@ struct android_device
 
 
 struct android_device *
-android_device_create();
+android_device_create(void);
 
 
 /*

@@ -26,7 +26,7 @@ extern "C" {
  * @ingroup drv_android
  */
 struct xrt_auto_prober *
-android_create_auto_prober();
+android_create_auto_prober(void);
 
 
 /*!
