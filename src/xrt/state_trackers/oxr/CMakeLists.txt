@@ -98,7 +98,7 @@ if(WIN32 AND XRT_HAVE_OPENGL)
 	target_sources(st_oxr PRIVATE oxr_session_gfx_gl_win32.c)
 endif()
 
-if(XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH)
+if(XRT_FEATURE_OPENXR_LAYER_FB_PASSTHROUGH)
 	target_sources(st_oxr PRIVATE oxr_api_passthrough.c oxr_passthrough.c)
 endif()
 

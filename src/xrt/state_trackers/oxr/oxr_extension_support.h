@@ -500,7 +500,7 @@
 /*
  * XR_FB_passthrough
  */
-#if defined(XR_FB_passthrough) && defined(XRT_FEATURE_OPENXR_LAYER_PASSTHROUGH)
+#if defined(XR_FB_passthrough) && defined(XRT_FEATURE_OPENXR_LAYER_FB_PASSTHROUGH)
 #define OXR_HAVE_FB_passthrough
 #define OXR_EXTENSION_SUPPORT_FB_passthrough(_) _(FB_passthrough, FB_PASSTHROUGH)
 #else
