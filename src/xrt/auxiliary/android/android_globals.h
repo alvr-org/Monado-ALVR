@@ -45,7 +45,7 @@ android_globals_is_instance_of_activity(struct _JavaVM *vm, void *obj);
  * Retrieve the Java VM pointer previously stored, if any.
  */
 struct _JavaVM *
-android_globals_get_vm();
+android_globals_get_vm(void);
 
 /*!
  * Retrieve the android.app.Activity jobject previously stored, if any.
@@ -54,7 +54,7 @@ android_globals_get_vm();
  * differs between C (a void *) and C++ (a pointer to an empty class)
  */
 void *
-android_globals_get_activity();
+android_globals_get_activity(void);
 
 /*!
  * Retrieve the android.content.Context jobject previously stored, if any.
@@ -66,14 +66,14 @@ android_globals_get_activity();
  * differs between C (a void *) and C++ (a pointer to an empty class)
  */
 void *
-android_globals_get_context();
+android_globals_get_context(void);
 
 
 void
 android_globals_store_window(struct _ANativeWindow *window);
 
 struct _ANativeWindow *
-android_globals_get_window();
+android_globals_get_window(void);
 
 #ifdef __cplusplus
 }

@@ -172,7 +172,7 @@ ahardwarebuffer_destroy(struct xrt_image_native_allocator *xina)
 }
 
 struct xrt_image_native_allocator *
-android_ahardwarebuffer_allocator_create()
+android_ahardwarebuffer_allocator_create(void)
 {
 	struct xrt_image_native_allocator *xina = U_TYPED_CALLOC(struct xrt_image_native_allocator);
 	xina->images_allocate = ahardwarebuffer_images_allocate;
