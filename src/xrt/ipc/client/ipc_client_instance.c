@@ -254,7 +254,7 @@ ipc_client_instance_destroy(struct xrt_instance *xinst)
  * @public @memberof ipc_instance
  */
 xrt_result_t
-ipc_instance_create(struct xrt_instance_info *i_info, struct xrt_instance **out_xinst)
+ipc_instance_create(const struct xrt_instance_info *i_info, struct xrt_instance **out_xinst)
 {
 	struct ipc_client_instance *ii = U_TYPED_CALLOC(struct ipc_client_instance);
 	ii->base.create_system = ipc_client_instance_create_system;
