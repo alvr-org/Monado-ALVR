@@ -34,7 +34,7 @@
 DEBUG_GET_ONCE_OPTION(euroc_path, "EUROC_PATH", NULL)
 #endif
 
-#ifdef XRT_BUILD_DRIVER_REALSENSE
+#if defined(XRT_HAVE_OPENCV) && defined(XRT_BUILD_DRIVER_REALSENSE)
 #include "util/u_debug.h"
 DEBUG_GET_ONCE_NUM_OPTION(rs_source_index, "RS_SOURCE_INDEX", -1)
 #endif
