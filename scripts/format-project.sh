@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright 2019-2023, Collabora, Ltd.
+# Copyright 2019-2024, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 # Author: Rylie Pavlik <rylie.pavlik@collabora.com>
 
@@ -24,7 +24,7 @@ fi
 (
         ${CLANGFORMAT} --version
 
-        cd $(dirname $0)/..
+        cd "$(dirname "$0")/.."
 
         find \
                 src/xrt/auxiliary \
@@ -37,5 +37,6 @@ fi
                 src/xrt/tracking \
                 tests \
                 \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) \
-                -exec ${CLANGFORMAT} -i -style=file \{\} +
+                -and -not \( -ipath \*/.cxx/\* \) \
+                -exec "${CLANGFORMAT}" -i -style=file \{\} +
 )
