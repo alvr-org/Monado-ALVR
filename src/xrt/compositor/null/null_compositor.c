@@ -28,6 +28,7 @@
 #include "util/comp_vulkan.h"
 
 #include "multi/comp_multi_interface.h"
+#include "xrt/xrt_device.h"
 
 
 #include <stdint.h>
@@ -57,7 +58,7 @@ get_vk(struct null_compositor *c)
 
 /*
  *
- * Vulkan functions.
+ * Vulkan extensions.
  *
  */
 
@@ -426,6 +427,16 @@ null_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle
 	NULL_TRACE(c, "LAYER_COMMIT");
 
 	int64_t frame_id = c->base.layer_accum.data.frame_id;
+	int64_t display_time_ns = c->base.layer_accum.layers[0].data.timestamp;
+
+	// Default value from monado, overridden by HMD device where possible.
+	struct xrt_vec3 default_eye_relation = {0.063f, 0.f, 0.f};
+	struct xrt_space_relation head_relation = {0};
+
+	struct xrt_fov fovs[2] = {0};
+	struct xrt_pose poses[2] = {0};
+	xrt_device_get_view_poses(c->xdev, &default_eye_relation, display_time_ns, 2, &head_relation, fovs, poses);
+
 
 	/*
 	 * The null compositor doesn't render any frames, but needs to do
