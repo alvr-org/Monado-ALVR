@@ -1,10 +1,10 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Header for null compositor.
+ * @brief Internal header for null compositor.
  *
- * Based on src/xrt/compositor/main/comp_compositor.h
+ * Originally based on src/xrt/compositor/main/comp_compositor.h
  *
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
@@ -14,21 +14,22 @@
 
 #pragma once
 
-#include "xrt/xrt_gfx_vk.h"
 #include "xrt/xrt_instance.h"
 
-#include "os/os_time.h"
-
-#include "util/u_threading.h"
 #include "util/u_logging.h"
 #include "util/u_pacing.h"
 
 #include "util/comp_base.h"
 
+#include <stdint.h>
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct xrt_device;
+struct u_pacing_compositor;
 
 /*!
  * @defgroup comp_null Null compositor

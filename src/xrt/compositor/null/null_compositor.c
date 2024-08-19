@@ -4,7 +4,7 @@
  * @file
  * @brief  Null compositor implementation.
  *
- * Based on src/xrt/compositor/main/comp_compositor.c
+ * Originally based on src/xrt/compositor/main/comp_compositor.c
  *
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
