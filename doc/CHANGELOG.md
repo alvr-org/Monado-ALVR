@@ -2337,7 +2337,7 @@ forward to keeping the momentum up!
   - t/cli: Add support for `xrt_system`.
     ([!2062](https://gitlab.freedesktop.org/monado/monado/merge_requests/2062))
   - t/cli: Add new `info` command that prints information about the system, this is
-    for end-user reports of failurs to start `monado-service`.
+    for end-user reports of failures to start `monado-service`.
     ([!2094](https://gitlab.freedesktop.org/monado/monado/merge_requests/2094))
   - t/common: Refactor the builders so it will be easier to add hotswap support.
     ([!1987](https://gitlab.freedesktop.org/monado/monado/merge_requests/1987))
