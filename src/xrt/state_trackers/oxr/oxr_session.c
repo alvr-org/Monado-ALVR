@@ -614,7 +614,11 @@ oxr_session_locate_views(struct oxr_logger *log,
 		 * Pose
 		 */
 
-		const struct xrt_pose view_pose = poses[i];
+		struct xrt_pose view_pose = poses[i];
+
+		if (sess->sys->inst->quirks.parallel_views) {
+			view_pose.orientation = (struct xrt_quat)XRT_QUAT_IDENTITY;
+		}
 
 		// Do the magical space relation dance here.
 		struct xrt_space_relation result = {0};

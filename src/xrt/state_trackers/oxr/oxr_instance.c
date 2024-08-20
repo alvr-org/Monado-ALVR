@@ -49,6 +49,7 @@ DEBUG_GET_ONCE_BOOL_OPTION(debug_views, "OXR_DEBUG_VIEWS", false)
 DEBUG_GET_ONCE_BOOL_OPTION(debug_spaces, "OXR_DEBUG_SPACES", false)
 DEBUG_GET_ONCE_BOOL_OPTION(debug_bindings, "OXR_DEBUG_BINDINGS", false)
 DEBUG_GET_ONCE_BOOL_OPTION(lifecycle_verbose, "OXR_LIFECYCLE_VERBOSE", false)
+DEBUG_GET_ONCE_TRISTATE_OPTION(parallel_views, "OXR_PARALLEL_VIEWS")
 
 
 #ifdef XRT_OS_ANDROID
@@ -202,6 +203,15 @@ apply_quirks(struct oxr_logger *log, struct oxr_instance *inst)
 
 	// Currently always true.
 	inst->quirks.no_validation_error_in_create_ref_space = true;
+
+	enum debug_tristate_option parallel_view = debug_get_tristate_option_parallel_views();
+
+	// Only override hardcoded quirks when explicitly enabling or disabling, not on auto.
+	if (parallel_view == DEBUG_TRISTATE_OFF) {
+		inst->quirks.parallel_views = false;
+	} else if (parallel_view == DEBUG_TRISTATE_ON) {
+		inst->quirks.parallel_views = true;
+	}
 }
 
 XrResult

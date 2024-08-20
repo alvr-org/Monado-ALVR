@@ -1711,6 +1711,9 @@ struct oxr_instance
 		 * XR_ERROR_VALIDATION_FAILURE in xrCreateReferenceSpace.
 		 */
 		bool no_validation_error_in_create_ref_space;
+
+		//! For applications that rely on views being parallel, notably some OpenVR games with OpenComposite.
+		bool parallel_views;
 	} quirks;
 
 	//! Debug messengers
