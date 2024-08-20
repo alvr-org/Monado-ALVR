@@ -418,20 +418,25 @@ oxr_instance_create(struct oxr_logger *log,
 	        "\tappinfo.detected.engine.name: %s\n"
 	        "\tappinfo.detected.engine.version: %i.%i.%i\n"
 	        "\tquirks.disable_vulkan_format_depth_stencil: %s\n"
-	        "\tquirks.no_validation_error_in_create_ref_space: %s",
-	        createInfo->applicationInfo.applicationName,                              //
-	        createInfo->applicationInfo.applicationVersion,                           //
-	        createInfo->applicationInfo.engineName,                                   //
-	        createInfo->applicationInfo.engineVersion,                                //
-	        XR_VERSION_MAJOR(createInfo->applicationInfo.apiVersion),                 //
-	        XR_VERSION_MINOR(createInfo->applicationInfo.apiVersion),                 //
-	        XR_VERSION_PATCH(createInfo->applicationInfo.apiVersion),                 //
-	        inst->appinfo.detected.engine.name,                                       //
-	        inst->appinfo.detected.engine.major,                                      //
-	        inst->appinfo.detected.engine.minor,                                      //
-	        inst->appinfo.detected.engine.patch,                                      //
-	        inst->quirks.disable_vulkan_format_depth_stencil ? "true" : "false",      //
-	        inst->quirks.no_validation_error_in_create_ref_space ? "true" : "false"); //
+	        "\tquirks.no_validation_error_in_create_ref_space: %s\n"
+	        "\tquirks.skip_end_session: %s\n"
+	        "\tquirks.parallel_views: %s\n",
+	        createInfo->applicationInfo.applicationName,                             //
+	        createInfo->applicationInfo.applicationVersion,                          //
+	        createInfo->applicationInfo.engineName,                                  //
+	        createInfo->applicationInfo.engineVersion,                               //
+	        XR_VERSION_MAJOR(createInfo->applicationInfo.apiVersion),                //
+	        XR_VERSION_MINOR(createInfo->applicationInfo.apiVersion),                //
+	        XR_VERSION_PATCH(createInfo->applicationInfo.apiVersion),                //
+	        inst->appinfo.detected.engine.name,                                      //
+	        inst->appinfo.detected.engine.major,                                     //
+	        inst->appinfo.detected.engine.minor,                                     //
+	        inst->appinfo.detected.engine.patch,                                     //
+	        inst->quirks.disable_vulkan_format_depth_stencil ? "true" : "false",     //
+	        inst->quirks.no_validation_error_in_create_ref_space ? "true" : "false", //
+	        inst->quirks.skip_end_session ? "true" : "false",                        //
+	        inst->quirks.parallel_views ? "true" : "false"                           //
+	);                                                                               //
 
 	debug_print_devices(log, sys);
 
