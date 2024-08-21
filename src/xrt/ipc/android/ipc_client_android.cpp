@@ -102,6 +102,11 @@ ipc_client_android_destroy(struct ipc_client_android **ptr_ica)
 	if (ica == NULL) {
 		return;
 	}
-	delete ica;
+	try {
+		delete ica;
+	} catch (std::exception const &e) {
+		// Must catch and ignore any exceptions in the destructor!
+		U_LOG_E("Failure while destroying IPC clean: %s", e.what());
+	}
 	*ptr_ica = NULL;
 }
