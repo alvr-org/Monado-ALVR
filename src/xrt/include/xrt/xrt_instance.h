@@ -176,8 +176,15 @@ struct xrt_instance
 	/*!
 	 * @}
 	 */
+
+	/*!
+	 * Instance information structure, including both platform and application info.
+	 */
 	struct xrt_instance_info instance_info;
 
+	/*!
+	 * CLOCK_MONOTONIC timestamp of the instance startup.
+	 */
 	uint64_t startup_timestamp;
 
 	/*!
