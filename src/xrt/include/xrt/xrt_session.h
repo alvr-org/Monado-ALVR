@@ -198,7 +198,7 @@ union xrt_session_event {
 
 /*!
  * Used internally from producers of events to push events into session, some
- * sinks might mutliplex events to multiple sessions.
+ * sinks might multiplex events to multiple sessions.
  *
  * @ingroup xrt_iface
  */
