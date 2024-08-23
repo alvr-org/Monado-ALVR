@@ -522,14 +522,16 @@ sdl_compositor_init(struct sdl_program *sp)
 
 	struct sdl_compositor *c = &sp->c;
 
-	c->base.base.base.begin_session = sdl_compositor_begin_session;
-	c->base.base.base.end_session = sdl_compositor_end_session;
-	c->base.base.base.predict_frame = sdl_compositor_predict_frame;
-	c->base.base.base.mark_frame = sdl_compositor_mark_frame;
-	c->base.base.base.begin_frame = sdl_compositor_begin_frame;
-	c->base.base.base.discard_frame = sdl_compositor_discard_frame;
-	c->base.base.base.layer_commit = sdl_compositor_layer_commit;
-	c->base.base.base.destroy = sdl_compositor_destroy;
+	struct xrt_compositor *iface = &c->base.base.base;
+
+	iface->begin_session = sdl_compositor_begin_session;
+	iface->end_session = sdl_compositor_end_session;
+	iface->predict_frame = sdl_compositor_predict_frame;
+	iface->mark_frame = sdl_compositor_mark_frame;
+	iface->begin_frame = sdl_compositor_begin_frame;
+	iface->discard_frame = sdl_compositor_discard_frame;
+	iface->layer_commit = sdl_compositor_layer_commit;
+	iface->destroy = sdl_compositor_destroy;
 	c->base.vk.log_level = log_level;
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
@@ -541,8 +543,8 @@ sdl_compositor_init(struct sdl_program *sp)
 	comp_base_init(&c->base);
 
 	// Override some comp_base functions.
-	c->base.base.base.create_swapchain = sdl_swapchain_create;
-	c->base.base.base.import_swapchain = sdl_swapchain_import;
+	iface->create_swapchain = sdl_swapchain_create;
+	iface->import_swapchain = sdl_swapchain_import;
 
 
 	/*
