@@ -28,6 +28,7 @@
 #include "util/comp_vulkan.h"
 
 #include "multi/comp_multi_interface.h"
+#include "xrt/xrt_compositor.h"
 #include "xrt/xrt_device.h"
 
 
@@ -517,14 +518,15 @@ null_compositor_create_system(struct xrt_device *xdev, struct xrt_system_composi
 {
 	struct null_compositor *c = U_TYPED_CALLOC(struct null_compositor);
 
-	c->base.base.base.begin_session = null_compositor_begin_session;
-	c->base.base.base.end_session = null_compositor_end_session;
-	c->base.base.base.predict_frame = null_compositor_predict_frame;
-	c->base.base.base.mark_frame = null_compositor_mark_frame;
-	c->base.base.base.begin_frame = null_compositor_begin_frame;
-	c->base.base.base.discard_frame = null_compositor_discard_frame;
-	c->base.base.base.layer_commit = null_compositor_layer_commit;
-	c->base.base.base.destroy = null_compositor_destroy;
+	struct xrt_compositor *iface = &c->base.base.base;
+	iface->begin_session = null_compositor_begin_session;
+	iface->end_session = null_compositor_end_session;
+	iface->predict_frame = null_compositor_predict_frame;
+	iface->mark_frame = null_compositor_mark_frame;
+	iface->begin_frame = null_compositor_begin_frame;
+	iface->discard_frame = null_compositor_discard_frame;
+	iface->layer_commit = null_compositor_layer_commit;
+	iface->destroy = null_compositor_destroy;
 	c->settings.log_level = debug_get_log_option_log();
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
