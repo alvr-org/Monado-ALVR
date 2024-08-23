@@ -16,6 +16,7 @@
 
 #include "util/comp_base.h"
 #include "util/comp_semaphore.h"
+#include "xrt/xrt_compositor.h"
 
 
 /*
@@ -214,20 +215,21 @@ base_wait_frame(struct xrt_compositor *xc,
 void
 comp_base_init(struct comp_base *cb)
 {
-	cb->base.base.get_swapchain_create_properties = base_get_swapchain_create_properties;
-	cb->base.base.create_swapchain = base_create_swapchain;
-	cb->base.base.import_swapchain = base_import_swapchain;
-	cb->base.base.create_semaphore = base_create_semaphore;
-	cb->base.base.import_fence = base_import_fence;
-	cb->base.base.layer_begin = base_layer_begin;
-	cb->base.base.layer_projection = base_layer_projection;
-	cb->base.base.layer_projection_depth = base_layer_projection_depth;
-	cb->base.base.layer_quad = base_layer_quad;
-	cb->base.base.layer_cube = base_layer_cube;
-	cb->base.base.layer_cylinder = base_layer_cylinder;
-	cb->base.base.layer_equirect1 = base_layer_equirect1;
-	cb->base.base.layer_equirect2 = base_layer_equirect2;
-	cb->base.base.wait_frame = base_wait_frame;
+	struct xrt_compositor *iface = &cb->base.base;
+	iface->get_swapchain_create_properties = base_get_swapchain_create_properties;
+	iface->create_swapchain = base_create_swapchain;
+	iface->import_swapchain = base_import_swapchain;
+	iface->create_semaphore = base_create_semaphore;
+	iface->import_fence = base_import_fence;
+	iface->layer_begin = base_layer_begin;
+	iface->layer_projection = base_layer_projection;
+	iface->layer_projection_depth = base_layer_projection_depth;
+	iface->layer_quad = base_layer_quad;
+	iface->layer_cube = base_layer_cube;
+	iface->layer_cylinder = base_layer_cylinder;
+	iface->layer_equirect1 = base_layer_equirect1;
+	iface->layer_equirect2 = base_layer_equirect2;
+	iface->wait_frame = base_wait_frame;
 
 	u_threading_stack_init(&cb->cscs.destroy_swapchains);
 
