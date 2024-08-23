@@ -43,6 +43,7 @@
  */
 
 #include "xrt/xrt_compiler.h"
+#include "xrt/xrt_compositor.h"
 #include "xrt/xrt_config_have.h"
 #include "xrt/xrt_results.h"
 
@@ -981,16 +982,17 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 
 	struct comp_compositor *c = U_TYPED_CALLOC(struct comp_compositor);
 
-	c->base.base.base.begin_session = compositor_begin_session;
-	c->base.base.base.end_session = compositor_end_session;
-	c->base.base.base.predict_frame = compositor_predict_frame;
-	c->base.base.base.mark_frame = compositor_mark_frame;
-	c->base.base.base.begin_frame = compositor_begin_frame;
-	c->base.base.base.discard_frame = compositor_discard_frame;
-	c->base.base.base.layer_commit = compositor_layer_commit;
-	c->base.base.base.get_display_refresh_rate = compositor_get_display_refresh_rate;
-	c->base.base.base.request_display_refresh_rate = compositor_request_display_refresh_rate;
-	c->base.base.base.destroy = compositor_destroy;
+	struct xrt_compositor *iface = &c->base.base.base;
+	iface->begin_session = compositor_begin_session;
+	iface->end_session = compositor_end_session;
+	iface->predict_frame = compositor_predict_frame;
+	iface->mark_frame = compositor_mark_frame;
+	iface->begin_frame = compositor_begin_frame;
+	iface->discard_frame = compositor_discard_frame;
+	iface->layer_commit = compositor_layer_commit;
+	iface->get_display_refresh_rate = compositor_get_display_refresh_rate;
+	iface->request_display_refresh_rate = compositor_request_display_refresh_rate;
+	iface->destroy = compositor_destroy;
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
 	c->xdev = xdev;
