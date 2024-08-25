@@ -513,6 +513,28 @@ xrt_to_view_state_flags(enum xrt_space_relation_flags flags)
 	return res;
 }
 
+static void
+adjust_fov(const struct xrt_fov *original_fov, const struct xrt_quat *original_rotation, struct xrt_fov *adjusted_fov)
+{
+	struct xrt_quat identity = XRT_QUAT_IDENTITY;
+
+	struct xrt_quat original_rotation_inv;
+	math_quat_invert(original_rotation, &original_rotation_inv);
+
+	struct xrt_quat rotation_diff;
+	math_quat_rotate(&original_rotation_inv, &identity, &rotation_diff);
+
+	struct xrt_vec3 euler_angles;
+	math_quat_to_euler_angles(&rotation_diff, &euler_angles);
+
+	*adjusted_fov = (struct xrt_fov){
+	    .angle_left = original_fov->angle_left + euler_angles.y,
+	    .angle_right = original_fov->angle_right + euler_angles.y,
+	    .angle_up = original_fov->angle_up + euler_angles.x,
+	    .angle_down = original_fov->angle_down + euler_angles.x,
+	};
+}
+
 XrResult
 oxr_session_locate_views(struct oxr_logger *log,
                          struct oxr_session *sess,
@@ -633,7 +655,12 @@ oxr_session_locate_views(struct oxr_logger *log,
 		 * Fov
 		 */
 
-		const struct xrt_fov fov = fovs[i];
+		struct xrt_fov fov = fovs[i];
+
+		if (sess->sys->inst->quirks.parallel_views) {
+			adjust_fov(&fovs[i], &poses[i].orientation, &fov);
+		}
+
 		OXR_XRT_FOV_TO_XRFOVF(fov, views[i].fov);
 
 
