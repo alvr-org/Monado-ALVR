@@ -219,6 +219,7 @@ ipc_client_hmd_get_view_poses(struct xrt_device *xdev,
 static xrt_result_t
 ipc_client_hmd_get_face_tracking(struct xrt_device *xdev,
                                  enum xrt_input_name facial_expression_type,
+                                 int64_t at_timestamp_ns,
                                  struct xrt_facial_expression_set *out_value)
 {
 	ipc_client_hmd_t *icd = ipc_client_hmd(xdev);
@@ -227,6 +228,7 @@ ipc_client_hmd_get_face_tracking(struct xrt_device *xdev,
 	    icd->ipc_c,                                        //
 	    icd->device_id,                                    //
 	    facial_expression_type,                            //
+	    at_timestamp_ns,                                   //
 	    out_value);                                        //
 	IPC_CHK_ALWAYS_RET(icd->ipc_c, xret, "ipc_call_device_get_face_tracking");
 }

@@ -2116,12 +2116,13 @@ xrt_result_t
 ipc_handle_device_get_face_tracking(volatile struct ipc_client_state *ics,
                                     uint32_t id,
                                     enum xrt_input_name facial_expression_type,
+                                    int64_t at_timestamp_ns,
                                     struct xrt_facial_expression_set *out_value)
 {
 	const uint32_t device_id = id;
 	struct xrt_device *xdev = get_xdev(ics, device_id);
 	// Get facial expression data.
-	return xrt_device_get_face_tracking(xdev, facial_expression_type, out_value);
+	return xrt_device_get_face_tracking(xdev, facial_expression_type, at_timestamp_ns, out_value);
 }
 
 xrt_result_t

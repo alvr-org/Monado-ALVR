@@ -100,7 +100,10 @@ oxr_get_facial_expressions_htc(struct oxr_logger *log,
 	const enum xrt_input_name ft_input_name =
 	    oxr_facial_tracking_type_htc_to_input_name(facial_tracker_htc->facial_tracking_type);
 
-	xrt_device_get_face_tracking(facial_tracker_htc->xdev, ft_input_name, &facial_expression_set_result);
+	int64_t at_timestamp_ns = os_monotonic_get_ns();
+
+	xrt_device_get_face_tracking(facial_tracker_htc->xdev, ft_input_name, at_timestamp_ns,
+	                             &facial_expression_set_result);
 
 	facialExpressions->isActive = facial_expression_set_result.base_expression_set_htc.is_active;
 	if (facialExpressions->isActive == XR_FALSE)

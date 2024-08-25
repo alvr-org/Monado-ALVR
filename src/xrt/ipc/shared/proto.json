@@ -486,7 +486,8 @@
 	"device_get_face_tracking": {
 		"in": [
 			{"name": "id", "type": "uint32_t"},
-			{"name": "facial_expression_type", "type": "enum xrt_input_name"}
+			{"name": "facial_expression_type", "type": "enum xrt_input_name"},
+			{"name": "at_timestamp_ns", "type": "int64_t"}
 		],
 		"out": [
 			{"name": "value", "type": "struct xrt_facial_expression_set"}

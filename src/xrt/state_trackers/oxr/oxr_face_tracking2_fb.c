@@ -115,11 +115,15 @@ oxr_get_face_expression_weights2_fb(struct oxr_logger *log,
 	}
 	struct xrt_facial_expression_set result = {0};
 
+	const struct oxr_instance *inst = face_tracker2_fb->sess->sys->inst;
+	int64_t at_timestamp_ns = time_state_ts_to_monotonic_ns(inst->timekeeping, expression_info->time);
+
 	// spec: visual is allowed to use both camera and audio
 	enum xrt_input_name ft_input_name =
 	    face_tracker2_fb->visual_enabled ? XRT_INPUT_FB_FACE_TRACKING2_VISUAL : XRT_INPUT_FB_FACE_TRACKING2_AUDIO;
 
-	xrt_result_t xres = xrt_device_get_face_tracking(face_tracker2_fb->xdev, ft_input_name, &result);
+	xrt_result_t xres =
+	    xrt_device_get_face_tracking(face_tracker2_fb->xdev, ft_input_name, at_timestamp_ns, &result);
 	if (xres != XRT_SUCCESS) {
 		return XR_ERROR_RUNTIME_FAILURE;
 	}
@@ -132,7 +136,6 @@ oxr_get_face_expression_weights2_fb(struct oxr_logger *log,
 	expression_weights->isEyeFollowingBlendshapesValid =
 	    result.face_expression_set2_fb.is_eye_following_blendshapes_valid;
 
-	const struct oxr_instance *inst = face_tracker2_fb->sess->sys->inst;
 	expression_weights->time =
 	    time_state_monotonic_to_ts_ns(inst->timekeeping, result.face_expression_set2_fb.sample_time_ns);
 

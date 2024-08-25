@@ -348,12 +348,15 @@ struct xrt_device
 	 * @param[in] xdev                    The device.
 	 * @param[in] facial_expression_type  The facial expression data type (XR_FB_face_tracking,
 	 * XR_HTC_facial_tracking, etc).
+	 * @param[in] at_timestamp_ns         Timestamp to be optionally used for prediction/history. For OXR extensions
+	 * that do not pass a timestamp, the current timestamp is used.
 	 * @param[in] out_value               Set of requested expression weights & blend shape properties.
 	 *
 	 * @see xrt_input_name
 	 */
 	xrt_result_t (*get_face_tracking)(struct xrt_device *xdev,
 	                                  enum xrt_input_name facial_expression_type,
+	                                  int64_t at_timestamp_ns,
 	                                  struct xrt_facial_expression_set *out_value);
 
 	/*!
@@ -580,9 +583,10 @@ xrt_device_get_hand_tracking(struct xrt_device *xdev,
 static inline xrt_result_t
 xrt_device_get_face_tracking(struct xrt_device *xdev,
                              enum xrt_input_name facial_expression_type,
+                             int64_t at_timestamp_ns,
                              struct xrt_facial_expression_set *out_value)
 {
-	return xdev->get_face_tracking(xdev, facial_expression_type, out_value);
+	return xdev->get_face_tracking(xdev, facial_expression_type, at_timestamp_ns, out_value);
 }
 
 /*!
