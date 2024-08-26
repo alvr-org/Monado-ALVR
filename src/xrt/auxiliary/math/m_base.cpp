@@ -223,6 +223,17 @@ math_quat_from_euler_angles(const struct xrt_vec3 *angles, struct xrt_quat *resu
 }
 
 extern "C" void
+math_quat_to_euler_angles(const struct xrt_quat *quat, struct xrt_vec3 *euler_angles)
+{
+	Eigen::Quaternionf eigen_quat(quat->w, quat->x, quat->y, quat->z);
+	Eigen::Vector3f eigen_euler = eigen_quat.toRotationMatrix().eulerAngles(2, 1, 0);
+
+	euler_angles->x = eigen_euler.x();
+	euler_angles->y = eigen_euler.y();
+	euler_angles->z = eigen_euler.z();
+}
+
+extern "C" void
 math_quat_from_matrix_3x3(const struct xrt_matrix_3x3 *mat, struct xrt_quat *result)
 {
 	Eigen::Matrix3f m;
