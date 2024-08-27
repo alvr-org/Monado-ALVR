@@ -25,7 +25,7 @@ extern "C" {
 //! Major version of the API.
 #define MND_API_VERSION_MAJOR 1
 //! Minor version of the API.
-#define MND_API_VERSION_MINOR 3
+#define MND_API_VERSION_MINOR 4
 //! Patch version of the API.
 #define MND_API_VERSION_PATCH 0
 
@@ -72,6 +72,12 @@ typedef enum mnd_property
 	MND_PROPERTY_NAME_STRING = 0,
 	//! Supported in version 1.2 and above.
 	MND_PROPERTY_SERIAL_STRING = 1,
+	//! Supported in version 1.4.0 and above.
+	MND_PROPERTY_TRACKING_ORIGIN_U32 = 2,
+	//! Supported in version 1.4.0 and above.
+	MND_PROPERTY_SUPPORTS_POSITION_BOOL = 3,
+	//! Supported in version 1.4.0 and above.
+	MND_PROPERTY_SUPPORTS_ORIENTATION_BOOL = 4,
 } mnd_property_t;
 
 /*!

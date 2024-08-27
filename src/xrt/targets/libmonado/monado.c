@@ -306,9 +306,15 @@ mnd_root_get_device_info_bool(mnd_root_t *root, uint32_t device_index, mnd_prope
 		return MND_ERROR_INVALID_VALUE;
 	}
 
-	PE("Is not a valid boolean property (%u)", prop);
+	const struct ipc_shared_device *shared_device = &root->ipc_c.ism->isdevs[device_index];
 
-	return MND_ERROR_INVALID_PROPERTY;
+	switch (prop) {
+	case MND_PROPERTY_SUPPORTS_POSITION_BOOL: *out_bool = shared_device->position_tracking_supported; break;
+	case MND_PROPERTY_SUPPORTS_ORIENTATION_BOOL: *out_bool = shared_device->orientation_tracking_supported; break;
+	default: PE("Is not a valid boolean property (%u)", prop); return MND_ERROR_INVALID_PROPERTY;
+	}
+
+	return MND_SUCCESS;
 }
 
 mnd_result_t
@@ -338,9 +344,14 @@ mnd_root_get_device_info_u32(mnd_root_t *root, uint32_t device_index, mnd_proper
 		return MND_ERROR_INVALID_VALUE;
 	}
 
-	PE("Is not a valid u32 property (%u)", prop);
+	const struct ipc_shared_device *shared_device = &root->ipc_c.ism->isdevs[device_index];
 
-	return MND_ERROR_INVALID_PROPERTY;
+	switch (prop) {
+	case MND_PROPERTY_TRACKING_ORIGIN_U32: *out_u32 = shared_device->tracking_origin_index; break;
+	default: PE("Is not a valid u32 property (%u)", prop); return MND_ERROR_INVALID_PROPERTY;
+	}
+
+	return MND_SUCCESS;
 }
 
 mnd_result_t
