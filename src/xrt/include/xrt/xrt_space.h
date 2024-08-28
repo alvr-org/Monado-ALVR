@@ -449,10 +449,10 @@ xrt_space_overseer_recenter_local_spaces(struct xrt_space_overseer *xso)
  */
 static inline xrt_result_t
 xrt_space_overseer_get_tracking_origin_offset(struct xrt_space_overseer *xso,
-                                              struct xrt_tracking_origin *torig,
+                                              struct xrt_tracking_origin *xto,
                                               struct xrt_pose *out_offset)
 {
-	return xso->get_tracking_origin_offset(xso, torig, out_offset);
+	return xso->get_tracking_origin_offset(xso, xto, out_offset);
 }
 
 /*!
@@ -464,10 +464,10 @@ xrt_space_overseer_get_tracking_origin_offset(struct xrt_space_overseer *xso,
  */
 static inline xrt_result_t
 xrt_space_overseer_set_tracking_origin_offset(struct xrt_space_overseer *xso,
-                                              struct xrt_tracking_origin *torig,
+                                              struct xrt_tracking_origin *xt0,
                                               const struct xrt_pose *offset)
 {
-	return xso->set_tracking_origin_offset(xso, torig, offset);
+	return xso->set_tracking_origin_offset(xso, xt0, offset);
 }
 
 /*!
