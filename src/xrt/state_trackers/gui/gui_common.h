@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -60,6 +60,7 @@ struct gui_program
  * @interface gui_scene
  * A single currently running scene.
  *
+ * @see gui_program
  * @ingroup gui
  */
 struct gui_scene
@@ -71,6 +72,7 @@ struct gui_scene
 /*!
  * A OpenGL texture.
  *
+ * @see gui_program
  * @ingroup gui
  */
 struct gui_ogl_texture
@@ -84,9 +86,14 @@ struct gui_ogl_texture
 };
 
 /*!
+ * @addtogroup gui
+ * @{
+ */
+
+/*!
  * Initialize the prober and open all devices found.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 int
 gui_prober_init(struct gui_program *p);
@@ -94,7 +101,7 @@ gui_prober_init(struct gui_program *p);
 /*!
  * Create devices.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 int
 gui_prober_select(struct gui_program *p);
@@ -102,7 +109,7 @@ gui_prober_select(struct gui_program *p);
 /*!
  * Update all devices.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_prober_update(struct gui_program *p);
@@ -110,7 +117,7 @@ gui_prober_update(struct gui_program *p);
 /*!
  * Destroy all opened devices and destroy the prober.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_prober_teardown(struct gui_program *p);
@@ -121,6 +128,7 @@ gui_prober_teardown(struct gui_program *p);
  *
  * Destruction is handled by the frame context.
  *
+ * @public @memberof gui_ogl_texture
  * @ingroup gui
  */
 struct gui_ogl_texture *
@@ -129,6 +137,7 @@ gui_ogl_sink_create(const char *name, struct xrt_frame_context *xfctx, struct xr
 /*!
  * Update the texture to the latest received frame.
  *
+ * @public @memberof gui_ogl_texture
  * @ingroup gui
  */
 void
@@ -137,7 +146,7 @@ gui_ogl_sink_update(struct gui_ogl_texture * /*tex*/);
 /*!
  * Push the scene to the top of the lists.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_push_front(struct gui_program *p, struct gui_scene *me);
@@ -145,7 +154,7 @@ gui_scene_push_front(struct gui_program *p, struct gui_scene *me);
 /*!
  * Put a scene on the delete list, also removes it from any other list.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_delete_me(struct gui_program *p, struct gui_scene *me);
@@ -153,7 +162,7 @@ gui_scene_delete_me(struct gui_program *p, struct gui_scene *me);
 /*!
  * Render the scenes.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_manager_render(struct gui_program *p);
@@ -161,7 +170,7 @@ gui_scene_manager_render(struct gui_program *p);
 /*!
  * Initialize the scene manager.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_manager_init(struct gui_program *p);
@@ -169,7 +178,7 @@ gui_scene_manager_init(struct gui_program *p);
 /*!
  * Destroy the scene manager.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_manager_destroy(struct gui_program *p);
@@ -184,7 +193,7 @@ gui_scene_manager_destroy(struct gui_program *p);
 /*!
  * Shows the main menu.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_main_menu(struct gui_program *p);
@@ -192,7 +201,7 @@ gui_scene_main_menu(struct gui_program *p);
 /*!
  * Shows a UI that lets you select a video device and mode for calibration.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_select_video_calibrate(struct gui_program *p);
@@ -200,7 +209,7 @@ gui_scene_select_video_calibrate(struct gui_program *p);
 /*!
  * Shows a UI that lets you set up tracking overrides.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_tracking_overrides(struct gui_program *p);
@@ -208,7 +217,7 @@ gui_scene_tracking_overrides(struct gui_program *p);
 /*!
  * Regular debug UI.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_debug(struct gui_program *p);
@@ -216,7 +225,7 @@ gui_scene_debug(struct gui_program *p);
 /*!
  * Small hand-tracking demo.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_hand_tracking_demo(struct gui_program *p);
@@ -224,7 +233,7 @@ gui_scene_hand_tracking_demo(struct gui_program *p);
 /*!
  * EuRoC recorder for DepthAI cameras
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_record_euroc(struct gui_program *p);
@@ -232,7 +241,7 @@ gui_scene_record_euroc(struct gui_program *p);
 /*!
  * Create a recording view scene.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_record(struct gui_program *p, const char *camera);
@@ -242,7 +251,8 @@ gui_scene_record(struct gui_program *p, const char *camera);
  *
  * @param p self
  * @param address Optional address.
- * @ingroup gui
+ *
+ * @public @memberof gui_program
  */
 void
 gui_scene_remote(struct gui_program *p, const char *address);
@@ -251,7 +261,7 @@ gui_scene_remote(struct gui_program *p, const char *address);
  * Given the frameserver runs the calibration code on it.
  * Claims ownership of @p s.
  *
- * @ingroup gui
+ * @public @memberof gui_program
  */
 void
 gui_scene_calibrate(struct gui_program *p,
@@ -259,6 +269,9 @@ gui_scene_calibrate(struct gui_program *p,
                     struct xrt_fs *xfs,
                     struct xrt_settings_tracking *s);
 
+/*!
+ * @}
+ */
 
 #ifdef __cplusplus
 }
