@@ -159,6 +159,61 @@ struct comp_render_dispatch_data
 	} cs;
 };
 
+/*!
+ * Shared implementation setting up common view params between GFX and CS.
+ *
+ * Private implementation method, do not use outside of more-specific add_view calls!
+ *
+ * @param data Common render dispatch data, will be updated
+ * @param world_pose New world pose of this view.
+ *        Populates @ref comp_render_view_data::world_pose
+ * @param eye_pose New eye pose of this view
+ *        Populates @ref comp_render_view_data::eye_pose
+ * @param fov Assigned to fov in the view data, and used to compute @ref comp_render_view_data::target_pre_transform
+ *        Populates @ref comp_render_view_data::fov
+ * @param layer_viewport_data Where in the image to render the view
+ *        Populates @ref comp_render_view_data::layer_viewport_data
+ * @param layer_norm_rect How to transform when sampling from the scratch image.
+ *        Populates @ref comp_render_view_data::layer_norm_rect
+ * @param image Scratch image for this view
+ *        Populates @ref comp_render_view_data::image
+ * @param srgb_view SRGB image view into the scratch image
+ *        Populates @ref comp_render_view_data::srgb_view
+ * @param target_viewport_data Distortion target viewport data (aka target)
+ *        Populates @ref comp_render_view_data::target_viewport_data
+
+ * @return Pointer to the @ref comp_render_view_data we have been populating, for additional setup.
+ */
+static inline struct comp_render_view_data *
+comp_render_dispatch_add_view(struct comp_render_dispatch_data *data,
+                              const struct xrt_pose *world_pose,
+                              const struct xrt_pose *eye_pose,
+                              const struct xrt_fov *fov,
+                              const struct render_viewport_data *layer_viewport_data,
+                              const struct xrt_normalized_rect *layer_norm_rect,
+                              VkImage image,
+                              VkImageView srgb_view,
+                              const struct render_viewport_data *target_viewport_data)
+{
+	uint32_t i = data->view_count++;
+
+	assert(i < ARRAY_SIZE(data->views));
+
+	struct comp_render_view_data *view = &data->views[i];
+
+	render_calc_uv_to_tangent_lengths_rect(fov, &view->target_pre_transform);
+
+	view->world_pose = *world_pose;
+	view->eye_pose = *eye_pose;
+	view->fov = *fov;
+	view->image = image;
+	view->srgb_view = srgb_view;
+	view->layer_viewport_data = *layer_viewport_data;
+	view->layer_norm_rect = *layer_norm_rect;
+	view->target_viewport_data = *target_viewport_data;
+
+	return view;
+}
 
 /*! @} */
 
@@ -239,23 +294,18 @@ comp_render_gfx_add_view(struct comp_render_dispatch_data *data,
                          const struct xrt_matrix_2x2 *vertex_rot,
                          const struct render_viewport_data *target_viewport_data)
 {
-	uint32_t i = data->view_count++;
+	struct comp_render_view_data *view = comp_render_dispatch_add_view( //
+	    data,                                                           //
+	    world_pose,                                                     //
+	    eye_pose,                                                       //
+	    fov,                                                            //
+	    layer_viewport_data,                                            //
+	    layer_norm_rect,                                                //
+	    image,                                                          //
+	    srgb_view,                                                      //
+	    target_viewport_data);
 
-	assert(i < ARRAY_SIZE(data->views));
-
-	struct comp_render_view_data *view = &data->views[i];
-
-	render_calc_uv_to_tangent_lengths_rect(fov, &view->target_pre_transform);
-
-	view->world_pose = *world_pose;
-	view->eye_pose = *eye_pose;
-	view->fov = *fov;
-	view->image = image;
-	view->srgb_view = srgb_view;
-	view->layer_viewport_data = *layer_viewport_data;
-	view->layer_norm_rect = *layer_norm_rect;
-	view->target_viewport_data = *target_viewport_data;
-
+	// TODO why is the one in data not used instead
 	view->gfx.rtr = rtr;
 	view->gfx.vertex_rot = *vertex_rot;
 }
@@ -382,22 +432,16 @@ comp_render_cs_add_view(struct comp_render_dispatch_data *data,
                         VkImageView unorm_view,
                         const struct render_viewport_data *target_viewport_data)
 {
-	uint32_t i = data->view_count++;
-
-	assert(i < ARRAY_SIZE(data->views));
-
-	struct comp_render_view_data *view = &data->views[i];
-
-	render_calc_uv_to_tangent_lengths_rect(fov, &view->target_pre_transform);
-
-	view->world_pose = *world_pose;
-	view->eye_pose = *eye_pose;
-	view->fov = *fov;
-	view->layer_viewport_data = *layer_viewport_data;
-	view->layer_norm_rect = *layer_norm_rect;
-	view->image = image;
-	view->srgb_view = srgb_view;
-	view->target_viewport_data = *target_viewport_data;
+	struct comp_render_view_data *view = comp_render_dispatch_add_view( //
+	    data,                                                           //
+	    world_pose,                                                     //
+	    eye_pose,                                                       //
+	    fov,                                                            //
+	    layer_viewport_data,                                            //
+	    layer_norm_rect,                                                //
+	    image,                                                          //
+	    srgb_view,                                                      //
+	    target_viewport_data);
 
 	view->cs.unorm_view = unorm_view;
 }
