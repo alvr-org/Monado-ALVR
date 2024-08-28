@@ -151,7 +151,7 @@ typedef XrResult (*oxr_handle_destroyer)(struct oxr_logger *log, struct oxr_hand
  */
 
 /*!
- * Safely copy a xrt_pose to a XrPosef.
+ * Safely copy an xrt_pose to an XrPosef.
  */
 #define OXR_XRT_POSE_TO_XRPOSEF(FROM, TO)                                                                              \
 	do {                                                                                                           \
@@ -163,7 +163,7 @@ typedef XrResult (*oxr_handle_destroyer)(struct oxr_logger *log, struct oxr_hand
 	} while (false)
 
 /*!
- * Safely copy a xrt_fov to a XrFovf.
+ * Safely copy an xrt_fov to an XrFovf.
  */
 #define OXR_XRT_FOV_TO_XRFOVF(FROM, TO)                                                                                \
 	do {                                                                                                           \
@@ -1444,7 +1444,7 @@ struct oxr_handle_base
  *
  * Not strictly an object, but an atom.
  *
- * Valid only within a XrInstance (@ref oxr_instance)
+ * Valid only within an XrInstance (@ref oxr_instance)
  *
  * @obj{XrSystemId}
  */
