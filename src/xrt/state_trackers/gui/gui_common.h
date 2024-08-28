@@ -240,7 +240,8 @@ gui_scene_record(struct gui_program *p, const char *camera);
 /*!
  * Remote control debugging UI.
  *
- * @param Optional address.
+ * @param p self
+ * @param address Optional address.
  * @ingroup gui
  */
 void
