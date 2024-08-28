@@ -282,3 +282,157 @@ vk_csci_get_image_external_support(struct vk_bundle *vk,
 		*out_exportable = (features & VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) != 0;
 	}
 }
+
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
+static bool
+has_ahardware_buffer_format_conversion(VkFormat format)
+{
+	/*
+	 * Format mappings from official Android docs:
+	 *
+	 * | AHardwareBuffer Format                    | Vulkan format                                |
+	 * |-------------------------------------------|----------------------------------------------|
+	 * | AHARDWAREBUFFER_FORMAT_BLOB               | N/A                                          |
+	 * | AHARDWAREBUFFER_FORMAT_D16_UNORM          | VK_FORMAT_D16_UNORM                          |
+	 * | AHARDWAREBUFFER_FORMAT_D24_UNORM          | VK_FORMAT_X8_D24_UNORM_PACK32                |
+	 * | AHARDWAREBUFFER_FORMAT_D24_UNORM_S8_UINT  | VK_FORMAT_D24_UNORM_S8_UINT                  |
+	 * | AHARDWAREBUFFER_FORMAT_D32_FLOAT          | VK_FORMAT_D32_SFLOAT                         |
+	 * | AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT  | VK_FORMAT_D32_SFLOAT_S8_UINT                 |
+	 * | AHARDWAREBUFFER_FORMAT_R10G10B10A10_UNORM | VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16 |
+	 * | AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM  | VK_FORMAT_A2B10G10R10_UNORM_PACK32           |
+	 * | AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT | VK_FORMAT_R16G16B16A16_SFLOAT                |
+	 * | AHARDWAREBUFFER_FORMAT_R16G16_UINT        | VK_FORMAT_R16G16_UINT                        |
+	 * | AHARDWAREBUFFER_FORMAT_R16_UINT           | VK_FORMAT_R16_UINT                           |
+	 * | AHARDWAREBUFFER_FORMAT_R5G6B5_UNORM       | VK_FORMAT_R5G6B5_UNORM_PACK16                |
+	 * | AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM     | VK_FORMAT_R8G8B8A8_UNORM                     |
+	 * | AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM     | VK_FORMAT_R8G8B8A8_UNORM                     |
+	 * | AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM       | VK_FORMAT_R8G8B8_UNORM                       |
+	 * | AHARDWAREBUFFER_FORMAT_R8_UNORM           | VK_FORMAT_R8_UNORM                           |
+	 * | AHARDWAREBUFFER_FORMAT_S8_UINT            | VK_FORMAT_S8_UINT                            |
+	 * | AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420       | N/A                                          |
+	 * | AHARDWAREBUFFER_FORMAT_YCbCr_P010         | N/A                                          |
+	 *
+	 * The VK_FORMAT_R8G8B8A8_SRGB format maps to AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM.
+	 */
+
+	switch (format) {
+	case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16: return true; // AHARDWAREBUFFER_FORMAT_R10G10B10A10_UNORM
+	case VK_FORMAT_D16_UNORM: return true;                          // AHARDWAREBUFFER_FORMAT_D16_UNORM
+	case VK_FORMAT_X8_D24_UNORM_PACK32: return true;                // AHARDWAREBUFFER_FORMAT_D24_UNORM
+	case VK_FORMAT_D24_UNORM_S8_UINT: return true;                  // AHARDWAREBUFFER_FORMAT_D24_UNORM_S8_UINT
+	case VK_FORMAT_D32_SFLOAT: return true;                         // AHARDWAREBUFFER_FORMAT_D32_FLOAT
+	case VK_FORMAT_D32_SFLOAT_S8_UINT: return true;                 // AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT
+	case VK_FORMAT_A2B10G10R10_UNORM_PACK32: return true;           // AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM
+	case VK_FORMAT_R16G16B16A16_SFLOAT: return true;                // AHARDWAREBUFFER_FORMAT_R16G16B16A16_FLOAT
+	case VK_FORMAT_R16G16_UINT: return true;                        // AHARDWAREBUFFER_FORMAT_R16G16_UINT
+	case VK_FORMAT_R16_UINT: return true;                           // AHARDWAREBUFFER_FORMAT_R16_UINT
+	case VK_FORMAT_R5G6B5_UNORM_PACK16: return true;                // AHARDWAREBUFFER_FORMAT_R5G6B5_UNORM
+	case VK_FORMAT_R8G8B8A8_UNORM: return true;                     // AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM
+	case VK_FORMAT_R8G8B8A8_SRGB: return true;                      // AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM
+	case VK_FORMAT_R8G8B8_UNORM: return true;                       // AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM
+	case VK_FORMAT_R8_UNORM: return true;                           // AHARDWAREBUFFER_FORMAT_R8_UNORM
+	case VK_FORMAT_S8_UINT: return true;                            // AHARDWAREBUFFER_FORMAT_S8_UINT
+	default: return false;
+	}
+}
+#endif
+
+bool
+vk_csci_is_format_supported(struct vk_bundle *vk, VkFormat format, enum xrt_swapchain_usage_bits xbits)
+{
+	/*
+	 * First check if the format is supported at all.
+	 */
+
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
+	if (!has_ahardware_buffer_format_conversion(format)) {
+		VK_DEBUG(vk, "Format '%s' does not map to a AHardwareBuffer format!", vk_format_string(format));
+		return false;
+	}
+#endif
+
+	VkFormatProperties prop;
+	vk->vkGetPhysicalDeviceFormatProperties(vk->physical_device, format, &prop);
+	const VkFormatFeatureFlagBits bits = prop.optimalTilingFeatures;
+
+	if ((bits & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) == 0) {
+		VK_DEBUG(vk, "Format '%s' cannot be sampled from in optimal layout!", vk_format_string(format));
+		return false;
+	}
+
+	if ((xbits & XRT_SWAPCHAIN_USAGE_COLOR) != 0 && (bits & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) == 0) {
+		VK_DEBUG(vk, "Color format '%s' cannot be used as render target in optimal layout!",
+		         vk_format_string(format));
+		return false;
+	}
+
+	if ((xbits & XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL) != 0 &&
+	    (bits & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0) {
+		VK_DEBUG(vk, "Depth/stencil format '%s' cannot be used as render target in optimal layout!",
+		         vk_format_string(format));
+		return false;
+	}
+
+
+	/*
+	 * Check exportability.
+	 */
+
+	VkExternalMemoryHandleTypeFlags handle_type = vk_csci_get_image_external_handle_type(vk, NULL);
+	VkResult ret;
+
+	VkImageUsageFlags usage = vk_csci_get_image_usage_flags(vk, format, xbits);
+
+	// In->pNext
+	VkPhysicalDeviceExternalImageFormatInfo external_image_format_info = {
+	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO,
+	    .handleType = handle_type,
+	};
+
+	// In
+	VkPhysicalDeviceImageFormatInfo2 format_info = {
+	    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
+	    .pNext = &external_image_format_info,
+	    .format = format,
+	    .type = VK_IMAGE_TYPE_2D,
+	    .tiling = VK_IMAGE_TILING_OPTIMAL,
+	    .usage = usage,
+	};
+
+	// Out->pNext
+	VkExternalImageFormatProperties external_format_properties = {
+	    .sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES,
+	};
+
+	// Out
+	VkImageFormatProperties2 format_properties = {
+	    .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
+	    .pNext = &external_format_properties,
+	};
+
+	ret = vk->vkGetPhysicalDeviceImageFormatProperties2(vk->physical_device, &format_info, &format_properties);
+	if (ret == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+		VK_DEBUG(vk, "Format '%s' as external image is not supported!", vk_format_string(format));
+		return false;
+	} else if (ret != VK_SUCCESS) {
+		// This is not a expected path.
+		VK_ERROR(vk, "vkGetPhysicalDeviceImageFormatProperties2: %s for format '%s'", vk_result_string(ret),
+		         vk_format_string(format));
+		return false;
+	}
+
+	VkExternalMemoryFeatureFlags features =
+	    external_format_properties.externalMemoryProperties.externalMemoryFeatures;
+
+	if ((features & VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) == 0) {
+		VK_DEBUG(vk, "Format '%s' is not importable!", vk_format_string(format));
+		return false;
+	}
+
+	if ((features & VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) == 0) {
+		VK_DEBUG(vk, "Format '%s' is not exportable!", vk_format_string(format));
+		return false;
+	}
+
+	return true;
+}

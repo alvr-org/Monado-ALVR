@@ -1556,6 +1556,15 @@ vk_csci_get_image_external_support(struct vk_bundle *vk,
                                    bool *out_importable,
                                    bool *out_exportable);
 
+/*!
+ * Verify if a format is supported for a specific usage
+ *
+ * CSCI = Compositor SwapChain Images.
+ */
+bool
+vk_csci_is_format_supported(struct vk_bundle *vk,
+	VkFormat format,
+        enum xrt_swapchain_usage_bits xbits);
 
 /*
  *
