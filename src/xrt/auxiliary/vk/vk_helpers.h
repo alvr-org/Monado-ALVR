@@ -1082,9 +1082,7 @@ vk_get_memory_type(struct vk_bundle *vk, uint32_t type_bits, VkMemoryPropertyFla
  *
  * @param vk Vulkan bundle
  * @param image The VkImage to allocate for and bind.
- * @param max_size The maximum value you'll allow for
- *        VkMemoryRequirements::size. Pass SIZE_MAX if you will accept any size
- *        that works.
+ * @param requirements Memory requirements used for finding the memory type and the size.
  * @param pNext_for_allocate (Optional) a pointer to use in the pNext chain of
  *        VkMemoryAllocateInfo.
  * @param caller_name Used for error printing, this function is called from
@@ -1104,11 +1102,10 @@ vk_get_memory_type(struct vk_bundle *vk, uint32_t type_bits, VkMemoryPropertyFla
 XRT_CHECK_RESULT VkResult
 vk_alloc_and_bind_image_memory(struct vk_bundle *vk,
                                VkImage image,
-                               size_t max_size,
+                               const VkMemoryRequirements *requirements,
                                const void *pNext_for_allocate,
                                const char *caller_name,
-                               VkDeviceMemory *out_mem,
-                               VkDeviceSize *out_size);
+                               VkDeviceMemory *out_mem);
 
 /*!
  *
@@ -1564,9 +1561,7 @@ vk_csci_get_image_external_support(struct vk_bundle *vk,
  * CSCI = Compositor SwapChain Images.
  */
 bool
-vk_csci_is_format_supported(struct vk_bundle *vk,
-	VkFormat format,
-        enum xrt_swapchain_usage_bits xbits);
+vk_csci_is_format_supported(struct vk_bundle *vk, VkFormat format, enum xrt_swapchain_usage_bits xbits);
 
 /*
  *

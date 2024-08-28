@@ -108,7 +108,6 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	VkDeviceMemory device_memory = VK_NULL_HANDLE;
 	VkImage image = VK_NULL_HANDLE;
 	VkResult ret = VK_SUCCESS;
-	VkDeviceSize size;
 
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
 	/*
@@ -187,9 +186,8 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	};
 	CHAIN(format_android);
 
-	// Android can't allocate native sRGB.
-	// Use UNORM and correct gamma later.
 	if (image_format == VK_FORMAT_R8G8B8A8_SRGB) {
+		// Some versions of Android can't allocate native sRGB, use UNORM and correct gamma later.
 		image_format = VK_FORMAT_R8G8B8A8_UNORM;
 
 		// https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkImageViewCreateInfo-image-01019
@@ -202,6 +200,20 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 
 		add_format_non_dup(&flh, VK_FORMAT_R8G8B8A8_UNORM);
 		add_format_non_dup(&flh, VK_FORMAT_R8G8B8A8_SRGB);
+	}
+
+	if (vk_csci_is_format_supported(vk, image_format, info->bits)) {
+		// Format is supported, no need for VkExternalFormatANDROID
+		format_android.externalFormat = 0;
+		assert(a_buffer_format_props.format != VK_FORMAT_UNDEFINED); // Make sure there is a Vulkan format.
+	} else if (image_usage != VK_IMAGE_USAGE_SAMPLED_BIT && !vk->has_ANDROID_external_format_resolve) {
+		// VUID-VkImageCreateInfo-pNext-09457
+		VK_ERROR(
+		    vk, "VK_ANDROID_external_format_resolve not supported, only VK_IMAGE_USAGE_SAMPLED_BIT is allowed");
+		return VK_ERROR_FORMAT_NOT_SUPPORTED;
+	} else {
+		VK_ERROR(vk, "Format not supported");
+		return VK_ERROR_FORMAT_NOT_SUPPORTED;
 	}
 #endif
 
@@ -270,7 +282,20 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	    .pNext = &memory_dedicated_requirements,
 	};
 
+	VkMemoryRequirements *requirements;
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
+	// VUID-VkImageMemoryRequirementsInfo2-image-01897
+	// VUID-VkMemoryAllocateInfo-pNext-01874
+	// Use the requirements from the VkAndroidHardwareBufferPropertiesANDROID instead of querying them
+	VkMemoryRequirements android_memory_requirements = {
+	    .size = a_buffer_props.allocationSize,
+	    .memoryTypeBits = a_buffer_props.memoryTypeBits,
+	};
+	requirements = &android_memory_requirements;
+#else
 	vk->vkGetImageMemoryRequirements2(vk->device, &memory_requirements_info, &memory_requirements);
+	requirements = &memory_requirements.memoryRequirements;
+#endif
 
 	/*
 	 * On tegra we must not use dedicated allocation when it is only preferred to avoid black textures and driver
@@ -312,11 +337,10 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	ret = vk_alloc_and_bind_image_memory(   //
 	    vk,                                 // vk_bundle
 	    image,                              // image
-	    SIZE_MAX,                           // max_size
+	    requirements,                       // requirements
 	    &export_alloc_info,                 // pNext_for_allocate
 	    "vk_image_allocator::create_image", // caller_name
-	    &device_memory,                     // out_mem
-	    &size);                             // out_size
+	    &device_memory);                    // out_mem
 	if (ret != VK_SUCCESS) {
 		vk->vkDestroyImage(vk->device, image, NULL);
 		return ret;
@@ -324,7 +348,7 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 
 	out_image->handle = image;
 	out_image->memory = device_memory;
-	out_image->size = size;
+	out_image->size = memory_requirements.memoryRequirements.size;
 	out_image->use_dedicated_allocation = use_dedicated_allocation;
 
 	return ret;
