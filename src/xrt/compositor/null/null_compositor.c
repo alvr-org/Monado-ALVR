@@ -425,7 +425,7 @@ null_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle
 	struct null_compositor *c = null_compositor(xc);
 	NULL_TRACE(c, "LAYER_COMMIT");
 
-	int64_t frame_id = c->base.slot.data.frame_id;
+	int64_t frame_id = c->base.layer_accum.data.frame_id;
 
 	/*
 	 * The null compositor doesn't render any frames, but needs to do

@@ -6,9 +6,11 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Christoph Haag <christoph.haag@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup comp_main
  */
 
+#include "util/comp_layer_accum.h"
 #include "xrt/xrt_compositor.h"
 
 #include "os/os_time.h"
@@ -34,6 +36,23 @@
  *
  */
 
+static inline const struct comp_swapchain_image *
+get_layer_image(const struct comp_layer *layer, uint32_t swapchain_index, uint32_t image_index)
+{
+
+	const struct comp_swapchain *sc = (struct comp_swapchain *)(comp_layer_get_swapchain(layer, swapchain_index));
+	return &sc->images[image_index];
+}
+
+static inline const struct comp_swapchain_image *
+get_layer_depth_image(const struct comp_layer *layer, uint32_t swapchain_index, uint32_t image_index)
+{
+
+	const struct comp_swapchain *sc =
+	    (struct comp_swapchain *)(comp_layer_get_depth_swapchain(layer, swapchain_index));
+	return &sc->images[image_index];
+}
+
 static inline void
 do_cs_equirect2_layer(const struct xrt_layer_data *data,
                       const struct comp_layer *layer,
@@ -49,10 +68,10 @@ do_cs_equirect2_layer(const struct xrt_layer_data *data,
                       struct render_compute_layer_ubo_data *ubo_data,
                       uint32_t *out_cur_image)
 {
-	const struct xrt_layer_equirect2_data *eq2 = &data->equirect2;
-
-	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[eq2->sub.image_index];
-	uint32_t array_index = eq2->sub.array_index;
+	const struct xrt_layer_data *layer_data = &layer->data;
+	const struct xrt_layer_equirect2_data *eq2 = &layer_data->equirect2;
+	const uint32_t array_index = eq2->sub.array_index;
+	const struct comp_swapchain_image *image = get_layer_image(layer, 0, eq2->sub.image_index);
 
 	// Image to use.
 	src_samplers[cur_image] = clamp_to_edge;
@@ -112,18 +131,19 @@ do_cs_projection_layer(const struct xrt_layer_data *data,
                        bool do_timewarp,
                        uint32_t *out_cur_image)
 {
+	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_projection_view_data *vd = NULL;
 	const struct xrt_layer_depth_data *dvd = NULL;
 
-	if (data->type == XRT_LAYER_PROJECTION) {
-		view_index_to_projection_data(view_index, data, &vd);
+	if (layer_data->type == XRT_LAYER_PROJECTION) {
+		view_index_to_projection_data(view_index, layer_data, &vd);
 	} else {
-		view_index_to_depth_data(view_index, data, &vd, &dvd);
+		view_index_to_depth_data(view_index, layer_data, &vd, &dvd);
 	}
 
 	uint32_t sc_array_index = is_view_index_right(view_index) ? 1 : 0;
 	uint32_t array_index = vd->sub.array_index;
-	const struct comp_swapchain_image *image = &layer->sc_array[sc_array_index]->images[vd->sub.image_index];
+	const struct comp_swapchain_image *image = get_layer_image(layer, sc_array_index, vd->sub.image_index);
 
 	// Color
 	src_samplers[cur_image] = clamp_to_border_black;
@@ -134,7 +154,7 @@ do_cs_projection_layer(const struct xrt_layer_data *data,
 	if (data->type == XRT_LAYER_PROJECTION_DEPTH) {
 		uint32_t d_array_index = dvd->sub.array_index;
 		const struct comp_swapchain_image *d_image =
-		    &layer->sc_array[sc_array_index + 2]->images[dvd->sub.image_index];
+		    get_layer_depth_image(layer, sc_array_index, dvd->sub.image_index);
 
 		src_samplers[cur_image] = clamp_to_edge; // Edge to keep depth stable at edges.
 		src_image_views[cur_image] = get_image_view(d_image, data->flags, d_array_index);
@@ -174,10 +194,10 @@ do_cs_quad_layer(const struct xrt_layer_data *data,
                  struct render_compute_layer_ubo_data *ubo_data,
                  uint32_t *out_cur_image)
 {
-	const struct xrt_layer_quad_data *q = &data->quad;
-
-	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[q->sub.image_index];
-	uint32_t array_index = q->sub.array_index;
+	const struct xrt_layer_data *layer_data = &layer->data;
+	const struct xrt_layer_quad_data *q = &layer_data->quad;
+	const uint32_t array_index = q->sub.array_index;
+	const struct comp_swapchain_image *image = get_layer_image(layer, 0, q->sub.image_index);
 
 	// Image to use.
 	src_samplers[cur_image] = clamp_to_edge;
@@ -257,10 +277,10 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
                      struct render_compute_layer_ubo_data *ubo_data,
                      uint32_t *out_cur_image)
 {
-	const struct xrt_layer_cylinder_data *c = &data->cylinder;
-
-	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[c->sub.image_index];
-	uint32_t array_index = c->sub.array_index;
+	const struct xrt_layer_data *layer_data = &layer->data;
+	const struct xrt_layer_cylinder_data *c = &layer_data->cylinder;
+	const uint32_t array_index = c->sub.array_index;
+	const struct comp_swapchain_image *image = get_layer_image(layer, 0, c->sub.image_index);
 
 	// Image to use.
 	src_samplers[cur_image] = clamp_to_edge;
@@ -268,7 +288,7 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
 
 	// Used for Subimage and OpenGL flip.
 	set_post_transform_rect(                    //
-	    data,                                   // data
+	    layer_data,                             // data
 	    &c->sub.norm_rect,                      // src_norm_rect
 	    false,                                  // invert_flip
 	    &ubo_data->post_transforms[cur_layer]); // out_norm_rect
@@ -284,7 +304,7 @@ do_cs_cylinder_layer(const struct xrt_layer_data *data,
 	struct xrt_matrix_4x4 model_inv;
 	math_matrix_4x4_inverse(&model, &model_inv);
 
-	const struct xrt_matrix_4x4 *v = is_layer_view_space(data) ? eye_view_mat : world_view_mat;
+	const struct xrt_matrix_4x4 *v = is_layer_view_space(layer_data) ? eye_view_mat : world_view_mat;
 
 	struct xrt_matrix_4x4 v_inv;
 	math_matrix_4x4_inverse(v, &v_inv);
@@ -413,7 +433,7 @@ do_cs_distortion_for_layer(struct render_compute *crc,
 		struct xrt_normalized_rect src_norm_rect;
 		VkImageView src_image_view;
 		uint32_t array_index = vds[i]->sub.array_index;
-		const struct comp_swapchain_image *image = &layer->sc_array[i]->images[vds[i]->sub.image_index];
+		const struct comp_swapchain_image *image = get_layer_image(layer, i, vds[i]->sub.image_index);
 
 		// Gather data.
 		world_pose = d->views[i].world_pose;

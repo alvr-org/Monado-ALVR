@@ -4,10 +4,12 @@
  * @file
  * @brief  Compositor gfx rendering code.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup comp_util
  */
 
 #include "xrt/xrt_compositor.h"
+#include "util/comp_swapchain.h"
 
 #include "math/m_api.h"
 #include "math/m_mathinclude.h"
@@ -217,6 +219,14 @@ calc_mvp_rot_only(struct gfx_layer_view_state *state,
  *
  */
 
+static inline const struct comp_swapchain_image *
+get_layer_image(const struct comp_layer *layer, uint32_t swapchain_index, uint32_t image_index)
+{
+
+	const struct comp_swapchain *sc = (struct comp_swapchain *)(comp_layer_get_swapchain(layer, swapchain_index));
+	return &sc->images[image_index];
+}
+
 static inline void
 add_layer(struct gfx_layer_view_state *state, const struct xrt_layer_data *data, VkDescriptorSet descriptor_set)
 {
@@ -236,11 +246,11 @@ do_cylinder_layer(struct render_gfx *rr,
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_cylinder_data *c = &layer_data->cylinder;
+	const uint32_t array_index = c->sub.array_index;
+	const struct comp_swapchain_image *image = get_layer_image(layer, 0, c->sub.image_index);
+
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
-
-	const uint32_t array_index = c->sub.array_index;
-	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[c->sub.image_index];
 
 	// Color
 	VkSampler src_sampler = clamp_to_edge; // WIP: Is this correct?
@@ -300,11 +310,11 @@ do_equirect2_layer(struct render_gfx *rr,
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_equirect2_data *eq2 = &layer_data->equirect2;
+	const uint32_t array_index = eq2->sub.array_index;
+	const struct comp_swapchain_image *image = get_layer_image(layer, 0, eq2->sub.image_index);
+
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
-
-	const uint32_t array_index = eq2->sub.array_index;
-	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[eq2->sub.image_index];
 
 	// Color
 	VkSampler src_sampler = clamp_to_edge;
@@ -365,8 +375,6 @@ do_projection_layer(struct render_gfx *rr,
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_projection_view_data *vd = NULL;
 	const struct xrt_layer_depth_data *dvd = NULL;
-	struct vk_bundle *vk = rr->r->vk;
-	VkResult ret;
 
 	if (layer_data->type == XRT_LAYER_PROJECTION) {
 		view_index_to_projection_data(view_index, layer_data, &vd);
@@ -376,8 +384,10 @@ do_projection_layer(struct render_gfx *rr,
 
 	uint32_t sc_array_index = is_view_index_right(view_index) ? 1 : 0;
 	uint32_t array_index = vd->sub.array_index;
-	const struct comp_swapchain_image *image = &layer->sc_array[sc_array_index]->images[vd->sub.image_index];
+	const struct comp_swapchain_image *image = get_layer_image(layer, sc_array_index, vd->sub.image_index);
 
+	struct vk_bundle *vk = rr->r->vk;
+	VkResult ret;
 	// Color
 	VkSampler src_sampler = clamp_to_border_black;
 	VkImageView src_image_view = get_image_view(image, layer_data->flags, array_index);
@@ -426,11 +436,11 @@ do_quad_layer(struct render_gfx *rr,
 {
 	const struct xrt_layer_data *layer_data = &layer->data;
 	const struct xrt_layer_quad_data *q = &layer_data->quad;
+	const uint32_t array_index = q->sub.array_index;
+	const struct comp_swapchain_image *image = get_layer_image(layer, 0, q->sub.image_index);
+
 	struct vk_bundle *vk = rr->r->vk;
 	VkResult ret;
-
-	const uint32_t array_index = q->sub.array_index;
-	const struct comp_swapchain_image *image = &layer->sc_array[0]->images[q->sub.image_index];
 
 	// Color
 	VkSampler src_sampler = clamp_to_edge;
@@ -762,7 +772,8 @@ do_mesh_from_proj(struct render_gfx *rr,
 	struct gfx_mesh_data md = XRT_STRUCT_INIT;
 	for (uint32_t i = 0; i < d->view_count; i++) {
 		const uint32_t array_index = vds[i]->sub.array_index;
-		const struct comp_swapchain_image *image = &layer->sc_array[i]->images[vds[i]->sub.image_index];
+
+		const struct comp_swapchain_image *image = get_layer_image(layer, 0, vds[i]->sub.image_index);
 
 		struct xrt_pose src_pose;
 		struct xrt_fov src_fov;

@@ -264,20 +264,16 @@ compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 static bool
 can_do_one_projection_layer_fast_path(struct comp_compositor *c)
 {
-	if (c->base.slot.layer_count != 1) {
+	if (c->base.layer_accum.layer_count != 1) {
 		return false;
 	}
 
-	struct comp_layer *layer = &c->base.slot.layers[0];
+	struct comp_layer *layer = &c->base.layer_accum.layers[0];
 	enum xrt_layer_type type = layer->data.type;
 
 	// Handled by the distortion shader.
-	if (type != XRT_LAYER_PROJECTION && //
-	    type != XRT_LAYER_PROJECTION_DEPTH) {
-		return false;
-	}
-
-	return true;
+	return type == XRT_LAYER_PROJECTION || //
+	       type == XRT_LAYER_PROJECTION_DEPTH;
 }
 
 static XRT_CHECK_RESULT xrt_result_t
@@ -298,7 +294,7 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 	    !c->mirroring_to_debug_gui &&             //
 	    !c->debug.disable_fast_path &&            //
 	    can_do_one_projection_layer_fast_path(c); //
-	c->base.slot.one_projection_layer_fast_path = fast_path;
+	c->base.frame_params.one_projection_layer_fast_path = fast_path;
 
 
 	u_graphics_sync_unref(&sync_handle);

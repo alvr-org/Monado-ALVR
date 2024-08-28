@@ -146,6 +146,8 @@ if(XRT_HAVE_VULKAN)
 		comp_util STATIC
 		util/comp_base.h
 		util/comp_base.c
+		util/comp_layer_accum.h
+		util/comp_layer_accum.c
 		util/comp_render.h
 		util/comp_render_cs.c
 		util/comp_render_gfx.c

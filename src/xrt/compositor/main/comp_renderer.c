@@ -348,8 +348,8 @@ calc_pose_data(struct comp_renderer *r,
 		out_eye[i] = eye_pose;
 
 		// For remote rendering targets.
-		r->c->base.slot.fovs[i] = fov;
-		r->c->base.slot.poses[i] = result.pose;
+		r->c->base.frame_params.fovs[i] = fov;
+		r->c->base.frame_params.poses[i] = result.pose;
 	}
 }
 
@@ -856,16 +856,16 @@ dispatch_graphics(struct comp_renderer *r,
 	VkResult ret;
 
 	// Basics
-	const struct comp_layer *layers = c->base.slot.layers;
-	uint32_t layer_count = c->base.slot.layer_count;
-	bool fast_path = c->base.slot.one_projection_layer_fast_path;
+	const struct comp_layer *layers = c->base.layer_accum.layers;
+	uint32_t layer_count = c->base.layer_accum.layer_count;
+	bool fast_path = c->base.frame_params.one_projection_layer_fast_path;
 	bool do_timewarp = !c->debug.atw_off;
 
 	// Resources for the distortion render target.
 	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
 
 	// Consistency check.
-	assert(!fast_path || c->base.slot.layer_count >= 1);
+	assert(!fast_path || c->base.layer_accum.layer_count >= 1);
 
 	// Viewport information.
 	struct render_viewport_data viewport_datas[XRT_MAX_VIEWS];
@@ -982,9 +982,9 @@ dispatch_compute(struct comp_renderer *r,
 	VkResult ret;
 
 	// Basics
-	const struct comp_layer *layers = c->base.slot.layers;
-	uint32_t layer_count = c->base.slot.layer_count;
-	bool fast_path = c->base.slot.one_projection_layer_fast_path;
+	const struct comp_layer *layers = c->base.layer_accum.layers;
+	uint32_t layer_count = c->base.layer_accum.layer_count;
+	bool fast_path = c->base.frame_params.one_projection_layer_fast_path;
 	bool do_timewarp = !c->debug.atw_off;
 
 	// Device view information.

@@ -112,13 +112,13 @@ sdl_program_plus_render(struct sdl_program_plus *spp_ptr)
 		// Nothing for now.
 	}
 
-	if (spp.c.base.slot.layer_count == 0) {
+	if (spp.c.base.layer_accum.layer_count == 0) {
 		glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-	} else if (spp.c.base.slot.layers[0].data.type == XRT_LAYER_PROJECTION ||
-	           spp.c.base.slot.layers[0].data.type == XRT_LAYER_PROJECTION_DEPTH) {
+	} else if (spp.c.base.layer_accum.layers[0].data.type == XRT_LAYER_PROJECTION ||
+	           spp.c.base.layer_accum.layers[0].data.type == XRT_LAYER_PROJECTION_DEPTH) {
 
-		auto &l = spp.c.base.slot.layers[0];
+		auto &l = spp.c.base.layer_accum.layers[0];
 		auto &ssc = *(sdl_swapchain *)l.sc_array[0];
 		GLuint tex = ssc.textures[l.data.proj.v[0].sub.image_index];
 

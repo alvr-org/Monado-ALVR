@@ -433,7 +433,7 @@ sdl_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_
 
 	struct sdl_program *sp = from_comp(xc);
 	struct sdl_compositor *c = &sp->c;
-	int64_t frame_id = c->base.slot.data.frame_id;
+	int64_t frame_id = c->base.layer_accum.data.frame_id;
 
 	SC_TRACE(c, "LAYER_COMMIT");
 
