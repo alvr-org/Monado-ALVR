@@ -470,7 +470,7 @@ forward to keeping the momentum up!
     ([!2086](https://gitlab.freedesktop.org/monado/monado/merge_requests/2086))
   - The runtime name is now picked up from the CMake project description.
     ([!2089](https://gitlab.freedesktop.org/monado/monado/merge_requests/2089))
-  - Add `xrt_device::ref_space_usage` function to let a `xrt_device` know if a
+  - Add `xrt_device::ref_space_usage` function to let an `xrt_device` know if a
     reference it's powering is being used or not by any client.
     ([!2091](https://gitlab.freedesktop.org/monado/monado/merge_requests/2091),
     [!2107](https://gitlab.freedesktop.org/monado/monado/merge_requests/2107))
@@ -2978,7 +2978,7 @@ forward to keeping the momentum up!
   - OpenXR: Correctly ensure that the application has called the required get
     graphics requirements function when creating a session.
     ([!359](https://gitlab.freedesktop.org/monado/monado/merge_requests/359))
-  - OpenXR: When a `XrSession` is destroyed purge the event queue of any events
+  - OpenXR: When an `XrSession` is destroyed purge the event queue of any events
     that
     references to it so that no events gets delivered to the applications with
     stales handles.

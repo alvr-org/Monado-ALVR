@@ -30,7 +30,7 @@ it easier for the IPC layer to implement it.
 * Where do space events come from?
   * **UNRESOLVED:** Probably will come from the space overseer.
 * Do we map all spaces one to one, like the each `XrSpace` with an offset gets
-  backed with a `xrt_space`. There is going to be a limit on spaces from the
+  backed with an `xrt_space`. There is going to be a limit on spaces from the
   point of view of the IPC layer, do we create some of them locally?
   * **RESOLVED:** While you can create a offset `xrt_space`, the offsets from
     from the `XrSpace`s are not expressed as an `xrt_space` this is to reduce
