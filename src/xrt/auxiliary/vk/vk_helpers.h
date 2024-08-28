@@ -142,6 +142,7 @@ struct vk_bundle
 	bool has_EXT_global_priority;
 	bool has_EXT_image_drm_format_modifier;
 	bool has_EXT_robustness2;
+	bool has_ANDROID_external_format_resolve;
 	bool has_GOOGLE_display_timing;
 	// end of GENERATED device extension code - do not modify - used by scripts
 
@@ -996,6 +997,7 @@ struct vk_device_features
 	bool null_descriptor;
 	bool timeline_semaphore;
 	bool synchronization_2;
+	bool ext_fmt_resolve;
 };
 
 /*!

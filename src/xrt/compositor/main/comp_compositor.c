@@ -556,7 +556,11 @@ static const char *optional_device_extensions[] = {
     VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,     //
 
 #elif defined(XRT_GRAPHICS_SYNC_HANDLE_IS_WIN32_HANDLE) // Not optional
-
+#elif defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
+#if defined(VK_ANDROID_external_format_resolve)
+    // Requires Vulkan 1.3.268.1
+    VK_ANDROID_EXTERNAL_FORMAT_RESOLVE_EXTENSION_NAME //
+#endif
 #else
 #error "Need port!"
 #endif
