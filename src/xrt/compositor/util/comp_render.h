@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Independent semaphore implementation.
+ * @brief  Compositor render implementation.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup comp_util
  */
 
@@ -22,6 +23,22 @@ extern "C" {
 struct comp_layer;
 
 
+/*!
+ * @defgroup comp_render
+ * @brief Renders, aka "layer squashers" and distortion application.
+ *
+ * Two parallel implementations of the render module exist:
+ *
+ * - one uses graphics shaders (aka GFX, @ref comp_render_gfx, @ref comp_render_gfx.c)
+ * - the other uses compute shaders (aka CS, @ref comp_render_cs, @ref comp_render_cs.c)
+ *
+ * Their abilities are effectively equivalent, although the graphics version disregards depth
+ * data, while the compute shader does use it somewhat.
+ *
+ * @note In general this module requires that swapchains in your supplied @ref comp_layer layers
+ * implement @ref comp_swapchain in addition to just @ref xrt_swapchain.
+ */
+
 /*
  *
  * Input data struct.
@@ -29,12 +46,21 @@ struct comp_layer;
  */
 
 /*!
- * The input data needed for a single view, it shared between both GFX and CS
- * paths. To fully render a single view two "rendering" might be needed, the
+ * @name Input data structs
+ * @{
+ */
+
+/*!
+ * The input data needed for a single view, shared between both GFX and CS
+ * paths.
+ *
+ * To fully render a single view two "rendering" might be needed, the
  * first being the layer squashing, and the second is the distortion step. The
  * target for the layer squashing is referred to as "layer" or "scratch" and
  * prefixed with `layer` if needs be. The other final step is referred to as
  * "distortion target" or just "target", and is prefixed with `target`.
+ *
+ * @ingroup comp_render
  */
 struct comp_render_view_data
 {
@@ -99,6 +125,8 @@ struct comp_render_view_data
 /*!
  * The input data needed for a complete layer squashing distortion rendering
  * to a target. This struct is shared between GFX and CS paths.
+ *
+ * @ingroup comp_render
  */
 struct comp_render_dispatch_data
 {
@@ -113,22 +141,26 @@ struct comp_render_dispatch_data
 	//! Very often true, can be disabled for debugging.
 	bool do_timewarp;
 
+	//! Members used only by GFX @ref comp_render_gfx
 	struct
 	{
-		// The resources needed for the target.
+		//! The resources needed for the target.
 		struct render_gfx_target_resources *rtr;
 	} gfx;
 
+	//! Members used only by CS @ref comp_render_cs
 	struct
 	{
-		// Target image for distortion, used for barrier.
+		//! Target image for distortion, used for barrier.
 		VkImage target_image;
 
-		// Target image view for distortion.
+		//! Target image view for distortion.
 		VkImageView target_unorm_view;
 	} cs;
 };
 
+
+/*! @} */
 
 /*
  *
@@ -136,6 +168,27 @@ struct comp_render_dispatch_data
  *
  */
 
+/*!
+ *
+ * @defgroup comp_render_gfx
+ *
+ * GFX renderer control and dispatch - uses graphics shaders.
+ *
+ * Depends on the common @ref comp_render_dispatch_data, as well as the resources
+ * @ref render_gfx_target_resources (often called `rtr`), and @ref render_gfx.
+ *
+ * @ingroup comp_render
+ * @{
+ */
+
+/*!
+ * Initialize structure for use of the GFX renderer.
+ *
+ * @param[out] data Common render dispatch data. Will be zeroed and initialized.
+ * @param rtr GFX-specific resources for the entire frameedg. Must be populated before call.
+ * @param fast_path Whether we will use the "fast path" avoiding layer squashing.
+ * @param do_timewarp Whether timewarp (reprojection) will be performed.
+ */
 static inline void
 comp_render_gfx_initial_init(struct comp_render_dispatch_data *data,
                              struct render_gfx_target_resources *rtr,
@@ -149,6 +202,30 @@ comp_render_gfx_initial_init(struct comp_render_dispatch_data *data,
 	data->gfx.rtr = rtr;
 }
 
+/*!
+ * Add view to the common data, as required by the GFX renderer.
+ *
+ * @param[in,out] data Common render dispatch data, will be updated
+ * @param world_pose New world pose of this view.
+ *        Populates @ref comp_render_view_data::world_pose
+ * @param eye_pose New eye pose of this view
+ *        Populates @ref comp_render_view_data::eye_pose
+ * @param fov Assigned to fov in the view data, and used to
+ *        compute @ref comp_render_view_data::target_pre_transform - also
+ *        populates @ref comp_render_view_data::fov
+ * @param rtr Will be associated with this view. GFX-specific
+ * @param layer_viewport_data Where in the image to render the view
+ *        Populates @ref comp_render_view_data::layer_viewport_data
+ * @param layer_norm_rect How to transform when sampling from the scratch image.
+ *        Populates @ref comp_render_view_data::layer_norm_rect
+ * @param image Scratch image for this view
+ *        Populates @ref comp_render_view_data::image
+ * @param srgb_view SRGB image view into the scratch image
+ *        Populates @ref comp_render_view_data::srgb_view
+ * @param vertex_rot
+ * @param target_viewport_data Distortion target viewport data (aka target)
+ *        Populates @ref comp_render_view_data::target_viewport_data
+ */
 static inline void
 comp_render_gfx_add_view(struct comp_render_dispatch_data *data,
                          const struct xrt_pose *world_pose,
@@ -184,7 +261,9 @@ comp_render_gfx_add_view(struct comp_render_dispatch_data *data,
 }
 
 /*!
- * Helper function that takes a set of layers, new device poses, a scratch
+ * Writes the needed commands to the @ref render_gfx to do a full composition with distortion.
+ *
+ * Takes a set of layers, new device poses, scratch
  * images with associated @ref render_gfx_target_resources and writes the needed
  * commands to the @ref render_gfx to do a full composition with distortion.
  * The scratch images are optionally used to squash layers should it not be
@@ -192,26 +271,38 @@ comp_render_gfx_add_view(struct comp_render_dispatch_data *data,
  * passes of the targets which set the layout.
  *
  * The render passes of @p comp_render_dispatch_data::views::rtr must be created
- * with a final_layout of VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL or there will
+ * with a final_layout of `VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL` or there will
  * be validation errors.
  *
  * Expected layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Scratch images: Any (as per the @ref render_gfx_render_pass)
- * * Target image: Any (as per the @ref render_gfx_render_pass)
+ *
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Scratch images: Any (as per the @ref render_gfx_render_pass)
+ * - Target image: Any (as per the @ref render_gfx_render_pass)
  *
  * After call layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Scratch images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Target image: What the render pass of @p rtr specifies.
  *
- * @ingroup comp_util
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Scratch images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Target image: What the render pass of @p rtr specifies.
+ *
+ * @note Swapchains in the @p layers must implement @ref comp_swapchain in
+ * addition to just @ref xrt_swapchain, as this function downcasts to @ref comp_swapchain !
+ *
+ * @param rr GFX render object
+ * @param[in] layers Layers to render, see note.
+ * @param[in] layer_count Number of elements in @p layers array.
+ * @param[in] d Common render dispatch data
  */
 void
 comp_render_gfx_dispatch(struct render_gfx *rr,
                          const struct comp_layer *layers,
                          const uint32_t layer_count,
                          const struct comp_render_dispatch_data *d);
+
+/* end of comp_render_gfx group */
+
+/*! @} */
 
 
 /*
@@ -220,6 +311,27 @@ comp_render_gfx_dispatch(struct render_gfx *rr,
  *
  */
 
+/*!
+ *
+ * @defgroup comp_render_cs
+ *
+ * CS renderer control and dispatch - uses compute shaders
+ *
+ * Depends on @ref render_compute (often called `crc`)
+ *
+ * @ingroup comp_render
+ * @{
+ */
+
+/*!
+ * Initialize structure for use of the CS renderer.
+ *
+ * @param data Common render dispatch data. Will be zeroed and initialized.
+ * @param target_image Image to render into
+ * @param target_unorm_view Corresponding image view
+ * @param fast_path Whether we will use the "fast path" avoiding layer squashing.
+ * @param do_timewarp Whether timewarp (reprojection) will be performed.
+ */
 static inline void
 comp_render_cs_initial_init(struct comp_render_dispatch_data *data,
                             VkImage target_image,
@@ -236,6 +348,28 @@ comp_render_cs_initial_init(struct comp_render_dispatch_data *data,
 	data->cs.target_unorm_view = target_unorm_view;
 }
 
+/*!
+ * Add view to the common data, as required by the CS renderer.
+ *
+ * @param[in,out] data Common render dispatch data, will be updated
+ * @param world_pose New world pose of this view.
+ *        Populates @ref comp_render_view_data::world_pose
+ * @param eye_pose New eye pose of this view
+ *        Populates @ref comp_render_view_data::eye_pose
+ * @param fov Assigned to fov in the view data, and used to compute @ref comp_render_view_data::target_pre_transform
+ *        Populates @ref comp_render_view_data::fov
+ * @param layer_viewport_data Where in the image to render the view
+ *        Populates @ref comp_render_view_data::layer_viewport_data
+ * @param layer_norm_rect How to transform when sampling from the scratch image.
+ *        Populates @ref comp_render_view_data::layer_norm_rect
+ * @param image Scratch image for this view
+ *        Populates @ref comp_render_view_data::image
+ * @param srgb_view SRGB image view into the scratch image
+ *        Populates @ref comp_render_view_data::srgb_view
+ * @param unorm_view UNORM image view into the scratch image, CS specific
+ * @param target_viewport_data Distortion target viewport data (aka target)
+ *        Populates @ref comp_render_view_data::target_viewport_data
+ */
 static inline void
 comp_render_cs_add_view(struct comp_render_dispatch_data *data,
                         const struct xrt_pose *world_pose,
@@ -269,7 +403,7 @@ comp_render_cs_add_view(struct comp_render_dispatch_data *data,
 }
 
 /*!
- * Helper to dispatch the layer squasher for a single view.
+ * Dispatch the layer squasher for a single view.
  *
  * All source layer images and target image needs to be in the correct image
  * layout, no barrier is inserted at all. The @p view_index argument is needed
@@ -277,8 +411,24 @@ comp_render_cs_add_view(struct comp_render_dispatch_data *data,
  * select left/right data from various layers.
  *
  * Expected layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Target images: VK_IMAGE_LAYOUT_GENERAL
+ *
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Target images: `VK_IMAGE_LAYOUT_GENERAL`
+ *
+ * @note Swapchains in the @p layers must implement @ref comp_swapchain in
+ * addition to just @ref xrt_swapchain, as this function downcasts to @ref comp_swapchain !
+ *
+ * @param crc Compute renderer object
+ * @param view_index Index of the view
+ * @param layers Layers to render, see note.
+ * @param layer_count Number of elements in @p layers array.
+ * @param pre_transform
+ * @param world_pose
+ * @param eye_pose
+ * @param target_image
+ * @param target_image_view
+ * @param target_view
+ * @param do_timewarp
  */
 void
 comp_render_cs_layer(struct render_compute *crc,
@@ -294,21 +444,30 @@ comp_render_cs_layer(struct render_compute *crc,
                      bool do_timewarp);
 
 /*!
- * Helper function to dispatch the layer squasher, works on any number of views.
+ * Dispatch the layer squasher, on any number of views.
  *
  * All source layer images needs to be in the correct image layout, no barrier
- * is inserted for them. The target images are barried from undefined to general
+ * is inserted for them. The target images are barriered from undefined to general
  * so they can be written to, then to the laying defined by @p transition_to.
  *
  * Expected layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Target images: Any
+ *
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Target images: Any
  *
  * After call layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Target images: @p transition_to
  *
- * @ingroup comp_util
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Target images: @p transition_to
+ *
+ * @note Swapchains in the @p layers must implement @ref comp_swapchain in
+ * addition to just @ref xrt_swapchain, as this function downcasts to @ref comp_swapchain !
+ *
+ * @param crc Compute renderer object
+ * @param[in] layers Layers to render, see note.
+ * @param[in] layer_count Number of elements in @p layers array.
+ * @param[in] d Common render dispatch data
+ * @param[in] transition_to Desired image layout for target images
  */
 void
 comp_render_cs_layers(struct render_compute *crc,
@@ -318,6 +477,8 @@ comp_render_cs_layers(struct render_compute *crc,
                       VkImageLayout transition_to);
 
 /*!
+ * Write commands to @p crc to do a full composition with distortion.
+ *
  * Helper function that takes a set of layers, new device poses, a scratch
  * images and writes the needed commands to the @ref render_compute to do a full
  * composition with distortion. The scratch images are optionally used to squash
@@ -326,16 +487,25 @@ comp_render_cs_layers(struct render_compute *crc,
  *
  *
  * Expected layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Scratch images: Any
- * * Target image: Any
+ *
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Scratch images: Any
+ * - Target image: Any
  *
  * After call layouts:
- * * Layer images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Scratch images: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
- * * Target image: VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
  *
- * @ingroup comp_util
+ * - Layer images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Scratch images: `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+ * - Target image: `VK_IMAGE_LAYOUT_PRESENT_SRC_KHR`
+ *
+ * @note Swapchains in the @p layers must implement @ref comp_swapchain in
+ * addition to just @ref xrt_swapchain, as this function downcasts to @ref comp_swapchain !
+ *
+ * @param crc Compute renderer object
+ * @param[in] layers Layers to render, see note.
+ * @param[in] layer_count Number of elements in @p layers array.
+ * @param[in] d Common render dispatch data
+ *
  */
 void
 comp_render_cs_dispatch(struct render_compute *crc,
@@ -343,6 +513,8 @@ comp_render_cs_dispatch(struct render_compute *crc,
                         const uint32_t layer_count,
                         const struct comp_render_dispatch_data *d);
 
+/* end of comp_render_cs group */
+/*! @} */
 
 #ifdef __cplusplus
 }
