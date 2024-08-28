@@ -18,7 +18,7 @@ extern "C" {
 
 
 /*!
- * Helper to match various strings of a xrt_prober_device to
+ * Helper to match various strings of an xrt_prober_device to
  * @public @memberof xrt_prober
  */
 bool
