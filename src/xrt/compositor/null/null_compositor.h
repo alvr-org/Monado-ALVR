@@ -114,7 +114,7 @@ struct null_compositor
  */
 
 /*!
- * Convenience function to convert a xrt_compositor to a null_compositor.
+ * Convenience function to convert an xrt_compositor to a null_compositor.
  * (Down-cast helper.)
  *
  * @private @memberof null_compositor
