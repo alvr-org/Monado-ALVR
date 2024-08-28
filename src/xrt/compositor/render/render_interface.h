@@ -768,6 +768,8 @@ render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp);
  * (@ref render_gfx_target_resources), the target points to one render pass and
  * it's pipelines (@ref render_gfx_render_pass). It is up to the code using
  * these to do reuse of render passes and ensure they match.
+ *
+ * @see comp_render_gfx
  */
 struct render_gfx_target_resources
 {
@@ -814,6 +816,8 @@ render_gfx_target_resources_close(struct render_gfx_target_resources *rtr);
 /*!
  * A rendering is used to create command buffers needed to do one frame of
  * compositor rendering, it holds onto resources used by the command buffer.
+ *
+ * @see comp_render_gfx
  */
 struct render_gfx
 {
@@ -1095,6 +1099,8 @@ render_gfx_layer_quad(struct render_gfx *rr, bool premultiplied_alpha, VkDescrip
  * A compute rendering is used to create command buffers needed to do one frame
  * of compositor rendering using compute shaders, it holds onto resources used
  * by the command buffer.
+ *
+ * @see comp_render_cs
  */
 struct render_compute
 {
