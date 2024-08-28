@@ -1021,7 +1021,7 @@ render_gfx_end(struct render_gfx *rr)
 }
 
 void
-render_gfx_close(struct render_gfx *rr)
+render_gfx_fini(struct render_gfx *rr)
 {
 	struct vk_bundle *vk = vk_from_rr(rr);
 	struct render_resources *r = rr->r;

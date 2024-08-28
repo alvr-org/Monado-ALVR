@@ -1244,9 +1244,9 @@ comp_renderer_draw(struct comp_renderer *r)
 	 */
 
 	if (use_compute) {
-		render_compute_close(&crc);
+		render_compute_fini(&crc);
 	} else {
-		render_gfx_close(&rr);
+		render_gfx_fini(&rr);
 	}
 
 

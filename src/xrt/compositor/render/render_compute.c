@@ -371,7 +371,7 @@ render_compute_end(struct render_compute *crc)
 }
 
 void
-render_compute_close(struct render_compute *crc)
+render_compute_fini(struct render_compute *crc)
 {
 	assert(crc->r != NULL);
 

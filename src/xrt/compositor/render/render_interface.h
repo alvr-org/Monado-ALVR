@@ -862,7 +862,7 @@ render_gfx_end(struct render_gfx *rr);
  * @public @memberof render_gfx
  */
 void
-render_gfx_close(struct render_gfx *rr);
+render_gfx_fini(struct render_gfx *rr);
 
 
 /*
@@ -1249,7 +1249,7 @@ render_compute_init(struct render_compute *crc, struct render_resources *r);
  * @public @memberof render_compute
  */
 void
-render_compute_close(struct render_compute *crc);
+render_compute_fini(struct render_compute *crc);
 
 /*!
  * Begin the compute command buffer building, takes the vk_bundle's pool lock
