@@ -169,7 +169,7 @@ struct comp_compositor
  */
 
 /*!
- * Convenience function to convert a xrt_compositor to a comp_compositor.
+ * Convenience function to convert an xrt_compositor to a comp_compositor.
  *
  * @private @memberof comp_compositor
  */

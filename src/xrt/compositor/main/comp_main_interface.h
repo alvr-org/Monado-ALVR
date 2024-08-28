@@ -6,7 +6,7 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_main
  *
- * Formerly a header for defining a XRT graphics provider.
+ * Formerly a header for defining an XRT graphics provider.
  */
 
 #pragma once
