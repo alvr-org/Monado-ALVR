@@ -11,9 +11,12 @@
 #pragma once
 
 #include "xrt/xrt_defines.h"
-#include "xrt/xrt_vulkan_includes.h"
+#include "xrt/xrt_vulkan_includes.h" // IWYU pragma: keep
 
 #include "render/render_interface.h"
+#include "util/u_misc.h"
+
+#include <assert.h>
 
 
 #ifdef __cplusplus
@@ -21,6 +24,9 @@ extern "C" {
 #endif
 
 struct comp_layer;
+struct render_compute;
+struct render_gfx;
+struct render_gfx_target_resources;
 
 
 /*!
