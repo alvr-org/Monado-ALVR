@@ -76,7 +76,7 @@ ulv2_device(struct xrt_device *xdev)
 }
 
 
-// Roughly, take the Leap hand joint, do some coordinate conversions, and save it in a xrt_hand_joint_value
+// Roughly, take the Leap hand joint, do some coordinate conversions, and save it in an xrt_hand_joint_value
 static void
 ulv2_process_joint(
     Leap::Vector jointpos, Leap::Matrix jointbasis, float width, int side, struct xrt_hand_joint_value *joint)
