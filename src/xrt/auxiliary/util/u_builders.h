@@ -202,7 +202,7 @@ u_builder_roles_helper_open_system(struct xrt_builder *xb,
  * the @ref u_builder should use this function for xrt_builder::open_system.
  *
  * When using this function the builder must have @ref u_builder and implement
- * the @ref u_builder::open_static_roles function, see documentation for
+ * the @ref u_builder::open_system_static_roles function, see documentation for
  * @ref u_builder_open_system_fn about requirements.
  *
  * @ingroup aux_util
