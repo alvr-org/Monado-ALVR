@@ -419,7 +419,7 @@ do_projection_layer(struct render_gfx *rr,
 	    &descriptor_set);                              // out_descriptor_set
 	VK_CHK_AND_RET(ret, "render_gfx_layer_projection_alloc_and_write");
 
-	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "render_gfx layer quad descriptor set");
+	VK_NAME_DESCRIPTOR_SET(vk, descriptor_set, "render_gfx layer proj descriptor set");
 
 	add_layer(state, layer_data, descriptor_set);
 
