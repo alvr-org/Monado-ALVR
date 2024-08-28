@@ -855,7 +855,7 @@ enum xrt_input_type
 /*!
  * @brief Extract the xrt_input_type from an xrt_input_name.
  *
- * @param name A xrt_input_name value
+ * @param name An xrt_input_name value
  *
  * @relates xrt_input_name
  * @returns @ref xrt_input_type
@@ -866,7 +866,7 @@ enum xrt_input_type
 /*!
  * @brief Extract the xrt_input_name id from an xrt_input_name.
  *
- * @param name A xrt_input_name value
+ * @param name An xrt_input_name value
  *
  * @relates xrt_input_name
  * @returns @ref xrt_input_type

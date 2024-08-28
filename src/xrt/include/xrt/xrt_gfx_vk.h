@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Header defining a XRT graphics provider.
+ * @brief  Header defining an XRT graphics provider.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup xrt_iface
  */
