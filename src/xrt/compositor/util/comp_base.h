@@ -41,22 +41,23 @@ struct comp_frame_params
  * A simple compositor base that handles a lot of things for you.
  *
  * Things it handles for you:
- * * App swapchains
- * * App fences
- * * Vulkan bundle (needed for swapchains and fences)
- * * Layer tracking, not @ref xrt_compositor::layer_commit
- * * Wait function, not @ref xrt_compositor::predict_frame
  *
- * Functions it does not handle:
- * * @ref xrt_compositor::begin_session
- * * @ref xrt_compositor::end_session
- * * @ref xrt_compositor::predict_frame
- * * @ref xrt_compositor::mark_frame
- * * @ref xrt_compositor::begin_frame
- * * @ref xrt_compositor::discard_frame
- * * @ref xrt_compositor::layer_commit
- * * @ref xrt_compositor::poll_events
- * * @ref xrt_compositor::destroy
+ * - App swapchains
+ * - App fences
+ * - Vulkan bundle (needed for swapchains and fences)
+ * - Layer tracking, not @ref xrt_compositor::layer_commit
+ * - Wait function, not @ref xrt_compositor::predict_frame
+ *
+ * Functions it does not implement:
+ *
+ * - @ref xrt_compositor::begin_session
+ * - @ref xrt_compositor::end_session
+ * - @ref xrt_compositor::predict_frame
+ * - @ref xrt_compositor::mark_frame
+ * - @ref xrt_compositor::begin_frame
+ * - @ref xrt_compositor::discard_frame
+ * - @ref xrt_compositor::layer_commit
+ * - @ref xrt_compositor::destroy
  *
  * Partially implements @ref xrt_compositor_native, meant to serve as
  * the base of a main compositor implementation.
