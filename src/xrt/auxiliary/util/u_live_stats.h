@@ -82,7 +82,7 @@ void
 u_ls_ns_get_and_reset(struct u_live_stats_ns *uls, uint64_t *out_median, uint64_t *out_mean, uint64_t *out_worst);
 
 /*!
- * Prints a header that looks nice before @ref u_ls_print_and_reset,
+ * Prints a header that looks nice before @ref u_ls_ns_print_and_reset,
  * adding details about columns. Doesn't include any newlines.
  *
  * @public @memberof u_live_stats_ns
