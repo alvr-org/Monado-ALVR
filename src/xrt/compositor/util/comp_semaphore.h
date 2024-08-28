@@ -50,7 +50,7 @@ struct comp_semaphore
  */
 
 /*!
- * Convenience function to convert a xrt_compositor_semaphore to a comp_semaphore.
+ * Convenience function to convert an xrt_compositor_semaphore to a comp_semaphore.
  *
  * @ingroup comp_util
  * @private @memberof comp_semaphore

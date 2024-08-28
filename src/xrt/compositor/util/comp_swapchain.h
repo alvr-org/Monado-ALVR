@@ -116,7 +116,7 @@ struct comp_swapchain
  */
 
 /*!
- * Convenience function to convert a xrt_swapchain to a comp_swapchain.
+ * Convenience function to convert an xrt_swapchain to a comp_swapchain.
  *
  * @ingroup comp_util
  * @private @memberof comp_swapchain

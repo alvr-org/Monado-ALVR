@@ -94,7 +94,7 @@ struct comp_base
  */
 
 /*!
- * Convenience function to convert a xrt_compositor to a comp_base.
+ * Convenience function to convert an xrt_compositor to a comp_base.
  *
  * @private @memberof comp_base
  */
