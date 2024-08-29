@@ -201,6 +201,11 @@ android {
             // Gradle plugin produces proguard-android-optimize.txt from @Keep annotations
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            minifyEnabled false
+            debuggable true
+            jniDebuggable true
+        }
     }
 
     externalNativeBuild {
@@ -252,6 +257,12 @@ android {
     }
     buildFeatures {
         buildConfig true
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("debug")) {
+        packaging.jniLibs.keepDebugSymbols.add("**")
     }
 }
 
