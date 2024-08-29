@@ -13,8 +13,8 @@ if(XRT_INSTALL_ABSOLUTE_SYSTEMD_UNIT_FILES)
 endif()
 
 # Create unit files
-configure_file(@SOCKET_INPUT@ "@CMAKE_CURRENT_BINARY_DIR@/@UNIT_NAME@.socket")
-configure_file(@SERVICE_INPUT@ "@CMAKE_CURRENT_BINARY_DIR@/@UNIT_NAME@.service")
+configure_file("@SOCKET_INPUT@" "@CMAKE_CURRENT_BINARY_DIR@/@UNIT_NAME@.socket")
+configure_file("@SERVICE_INPUT@" "@CMAKE_CURRENT_BINARY_DIR@/@UNIT_NAME@.service")
 
 # Install them
 file(

@@ -7,23 +7,25 @@
 # 2019-2022 Rylie Pavlik <rylie.pavlik@collabora.com> <rylie@ryliepavlik.com>
 
 # Get input from main CMake script
-set(MANIFEST_TEMPLATE @_genmanifest_MANIFEST_TEMPLATE@)
-set(DESTINATION @_genmanifest_DESTINATION@)
-set(OUT_FILENAME @_genmanifest_OUT_FILENAME@)
-set(CONFIGURE_OUTPUT_FILE @_genmanifest_INTERMEDIATE_MANIFEST@)
+set(MANIFEST_TEMPLATE "@_genmanifest_MANIFEST_TEMPLATE@")
+set(DESTINATION "@_genmanifest_DESTINATION@")
+set(OUT_FILENAME "@_genmanifest_OUT_FILENAME@")
+set(CONFIGURE_OUTPUT_FILE "@_genmanifest_INTERMEDIATE_MANIFEST@")
 set(IS_INSTALL @_genmanifest_IS_INSTALL@)
 set(MANIFEST_DESCRIPTION "@_genmanifest_MANIFEST_DESCRIPTION@")
-set(TARGET @_genmanifest_TARGET@)
+set(TARGET "@_genmanifest_TARGET@")
 # Target install dir relative to install prefix
-set(RELATIVE_TARGET_DIR @_genmanifest_RELATIVE_TARGET_DIR@)
+set(RELATIVE_TARGET_DIR "@_genmanifest_RELATIVE_TARGET_DIR@")
 # Target so/dll filename
-set(TARGET_FILENAME @TARGET_FILENAME@)
+set(TARGET_FILENAME "@TARGET_FILENAME@")
 # The relative path from the manifest dir to the library. Optional.
 set(TARGET_DIR_RELATIVE_TO_MANIFEST
-    @_genmanifest_TARGET_DIR_RELATIVE_TO_MANIFEST@)
+    "@_genmanifest_TARGET_DIR_RELATIVE_TO_MANIFEST@")
 # Config option
-set(ABSOLUTE_TARGET_PATH @_genmanifest_ABSOLUTE_TARGET_PATH@)
-set(LIBMONADO @LIBMONADO@)
+set(ABSOLUTE_TARGET_PATH "@_genmanifest_ABSOLUTE_TARGET_PATH@")
+if (NOT LIBMONADO)
+    set(LIBMONADO "@LIBMONADO@")
+endif()
 
 if(TARGET_PATH)
     # This is at build time, not install time
@@ -33,14 +35,14 @@ elseif(ABSOLUTE_TARGET_PATH)
     message(
         STATUS
             "Installing ${MANIFEST_DESCRIPTION} with absolute path to library")
-    set(TARGET_PATH ${RELATIVE_TARGET_DIR}/${TARGET_FILENAME})
+    set(TARGET_PATH "${RELATIVE_TARGET_DIR}/${TARGET_FILENAME}")
     if(NOT IS_ABSOLUTE ${RELATIVE_TARGET_DIR})
-        set(TARGET_PATH ${CMAKE_INSTALL_PREFIX}/${TARGET_PATH})
+        set(TARGET_PATH "${CMAKE_INSTALL_PREFIX}/${TARGET_PATH}")
     endif()
     if(LIBMONADO)
-        set(LIBMONADO ${RELATIVE_TARGET_DIR}/${LIBMONADO})
+        set(LIBMONADO "${RELATIVE_TARGET_DIR}/${LIBMONADO}")
         if(NOT IS_ABSOLUTE ${RELATIVE_TARGET_DIR})
-            set(LIBMONADO ${CMAKE_INSTALL_PREFIX}/${LIBMONADO})
+            set(LIBMONADO "${CMAKE_INSTALL_PREFIX}/${LIBMONADO}")
         endif()
     endif()
 elseif(TARGET_DIR_RELATIVE_TO_MANIFEST)
@@ -49,10 +51,10 @@ elseif(TARGET_DIR_RELATIVE_TO_MANIFEST)
         STATUS
             "Installing ${MANIFEST_DESCRIPTION} with JSON-relative path to library"
     )
-    set(TARGET_PATH ${TARGET_DIR_RELATIVE_TO_MANIFEST}/${TARGET_FILENAME})
+    set(TARGET_PATH "${TARGET_DIR_RELATIVE_TO_MANIFEST}/${TARGET_FILENAME}")
     if(LIBMONADO)
-        get_filename_component(LIBMONADO ${LIBMONADO} NAME)
-        set(LIBMONADO ${TARGET_DIR_RELATIVE_TO_MANIFEST}/${LIBMONADO})
+        get_filename_component(LIBMONADO "${LIBMONADO}" NAME)
+        set(LIBMONADO "${TARGET_DIR_RELATIVE_TO_MANIFEST}/${LIBMONADO}")
     endif()
 else()
     # Unqualified filename: requires it exist on the system shared library search path.
@@ -60,9 +62,9 @@ else()
         STATUS
             "Installing ${MANIFEST_DESCRIPTION} with unqualified library filename (uses system search path)"
     )
-    set(TARGET_PATH ${TARGET_FILENAME})
+    set(TARGET_PATH "${TARGET_FILENAME}")
     if(LIBMONADO)
-        get_filename_component(LIBMONADO ${LIBMONADO} NAME)
+        get_filename_component(LIBMONADO "${LIBMONADO}" NAME)
     endif()
 endif()
 
@@ -75,7 +77,7 @@ if(WIN32)
     string(REPLACE "/" [[\\]] TARGET_PATH ${TARGET_PATH})
 endif()
 
-set(target_path ${TARGET_PATH})
+set(target_path "${TARGET_PATH}")
 # Create manifest
 configure_file("${MANIFEST_TEMPLATE}" "${CONFIGURE_OUTPUT_FILE}")
 

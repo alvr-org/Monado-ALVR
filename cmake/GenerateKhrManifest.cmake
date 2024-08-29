@@ -77,7 +77,7 @@ function(generate_khr_manifest_buildtree)
         message(FATAL_ERROR "Need MANIFEST_DESCRIPTION specified!")
     endif()
     if(_genmanifest_LIBMONADO)
-        set(_libmonado $<TARGET_FILE:${_genmanifest_LIBMONADO}>)
+        set(_libmonado "$<TARGET_FILE:${_genmanifest_LIBMONADO}>")
     endif()
 
     # Set template values
@@ -101,6 +101,7 @@ function(generate_khr_manifest_buildtree)
             "${_script}" DEPENDS "${_script}"
         COMMENT
             "Generating ${_genmanifest_MANIFEST_DESCRIPTION} named ${_genmanifest_OUT_FILE} for build tree usage"
+        VERBATIM
     )
 endfunction()
 
@@ -144,14 +145,14 @@ function(generate_khr_manifest_at_install)
     set(_genmanifest_IS_INSTALL ON)
     # Template value
     set(TARGET_FILENAME
-        ${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_TARGET}${CMAKE_SHARED_MODULE_SUFFIX}
+        "${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_TARGET}${CMAKE_SHARED_MODULE_SUFFIX}"
     )
     if(_genmanifest_LIBMONADO)
-        set(LIBMONADO ${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_LIBMONADO}${CMAKE_SHARED_MODULE_SUFFIX})
+        set(LIBMONADO "${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_LIBMONADO}${CMAKE_SHARED_MODULE_SUFFIX}")
     endif()
 
     set(_script
-        ${CMAKE_CURRENT_BINARY_DIR}/make_manifest_${_genmanifest_TARGET}.cmake)
+        "${CMAKE_CURRENT_BINARY_DIR}/make_manifest_${_genmanifest_TARGET}.cmake")
     configure_file("${_KHR_MANIFEST_SCRIPT}" "${_script}" @ONLY)
     install(SCRIPT "${_script}" COMPONENT ${_genmanifest_COMPONENT})
 endfunction()

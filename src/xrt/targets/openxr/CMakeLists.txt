@@ -42,7 +42,7 @@ if(NOT WIN32)
 		APPEND_STRING
 		PROPERTY
 			LINK_FLAGS
-			"-u xrNegotiateLoaderRuntimeInterface -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/libopenxr.version"
+			"-u xrNegotiateLoaderRuntimeInterface -Wl,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/libopenxr.version\""
 		)
 	# Re-link if the version script changes.
 	set_property(
