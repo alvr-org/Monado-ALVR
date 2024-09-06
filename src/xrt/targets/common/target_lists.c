@@ -11,6 +11,9 @@
 #include "target_lists.h"
 #include "target_builder_interface.h"
 
+#ifdef XRT_BUILD_DRIVER_ALVR
+#include "alvr/alvr_interface.h"
+#endif
 
 #ifdef XRT_BUILD_DRIVER_ARDUINO
 #include "arduino/arduino_interface.h"
@@ -205,6 +208,10 @@ struct xrt_prober_entry *target_entry_lists[] = {
 };
 
 xrt_auto_prober_create_func_t target_auto_list[] = {
+#ifdef XRT_BUILD_DRIVER_ALVR
+    alvr_create_auto_prober,
+#endif
+
 #ifdef XRT_BUILD_DRIVER_PSVR
     psvr_create_auto_prober,
 #endif

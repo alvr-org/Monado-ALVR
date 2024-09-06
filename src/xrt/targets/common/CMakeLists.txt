@@ -5,11 +5,26 @@
 # Lists
 #
 
+# add_subdirectory("/home/duck/devel/alvr_render" "alvr_render")
+
+# add_library(libalvr STATIC IMPORTED)
+# set_target_properties(libalvr PROPERTIES IMPORTED_LOCATION /home/duck/devel/alvr_intact/target/debug/libalvr_server.so)
+
+add_library(x264 SHARED IMPORTED)
+set_target_properties(x264 PROPERTIES IMPORTED_LOCATION /usr/lib64/libx264.so)
+
+add_library(vk SHARED IMPORTED)
+set_target_properties(vk PROPERTIES IMPORTED_LOCATION /usr/lib64/libvulkan.so.1)
+
+# set_target_properties(libpthread PROPERTIES INTERFACE_INCLUDE_DIRECTORIES /usr/include)
+
 add_library(
 	target_lists STATIC target_builder_interface.h target_builder_legacy.c target_lists.c
 			    target_lists.h
 	)
-target_link_libraries(target_lists PRIVATE xrt-interfaces aux_util aux_util_sink drv_includes)
+target_link_libraries(target_lists PRIVATE xrt-interfaces aux_util aux_util_sink drv_includes x264 AlvrRender vk)
+
+get_property(alvr_inc_dirs TARGET AlvrRender PROPERTY INCLUDE_DIRECTORIES)
 target_include_directories(target_lists PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 ###
@@ -67,6 +82,10 @@ endif()
 ###
 # Drivers
 #
+
+if(XRT_BUILD_DRIVER_ALVR)
+	target_link_libraries(target_lists PRIVATE drv_alvr)
+endif()
 
 if(XRT_BUILD_DRIVER_ARDUINO)
 	target_link_libraries(target_lists PRIVATE drv_arduino)
@@ -206,7 +225,8 @@ endif()
 #
 
 if(XRT_MODULE_COMPOSITOR_MAIN OR XRT_MODULE_COMPOSITOR_NULL)
-	add_library(target_instance STATIC target_instance.c)
+	set_source_files_properties(target_alvr_comp.cpp PROPERTIES COMPILE_FLAGS -std=c++20)
+	add_library(target_instance STATIC target_instance.c target_alvr_comp.cpp)
 	target_link_libraries(
 		target_instance
 		PRIVATE
@@ -216,7 +236,7 @@ if(XRT_MODULE_COMPOSITOR_MAIN OR XRT_MODULE_COMPOSITOR_NULL)
 			target_lists
 			drv_includes
 		)
-	target_include_directories(target_instance PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_include_directories(target_instance PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${alvr_inc_dirs})
 
 	if(XRT_MODULE_COMPOSITOR_MAIN)
 		target_link_libraries(target_instance PRIVATE comp_main)

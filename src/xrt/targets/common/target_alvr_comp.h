@@ -1,0 +1,1 @@
+struct comp_target_factory alvr_create_target_factory(void);

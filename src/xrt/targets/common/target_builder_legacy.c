@@ -56,6 +56,10 @@ static const char *driver_list[] = {
     "ns",
 #endif
 
+#ifdef XRT_BUILD_DRIVER_ALVR
+    "alvr",
+#endif
+
 #ifdef XRT_BUILD_DRIVER_ANDROID
     "android",
 #endif

@@ -38,6 +38,7 @@
 // the xlib header is notoriously polluting.
 #undef Status
 #undef Bool
+#undef None
 #endif
 
 #ifdef __cplusplus

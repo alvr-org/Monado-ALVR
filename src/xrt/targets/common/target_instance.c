@@ -7,6 +7,7 @@
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 
+#include "main/comp_target.h"
 #include "xrt/xrt_space.h"
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_config_build.h"
@@ -25,6 +26,7 @@
 #endif
 
 #include "target_instance_parts.h"
+#include "target_alvr_comp.h"
 
 #include <assert.h>
 
@@ -109,7 +111,8 @@ t_instance_create_system(struct xrt_instance *xinst,
 
 #ifdef XRT_MODULE_COMPOSITOR_MAIN
 	if (xret == XRT_SUCCESS && xsysc == NULL) {
-		xret = comp_main_create_system_compositor(head, NULL, &xsysc);
+		struct comp_target_factory alvr_fac = alvr_create_target_factory();
+		xret = comp_main_create_system_compositor(head, &alvr_fac, &xsysc);
 	}
 #else
 	if (!use_null) {

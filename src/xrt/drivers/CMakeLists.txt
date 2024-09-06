@@ -8,6 +8,21 @@ set(ENABLED_DRIVERS)
 add_library(drv_includes INTERFACE)
 target_include_directories(drv_includes INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
+if(XRT_BUILD_DRIVER_ALVR)
+	# TODO: Only requires eventmanager header actually
+	add_subdirectory("${CMAKE_SOURCE_DIR}/../alvr_render" "alvr_render2")
+	get_property(alvr_inc_dirs TARGET AlvrRender PROPERTY INCLUDE_DIRECTORIES)
+
+	add_library(
+		drv_alvr STATIC alvr/alvr.cpp alvr/alvr_interface.h
+				   alvr/alvr_prober.c
+		)
+	target_link_libraries(drv_alvr PRIVATE xrt-interfaces aux_util aux_os)
+	target_include_directories(drv_alvr PRIVATE ${alvr_inc_dirs})
+	list(APPEND ENABLED_DRIVERS alvr)
+endif()
+
+
 if(XRT_BUILD_DRIVER_ARDUINO)
 	add_library(
 		drv_arduino STATIC arduino/arduino_device.c arduino/arduino_interface.h
