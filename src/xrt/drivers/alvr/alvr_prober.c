@@ -62,9 +62,8 @@ alvr_auto_prober_autoprobe(struct xrt_auto_prober *xap,
 struct xrt_auto_prober *
 alvr_create_auto_prober(void)
 {
-	printf("kurwa auto_prober created");
 	struct alvr_auto_prober *ap = U_TYPED_CALLOC(struct alvr_auto_prober);
-	ap->base.name = "Sample HMD Auto-Prober";
+	ap->base.name = "ALVR HMD Auto-Prober";
 	ap->base.destroy = alvr_auto_prober_destroy;
 	ap->base.lelo_dallas_autoprobe = alvr_auto_prober_autoprobe;
 

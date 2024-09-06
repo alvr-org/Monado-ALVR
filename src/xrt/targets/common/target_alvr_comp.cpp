@@ -52,9 +52,9 @@ alvr_target_init_post_vulkan(comp_target *ct, uint32_t pref_w, uint32_t pref_h)
 
 	vk_bundle *vk = get_vk(ct);
 
-	auto lock_mutex = [](MutexProxy *m) { os_mutex_lock(reinterpret_cast<os_mutex *>(m)); };
+	auto lock_mutex = [](MutexProxy *m) { os_mutex_lock(reinterpret_cast<os_mutex *>(m->mutex)); };
 
-	auto unlock_mutex = [](MutexProxy *m) { os_mutex_unlock(reinterpret_cast<os_mutex *>(m)); };
+	auto unlock_mutex = [](MutexProxy *m) { os_mutex_unlock(reinterpret_cast<os_mutex *>(m->mutex)); };
 
 	AlvrVkInfo info = {.instance = vk->instance,
 	                   .version = vk->version,
@@ -109,7 +109,6 @@ alvr_target_create_images(comp_target *ct, const comp_target_create_images_info 
 
 	ct->semaphores.render_complete_is_timeline = true;
 	ct->semaphores.render_complete = expt.sem;
-
 
 	// TODO: This
 	ct->format = VK_FORMAT_R8G8B8A8_UNORM;

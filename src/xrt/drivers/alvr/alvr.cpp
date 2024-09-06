@@ -31,18 +31,16 @@
 #include "util/u_visibility_mask.h"
 #include "xrt/xrt_results.h"
 
+#include <array>
 #include <stdio.h>
+#include <mutex>
 
 #include <EventManager.hpp>
-
-/*
- *
- * Structs and defines.
- *
- */
+#include <Encoder.hpp>
+#include <utils.hpp>
 
 /*!
- * A alvr HMD device.
+ * An alvr HMD device.
  *
  * @implements xrt_device
  */
@@ -50,12 +48,13 @@ struct alvr_hmd
 {
 	struct xrt_device base;
 
-	struct xrt_pose pose;
-
 	enum u_logging_level log_level;
 
 	// has built-in mutex so thread safe
 	struct m_relation_history *relation_hist;
+
+	std::mutex viewMutex;
+	std::array<xrt_pose, 2> viewPoses;
 };
 
 
@@ -125,8 +124,9 @@ alvr_hmd_get_tracked_pose(struct xrt_device *xdev,
 		math_quat_normalize(&relation.pose.orientation);
 	}
 
-	HMD_ERROR(hmd, "%f, %f, %f, %u", relation.pose.position.x, relation.pose.orientation.x,
-	          relation.pose.orientation.y, m_relation_history_get_size(hmd->relation_hist));
+	// HMD_ERROR(hmd, "%f, %f, %f, %u", relation.pose.position.x, relation.pose.orientation.x,
+	//           relation.pose.orientation.y, m_relation_history_get_size(hmd->relation_hist));
+
 	*out_relation = relation;
 }
 
@@ -139,18 +139,17 @@ alvr_hmd_get_view_poses(struct xrt_device *xdev,
                         struct xrt_fov *out_fovs,
                         struct xrt_pose *out_poses)
 {
-	/*
-	 * For HMDs you can call this function or directly set
-	 * the `get_view_poses` function on the device to it.
-	 */
-	u_device_get_view_poses(  //
-	    xdev,                 //
-	    default_eye_relation, //
-	    at_timestamp_ns,      //
-	    view_count,           //
-	    out_head_relation,    //
-	    out_fovs,             //
-	    out_poses);           //
+	auto& hmd = *alvr_hmd(xdev);
+
+	xrt_device_get_tracked_pose(xdev, XRT_INPUT_GENERIC_HEAD_POSE, at_timestamp_ns, out_head_relation);
+
+	std::lock_guard mutexGuard_(hmd.viewMutex);
+
+	for (uint32_t i = 0; i < view_count && i < ARRAY_SIZE(xdev->hmd->views); i++) {
+		out_fovs[i] = xdev->hmd->distortion.fov[i];
+	}
+	out_poses[0] = hmd.viewPoses[0];
+	out_poses[1] = hmd.viewPoses[1];
 }
 
 xrt_result_t
@@ -164,35 +163,49 @@ alvr_hmd_get_visibility_mask(struct xrt_device *xdev,
 	return XRT_SUCCESS;
 }
 
+xrt_vec3
+xrt_vec3_from_alvr_vec3(float *avec)
+{
+	return xrt_vec3{
+	    .x = avec[0],
+	    .y = avec[1],
+	    .z = avec[2],
+	};
+}
+
+xrt_pose
+xrt_pose_from_alvr_pose(AlvrPose pose)
+{
+	return xrt_pose{
+	    .orientation{
+	        .x = pose.orientation.x,
+	        .y = pose.orientation.y,
+	        .z = pose.orientation.z,
+	        .w = pose.orientation.w,
+	    },
+	    .position = xrt_vec3_from_alvr_vec3(pose.position),
+	};
+}
+
+xrt_fov
+xrt_fov_from_alvr_fov(AlvrFov fov)
+{
+	return xrt_fov{
+	    .angle_left = fov.left,
+	    .angle_right = fov.right,
+	    .angle_up = fov.up,
+	    .angle_down = fov.down,
+	};
+}
+
 xrt_space_relation
 xrt_rel_from_alvr_rel(AlvrSpaceRelation arel)
 {
 	return xrt_space_relation{
 	    .relation_flags = XRT_SPACE_RELATION_BITMASK_ALL,
-	    .pose =
-	        {
-	            .orientation{
-	                .x = arel.pose.orientation.x,
-	                .y = arel.pose.orientation.y,
-	                .z = arel.pose.orientation.z,
-	                .w = arel.pose.orientation.w,
-	            },
-	            .position{
-	                .x = arel.pose.position[0],
-	                .y = arel.pose.position[1],
-	                .z = arel.pose.position[2],
-	            },
-	        },
-	    .linear_velocity{
-	        .x = arel.linear_velocity[0],
-	        .y = arel.linear_velocity[1],
-	        .z = arel.linear_velocity[2],
-	    },
-	    .angular_velocity{
-	        .x = arel.angular_velocity[0],
-	        .y = arel.angular_velocity[1],
-	        .z = arel.angular_velocity[2],
-	    },
+	    .pose = xrt_pose_from_alvr_pose(arel.pose),
+	    .linear_velocity = xrt_vec3_from_alvr_vec3(arel.linear_velocity),
+	    .angular_velocity = xrt_vec3_from_alvr_vec3(arel.angular_velocity),
 	};
 }
 
@@ -216,72 +229,45 @@ alvr_hmd_create(void)
 	hmd->base.get_visibility_mask = alvr_hmd_get_visibility_mask;
 	hmd->base.destroy = alvr_hmd_destroy;
 
-	// Distortion information, fills in xdev->compute_distortion().
+	// TODO: Could use for foveated encoding
 	u_distortion_mesh_set_none(&hmd->base);
 
-	// populate this with something more complex if required
-	// hmd->base.compute_distortion = alvr_hmd_compute_distortion;
-
-	hmd->pose = (struct xrt_pose)XRT_POSE_IDENTITY;
 	hmd->log_level = debug_get_log_option_alvr_log();
 
-	// Print name.
 	snprintf(hmd->base.str, XRT_DEVICE_NAME_LEN, "Alvr HMD");
 	snprintf(hmd->base.serial, XRT_DEVICE_NAME_LEN, "Alvr HMD S/N");
 
 	m_relation_history_create(&hmd->relation_hist);
 
-	// Setup input.
 	hmd->base.name = XRT_DEVICE_GENERIC_HMD;
 	hmd->base.device_type = XRT_DEVICE_TYPE_HMD;
 	hmd->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 	hmd->base.orientation_tracking_supported = true;
 	hmd->base.position_tracking_supported = true;
 
-	// Set up display details
-	// refresh rate
+	// TODO: Get dynamically / why do we even care about this?
 	hmd->base.hmd->screens[0].nominal_frame_interval_ns = time_s_to_ns(1.0f / 90.0f);
 
-	const double hFOV = 90 * (M_PI / 180.0);
-	const double vFOV = 96.73 * (M_PI / 180.0);
-	// center of projection
-	const double hCOP = 0.529;
-	const double vCOP = 0.5;
-	if (
-	    /* right eye */
-	    !math_compute_fovs(1, hCOP, hFOV, 1, vCOP, vFOV, &hmd->base.hmd->distortion.fov[1]) ||
-	    /*
-	     * left eye - same as right eye, except the horizontal center of projection is moved in the opposite
-	     * direction now
-	     */
-	    !math_compute_fovs(1, 1.0 - hCOP, hFOV, 1, vCOP, vFOV, &hmd->base.hmd->distortion.fov[0])) {
-		// If those failed, it means our math was impossible.
-		HMD_ERROR(hmd, "Failed to setup basic device info");
-		alvr_hmd_destroy(&hmd->base);
-		return NULL;
-	}
-	const int panel_w = 1080;
-	const int panel_h = 1200;
+	// TODO: Shouldn't this mabye be called later?
+	auto streamExtent = ensureInit();
+	auto streamWidth = streamExtent.width / 2;
 
-	// Single "screen" (always the case)
-	hmd->base.hmd->screens[0].w_pixels = panel_w * 2;
-	hmd->base.hmd->screens[0].h_pixels = panel_h;
+	hmd->base.hmd->screens[0].w_pixels = streamExtent.width;
+	hmd->base.hmd->screens[0].h_pixels = streamExtent.height;
 
-	// Left, Right
 	for (uint8_t eye = 0; eye < 2; ++eye) {
-		hmd->base.hmd->views[eye].display.w_pixels = panel_w;
-		hmd->base.hmd->views[eye].display.h_pixels = panel_h;
+		hmd->base.hmd->views[eye].display.w_pixels = streamWidth;
+		hmd->base.hmd->views[eye].display.h_pixels = streamExtent.height;
 		hmd->base.hmd->views[eye].viewport.y_pixels = 0;
-		hmd->base.hmd->views[eye].viewport.w_pixels = panel_w;
-		hmd->base.hmd->views[eye].viewport.h_pixels = panel_h;
+		hmd->base.hmd->views[eye].viewport.w_pixels = streamWidth;
+		hmd->base.hmd->views[eye].viewport.h_pixels = streamExtent.height;
+
 		// if rotation is not identity, the dimensions can get more complex.
 		hmd->base.hmd->views[eye].rot = u_device_rotation_ident;
 	}
-	// left eye starts at x=0, right eye starts at x=panel_width
 	hmd->base.hmd->views[0].viewport.x_pixels = 0;
-	hmd->base.hmd->views[1].viewport.x_pixels = panel_w;
+	hmd->base.hmd->views[1].viewport.x_pixels = streamWidth;
 
-	// Distortion information, fills in xdev->compute_distortion().
 	u_distortion_mesh_set_none(&hmd->base);
 
 	// Just put an initial identity value in the tracker
@@ -297,13 +283,28 @@ alvr_hmd_create(void)
 
 	auto tracking_cb = [hmd](u64 ts_ns, AlvrSpaceRelation hmd_rel) {
 		auto xrel = xrt_rel_from_alvr_rel(hmd_rel);
-		HMD_ERROR(hmd, "got a tracking callback woo %f, %f, %f, %lu", xrel.pose.position.x, xrel.pose.orientation.x,
-		          xrel.linear_velocity.x, ts_ns);
+
+		// HMD_ERROR(hmd, "got a tracking callback woo %f, %f, %f, %lu", xrel.pose.position.x,
+		//           xrel.pose.orientation.x, xrel.linear_velocity.x, ts_ns);
 
 		m_relation_history_push(hmd->relation_hist, &xrel, ts_ns);
 	};
-
 	CallbackManager::get().registerCb<ALVR_EVENT_TRACKING_UPDATED>(std::move(tracking_cb));
+
+	auto viewCb = [hmd](ViewsConfig_Body cfg) {
+		HMD_ERROR(hmd, "Got views config");
+
+		std::lock_guard mutexGuard_(hmd->viewMutex);
+
+		hmd->viewPoses[0] = xrt_pose_from_alvr_pose(cfg.local_view_transform[0]);
+		hmd->viewPoses[1] = xrt_pose_from_alvr_pose(cfg.local_view_transform[1]);
+
+		// TODO: If monado internally access it then it's UB (shouldn't really matter tho)
+		auto &fovs = hmd->base.hmd->distortion.fov;
+		fovs[0] = xrt_fov_from_alvr_fov(cfg.fov[0]);
+		fovs[1] = xrt_fov_from_alvr_fov(cfg.fov[1]);
+	};
+	CallbackManager::get().registerCb<ALVR_EVENT_VIEWS_CONFIG>(std::move(viewCb));
 
 	return &hmd->base;
 }

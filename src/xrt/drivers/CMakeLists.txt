@@ -17,7 +17,7 @@ if(XRT_BUILD_DRIVER_ALVR)
 		drv_alvr STATIC alvr/alvr.cpp alvr/alvr_interface.h
 				   alvr/alvr_prober.c
 		)
-	target_link_libraries(drv_alvr PRIVATE xrt-interfaces aux_util aux_os)
+	target_link_libraries(drv_alvr PRIVATE xrt-interfaces aux_util aux_os AlvrRender)
 	target_include_directories(drv_alvr PRIVATE ${alvr_inc_dirs})
 	list(APPEND ENABLED_DRIVERS alvr)
 endif()
