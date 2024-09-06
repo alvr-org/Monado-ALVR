@@ -1,3 +1,16 @@
+# This is a (highly) WIP fork of monado to add support for streaming via ALVR
+
+To build ensure that this repository is cloned next to:
+* https://github.com/alvr-org/ALVR with the `monado` branch as `alvr-monado`
+* https://github.com/The-personified-devil/alvr_render as `alvr_render`
+
+run `cargo xtask build-server-lib` in the alvr clone
+then run cmake in this repo and to run use the created monado-service binary
+
+this will be improved in the future, but again, this is still highly WIP
+note that binaries can't be shipped either rn as it needs to load shaders
+from the source dir
+
 # Monado - XR Runtime (XRT)
 
 <!--
