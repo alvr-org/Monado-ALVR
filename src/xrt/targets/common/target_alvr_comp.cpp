@@ -149,8 +149,8 @@ alvr_target_present(comp_target *ct,
                     VkQueue queue,
                     uint32_t img_idx,
                     uint64_t timeline_semaphore_value,
-                    uint64_t desired_present_time_ns,
-                    uint64_t preset_slop_ns)
+                    int64_t desired_present_time_ns,
+                    int64_t preset_slop_ns)
 {
 	auto &base = *(comp_target_alvr *)ct;
 
@@ -176,10 +176,10 @@ alvr_target_update_timings(comp_target *ct)
 void
 alvr_target_calc_frame_pacing(comp_target *ct,
                               int64_t *out_frame_id,
-                              uint64_t *out_wake_up,
-                              uint64_t *out_desired_present,
-                              uint64_t *out_present_slop,
-                              uint64_t *out_predicted_display)
+                              int64_t *out_wake_up,
+                              int64_t *out_desired_present,
+                              int64_t *out_present_slop,
+                              int64_t *out_predicted_display)
 {
 	// TODO: Obvs lmao
 	static int64_t frame = 0;
@@ -192,7 +192,7 @@ alvr_target_calc_frame_pacing(comp_target *ct,
 }
 
 void
-alvr_target_mark_timing_point(comp_target *ct, enum comp_target_timing_point tp, int64_t t, uint64_t t2)
+alvr_target_mark_timing_point(comp_target *ct, enum comp_target_timing_point tp, int64_t t, int64_t t2)
 {}
 
 void
@@ -200,7 +200,7 @@ alvr_target_flush_wsi(comp_target *ct)
 {}
 
 void
-alvr_target_info_gpu(comp_target *ct, int64_t frame_id, uint64_t gpu_start_ns, uint64_t gpu_end_ns, uint64_t when_ns)
+alvr_target_info_gpu(comp_target *ct, int64_t frame_id, int64_t gpu_start_ns, int64_t gpu_end_ns, int64_t when_ns)
 {}
 
 bool

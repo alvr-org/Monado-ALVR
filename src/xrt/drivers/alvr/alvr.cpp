@@ -100,7 +100,7 @@ alvr_hmd_update_inputs(struct xrt_device *xdev)
 static void
 alvr_hmd_get_tracked_pose(struct xrt_device *xdev,
                           enum xrt_input_name name,
-                          uint64_t at_timestamp_ns,
+                          int64_t at_timestamp_ns,
                           struct xrt_space_relation *out_relation)
 {
 	struct alvr_hmd *hmd = alvr_hmd(xdev);
@@ -133,7 +133,7 @@ alvr_hmd_get_tracked_pose(struct xrt_device *xdev,
 static void
 alvr_hmd_get_view_poses(struct xrt_device *xdev,
                         const struct xrt_vec3 *default_eye_relation,
-                        uint64_t at_timestamp_ns,
+                        int64_t at_timestamp_ns,
                         uint32_t view_count,
                         struct xrt_space_relation *out_head_relation,
                         struct xrt_fov *out_fovs,
