@@ -732,7 +732,10 @@ get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
 void
 destroy(struct xrt_system_devices *xsysd)
 {
-	u_system_devices_close(xsysd);
+	for (uint32_t i = 0; i < ARRAY_SIZE(xsysd->xdevs); i++) {
+		xrt_device_destroy(&xsysd->xdevs[i]);
+	}
+
 	svrs->ctx.reset();
 	free(svrs);
 }
