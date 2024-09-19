@@ -2160,7 +2160,7 @@ struct xrt_image_native
 	 * If not zero, used for a max memory requirements check when importing
 	 * into Vulkan.
 	 */
-	size_t size;
+	uint64_t size;
 
 	/*!
 	 * Is the image created with a dedicated allocation or not.
