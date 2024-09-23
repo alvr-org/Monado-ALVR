@@ -176,7 +176,7 @@ XrResult
 oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, struct oxr_session *sess)
 {
 	struct oxr_instance *inst = sess->sys->inst;
-	XrEventDataSessionStateChanged *changed;
+	XrEventDataInteractionProfileChanged *changed;
 	struct oxr_event *event = NULL;
 
 	ALLOC(log, inst, &event, &changed);
