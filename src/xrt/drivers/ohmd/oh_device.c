@@ -85,6 +85,12 @@ enum input_indices
 // one mapping for each of enum ohmd_control_hint
 #define CONTROL_MAPPING_SIZE 16
 
+// Default haptic frequency for when the driver needs to decide frequency.
+#if defined(OHMD_HAVE_HAPTICS_API_v0)
+#define DEFAULT_HAPTIC_FREQ 160.0
+#endif
+
+
 // generic controllers are mapped to the khronos simple profile
 // touch controllers input mappings are special cased
 enum openhmd_device_type
@@ -322,9 +328,24 @@ static void
 oh_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
 {
 	struct oh_device *ohd = oh_device(xdev);
-	(void)ohd;
 
-	//! @todo OpenHMD haptic API not finished
+#if defined(OHMD_HAVE_HAPTICS_API_v0)
+	// Use the unofficial Haptics API from thaytan's fork of OpenHMD:
+	// https://github.com/thaytan/OpenHMD/blob/rift-room-config/include/openhmd.h#L481
+
+	float frequency = value->vibration.frequency;
+
+	// A frequency of 0.0f from OpenXR means to let the driver decide.
+	if (frequency == 0.0f) {
+		frequency = DEFAULT_HAPTIC_FREQ;
+	}
+
+	ohmd_device_set_haptics_on(ohd->dev, (float)value->vibration.duration_ns / 1e9f, frequency,
+	                           value->vibration.amplitude);
+#else
+	// There is no official OpenHMD Haptic API.
+	(void)ohd;
+#endif
 }
 
 static bool
