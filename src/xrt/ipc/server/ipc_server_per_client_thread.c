@@ -73,7 +73,7 @@ common_shutdown(volatile struct ipc_client_state *ics)
 	}
 
 	if (ics->local_floor_space_overseer_index < IPC_MAX_CLIENT_SPACES && //
-	    ics->local_floor_space_overseer_index >= 0) {
+	    ics->local_floor_space_overseer_index > 0) {
 		xrt_space_reference(
 		    (struct xrt_space **)&ics->server->xso->localfloorspace[ics->local_floor_space_overseer_index],
 		    NULL);
