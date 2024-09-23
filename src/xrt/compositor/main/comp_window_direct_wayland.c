@@ -334,11 +334,11 @@ _drm_lease_device_released(void *data, struct wp_drm_lease_device_v1 *wp_drm_lea
 {
 	struct direct_wayland_lease_device *dev = data;
 	COMP_ERROR(dev->w->base.base.c, "Releasing lease device %s", dev->path);
-	direct_wayland_lease_device_destroy(dev);
 	if (dev == dev->w->selected_device) {
 		dev->w->selected_device = NULL;
 		dev->w->selected_connector = NULL;
 	}
+	direct_wayland_lease_device_destroy(dev);
 }
 
 static const struct wp_drm_lease_device_v1_listener drm_lease_device_listener = {
