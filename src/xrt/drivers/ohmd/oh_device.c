@@ -336,7 +336,7 @@ oh_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const u
 	float frequency = value->vibration.frequency;
 
 	// A frequency of 0.0f from OpenXR means to let the driver decide.
-	if (frequency == 0.0f) {
+	if (frequency == XRT_FREQUENCY_UNSPECIFIED) {
 		frequency = DEFAULT_HAPTIC_FREQ;
 	}
 
