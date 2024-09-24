@@ -40,6 +40,23 @@ find_suitable_pose_name(struct xrt_device *xdev)
 		case XRT_INPUT_GENERIC_HEAD_POSE: return name;
 		case XRT_INPUT_GENERIC_TRACKER_POSE: return name;
 		case XRT_INPUT_INDEX_GRIP_POSE: return name;
+		case XRT_INPUT_SIMPLE_GRIP_POSE: return name;
+		case XRT_INPUT_VIVE_GRIP_POSE: return name;
+		case XRT_INPUT_VIVE_COSMOS_GRIP_POSE: return name;
+		case XRT_INPUT_VIVE_FOCUS3_GRIP_POSE: return name;
+		case XRT_INPUT_VIVE_TRACKER_GRIP_POSE: return name;
+		case XRT_INPUT_WMR_GRIP_POSE: return name;
+		case XRT_INPUT_PSMV_GRIP_POSE: return name;
+		case XRT_INPUT_G2_CONTROLLER_GRIP_POSE: return name;
+		case XRT_INPUT_GO_GRIP_POSE: return name;
+		case XRT_INPUT_ODYSSEY_CONTROLLER_GRIP_POSE: return name;
+		case XRT_INPUT_TOUCH_GRIP_POSE: return name;
+		case XRT_INPUT_TOUCH_PLUS_GRIP_POSE: return name;
+		case XRT_INPUT_TOUCH_PRO_GRIP_POSE: return name;
+		case XRT_INPUT_PICO_G3_GRIP_POSE: return name;
+		case XRT_INPUT_PICO_NEO3_GRIP_POSE: return name;
+		case XRT_INPUT_PICO4_GRIP_POSE: return name;
+		case XRT_INPUT_OPPO_MR_GRIP_POSE: return name;
 		default: break;
 		}
 	}
