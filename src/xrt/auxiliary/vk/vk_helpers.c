@@ -1187,13 +1187,21 @@ vk_create_image_from_native(struct vk_bundle *vk,
 #error "need port"
 #endif
 
-
 	if (handle_type == VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID) {
 		/*
 		 * Skip check in this case
 		 * VUID-VkMemoryAllocateInfo-allocationSize-02383
 		 * For AHardwareBuffer handles, the alloc size must be the size returned by
 		 * vkGetAndroidHardwareBufferPropertiesANDROID for the Android hardware buffer
+		 */
+	} else if ((handle_type & (VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_BIT |
+	                           VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_KMT_BIT |
+	                           VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT)) != 0) {
+
+		/*
+		 * For VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_KMT_BIT and friends,
+		 * the size must be queried by the implementation (See VkMemoryAllocateInfo manual page)
+		 * so skip size check
 		 */
 	} else if (requirements.size == 0) {
 		/*
