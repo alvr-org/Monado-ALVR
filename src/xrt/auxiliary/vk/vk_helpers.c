@@ -1078,9 +1078,9 @@ vk_create_image_from_native(struct vk_bundle *vk,
 #ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
 	/*
 	 * Some Vulkan drivers will natively support importing and exporting
-	 * SRGB formats (Qualcomm) even tho technically that's not intended
+	 * SRGB formats (Qualcomm Adreno) even tho technically that's not intended
 	 * by the AHardwareBuffer since they don't support sRGB formats.
-	 * While others (Mail) does not support importing and exporting sRGB
+	 * While others (arm Mali) does not support importing and exporting sRGB
 	 * formats. So we need to create the image without sRGB and then create
 	 * the image views with sRGB which is allowed by the Vulkan spec. It
 	 * seems to be safe to do with on all drivers, so to reduce the logic
