@@ -1186,7 +1186,16 @@ vk_create_image_from_native(struct vk_bundle *vk,
 #else
 #error "need port"
 #endif
-	if (requirements.size > image_native->size) {
+
+
+	if (handle_type == VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID) {
+		/*
+		 * Skip check in this case
+		 * VUID-VkMemoryAllocateInfo-allocationSize-02383
+		 * For AHardwareBuffer handles, the alloc size must be the size returned by
+		 * vkGetAndroidHardwareBufferPropertiesANDROID for the Android hardware buffer
+		 */
+	} else if (requirements.size > image_native->size) {
 		VK_ERROR(vk, "size mismatch, exported %" PRIu64 " but requires %" PRIu64, image_native->size,
 		         requirements.size);
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
