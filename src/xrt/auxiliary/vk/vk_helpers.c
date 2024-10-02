@@ -1195,6 +1195,13 @@ vk_create_image_from_native(struct vk_bundle *vk,
 		 * For AHardwareBuffer handles, the alloc size must be the size returned by
 		 * vkGetAndroidHardwareBufferPropertiesANDROID for the Android hardware buffer
 		 */
+	} else if (requirements.size == 0) {
+		/*
+		 * VUID-VkMemoryAllocateInfo-allocationSize-07899
+		 * For any handles other than AHardwareBuffer, size must be greater than 0
+		 */
+		VK_ERROR(vk, "size must be greater than 0");
+
 	} else if (requirements.size > image_native->size) {
 		VK_ERROR(vk, "size mismatch, exported %" PRIu64 " but requires %" PRIu64, image_native->size,
 		         requirements.size);
