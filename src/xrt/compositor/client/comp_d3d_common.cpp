@@ -27,14 +27,6 @@
 
 namespace xrt::compositor::client {
 
-// xrt_result_t
-// importFromHandleDuplicates(xrt_compositor_native &xcn,
-//                            std::vector<wil::unique_handle> const &handles,
-//                            const xrt_swapchain_create_info &vkinfo,
-//                            bool use_dedicated_allocation,
-//                            unique_swapchain_ref &out_xsc)
-
-
 static inline DWORD
 convertTimeoutToWindowsMilliseconds(uint64_t timeout_ns)
 {
