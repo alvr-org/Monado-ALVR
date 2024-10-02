@@ -2169,6 +2169,12 @@ struct xrt_image_native
 
 	/*!
 	 * Is the native buffer handle a DXGI handle?
+	 *
+	 * - If true, it is some kind of weird global handle, not reference counted, but
+	 *   widely compatible with various images. Ostensibly deprecated, but works the best
+	 *   on Windows.
+	 * - If false, it's either not Windows, or a reference counted "NT Handle"
+	 *   which has awkward limitations, such as "usually no depth images allowed".
 	 */
 	bool is_dxgi_handle;
 };
