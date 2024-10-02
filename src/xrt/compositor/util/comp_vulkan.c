@@ -393,9 +393,9 @@ comp_vulkan_formats_check(struct vk_bundle *vk, struct comp_vulkan_formats *form
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
 	/*
 	 * Some Vulkan drivers will natively support importing and exporting
-	 * SRGB formats (Qualcomm) even tho technically that's not intended
+	 * SRGB formats (Qualcomm Adreno) even tho technically that's not intended
 	 * by the AHardwareBuffer since they don't support sRGB formats.
-	 * While others (Mail) does not support importing and exporting sRGB
+	 * While others (arm Mali) does not support importing and exporting sRGB
 	 * formats.
 	 */
 	if (!formats->has_R8G8B8A8_SRGB && formats->has_R8G8B8A8_UNORM) {
