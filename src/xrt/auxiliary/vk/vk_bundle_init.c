@@ -1446,12 +1446,6 @@ vk_init_from_given(struct vk_bundle *vk,
 	}
 #endif
 
-#ifdef VK_EXT_debug_utils
-	if (debug_utils_enabled) {
-		vk->has_EXT_debug_utils = true;
-	}
-#endif
-
 	// Fill in the device features we are interested in.
 	fill_in_device_features(vk);
 
@@ -1466,6 +1460,18 @@ vk_init_from_given(struct vk_bundle *vk,
 
 	vk->vkGetDeviceQueue(vk->device, vk->queue_family_index, vk->queue_index, &vk->queue);
 
+	vk->has_EXT_debug_utils = false;
+	if (debug_utils_enabled) {
+#ifdef VK_EXT_debug_utils
+		if (vk->vkSetDebugUtilsObjectNameEXT) {
+			vk->has_EXT_debug_utils = true;
+		} else {
+			VK_WARN(vk, "EXT_debug_utils requested but extension is not loaded");
+		}
+#else
+		VK_WARN(vk, "EXT_debug_utils requested but extension was not available at compile time");
+#endif
+	}
 
 	return VK_SUCCESS;
 
