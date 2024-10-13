@@ -165,7 +165,7 @@ tmp_init_and_create(struct tmp *t, struct vk_bundle *vk, const struct xrt_swapch
 	const VkImageUsageFlags unorm_usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	// Very few cards support SRGB storage.
-	const VkImageUsageFlags srgb_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	const VkImageUsageFlags srgb_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	const VkImageSubresourceRange subresource_range = {
 	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

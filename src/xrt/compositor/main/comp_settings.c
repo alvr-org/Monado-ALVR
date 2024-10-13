@@ -10,12 +10,7 @@
 #include "util/u_debug.h"
 #include "comp_settings.h"
 
-#ifdef XRT_OS_ANDROID
-// temporary workaround for https://gitlab.freedesktop.org/monado/monado/-/issues/381
-#define USE_COMPUTE_DEFAULT true
-#else
 #define USE_COMPUTE_DEFAULT false
-#endif
 
 // clang-format off
 DEBUG_GET_ONCE_LOG_OPTION(log, "XRT_COMPOSITOR_LOG", U_LOGGING_INFO)
