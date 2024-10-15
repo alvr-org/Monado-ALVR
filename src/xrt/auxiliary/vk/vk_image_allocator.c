@@ -288,7 +288,7 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	// VUID-VkMemoryAllocateInfo-pNext-01874
 	// Use the requirements from the VkAndroidHardwareBufferPropertiesANDROID instead of querying them
 	VkMemoryRequirements android_memory_requirements = {
-	    .size = a_buffer_props.allocationSize,
+	    .size = 0,
 	    .memoryTypeBits = a_buffer_props.memoryTypeBits,
 	};
 	requirements = &android_memory_requirements;
