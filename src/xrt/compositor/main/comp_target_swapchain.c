@@ -731,6 +731,20 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	// Get the image count.
 	uint32_t image_count = select_image_count(cts, surface_caps, preferred_at_least_image_count);
 
+	/*
+	 * VUID-VkSwapchainCreateInfoKHR-compositeAlpha-01280
+	 * compositeAlpha must be one of the bits present in the supportedCompositeAlpha member of the
+	 * VkSurfaceCapabilitiesKHR structure returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR for the surface.
+	 */
+	VkCompositeAlphaFlagsKHR composite_alpha = 0;
+	if (surface_caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) {
+		composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	} else if (surface_caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) {
+		composite_alpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+	} else {
+		COMP_ERROR(ct->c, "Unsupported composite alpha");
+		goto error_print_and_free;
+	}
 
 	/*
 	 * Do the creation.
@@ -753,7 +767,7 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	    .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	    .queueFamilyIndexCount = 0,
 	    .preTransform = surface_caps.currentTransform,
-	    .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+	    .compositeAlpha = composite_alpha,
 	    .presentMode = cts->present_mode,
 	    .clipped = VK_TRUE,
 	    .oldSwapchain = old_swapchain_handle,
