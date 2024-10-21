@@ -7,8 +7,7 @@ bindings."""
 import argparse
 import json
 import copy
-import itertools
-
+from operator import attrgetter
 
 def find_component_in_list_by_name(name, component_list, subaction_path=None, identifier_json_path=None):
     """Find a component with the given name in a list of components."""
@@ -124,7 +123,6 @@ class Component:
         Turn a Identifier's component paths into a list of Component objects.
         """
 
-        monado_bindings = json_subpath["monado_bindings"]
         component_list = []
         for component_name in json_subpath["components"]:  # click, touch, ...
             matched_dpad_emulation = None
@@ -132,9 +130,7 @@ class Component:
                     json_subpath["dpad_emulation"]["position"] == component_name):
                 matched_dpad_emulation = json_subpath["dpad_emulation"]
 
-            monado_binding = None
-            if component_name in monado_bindings:
-                monado_binding = monado_bindings[component_name]
+            monado_binding = json_subpath["monado_bindings"].get(component_name, None)
 
             steamvr_path = steamvr_subpath_name(identifier_json_path, json_subpath["type"])
             if "steamvr_path" in json_subpath:
@@ -224,10 +220,9 @@ class Identifier:
 
         identifier_list = []
         for subaction_path in json_subaction_paths:  # /user/hand/*
-            for json_sub_path_itm in json_subpaths.items():  # /input/*, /output/*
-                json_path = json_sub_path_itm[0]  # /input/trackpad
+            for json_path in sorted(json_subpaths.keys()):  # /input/*, /output/*
                 # json object associated with a subpath (type, localized_name, ...)
-                json_subpath = json_sub_path_itm[1]
+                json_subpath = json_subpaths[json_path]
 
                 # Oculus Touch a,b/x,y components only exist on one controller
                 if "side" in json_subpath and "/user/hand/" + json_subpath["side"] != subaction_path:
@@ -370,8 +365,8 @@ class Profile:
     def __update_component_list(self):
         self.components = []
         for identifier in self.identifiers:
-            for component in identifier.components:
-                self.components.append(component)
+            self.components += identifier.components
+        self.components = sorted(self.components, key=attrgetter("steamvr_path"))
 
 
 oxr_verify_extension_status_struct_name = "oxr_verify_extension_status"
@@ -395,8 +390,8 @@ class Bindings:
 
     def __init__(self, json_root):
         """Construct a bindings from a dictionary of profiles."""
-        self.profiles = [Profile(profile_name, json_profile) for
-                         profile_name, json_profile in json_root["profiles"].items()]
+        self.profiles = [Profile(profile_name, json_root["profiles"][profile_name]) for
+                         profile_name in sorted(json_root["profiles"].keys())]
         self.__set_parent_profile_refs()
         self.__mine_for_diamond_errors()
 
@@ -422,7 +417,7 @@ class Bindings:
         if profile.name in parent_path_set:
             return True
         parent_path_set.append(profile.name)
-        for parent in profile.parent_profiles:
+        for parent in sorted(profile.parent_profiles, key=attrgetter("name")):
             if self.__has_diamonds(parent, parent_path_set):
                 return True
         return False
@@ -468,9 +463,9 @@ def write_verify_switch_body(f, dict_of_lists, profile, profile_name, ext_name, 
     Input is a file to write the code into, a dict where keys are length and
     the values are lists of strings of that length. And a suffix if any."""
     f.write(f"{tab_char}\tswitch (length) {{\n")
-    for length in dict_of_lists:
+    for length in sorted(dict_of_lists.keys()):
         f.write(f"{tab_char}\tcase {str(length)}:\n\t\t")
-        for path in dict_of_lists[length]:
+        for path in sorted(dict_of_lists[length]):
             f.write(if_strcmp.format(exttab=tab_char, check=path))
         f.write(f"{tab_char}{{\n{tab_char}\t\t\tbreak;\n{tab_char}\t\t}}\n")
     f.write(f"{tab_char}\tdefault: break;\n{tab_char}\t}}\n")
@@ -514,7 +509,7 @@ def write_verify_func_body(f, profile, dict_name):
         profile, dict_name), profile, profile.name, profile.extension_name)
     if profile.parent_profiles is None:
         return
-    for pp in profile.parent_profiles:
+    for pp in sorted(profile.parent_profiles, key=attrgetter("name")):
         write_verify_func_body(f, pp, dict_name)
 
 
@@ -722,7 +717,7 @@ def generate_bindings_c(file, b):
     f.write('{\n')
     f.write('\tswitch(input)\n')
     f.write('\t{\n')
-    for input in inputs:
+    for input in sorted(inputs):
         f.write(f'\tcase {input}: return "{input}";\n')
     f.write(f'\tdefault: return "UNKNOWN";\n')
     f.write('\t}\n')
@@ -731,7 +726,7 @@ def generate_bindings_c(file, b):
     f.write('enum xrt_input_name\n')
     f.write('xrt_input_name_enum(const char *input)\n')
     f.write('{\n')
-    for input in inputs:
+    for input in sorted(inputs):
         f.write(f'\tif(strcmp("{input}", input) == 0) return {input};\n')
     f.write(f'\treturn XRT_INPUT_GENERIC_TRACKER_POSE;\n')
     f.write('}\n')
@@ -741,7 +736,7 @@ def generate_bindings_c(file, b):
     f.write('{\n')
     f.write('\tswitch(output)\n')
     f.write('\t{\n')
-    for output in outputs:
+    for output in sorted(outputs):
         f.write(f'\tcase {output}: return "{output}";\n')
     f.write(f'\tdefault: return "UNKNOWN";\n')
     f.write('\t}\n')
@@ -750,7 +745,7 @@ def generate_bindings_c(file, b):
     f.write('enum xrt_output_name\n')
     f.write('xrt_output_name_enum(const char *output)\n')
     f.write('{\n')
-    for output in outputs:
+    for output in sorted(outputs):
         f.write(f'\tif(strcmp("{output}", output) == 0) return {output};\n')
     f.write(f'\treturn XRT_OUTPUT_NAME_SIMPLE_VIBRATION;\n')
     f.write('}\n')

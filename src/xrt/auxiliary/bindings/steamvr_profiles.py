@@ -114,7 +114,7 @@ def main():
 
         # print("Creating SteamVR input profile", f.name)
 
-        json.dump(j, f, indent=2)
+        json.dump(j, f, indent=2, sort_keys=True)
 
         f.close()
 
