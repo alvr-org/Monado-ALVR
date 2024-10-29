@@ -184,7 +184,7 @@ public:
 	get_xrt_hand();
 
 	void
-	update_hand_tracking(struct xrt_hand_joint_set *out);
+	update_hand_tracking(int64_t desired_timestamp_ns, struct xrt_hand_joint_set *out);
 
 protected:
 	void

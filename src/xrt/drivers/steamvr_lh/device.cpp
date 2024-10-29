@@ -289,7 +289,7 @@ const std::vector<std::string> FACE_BUTTONS = {
 };
 
 void
-ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
+ControllerDevice::update_hand_tracking(int64_t desired_timestamp_ns, struct xrt_hand_joint_set *out)
 {
 	if (!has_index_hand_tracking)
 		return;
@@ -317,8 +317,7 @@ ControllerDevice::update_hand_tracking(struct xrt_hand_joint_set *out)
 	auto curl_values = u_hand_tracking_curl_values{pinky, ring, middle, index, thumb};
 
 	struct xrt_space_relation hand_relation = {};
-	int64_t ts = chrono_timestamp_ns();
-	m_relation_history_get_latest(relation_hist, &ts, &hand_relation);
+	m_relation_history_get(relation_hist, desired_timestamp_ns, &hand_relation);
 
 	u_hand_sim_simulate_for_valve_index_knuckles(&curl_values, get_xrt_hand(), &hand_relation, out);
 
@@ -406,7 +405,7 @@ ControllerDevice::get_hand_tracking(enum xrt_input_name name,
 {
 	if (!has_index_hand_tracking)
 		return;
-	update_hand_tracking(out_value);
+	update_hand_tracking(desired_timestamp_ns, out_value);
 	out_value->is_active = true;
 	hand_tracking_timestamp = desired_timestamp_ns;
 	*out_timestamp_ns = hand_tracking_timestamp;
