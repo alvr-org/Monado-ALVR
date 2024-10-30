@@ -285,7 +285,7 @@ oxr_session_end(struct oxr_logger *log, struct oxr_session *sess)
 	 * If the session is not running when the application calls xrEndSession, the runtime must return
 	 * error XR_ERROR_SESSION_NOT_RUNNING
 	 */
-	if (sess->state == XR_SESSION_STATE_IDLE || sess->state == XR_SESSION_STATE_READY) {
+	if (!oxr_frame_sync_is_session_running(&sess->frame_sync)) {
 		return oxr_error(log, XR_ERROR_SESSION_NOT_RUNNING, "Session is not running");
 	}
 
