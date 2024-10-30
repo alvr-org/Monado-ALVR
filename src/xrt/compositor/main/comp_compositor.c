@@ -1088,7 +1088,7 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	struct xrt_system_compositor_info *sys_info = &sys_info_storage;
 
 	// Required by OpenXR spec.
-	sys_info->max_layers = 16;
+	sys_info->max_layers = XRT_MAX_LAYERS;
 	sys_info->compositor_vk_deviceUUID = c->settings.selected_gpu_deviceUUID;
 	sys_info->client_vk_deviceUUID = c->settings.client_gpu_deviceUUID;
 	sys_info->client_d3d_deviceLUID = c->settings.client_gpu_deviceLUID;

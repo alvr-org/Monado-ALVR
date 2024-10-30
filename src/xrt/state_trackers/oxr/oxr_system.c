@@ -388,7 +388,7 @@ oxr_system_get_properties(struct oxr_logger *log, struct oxr_system *sys, XrSyst
 		properties->graphicsProperties.maxLayerCount = info->max_layers;
 	} else {
 		// probably using the headless extension, but the extension does not modify the 16 layer minimum.
-		properties->graphicsProperties.maxLayerCount = 16;
+		properties->graphicsProperties.maxLayerCount = XRT_MAX_LAYERS;
 	}
 	properties->graphicsProperties.maxSwapchainImageWidth = 1024 * 16;
 	properties->graphicsProperties.maxSwapchainImageHeight = 1024 * 16;

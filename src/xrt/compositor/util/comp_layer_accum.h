@@ -18,9 +18,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-#define COMP_MAX_LAYERS 16
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -93,7 +90,7 @@ struct comp_layer_accum
 	struct xrt_layer_frame_data data;
 
 	//! All of the layers.
-	struct comp_layer layers[COMP_MAX_LAYERS];
+	struct comp_layer layers[XRT_MAX_LAYERS];
 
 	//! Number of submitted layers.
 	uint32_t layer_count;

@@ -257,7 +257,7 @@ compositor_init_sys_info(struct sdl_compositor *c, struct sdl_program *sp, struc
 	struct xrt_system_compositor_info *sys_info = &c->sys_info;
 
 	// Required by OpenXR spec.
-	sys_info->max_layers = 16;
+	sys_info->max_layers = XRT_MAX_LAYERS;
 
 	// UUIDs and LUID already set in vk init.
 	(void)sys_info->compositor_vk_deviceUUID;

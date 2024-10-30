@@ -22,7 +22,9 @@ const float PI = acos(-1);
 // Should we do timewarp.
 layout(constant_id = 1) const bool do_timewarp = false;
 layout(constant_id = 2) const bool do_color_correction = true;
-layout(constant_id = 3) const int RENDER_MAX_LAYERS = 16;
+
+//! This is always set by the render_resource pipeline creation code to the actual limit.
+layout(constant_id = 3) const int RENDER_MAX_LAYERS = 128;
 layout(constant_id = 4) const int SAMPLER_ARRAY_SIZE = 16;
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;

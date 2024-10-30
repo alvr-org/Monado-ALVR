@@ -49,5 +49,10 @@
 #define XRT_MAX_SUPPORTED_REFRESH_RATES 16
 
 /*!
+ * Max number of layers which can be handled at once.
+ */
+#define XRT_MAX_LAYERS 128
+
+/*!
  * @}
  */

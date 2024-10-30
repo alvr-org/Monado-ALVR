@@ -12,8 +12,9 @@
 #pragma once
 
 #include "xrt/xrt_compiler.h"
-#include "xrt/xrt_system.h"
+#include "xrt/xrt_limits.h"
 #include "xrt/xrt_space.h"
+#include "xrt/xrt_system.h"
 
 #include "os/os_threading.h"
 
@@ -49,7 +50,7 @@ extern "C" {
  */
 
 #define IPC_MAX_CLIENT_SEMAPHORES 8
-#define IPC_MAX_CLIENT_SWAPCHAINS 32
+#define IPC_MAX_CLIENT_SWAPCHAINS (XRT_MAX_LAYERS * 2)
 #define IPC_MAX_CLIENT_SPACES 128
 
 struct xrt_instance;
