@@ -12,10 +12,18 @@
 
 #include "oxr_frame_sync.h" // iwyu pragma: keep
 
+#include <stddef.h>
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct oxr_action_set;
+struct oxr_extension_status;
+struct oxr_instance;
+struct oxr_logger;
+struct oxr_subaction_paths;
 
 #define OXR_VERIFY_AND_SET_AND_INIT(log, thing, new_thing, oxr_thing, THING, name, lookup)                             \
 	do {                                                                                                           \
