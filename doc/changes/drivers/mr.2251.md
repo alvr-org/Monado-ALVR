@@ -1,1 +1,1 @@
-steamvr_lh: Support loading SlimeVR OpenVR driver alongside lighthouse
+- steamvr_lh: Support loading SlimeVR OpenVR driver alongside lighthouse.

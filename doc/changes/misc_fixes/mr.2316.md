@@ -1,0 +1,8 @@
+---
+- mr.2316
+- issue.428
+- mr.2332
+- issue.381
+- mr.2337
+---
+- Fix: Vulkan-related crashes, Vulkan validation errors, and other Vulkan API usage issues.

@@ -1,4 +1,0 @@
----
-- issue.428
----
-- Fix validation errors and Vulkan API usage.

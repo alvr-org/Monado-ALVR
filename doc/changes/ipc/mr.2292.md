@@ -1,1 +1,1 @@
-all: Add device battery status query.
+Add: device battery status query.

@@ -1,1 +1,1 @@
-Add a `get_battery_status` function to `xrt_device` for getting the device's battery status info.
+Add: New `get_battery_status` method to `xrt_device` for getting the device's battery status info.

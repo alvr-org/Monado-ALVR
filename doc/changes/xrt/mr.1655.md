@@ -1,3 +1,3 @@
-- Move `xrt_instance_info` members to nested `xrt_application_info` struct, and add a parallel `xrt_platform_info`.
-- Add `xrt/xrt_android.h` header.
-- Add `xrt_instance_android` interface, optional aspect of `xrt_instance` when building on Android.
+- Change: Move `xrt_instance_info` members to nested `xrt_application_info` struct, and add a parallel `xrt_platform_info`.
+- Add: New `xrt/xrt_android.h` header.
+- Change: Add `xrt_instance_android` interface, optional aspect of `xrt_instance` when building on Android.

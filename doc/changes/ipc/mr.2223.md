@@ -1,1 +1,1 @@
-all: Add support for device feature usage
+Add: Support for device feature usage

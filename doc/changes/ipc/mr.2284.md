@@ -1,1 +1,1 @@
-add get/set_tracking_origin_offset, get/set_reference_space_offset
+Add: `get`/`set_tracking_origin_offset`, `get`/`set_reference_space_offset` methods
