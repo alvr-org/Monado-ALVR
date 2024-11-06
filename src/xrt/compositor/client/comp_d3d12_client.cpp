@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -6,6 +6,7 @@
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup comp_client
  */
 
@@ -494,6 +495,7 @@ try {
 	std::unique_ptr<struct client_d3d12_swapchain> sc = std::make_unique<struct client_d3d12_swapchain>();
 	sc->data = std::make_unique<client_d3d12_swapchain_data>(c->log_level);
 	auto &data = sc->data;
+	std::uint64_t image_mem_size = 0;
 
 	// Allocate images
 	xret = xrt::auxiliary::d3d::d3d12::allocateSharedImages( //
@@ -501,7 +503,8 @@ try {
 	    xinfo,                                               //
 	    image_count,                                         //
 	    data->images,                                        //
-	    data->handles);                                      //
+	    data->handles,                                       //
+	    image_mem_size);                                     //
 	if (xret != XRT_SUCCESS) {
 		return xret;
 	}
@@ -597,7 +600,8 @@ try {
 		    xinfo,                                               // xsci
 		    image_count,                                         // image_count
 		    data->comp_images,                                   // out_images
-		    data->comp_handles);                                 // out_handles
+		    data->comp_handles,                                  // out_handles
+		    image_mem_size);                                     // out_image_mem_size (in bytes)
 		if (xret != XRT_SUCCESS) {
 			return xret;
 		}
@@ -628,7 +632,8 @@ try {
 	std::vector<wil::unique_handle> &handles = compositorNeedsCopy ? data->comp_handles : data->handles;
 
 	// Import into the native compositor, to create the corresponding swapchain which we wrap.
-	xret = xrt::compositor::client::importFromHandleDuplicates(*(c->xcn), handles, vkinfo, true, sc->xsc);
+	xret = xrt::compositor::client::importFromHandleDuplicates(*(c->xcn), handles, vkinfo, image_mem_size, true,
+	                                                           sc->xsc);
 	if (xret != XRT_SUCCESS) {
 		D3D_ERROR(c, "Error importing D3D swapchain into native compositor");
 		return xret;

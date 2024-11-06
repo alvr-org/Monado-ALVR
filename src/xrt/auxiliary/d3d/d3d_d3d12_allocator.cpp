@@ -1,10 +1,11 @@
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief D3D12 backed image buffer allocator.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup aux_d3d
  */
 
@@ -74,7 +75,8 @@ allocateSharedImages(ID3D12Device &device,
                      const xrt_swapchain_create_info &xsci,
                      size_t image_count,
                      std::vector<wil::com_ptr<ID3D12Resource>> &out_images,
-                     std::vector<wil::unique_handle> &out_handles)
+                     std::vector<wil::unique_handle> &out_handles,
+                     std::uint64_t &out_image_mem_size)
 try {
 	if (0 != (xsci.create & XRT_SWAPCHAIN_CREATE_PROTECTED_CONTENT)) {
 		return XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED;
@@ -155,6 +157,8 @@ try {
 	}
 	out_images = std::move(images);
 	out_handles = std::move(handles);
+	const D3D12_RESOURCE_ALLOCATION_INFO alloc_info = device.GetResourceAllocationInfo(0, 1, &desc);
+	out_image_mem_size = alloc_info.SizeInBytes;
 	return XRT_SUCCESS;
 }
 DEFAULT_CATCH(XRT_ERROR_ALLOCATION)
@@ -177,6 +181,7 @@ d3d12_images_allocate(struct xrt_image_native_allocator *xina,
 	try {
 		d3d12_allocator *d3da = reinterpret_cast<d3d12_allocator *>(xina);
 
+		std::uint64_t image_mem_size = 0;
 		std::vector<wil::com_ptr<ID3D12Resource>> images;
 		std::vector<wil::unique_handle> handles;
 		auto result = xrt::auxiliary::d3d::d3d12::allocateSharedImages( //
@@ -184,7 +189,8 @@ d3d12_images_allocate(struct xrt_image_native_allocator *xina,
 		    *xsci,                                                      // xsci
 		    image_count,                                                // image_count
 		    images,                                                     // out_images
-		    handles);                                                   // out_handles
+		    handles,                                                    // out_handles
+		    image_mem_size);                                            // out_image_mem_size (in bytes)
 
 		if (result != XRT_SUCCESS) {
 			return result;
@@ -193,6 +199,7 @@ d3d12_images_allocate(struct xrt_image_native_allocator *xina,
 		for (size_t i = 0; i < image_count; ++i) {
 			out_images[i].handle = handles[i].release();
 			out_images[i].is_dxgi_handle = false;
+			out_images[i].size = image_mem_size;
 		}
 
 		return XRT_SUCCESS;

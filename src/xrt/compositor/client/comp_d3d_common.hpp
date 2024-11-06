@@ -1,4 +1,4 @@
-// Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -6,6 +6,7 @@
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup comp_client
  */
 #pragma once
@@ -41,6 +42,7 @@ using unique_swapchain_ref =
  * @param xcn The native compositor
  * @param handles A vector of uniquely-owned handles. These will be duplicated, not consumed, by this import.
  * @param vkinfo The swapchain create info, with format as a Vulkan constant
+ * @param image_mem_size The image memory allocation size in bytes
  * @param use_dedicated_allocation Passed through to @ref xrt_image_native
  * @param[out] out_xsc The swapchain to populate
  * @return XRT_SUCCESS if everything went well, otherwise whatever error a call internally returned.
@@ -49,6 +51,7 @@ static inline xrt_result_t
 importFromHandleDuplicates(xrt_compositor_native &xcn,
                            std::vector<wil::unique_handle> const &handles,
                            const struct xrt_swapchain_create_info &vkinfo,
+                           const std::uint64_t image_mem_size,
                            bool use_dedicated_allocation,
                            unique_swapchain_ref &out_xsc)
 {
@@ -65,7 +68,7 @@ importFromHandleDuplicates(xrt_compositor_native &xcn,
 		wil::unique_handle duped{u_graphics_buffer_ref(handle.get())};
 		xrt_image_native xin{};
 		xin.handle = duped.get();
-		xin.size = 0;
+		xin.size = image_mem_size;
 		xin.use_dedicated_allocation = use_dedicated_allocation;
 
 		handlesForImport.emplace_back(std::move(duped));

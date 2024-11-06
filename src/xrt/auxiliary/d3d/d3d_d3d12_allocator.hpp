@@ -1,10 +1,11 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief Higher-level D3D12-backed image buffer allocation routine.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup aux_d3d
  */
 
@@ -17,6 +18,7 @@
 #include <wil/com.h>
 #include <wil/resource.h>
 
+#include <cstdint>
 #include <vector>
 
 
@@ -32,6 +34,7 @@ namespace xrt::auxiliary::d3d::d3d12 {
  * @param keyed_mutex Whether to create images with a shared "keyed mutex" as well
  * @param[out] out_images A vector that will be cleared and populated with the images.
  * @param[out] out_handles A vector that will be cleared and populated with the corresponding native handles.
+ * @param[out] out_image_mem_size The image memory allocation size in bytes
  *
  * @return xrt_result_t, one of:
  * - @ref XRT_SUCCESS
@@ -45,6 +48,7 @@ allocateSharedImages(ID3D12Device &device,
                      const xrt_swapchain_create_info &xsci,
                      size_t image_count,
                      std::vector<wil::com_ptr<ID3D12Resource>> &out_images,
-                     std::vector<wil::unique_handle> &out_handles);
+                     std::vector<wil::unique_handle> &out_handles,
+                     std::uint64_t &out_image_mem_size);
 
 }; // namespace xrt::auxiliary::d3d::d3d12
