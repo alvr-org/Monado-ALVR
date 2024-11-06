@@ -97,7 +97,7 @@ d3d_convert_usage_bits_to_d3d12_app_resource_state(enum xrt_swapchain_usage_bits
 			state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 		} else {
 			//! @todo unspecified fallback
-			state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			state = D3D12_RESOURCE_STATE_COMMON;
 		}
 	}
 
