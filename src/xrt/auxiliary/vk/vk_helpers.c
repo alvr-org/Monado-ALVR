@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,6 +14,7 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
  * @author Moses Turner <moses@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup aux_vk
  */
 
@@ -1117,6 +1118,18 @@ vk_create_image_from_native(struct vk_bundle *vk,
 		return VK_ERROR_INITIALIZATION_FAILED;
 	}
 
+	VkImageCreateFlags image_create_flags = 0;
+	// Set the image create mutable flag if usage mutable is given.
+	const bool has_mutable_usage = (info->bits & XRT_SWAPCHAIN_USAGE_MUTABLE_FORMAT) != 0;
+	if (has_mutable_usage) {
+		image_create_flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+	}
+
+	const bool has_create_protected_content = (info->create & XRT_SWAPCHAIN_CREATE_PROTECTED_CONTENT) != 0;
+	if (has_create_protected_content) {
+		image_create_flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
+	}
+
 	// In->pNext
 	VkExternalMemoryImageCreateInfoKHR external_memory_image_create_info = {
 	    .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_KHR,
@@ -1127,6 +1140,7 @@ vk_create_image_from_native(struct vk_bundle *vk,
 	VkImageCreateInfo vk_info = {
 	    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 	    .pNext = &external_memory_image_create_info,
+	    .flags = image_create_flags,
 	    .imageType = VK_IMAGE_TYPE_2D,
 	    .format = image_format,
 	    .extent = {.width = info->width, .height = info->height, .depth = 1},
@@ -1138,10 +1152,6 @@ vk_create_image_from_native(struct vk_bundle *vk,
 	    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	};
-
-	if (0 != (info->create & XRT_SWAPCHAIN_CREATE_PROTECTED_CONTENT)) {
-		vk_info.flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
-	}
 
 	VkImage image = VK_NULL_HANDLE;
 	ret = vk->vkCreateImage(vk->device, &vk_info, NULL, &image);
