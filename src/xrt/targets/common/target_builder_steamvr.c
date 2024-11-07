@@ -167,7 +167,9 @@ steamvr_open_system(struct xrt_builder *xb,
 	    xsysd->xdev_count,         // xdev_count
 	    svrb->head,                // head
 	    &T_stage_local,            // local_offset
-	    false);                    // root_is_unbounded
+	    false,                     // root_is_unbounded
+	    true                       // per_app_local_spaces
+	);
 
 	*out_xso = (struct xrt_space_overseer *)uso;
 

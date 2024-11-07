@@ -113,6 +113,11 @@ struct u_space_overseer
 	 * spaces and that they share the same parent.
 	 */
 	bool can_do_local_spaces_recenter;
+
+	/*!
+	 * Create independent local and local_floor per application
+	 */
+	bool per_app_local_spaces;
 };
 
 
@@ -832,6 +837,12 @@ create_local_space(struct xrt_space_overseer *xso,
                    struct xrt_space **out_local_floor_space)
 {
 	assert(xso->semantic.root != NULL);
+	struct u_space_overseer *uso = u_space_overseer(xso);
+	if (!uso->per_app_local_spaces) {
+		xrt_space_reference(out_local_space, xso->semantic.local);
+		xrt_space_reference(out_local_floor_space, xso->semantic.local_floor);
+		return XRT_SUCCESS;
+	}
 
 	struct xrt_pose identity = XRT_POSE_IDENTITY;
 	struct xrt_space_relation xsr = XRT_SPACE_RELATION_ZERO;
@@ -1103,9 +1114,11 @@ u_space_overseer_legacy_setup(struct u_space_overseer *uso,
                               uint32_t xdev_count,
                               struct xrt_device *head,
                               const struct xrt_pose *local_offset,
-                              bool root_is_unbounded)
+                              bool root_is_unbounded,
+                              bool per_app_local_spaces)
 {
 	struct xrt_space *root = uso->base.semantic.root; // Convenience
+	uso->per_app_local_spaces = per_app_local_spaces;
 
 	for (uint32_t i = 0; i < xdev_count; i++) {
 		struct xrt_device *xdev = xdevs[i];

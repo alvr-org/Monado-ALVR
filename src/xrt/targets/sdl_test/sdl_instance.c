@@ -154,6 +154,7 @@ sdl_system_devices_init(struct sdl_program *sp)
 	    sp->xsysd_base.xdevs,               // xdevs
 	    sp->xsysd_base.xdev_count,          // xdev_count
 	    false,                              // root_is_unbounded
+	    true,                               // per_app_local_spaces
 	    &sp->xso);                          // out_xso
 }
 

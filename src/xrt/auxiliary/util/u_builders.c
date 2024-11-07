@@ -151,6 +151,7 @@ u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
                                        struct xrt_device **xdevs,
                                        uint32_t xdev_count,
                                        bool root_is_unbounded,
+                                       bool per_app_local_spaces,
                                        struct xrt_space_overseer **out_xso)
 {
 	/*
@@ -185,7 +186,9 @@ u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
 	    xdev_count,                // xdev_count
 	    head,                      // head
 	    &T_stage_local,            // local_offset
-	    root_is_unbounded);        // root_is_unbounded
+	    root_is_unbounded,         // root_is_unbounded
+	    per_app_local_spaces       // per_app_local_spaces
+	);
 
 	*out_xso = (struct xrt_space_overseer *)uso;
 }
@@ -248,6 +251,7 @@ u_builder_roles_helper_open_system(struct xrt_builder *xb,
 	    xsysd->xdevs,                       // xdevs
 	    xsysd->xdev_count,                  // xdev_count
 	    false,                              // root_is_unbounded
+	    true,                               // per_app_local_spaces
 	    out_xso);                           // out_xso
 
 	return XRT_SUCCESS;

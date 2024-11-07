@@ -174,6 +174,7 @@ u_builder_create_space_overseer_legacy(struct xrt_session_event_sink *broadcast,
                                        struct xrt_device **xdevs,
                                        uint32_t xdev_count,
                                        bool root_is_unbounded,
+                                       bool per_app_local_spaces,
                                        struct xrt_space_overseer **out_xso);
 
 /*!
