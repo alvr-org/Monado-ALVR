@@ -1222,8 +1222,7 @@ vk_create_image_from_native(struct vk_bundle *vk,
 		         requirements.size);
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 	} else if (requirements.size < image_native->size) {
-		VK_WARN(vk, "size mismatch, exported %" PRIu64 " but requires %" PRIu64, image_native->size,
-		        requirements.size);
+		// it's OK if we have more memory than we need, APIs can round up
 	}
 
 	VkMemoryDedicatedAllocateInfoKHR dedicated_memory_info = {
