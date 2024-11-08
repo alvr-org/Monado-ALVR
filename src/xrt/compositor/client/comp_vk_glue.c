@@ -1,9 +1,10 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Glue code to vulkan client side code.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup comp_client
  */
 
@@ -26,6 +27,7 @@ const char *xrt_gfx_vk_instance_extensions = VK_KHR_EXTERNAL_FENCE_CAPABILITIES_
 const char *xrt_gfx_vk_device_extensions = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME
     " " VK_KHR_EXTERNAL_FENCE_EXTENSION_NAME " " VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME
     " " VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME " " VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME
+    " " VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME
 
 // Platform version of "external_memory"
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD)
@@ -76,6 +78,7 @@ xrt_gfx_vk_provider_create(struct xrt_compositor_native *xcn,
                            bool external_fence_fd_enabled,
                            bool external_semaphore_fd_enabled,
                            bool timeline_semaphore_enabled,
+                           bool image_format_list_enabled,
                            bool debug_utils_enabled,
                            bool renderdoc_enabled,
                            uint32_t queue_family_index,
@@ -90,6 +93,7 @@ xrt_gfx_vk_provider_create(struct xrt_compositor_native *xcn,
 	    external_fence_fd_enabled,                                  //
 	    external_semaphore_fd_enabled,                              //
 	    timeline_semaphore_enabled,                                 //
+	    image_format_list_enabled,                                  //
 	    debug_utils_enabled,                                        //
 	    renderdoc_enabled,                                          //
 	    queue_family_index,                                         //

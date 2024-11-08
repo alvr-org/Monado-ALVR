@@ -1,10 +1,11 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Vulkan client side glue to compositor implementation.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup comp_client
  */
 
@@ -816,6 +817,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
                             bool external_fence_fd_enabled,
                             bool external_semaphore_fd_enabled,
                             bool timeline_semaphore_enabled,
+                            bool image_format_list_enabled,
                             bool debug_utils_enabled,
                             bool renderdoc_enabled,
                             uint32_t queueFamilyIndex,
@@ -872,6 +874,7 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
 	    external_fence_fd_enabled,     // external_fence_fd_enabled
 	    external_semaphore_fd_enabled, // external_semaphore_fd_enabled
 	    timeline_semaphore_enabled,    // timeline_semaphore_enabled
+	    image_format_list_enabled,     // image_format_list_enabled
 	    debug_utils_enabled,           // debug_utils_enabled
 	    log_level);                    // log_level
 	if (ret != VK_SUCCESS) {

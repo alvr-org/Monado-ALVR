@@ -1136,6 +1136,20 @@ vk_create_image_from_native(struct vk_bundle *vk,
 	    .handleTypes = handle_type,
 	};
 
+#ifdef VK_KHR_image_format_list
+	VkImageFormatListCreateInfoKHR image_format_list_create_info = {
+	    .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO_KHR,
+	    .pNext = NULL,
+	    .viewFormatCount = info->format_count,
+	    .pViewFormats = info->formats,
+	};
+	const bool has_mutable_format_list =
+	    has_mutable_usage && vk->has_KHR_image_format_list && info->format_count > 0;
+	if (has_mutable_format_list) {
+		external_memory_image_create_info.pNext = &image_format_list_create_info;
+	}
+#endif
+
 	// In
 	VkImageCreateInfo vk_info = {
 	    .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,

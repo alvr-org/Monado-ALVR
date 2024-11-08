@@ -1,9 +1,10 @@
-// Copyright 2018-2020, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Holds Vulkan related functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_main
  */
 
@@ -428,6 +429,7 @@ oxr_vk_create_vulkan_device(struct oxr_logger *log,
 	bool external_fence_fd_enabled = false;
 	bool external_semaphore_fd_enabled = false;
 #endif
+	bool image_format_list_enabled = false;
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(optional_device_extensions); i++) {
 		// Empty list or a not supported extension.
@@ -446,6 +448,10 @@ oxr_vk_create_vulkan_device(struct oxr_logger *log,
 			external_semaphore_fd_enabled = true;
 		}
 #endif
+
+		if (strcmp(optional_device_extensions[i], VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0) {
+			image_format_list_enabled = true;
+		}
 	}
 
 	free(props);
@@ -546,6 +552,12 @@ oxr_vk_create_vulkan_device(struct oxr_logger *log,
 	if (*vulkanResult == VK_SUCCESS) {
 		sys->vk.timeline_semaphore_enabled = timeline_semaphore_info.timelineSemaphore;
 		U_LOG_D("timeline semaphores enabled: %d", timeline_semaphore_info.timelineSemaphore);
+	}
+#endif
+
+#ifdef VK_KHR_image_format_list
+	if (*vulkanResult == VK_SUCCESS) {
+		sys->vk.image_format_list_enabled = image_format_list_enabled;
 	}
 #endif
 

@@ -1,9 +1,10 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Header defining an XRT graphics provider.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup xrt_iface
  */
 
@@ -64,6 +65,7 @@ xrt_gfx_vk_provider_create(struct xrt_compositor_native *xcn,
                            bool external_fence_fd_enabled,
                            bool external_semaphore_fd_enabled,
                            bool timeline_semaphore_enabled,
+                           bool image_format_list_enabled,
                            bool debug_utils_enabled,
                            bool renderdoc_enabled,
                            uint32_t queue_family_index,

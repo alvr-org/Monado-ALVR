@@ -1,9 +1,10 @@
-// Copyright 2022, Collabora, Ltd.
+// Copyright 2022-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief Basic Vulkan compositor tests.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  */
 
 
@@ -148,9 +149,10 @@ TEST_CASE("client_compositor", "[.][needgpu]")
 #else
 #error "Need port for fence sync handles checkers"
 #endif
-	    false,                  // debug_utils_enabled
-	    false,                  // renderdoc_enabled
-	    vk->queue_family_index, //
+	    vk->has_KHR_image_format_list, // image_format_list_enabled
+	    false,                         // debug_utils_enabled
+	    false,                         // renderdoc_enabled
+	    vk->queue_family_index,        //
 	    vk->queue_index);
 	struct xrt_compositor *xc = &xcvk->base;
 

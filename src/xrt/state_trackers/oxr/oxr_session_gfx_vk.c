@@ -1,9 +1,10 @@
-// Copyright 2018-2022, Collabora, Ltd.
+// Copyright 2018-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Holds Vulkan specific session functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_main
  * @ingroup comp_client
  */
@@ -82,6 +83,8 @@ oxr_session_populate_vk(struct oxr_logger *log,
 	bool timeline_semaphore_enabled = sess->sys->vk.timeline_semaphore_enabled;
 	bool external_fence_fd_enabled = sess->sys->vk.external_fence_fd_enabled;
 	bool external_semaphore_fd_enabled = sess->sys->vk.external_semaphore_fd_enabled;
+	bool image_format_list_enabled =
+	    sys->inst->extensions.KHR_vulkan_enable || sess->sys->vk.image_format_list_enabled;
 	bool debug_utils_enabled = false;
 	bool renderdoc_enabled = false;
 
@@ -146,6 +149,7 @@ oxr_session_populate_vk(struct oxr_logger *log,
 	    external_fence_fd_enabled,                               //
 	    external_semaphore_fd_enabled,                           //
 	    timeline_semaphore_enabled,                              //
+	    image_format_list_enabled,                               //
 	    debug_utils_enabled,                                     //
 	    renderdoc_enabled,                                       //
 	    next->queueFamilyIndex,                                  //

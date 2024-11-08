@@ -1503,6 +1503,7 @@ struct oxr_system
 		bool external_semaphore_fd_enabled;
 		bool timeline_semaphore_enabled;
 		bool debug_utils_enabled;
+		bool image_format_list_enabled;
 	} vk;
 
 #endif

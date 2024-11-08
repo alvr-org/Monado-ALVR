@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,6 +14,7 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
  * @author Moses Turner <moses@collabora.com>
+ * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup aux_vk
  */
 
@@ -1395,6 +1396,7 @@ vk_init_from_given(struct vk_bundle *vk,
                    bool external_fence_fd_enabled,
                    bool external_semaphore_fd_enabled,
                    bool timeline_semaphore_enabled,
+                   bool image_format_list_enabled,
                    bool debug_utils_enabled,
                    enum u_logging_level log_level)
 {
@@ -1433,6 +1435,11 @@ vk_init_from_given(struct vk_bundle *vk,
 	// Vulkan does not let us read what extensions was enabled.
 	if (external_semaphore_fd_enabled) {
 		vk->has_KHR_external_semaphore_fd = true;
+	}
+
+	// Vulkan does not let us read what extensions was enabled.
+	if (image_format_list_enabled) {
+		vk->has_KHR_image_format_list = image_format_list_enabled;
 	}
 
 #ifdef VK_KHR_timeline_semaphore
