@@ -40,10 +40,17 @@
 // clang-format on
 
 // Indices for fake controller input components
-#define QWERTY_SELECT 0
+#define QWERTY_TRIGGER 0
 #define QWERTY_MENU 1
-#define QWERTY_GRIP 2
-#define QWERTY_AIM 3
+#define QWERTY_SQUEEZE 2
+#define QWERTY_SYSTEM 3
+#define QWERTY_THUMBSTICK 4
+#define QWERTY_THUMBSTICK_CLICK 5
+#define QWERTY_TRACKPAD 6
+#define QWERTY_TRACKPAD_TOUCH 7
+#define QWERTY_TRACKPAD_CLICK 8
+#define QWERTY_GRIP 9
+#define QWERTY_AIM 10
 #define QWERTY_VIBRATION 0
 
 #define QWERTY_TRACE(qd, ...) U_LOG_XDEV_IFL_T(&qd->base, qd->sys->log_level, __VA_ARGS__)
@@ -51,6 +58,27 @@
 #define QWERTY_INFO(qd, ...) U_LOG_XDEV_IFL_I(&qd->base, qd->sys->log_level, __VA_ARGS__)
 #define QWERTY_WARN(qd, ...) U_LOG_XDEV_IFL_W(&qd->base, qd->sys->log_level, __VA_ARGS__)
 #define QWERTY_ERROR(qd, ...) U_LOG_XDEV_IFL_E(&qd->base, qd->sys->log_level, __VA_ARGS__)
+
+static struct xrt_binding_input_pair simple_inputs[4] = {
+    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_WMR_TRIGGER_VALUE},
+    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_WMR_MENU_CLICK},
+    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_WMR_GRIP_POSE},
+    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_WMR_AIM_POSE},
+};
+
+static struct xrt_binding_output_pair simple_outputs[1] = {
+    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_WMR_HAPTIC},
+};
+
+static struct xrt_binding_profile binding_profiles[1] = {
+    {
+        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
+        .inputs = simple_inputs,
+        .input_count = ARRAY_SIZE(simple_inputs),
+        .outputs = simple_outputs,
+        .output_count = ARRAY_SIZE(simple_outputs),
+    },
+};
 
 static void
 qwerty_system_remove(struct qwerty_system *qs, struct qwerty_device *qd);
@@ -106,17 +134,45 @@ qwerty_controller(struct xrt_device *xd)
 static xrt_result_t
 qwerty_update_inputs(struct xrt_device *xd)
 {
-	assert(xd->name == XRT_DEVICE_SIMPLE_CONTROLLER);
+	assert(xd->name == XRT_DEVICE_WMR_CONTROLLER);
 
 	struct qwerty_controller *qc = qwerty_controller(xd);
 	struct qwerty_device *qd = &qc->base;
 
-	QWERTY_TRACE(qd, "select: %u, menu: %u", qc->select_clicked, qc->menu_clicked);
+	// clang-format off
+	QWERTY_TRACE(qd, "trigger: %f, menu: %u, squeeze: %u, system %u, thumbstick: %u %f %f, trackpad: %u %f %f",
+	             1.0f * qc->trigger_clicked, qc->menu_clicked, qc->squeeze_clicked, qc->system_clicked,
+	             qc->thumbstick_clicked, 1.0f * (qc->thumbstick_right_pressed - qc->thumbstick_left_pressed),
+	             1.0f * (qc->thumbstick_up_pressed - qc->thumbstick_down_pressed),
+	             qc->trackpad_clicked, 1.0f * (qc->trackpad_right_pressed - qc->trackpad_left_pressed),
+	             1.0f * (qc->trackpad_up_pressed - qc->trackpad_down_pressed));
+	// clang-format on
 
-	xd->inputs[QWERTY_SELECT].value.boolean = qc->select_clicked;
-	xd->inputs[QWERTY_SELECT].timestamp = qc->select_timestamp;
+	xd->inputs[QWERTY_TRIGGER].value.vec1.x = 1.0f * qc->trigger_clicked;
+	xd->inputs[QWERTY_TRIGGER].timestamp = qc->trigger_timestamp;
 	xd->inputs[QWERTY_MENU].value.boolean = qc->menu_clicked;
 	xd->inputs[QWERTY_MENU].timestamp = qc->menu_timestamp;
+	xd->inputs[QWERTY_SQUEEZE].value.boolean = qc->squeeze_clicked;
+	xd->inputs[QWERTY_SQUEEZE].timestamp = qc->squeeze_timestamp;
+	xd->inputs[QWERTY_SYSTEM].value.boolean = qc->system_clicked;
+	xd->inputs[QWERTY_SYSTEM].timestamp = qc->system_timestamp;
+
+	xd->inputs[QWERTY_THUMBSTICK].value.vec2.x =
+	    1.0f * (qc->thumbstick_right_pressed - qc->thumbstick_left_pressed);
+	xd->inputs[QWERTY_THUMBSTICK].value.vec2.y = 1.0f * (qc->thumbstick_up_pressed - qc->thumbstick_down_pressed);
+	xd->inputs[QWERTY_THUMBSTICK].timestamp = qc->thumbstick_timestamp;
+	xd->inputs[QWERTY_THUMBSTICK_CLICK].value.boolean = qc->thumbstick_clicked;
+	xd->inputs[QWERTY_THUMBSTICK_CLICK].timestamp = qc->thumbstick_click_timestamp;
+
+	xd->inputs[QWERTY_TRACKPAD].value.vec2.x = 1.0f * (qc->trackpad_right_pressed - qc->trackpad_left_pressed);
+	xd->inputs[QWERTY_TRACKPAD].value.vec2.y = 1.0f * (qc->trackpad_up_pressed - qc->trackpad_down_pressed);
+	xd->inputs[QWERTY_TRACKPAD].timestamp = qc->trackpad_timestamp;
+	xd->inputs[QWERTY_TRACKPAD_TOUCH].value.boolean = qc->trackpad_right_pressed || qc->trackpad_left_pressed ||
+	                                                  qc->trackpad_up_pressed || qc->trackpad_down_pressed ||
+	                                                  qc->trackpad_clicked;
+	xd->inputs[QWERTY_TRACKPAD_TOUCH].timestamp = MAX(qc->trackpad_timestamp, qc->trackpad_click_timestamp);
+	xd->inputs[QWERTY_TRACKPAD_CLICK].value.boolean = qc->trackpad_clicked;
+	xd->inputs[QWERTY_TRACKPAD_CLICK].timestamp = qc->trackpad_click_timestamp;
 
 	return XRT_SUCCESS;
 }
@@ -144,8 +200,7 @@ qwerty_get_tracked_pose(struct xrt_device *xd,
 {
 	struct qwerty_device *qd = qwerty_device(xd);
 
-	if (name != XRT_INPUT_GENERIC_HEAD_POSE && name != XRT_INPUT_SIMPLE_GRIP_POSE &&
-	    name != XRT_INPUT_SIMPLE_AIM_POSE) {
+	if (name != XRT_INPUT_GENERIC_HEAD_POSE && name != XRT_INPUT_WMR_GRIP_POSE && name != XRT_INPUT_WMR_AIM_POSE) {
 		U_LOG_XDEV_UNSUPPORTED_INPUT(&qd->base, qd->sys->log_level, name);
 		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
@@ -187,7 +242,7 @@ qwerty_get_tracked_pose(struct xrt_device *xd,
 
 	// HMD Parenting
 
-	bool qd_is_ctrl = name == XRT_INPUT_SIMPLE_GRIP_POSE || name == XRT_INPUT_SIMPLE_AIM_POSE;
+	bool qd_is_ctrl = name == XRT_INPUT_WMR_GRIP_POSE || name == XRT_INPUT_WMR_AIM_POSE;
 	struct qwerty_controller *qc = qd_is_ctrl ? qwerty_controller(&qd->base) : NULL;
 	if (qd_is_ctrl && qc->follow_hmd) {
 		struct xrt_relation_chain relation_chain = {0};
@@ -272,10 +327,8 @@ qwerty_hmd_create(void)
 struct qwerty_controller *
 qwerty_controller_create(bool is_left, struct qwerty_hmd *qhmd)
 {
-	struct qwerty_controller *qc = U_DEVICE_ALLOCATE(struct qwerty_controller, U_DEVICE_ALLOC_TRACKING_NONE, 4, 1);
+	struct qwerty_controller *qc = U_DEVICE_ALLOCATE(struct qwerty_controller, U_DEVICE_ALLOC_TRACKING_NONE, 11, 1);
 	assert(qc);
-	qc->select_clicked = false;
-	qc->menu_clicked = false;
 	qc->follow_hmd = qhmd != NULL;
 
 	struct qwerty_device *qd = &qc->base;
@@ -286,7 +339,7 @@ qwerty_controller_create(bool is_left, struct qwerty_hmd *qhmd)
 
 	struct xrt_device *xd = &qd->base;
 
-	xd->name = XRT_DEVICE_SIMPLE_CONTROLLER;
+	xd->name = XRT_DEVICE_WMR_CONTROLLER;
 	xd->device_type = is_left ? XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER : XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER;
 
 	char *controller_name = is_left ? QWERTY_LEFT_STR : QWERTY_RIGHT_STR;
@@ -297,11 +350,22 @@ qwerty_controller_create(bool is_left, struct qwerty_hmd *qhmd)
 	char *tracker_name = is_left ? QWERTY_LEFT_TRACKER_STR : QWERTY_RIGHT_TRACKER_STR;
 	snprintf(xd->tracking_origin->name, XRT_TRACKING_NAME_LEN, "%s", tracker_name);
 
-	xd->inputs[QWERTY_SELECT].name = XRT_INPUT_SIMPLE_SELECT_CLICK;
-	xd->inputs[QWERTY_MENU].name = XRT_INPUT_SIMPLE_MENU_CLICK;
-	xd->inputs[QWERTY_GRIP].name = XRT_INPUT_SIMPLE_GRIP_POSE;
-	xd->inputs[QWERTY_AIM].name = XRT_INPUT_SIMPLE_AIM_POSE; //!< @todo: aim input not implemented
-	xd->outputs[QWERTY_VIBRATION].name = XRT_OUTPUT_NAME_SIMPLE_VIBRATION;
+	xd->inputs[QWERTY_TRIGGER].name = XRT_INPUT_WMR_TRIGGER_VALUE;
+	xd->inputs[QWERTY_MENU].name = XRT_INPUT_WMR_MENU_CLICK;
+	xd->inputs[QWERTY_SQUEEZE].name = XRT_INPUT_WMR_SQUEEZE_CLICK;
+	xd->inputs[QWERTY_SYSTEM].name = XRT_INPUT_WMR_HOME_CLICK;
+	xd->inputs[QWERTY_THUMBSTICK].name = XRT_INPUT_WMR_THUMBSTICK;
+	xd->inputs[QWERTY_THUMBSTICK_CLICK].name = XRT_INPUT_WMR_THUMBSTICK_CLICK;
+	xd->inputs[QWERTY_TRACKPAD].name = XRT_INPUT_WMR_TRACKPAD;
+	xd->inputs[QWERTY_TRACKPAD_TOUCH].name = XRT_INPUT_WMR_TRACKPAD_TOUCH;
+	xd->inputs[QWERTY_TRACKPAD_CLICK].name = XRT_INPUT_WMR_TRACKPAD_CLICK;
+	xd->inputs[QWERTY_GRIP].name = XRT_INPUT_WMR_GRIP_POSE;
+	//!< @todo: aim input offset not implemented, equal to grip pose
+	xd->inputs[QWERTY_AIM].name = XRT_INPUT_WMR_AIM_POSE;
+	xd->outputs[QWERTY_VIBRATION].name = XRT_OUTPUT_NAME_WMR_HAPTIC;
+
+	xd->binding_profiles = binding_profiles;
+	xd->binding_profile_count = ARRAY_SIZE(binding_profiles);
 
 	xd->update_inputs = qwerty_update_inputs;
 	xd->get_tracked_pose = qwerty_get_tracked_pose;
@@ -359,9 +423,15 @@ qwerty_setup_var_tracking(struct qwerty_system *qs)
 	u_var_add_ro_text(qs, "Modify FD movement speed", "Mouse wheel");
 	u_var_add_ro_text(qs, "Modify FD movement speed", "Numpad +/-");
 	u_var_add_ro_text(qs, "Reset both or FC pose", "R");
-	u_var_add_ro_text(qs, "Toggle both or FC parenting to HMD", "F");
-	u_var_add_ro_text(qs, "FC Select click", "Left Click");
-	u_var_add_ro_text(qs, "FC Menu click", "Middle Click");
+	u_var_add_ro_text(qs, "Toggle both or FC parenting to HMD", "C");
+	u_var_add_ro_text(qs, "FC Trigger click", "Left Click");
+	u_var_add_ro_text(qs, "FC Squeeze click", "Middle Click");
+	u_var_add_ro_text(qs, "FC Menu click", "N");
+	u_var_add_ro_text(qs, "FC System click", "B");
+	u_var_add_ro_text(qs, "FC Joystick direction", "TFGH");
+	u_var_add_ro_text(qs, "FC Joystick click", "V");
+	u_var_add_ro_text(qs, "FC Trackpad touch direction", "IJKL");
+	u_var_add_ro_text(qs, "FC Trackpad click", "M");
 }
 
 struct qwerty_system *
@@ -493,17 +563,17 @@ qwerty_release_all(struct qwerty_device *qd)
 // Controller methods
 
 void
-qwerty_press_select(struct qwerty_controller *qc)
+qwerty_press_trigger(struct qwerty_controller *qc)
 {
-	qc->select_clicked = true;
-	qc->select_timestamp = os_monotonic_get_ns();
+	qc->trigger_clicked = true;
+	qc->trigger_timestamp = os_monotonic_get_ns();
 }
 
 void
-qwerty_release_select(struct qwerty_controller *qc)
+qwerty_release_trigger(struct qwerty_controller *qc)
 {
-	qc->select_clicked = false;
-	qc->select_timestamp = os_monotonic_get_ns();
+	qc->trigger_clicked = false;
+	qc->trigger_timestamp = os_monotonic_get_ns();
 }
 
 void
@@ -519,6 +589,78 @@ qwerty_release_menu(struct qwerty_controller *qc)
 	qc->menu_clicked = false;
 	qc->menu_timestamp = os_monotonic_get_ns();
 }
+
+void
+qwerty_press_squeeze(struct qwerty_controller *qc)
+{
+	qc->squeeze_clicked = true;
+	qc->squeeze_timestamp = os_monotonic_get_ns();
+}
+
+void
+qwerty_release_squeeze(struct qwerty_controller *qc)
+{
+	qc->squeeze_clicked = false;
+	qc->squeeze_timestamp = os_monotonic_get_ns();
+}
+
+void
+qwerty_press_system(struct qwerty_controller *qc)
+{
+	qc->system_clicked = true;
+	qc->system_timestamp = os_monotonic_get_ns();
+}
+
+void
+qwerty_release_system(struct qwerty_controller *qc)
+{
+	qc->system_clicked = false;
+	qc->system_timestamp = os_monotonic_get_ns();
+}
+
+// clang-format off
+void qwerty_press_thumbstick_left(struct qwerty_controller *qc) { qc->thumbstick_left_pressed = true;
+                                                                  qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_thumbstick_left(struct qwerty_controller *qc) { qc->thumbstick_left_pressed = false;
+                                                                    qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_thumbstick_right(struct qwerty_controller *qc) { qc->thumbstick_right_pressed = true;
+                                                                   qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_thumbstick_right(struct qwerty_controller *qc) { qc->thumbstick_right_pressed = false;
+                                                                     qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_thumbstick_up(struct qwerty_controller *qc) { qc->thumbstick_up_pressed = true;
+                                                                qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_thumbstick_up(struct qwerty_controller *qc) { qc->thumbstick_up_pressed = false;
+                                                                  qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_thumbstick_down(struct qwerty_controller *qc) { qc->thumbstick_down_pressed = true;
+                                                                  qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_thumbstick_down(struct qwerty_controller *qc) { qc->thumbstick_down_pressed = false;
+                                                                    qc->thumbstick_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_thumbstick_click(struct qwerty_controller *qc) { qc->thumbstick_clicked = true;
+                                                                   qc->thumbstick_click_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_thumbstick_click(struct qwerty_controller *qc) { qc->thumbstick_clicked = false;
+                                                                     qc->thumbstick_click_timestamp = os_monotonic_get_ns(); }
+
+void qwerty_press_trackpad_left(struct qwerty_controller *qc) { qc->trackpad_left_pressed = true;
+                                                                qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_trackpad_left(struct qwerty_controller *qc) { qc->trackpad_left_pressed = false;
+                                                                  qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_trackpad_right(struct qwerty_controller *qc) { qc->trackpad_right_pressed = true;
+                                                                 qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_trackpad_right(struct qwerty_controller *qc) { qc->trackpad_right_pressed = false;
+                                                                   qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_trackpad_up(struct qwerty_controller *qc) { qc->trackpad_up_pressed = true;
+                                                              qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_trackpad_up(struct qwerty_controller *qc) { qc->trackpad_up_pressed = false;
+                                                                qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_trackpad_down(struct qwerty_controller *qc) { qc->trackpad_down_pressed = true;
+                                                                qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_trackpad_down(struct qwerty_controller *qc) { qc->trackpad_down_pressed = false;
+                                                                  qc->trackpad_timestamp = os_monotonic_get_ns(); }
+void qwerty_press_trackpad_click(struct qwerty_controller *qc) { qc->trackpad_clicked = true;
+                                                                 qc->trackpad_click_timestamp = os_monotonic_get_ns(); }
+void qwerty_release_trackpad_click(struct qwerty_controller *qc) { qc->trackpad_clicked = false;
+                                                                   qc->trackpad_click_timestamp = os_monotonic_get_ns(); }
+// clang-format on
 
 void
 qwerty_follow_hmd(struct qwerty_controller *qc, bool follow)

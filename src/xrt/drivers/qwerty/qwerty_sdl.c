@@ -209,16 +209,45 @@ qwerty_process_event(struct xrt_device **xdevs, size_t xdev_count, SDL_Event eve
 		qwerty_add_look_delta(qdev, yaw, pitch);
 	}
 
-	// Select and menu clicks only for controllers.
-	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) qwerty_press_select(qctrl);
-	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) qwerty_release_select(qctrl);
-	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_MIDDLE) qwerty_press_menu(qctrl);
-	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_MIDDLE) qwerty_release_menu(qctrl);
+	// Trigger, squeeze and menu clicks only for controllers.
+	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) qwerty_press_trigger(qctrl);
+	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) qwerty_release_trigger(qctrl);
+	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_MIDDLE) qwerty_press_squeeze(qctrl);
+	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_MIDDLE) qwerty_release_squeeze(qctrl);
+
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_n) qwerty_press_menu(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_n) qwerty_release_menu(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_b) qwerty_press_system(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_b) qwerty_release_system(qctrl);
+
+	// Thumbstick
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_f) qwerty_press_thumbstick_left(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_f) qwerty_release_thumbstick_left(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_h) qwerty_press_thumbstick_right(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_h) qwerty_release_thumbstick_right(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_t) qwerty_press_thumbstick_up(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_t) qwerty_release_thumbstick_up(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_g) qwerty_press_thumbstick_down(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_g) qwerty_release_thumbstick_down(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_v) qwerty_press_thumbstick_click(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_v) qwerty_release_thumbstick_click(qctrl);
+
+	// Trackpad
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_j) qwerty_press_trackpad_left(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_j) qwerty_release_trackpad_left(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_l) qwerty_press_trackpad_right(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_l) qwerty_release_trackpad_right(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_i) qwerty_press_trackpad_up(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_i) qwerty_release_trackpad_up(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_k) qwerty_press_trackpad_down(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_k) qwerty_release_trackpad_down(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_m) qwerty_press_trackpad_click(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_m) qwerty_release_trackpad_click(qctrl);
 
 	// clang-format on
 
 	// Controllers follow/unfollow HMD
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_f && event.key.repeat == 0) {
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_c && event.key.repeat == 0) {
 		if (qdev != qd_hmd) {
 			qwerty_follow_hmd(qctrl, !qctrl->follow_hmd);
 		} else { // If no controller is focused, set both to the same state
