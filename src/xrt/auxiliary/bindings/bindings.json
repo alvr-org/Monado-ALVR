@@ -985,7 +985,7 @@
 			"title": "Meta Touch Controller (Rift CV1)",
 			"type": "tracked_controller",
 			"steamvr_controllertype": "oculus_touch",
-			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER",
+			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER_RIFT_CV1",
 			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
 			"openxr_version": {
 				"promoted": {
@@ -1135,7 +1135,7 @@
 			"title": "Meta Touch Controller (Rift S / Quest 1)",
 			"type": "tracked_controller",
 			"steamvr_controllertype": "oculus_touch",
-			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER",
+			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER_QUEST_1_RIFT_S",
 			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
 			"openxr_version": {
 				"promoted": {
@@ -1277,7 +1277,7 @@
 			"title": "Meta Touch Controller (Quest 2)",
 			"type": "tracked_controller",
 			"steamvr_controllertype": "oculus_touch",
-			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER",
+			"monado_device": "XRT_DEVICE_TOUCH_CONTROLLER_QUEST_2",
 			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
 			"openxr_version": {
 				"promoted": {
