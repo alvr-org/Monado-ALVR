@@ -1,4 +1,4 @@
-// Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2019-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -203,6 +203,10 @@ u_device_setup_one_eye(struct xrt_device *xdev, const struct u_device_simple_inf
 bool
 u_device_setup_split_side_by_side(struct xrt_device *xdev, const struct u_device_simple_info *info)
 {
+	// 1 or 2 views supported.
+	assert(xdev->hmd->view_count > 0);
+	assert(xdev->hmd->view_count <= 2);
+	assert(xdev->hmd->view_count <= XRT_MAX_VIEWS);
 
 	uint32_t view_count = xdev->hmd->view_count;
 
