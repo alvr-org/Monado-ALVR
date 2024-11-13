@@ -78,6 +78,7 @@ sdl_device_init(struct sdl_program *sp)
 	// Name and type.
 	xdev->name = XRT_DEVICE_GENERIC_HMD;
 	xdev->device_type = XRT_DEVICE_TYPE_HMD;
+	xdev->hmd->view_count = 2;
 
 	// Print name.
 	snprintf(xdev->str, XRT_DEVICE_NAME_LEN, "SDL HMD");
