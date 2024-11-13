@@ -1,9 +1,10 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2024, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Basic logging functionality.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Simon Zeni <simon.zeni@collabora.com>
  * @ingroup aux_log
  */
 
@@ -11,6 +12,8 @@
 #pragma once
 
 #include "xrt/xrt_compiler.h"
+
+#include "util/u_pretty_print.h"
 
 #include <stdarg.h>
 
@@ -367,6 +370,27 @@ u_log_set_sink(u_log_sink_func_t func, void *data);
 //! Conditionally log a device-related memory hexdump message at U_LOGGING_DEBUG level.
 #define U_LOG_XDEV_IFL_D_HEX(xdev, cond_level, data, data_size)                                                        \
 	U_LOG_XDEV_IFL_HEX(U_LOGGING_DEBUG, cond_level, xdev, data, data_size)
+/*!
+ * @}
+ */
+
+/*!
+ * @name Device-related error logging macros
+ *
+ * These are printed from a driver at error level.
+ *
+ * @param xdev The @ref xrt_device pointer associated with this message
+ *
+ * @{
+ */
+#define U_LOG_XDEV_UNSUPPORTED_INPUT(xdev, cond_level, name)                                                           \
+	do {                                                                                                           \
+		struct u_pp_sink_stack_only sink;                                                                      \
+		u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);                                                 \
+		u_pp_xrt_input_name(dg, name);                                                                         \
+		U_LOG_XDEV_IFL_E(xdev, cond_level, "Unsupported input: %s", sink.buffer);                              \
+	} while (false);
+
 /*!
  * @}
  */
