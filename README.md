@@ -265,8 +265,9 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported by contacting:
 
 * First-line project contacts:
-  * Jakob Bornecrantz <jakob@collabora.com>
   * Rylie Pavlik <rylie.pavlik@collabora.com>
+  * Frederic Plourde <frederic.plourde@collabora.com>
+  * Jakob Bornecrantz <tbornecrantz@nvidia.com>
 * freedesktop.org contacts: see most recent list at <https://www.freedesktop.org/wiki/CodeOfConduct/>
 
 Code of Conduct section excerpt adapted from the
