@@ -450,7 +450,7 @@ def write_verify_func_end(f):
     f.write("\treturn false;\n}\n")
 
 
-if_strcmp = '''{exttab}if (strcmp(str, "{check}") == 0) {{
+if_strcmp = '''if (strcmp(str, "{check}") == 0) {{
 {exttab}\t\t\treturn true;
 {exttab}\t\t}} else '''
 
@@ -464,10 +464,10 @@ def write_verify_switch_body(f, dict_of_lists, profile, profile_name, ext_name, 
     the values are lists of strings of that length. And a suffix if any."""
     f.write(f"{tab_char}\tswitch (length) {{\n")
     for length in sorted(dict_of_lists.keys()):
-        f.write(f"{tab_char}\tcase {str(length)}:\n\t\t")
+        f.write(f"{tab_char}\tcase {str(length)}:\n\t\t{tab_char}")
         for path in sorted(dict_of_lists[length]):
             f.write(if_strcmp.format(exttab=tab_char, check=path))
-        f.write(f"{tab_char}{{\n{tab_char}\t\t\tbreak;\n{tab_char}\t\t}}\n")
+        f.write(f"{{\n{tab_char}\t\t\tbreak;\n{tab_char}\t\t}}\n")
     f.write(f"{tab_char}\tdefault: break;\n{tab_char}\t}}\n")
 
 def write_verify_func_switch(f, dict_of_lists, profile, profile_name, ext_name):
