@@ -61,7 +61,7 @@ oxr_find_input_in_chain(const void *ptr, XrStructureType desired)
  * casting.
  */
 static inline XrBaseOutStructure *
-oxr_find_output_in_chain(void *ptr, XrStructureType desired)
+oxr_find_output_in_chain(const void *ptr, XrStructureType desired)
 {
 	while (ptr != NULL) {
 		XrBaseOutStructure *base = (XrBaseOutStructure *)ptr;

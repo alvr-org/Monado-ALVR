@@ -294,6 +294,18 @@
 
 
 /*
+ * XR_EXT_active_action_set_priority
+ */
+#if defined(XR_EXT_active_action_set_priority) && defined(XRT_FEATURE_OPENXR_ACTIVE_ACTION_SET_PRIORITY)
+#define OXR_HAVE_EXT_active_action_set_priority
+#define OXR_EXTENSION_SUPPORT_EXT_active_action_set_priority(_)                                                        \
+	_(EXT_active_action_set_priority, EXT_ACTIVE_ACTION_SET_PRIORITY)
+#else
+#define OXR_EXTENSION_SUPPORT_EXT_active_action_set_priority(_)
+#endif
+
+
+/*
  * XR_EXT_debug_utils
  */
 #if defined(XR_EXT_debug_utils) && defined(XRT_FEATURE_OPENXR_DEBUG_UTILS)
@@ -783,6 +795,7 @@
     OXR_EXTENSION_SUPPORT_KHR_vulkan_enable2(_) \
     OXR_EXTENSION_SUPPORT_KHR_vulkan_swapchain_format_list(_) \
     OXR_EXTENSION_SUPPORT_KHR_win32_convert_performance_counter_time(_) \
+    OXR_EXTENSION_SUPPORT_EXT_active_action_set_priority(_) \
     OXR_EXTENSION_SUPPORT_EXT_debug_utils(_) \
     OXR_EXTENSION_SUPPORT_EXT_dpad_binding(_) \
     OXR_EXTENSION_SUPPORT_EXT_eye_gaze_interaction(_) \

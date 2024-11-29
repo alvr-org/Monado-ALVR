@@ -58,7 +58,8 @@ oxr_action_cache_update(struct oxr_logger *log,
                         struct oxr_action_cache *cache,
                         int64_t time,
                         struct oxr_subaction_paths *subaction_path,
-                        bool select);
+                        bool select,
+                        const XrActiveActionSetPrioritiesEXT *active_priorities);
 
 static void
 oxr_action_attachment_update(struct oxr_logger *log,
@@ -67,7 +68,8 @@ oxr_action_attachment_update(struct oxr_logger *log,
                              const XrActiveActionSet *actionSets,
                              struct oxr_action_attachment *act_attached,
                              int64_t time,
-                             struct oxr_subaction_paths subaction_paths);
+                             struct oxr_subaction_paths subaction_paths,
+                             const XrActiveActionSetPrioritiesEXT *active_priorities);
 
 static void
 oxr_action_bind_io(struct oxr_logger *log,
@@ -925,16 +927,37 @@ oxr_input_is_bound_in_act_set(struct oxr_action_input *action_input, struct oxr_
 	return false;
 }
 
+static uint32_t
+oxr_get_action_set_priority(const struct oxr_action_set_ref *act_set_ref,
+                            const XrActiveActionSetPrioritiesEXT *active_priorities)
+{
+	if (active_priorities) {
+		for (uint32_t i = 0; i < active_priorities->actionSetPriorityCount; i++) {
+			XrActiveActionSetPriorityEXT act_set_priority = active_priorities->actionSetPriorities[i];
+
+			struct oxr_action_set *action_set =
+			    XRT_CAST_OXR_HANDLE_TO_PTR(struct oxr_action_set *, act_set_priority.actionSet);
+
+			if (action_set->data == act_set_ref) {
+				return act_set_priority.priorityOverride;
+			}
+		}
+	}
+
+	return act_set_ref->priority;
+}
+
 static bool
 oxr_input_supressed(struct oxr_session *sess,
                     uint32_t countActionSets,
                     const XrActiveActionSet *actionSets,
                     struct oxr_subaction_paths *subaction_path,
                     struct oxr_action_attachment *act_attached,
-                    struct oxr_action_input *action_input)
+                    struct oxr_action_input *action_input,
+                    const XrActiveActionSetPrioritiesEXT *active_priorities)
 {
 	struct oxr_action_set_ref *act_set_ref = act_attached->act_set_attached->act_set_ref;
-	uint32_t priority = act_set_ref->priority;
+	uint32_t priority = oxr_get_action_set_priority(act_set_ref, active_priorities);
 
 	// find sources that are bound to an action in a set with higher prio
 	for (uint32_t i = 0; i < countActionSets; i++) {
@@ -954,7 +977,7 @@ oxr_input_supressed(struct oxr_session *sess,
 		}
 
 		/* input may be suppressed by action set with higher prio */
-		if (other_act_set_attached->act_set_ref->priority <= priority) {
+		if (oxr_get_action_set_priority(other_act_set_attached->act_set_ref, active_priorities) <= priority) {
 			continue;
 		}
 
@@ -993,7 +1016,8 @@ oxr_input_combine_input(struct oxr_session *sess,
                         struct oxr_action_cache *cache,
                         struct oxr_input_value_tagged *out_input,
                         int64_t *out_timestamp,
-                        bool *out_is_active)
+                        bool *out_is_active,
+                        const XrActiveActionSetPrioritiesEXT *active_priorities)
 {
 	struct oxr_action_input *inputs = cache->inputs;
 	size_t input_count = cache->input_count;
@@ -1013,8 +1037,8 @@ oxr_input_combine_input(struct oxr_session *sess,
 
 		// suppress input if it is also bound to action in set with
 		// higher priority
-		if (oxr_input_supressed(sess, countActionSets, actionSets, subaction_path, act_attached,
-		                        action_input)) {
+		if (oxr_input_supressed(sess, countActionSets, actionSets, subaction_path, act_attached, action_input,
+		                        active_priorities)) {
 			continue;
 		}
 
@@ -1111,7 +1135,8 @@ oxr_action_cache_update(struct oxr_logger *log,
                         struct oxr_action_cache *cache,
                         int64_t time,
                         struct oxr_subaction_paths *subaction_path,
-                        bool selected)
+                        bool selected,
+                        const XrActiveActionSetPrioritiesEXT *active_priorities)
 {
 	struct oxr_action_state last = cache->current;
 
@@ -1144,7 +1169,8 @@ oxr_action_cache_update(struct oxr_logger *log,
 		    cache,                           // cache
 		    &combined,                       // out_input
 		    &timestamp,                      // out_timestamp
-		    &is_active);                     // out_is_active
+		    &is_active,                      // out_is_active
+		    active_priorities);              // active_priorities
 		if (!bret) {
 			oxr_log(log, "Failed to get/combine input values '%s'", act_attached->act_ref->name);
 			return;
@@ -1291,7 +1317,8 @@ oxr_action_attachment_update(struct oxr_logger *log,
                              const XrActiveActionSet *actionSets,
                              struct oxr_action_attachment *act_attached,
                              int64_t time,
-                             struct oxr_subaction_paths subaction_paths)
+                             struct oxr_subaction_paths subaction_paths,
+                             const XrActiveActionSetPrioritiesEXT *active_priorities)
 {
 	// This really shouldn't be happening.
 	if (act_attached == NULL) {
@@ -1303,7 +1330,7 @@ oxr_action_attachment_update(struct oxr_logger *log,
 	subaction_paths_##X.X = true;                                                                                  \
 	bool select_##X = subaction_paths.X || subaction_paths.any;                                                    \
 	oxr_action_cache_update(log, sess, countActionSets, actionSets, act_attached, &act_attached->X, time,          \
-	                        &subaction_paths_##X, select_##X);
+	                        &subaction_paths_##X, select_##X, active_priorities);
 
 	OXR_FOR_EACH_VALID_SUBACTION_PATH(UPDATE_SELECT)
 #undef UPDATE_SELECT
@@ -1792,7 +1819,8 @@ XrResult
 oxr_action_sync_data(struct oxr_logger *log,
                      struct oxr_session *sess,
                      uint32_t countActionSets,
-                     const XrActiveActionSet *actionSets)
+                     const XrActiveActionSet *actionSets,
+                     const XrActiveActionSetPrioritiesEXT *activePriorities)
 {
 	struct oxr_action_set *act_set = NULL;
 	struct oxr_action_set_attachment *act_set_attached = NULL;
@@ -1877,7 +1905,7 @@ oxr_action_sync_data(struct oxr_logger *log,
 			}
 
 			oxr_action_attachment_update(log, sess, countActionSets, actionSets, act_attached, now,
-			                             subaction_paths);
+			                             subaction_paths, activePriorities);
 		}
 	}
 

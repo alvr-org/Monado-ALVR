@@ -57,6 +57,7 @@ EXTENSIONS = (
     ['XR_KHR_vulkan_enable2', 'XR_USE_GRAPHICS_API_VULKAN'],
     ['XR_KHR_vulkan_swapchain_format_list', 'XR_USE_GRAPHICS_API_VULKAN', 'XRT_FEATURE_OPENXR_VULKAN_SWAPCHAIN_FORMAT_LIST'],
     ['XR_KHR_win32_convert_performance_counter_time', 'XR_USE_PLATFORM_WIN32'],
+    ['XR_EXT_active_action_set_priority', 'XRT_FEATURE_OPENXR_ACTIVE_ACTION_SET_PRIORITY'],
     ['XR_EXT_debug_utils', 'XRT_FEATURE_OPENXR_DEBUG_UTILS'],
     ['XR_EXT_dpad_binding'],
     ['XR_EXT_eye_gaze_interaction', 'XRT_FEATURE_OPENXR_INTERACTION_EXT_EYE_GAZE'],

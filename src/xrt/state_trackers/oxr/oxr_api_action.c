@@ -132,6 +132,19 @@ oxr_xrSyncActions(XrSession session, const XrActionsSyncInfo *syncInfo)
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, syncInfo, XR_TYPE_ACTIONS_SYNC_INFO);
 
+	const XrActiveActionSetPrioritiesEXT *active_priorities = NULL;
+
+#ifdef OXR_HAVE_EXT_active_action_set_priority
+	active_priorities = OXR_GET_OUTPUT_FROM_CHAIN(syncInfo->next, XR_TYPE_ACTIVE_ACTION_SET_PRIORITIES_EXT,
+	                                              const XrActiveActionSetPrioritiesEXT);
+
+	// ensure that if the active priority override is present,
+	// the EXT_active_action_set_priority extension is enabled
+	if (active_priorities) {
+		OXR_VERIFY_EXTENSION(&log, sess->sys->inst, EXT_active_action_set_priority);
+	}
+#endif
+
 	struct xrt_system_roles sys_roles = XRT_STRUCT_INIT;
 	xrt_system_devices_get_roles(sess->sys->xsysd, &sys_roles);
 	{
@@ -159,7 +172,8 @@ oxr_xrSyncActions(XrSession session, const XrActionsSyncInfo *syncInfo)
 		}
 	}
 
-	return oxr_action_sync_data(&log, sess, syncInfo->countActiveActionSets, syncInfo->activeActionSets);
+	return oxr_action_sync_data(&log, sess, syncInfo->countActiveActionSets, syncInfo->activeActionSets,
+	                            active_priorities);
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL
