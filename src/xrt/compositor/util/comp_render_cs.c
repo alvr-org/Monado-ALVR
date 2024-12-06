@@ -7,7 +7,7 @@
  * @author Christoph Haag <christoph.haag@collabora.com>
  * @author Fernando Velazquez Innella <finnella@magicleap.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
- * @ingroup comp_main
+ * @ingroup comp_util
  */
 
 #include "util/comp_layer_accum.h"
