@@ -67,24 +67,24 @@ extern "C" {
 /*!
  * Maximum number of times that the layer squasher shader can run per
  * @ref render_compute. Since you run the layer squasher shader once per view
- * this is essentially the same as number of views. But if you you where to do
- * two or more different compositions it's not the maximum number of views per
+ * this is essentially the same as number of views. But if you were to do
+ * two or more different compositions it is not the maximum number of views per
  * composition (which is this number divided by number of composition).
  */
 #define RENDER_MAX_LAYER_RUNS_SIZE (XRT_MAX_VIEWS)
 #define RENDER_MAX_LAYER_RUNS_COUNT (r->view_count)
 
-//! How large in pixels the distortion image is.
+//! Distortion image dimension in pixels
 #define RENDER_DISTORTION_IMAGE_DIMENSIONS (128)
 
 //! How many distortion images we have, one for each channel (3 rgb) and per view.
 #define RENDER_DISTORTION_IMAGES_SIZE (3 * XRT_MAX_VIEWS)
 #define RENDER_DISTORTION_IMAGES_COUNT (3 * r->view_count)
 
-//! Which binding does the layer projection and quad shader has it's UBO on.
+//! The binding that the layer projection and quad shader have their UBO on.
 #define RENDER_BINDING_LAYER_SHARED_UBO 0
 
-//! Which binding does the shared layer fragment shader has it's source on.
+//! The binding that the shared layer fragment shader has its source on.
 #define RENDER_BINDING_LAYER_SHARED_SRC 1
 
 
@@ -268,7 +268,7 @@ render_buffer_write(struct vk_bundle *vk, struct render_buffer *buffer, void *da
 struct render_sub_alloc
 {
 	/*!
-	 * The buffer this is allocated from, it's the callers responsibility
+	 * The buffer this is allocated from, it is the caller's responsibility
 	 * to keep it alive for as long as the sub-allocation is used.
 	 */
 	VkBuffer buffer;
@@ -281,11 +281,11 @@ struct render_sub_alloc
 };
 
 /*!
- * A per frame tracker of sub-allocation out of a buffer, used to reduce the
+ * A per-frame tracker of sub-allocation out of a buffer, used to reduce the
  * number of UBO objects we need to create. This code is designed with one
  * constraint in mind, that the lifetime of a sub-allocation is only for one
  * frame and is discarded at the end of it, but also alive for the entire frame.
- * This removes the need to free indivudial sub-allocation, or even track them
+ * This removes the need to free individual sub-allocation, or even track them
  * beyond filling the UBO data and descriptor sets.
  *
  * @see render_sub_alloc
@@ -293,7 +293,7 @@ struct render_sub_alloc
 struct render_sub_alloc_tracker
 {
 	/*!
-	 * The buffer to allocate from, it's the callers responsibility to keep
+	 * The buffer to allocate from, it is the caller's responsibility to keep
 	 * it alive for as long as the sub-allocations are in used.
 	 */
 	VkBuffer buffer;
@@ -451,7 +451,7 @@ struct render_resources
 		uint32_t index_offsets[XRT_MAX_VIEWS];
 		uint32_t index_count_total;
 
-		//! Info ubos, only supports two views currently.
+		//! Info UBOs.
 		struct render_buffer ubos[XRT_MAX_VIEWS];
 	} mesh;
 
@@ -579,6 +579,8 @@ render_resources_close(struct render_resources *r);
 
 /*!
  * Creates or recreates the compute distortion textures if necessary.
+ *
+ * @public @memberof render_resources
  */
 bool
 render_distortion_images_ensure(struct render_resources *r,
@@ -588,6 +590,9 @@ render_distortion_images_ensure(struct render_resources *r,
 
 /*!
  * Free distortion images.
+ *
+ * @see render_distortion_images_ensure
+ * @public @memberof render_resources
  */
 void
 render_distortion_images_close(struct render_resources *r);
@@ -653,12 +658,16 @@ struct render_scratch_images
 
 /*!
  * Ensure that the scratch images are created and have the given extent.
+ *
+ * @public @memberof render_scratch_images
  */
 bool
 render_scratch_images_ensure(struct render_resources *r, struct render_scratch_images *rsi, VkExtent2D extent);
 
 /*!
  * Close all resources on the given @ref render_scratch_images.
+ *
+ * @public @memberof render_scratch_images
  */
 void
 render_scratch_images_close(struct render_resources *r, struct render_scratch_images *rsi);
@@ -737,7 +746,7 @@ struct render_gfx_render_pass
 };
 
 /*!
- * Creates all resources held by the render pass, does not free the struct itself.
+ * Creates all resources held by the render pass.
  *
  * @public @memberof render_gfx_render_pass
  */
@@ -766,7 +775,7 @@ render_gfx_render_pass_close(struct render_gfx_render_pass *rgrp);
 /*!
  * Each rendering (@ref render_gfx) render to one or more targets
  * (@ref render_gfx_target_resources), the target points to one render pass and
- * it's pipelines (@ref render_gfx_render_pass). It is up to the code using
+ * its pipelines (@ref render_gfx_render_pass). It is up to the code using
  * these to do reuse of render passes and ensure they match.
  *
  * @see comp_render_gfx
@@ -969,7 +978,7 @@ render_gfx_end_view(struct render_gfx *rr);
 
 /*!
  * Allocate needed resources for one mesh shader dispatch, will also update the
- * descriptor set, ubo will be filled out with the given @p data argument.
+ * descriptor set, UBO will be filled out with the given @p data argument.
  *
  * Uses the @ref render_sub_alloc_tracker of the @ref render_gfx and the
  * descriptor pool of @ref render_resources, both of which will be reset once
