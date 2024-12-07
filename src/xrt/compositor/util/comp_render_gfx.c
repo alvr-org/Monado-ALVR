@@ -532,7 +532,7 @@ do_layers(struct render_gfx *rr,
 
 	/*
 	 * Reserve UBOs, create descriptor sets, and fill in any data ahead of
-	 * time. If we ever want to copy UBO data, this lets us do that easily:
+	 * time. If we ever want to copy UBO data this lets us do that easily:
 	 * write a copy command before the other gfx commands.
 	 */
 
@@ -685,8 +685,8 @@ do_mesh(struct render_gfx *rr,
 	VkResult ret;
 
 	/*
-	 * Reserve UBOs, create descriptor sets, and fill in any data a head of
-	 * time, if we ever want to copy UBO data this lets us do that easily
+	 * Reserve UBOs, create descriptor sets, and fill in any data ahead of
+	 * time. If we ever want to copy UBO data this lets us do that easily:
 	 * write a copy command before the other gfx commands.
 	 */
 
