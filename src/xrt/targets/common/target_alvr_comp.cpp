@@ -1,4 +1,5 @@
 #include <thread>
+#include <iostream>
 
 extern "C" {
 #include "main/comp_compositor.h"
@@ -7,6 +8,8 @@ extern "C" {
 
 #include <Encoder.hpp>
 #include <monado_interface.h>
+// TODO: We should probably create an api boundary here
+#include <alvr_binding.h>
 
 // TODO: Deal with the exceptions?
 
@@ -180,14 +183,32 @@ alvr_target_calc_frame_pacing(comp_target *ct,
                               int64_t *out_present_slop,
                               int64_t *out_predicted_display)
 {
-	// TODO: Obvs lmao
-	static int64_t frame = 0;
+	// TODO: Should we give out the information on when we expect it to actually get displayed to improve prediction
+	// or will that just mess it up more?
 
+	// TODO: Do we need the frame index for anything?
+	static int64_t frame = 0;
 	*out_frame_id = ++frame;
-	*out_wake_up = os_monotonic_get_ns();
-	*out_desired_present = *out_wake_up + 5;
-	*out_present_slop = 0;
-	*out_predicted_display = *out_wake_up + 5;
+
+	// TODO: Improve handling
+	u64 nextVsync = 0;
+	// NOTE: That's the next vsync that will be performed, we want to aim for the one after it
+	alvr_duration_until_next_vsync(&nextVsync);
+
+	std::cout << "duration until next vsync: " << nextVsync << "\n";
+
+	nextVsync += os_monotonic_get_ns();
+
+	std::cout << "next vsync time: " << nextVsync << "\n";
+
+	// timed for 120 fps
+	*out_wake_up = nextVsync;
+	*out_desired_present = nextVsync + 8;
+	// graphics and encode are each allowed to take one full frametime since they are async
+	*out_present_slop = 8;
+	*out_predicted_display = nextVsync + 16;
+
+	std::cout << "calculated wake up time: " << *out_wake_up << "\n";
 }
 
 void
