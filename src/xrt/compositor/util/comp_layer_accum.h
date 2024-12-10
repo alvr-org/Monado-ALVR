@@ -51,7 +51,7 @@ struct comp_layer
 /*!
  * Get a (color) swapchain associated with a layer.
  *
- * @param cla self
+ * @param cl self
  * @param swapchain_index index of swapchain - typically this is 0 for most layers, the view index for projection.
 
  * @public @memberof comp_layer
@@ -63,7 +63,7 @@ comp_layer_get_swapchain(const struct comp_layer *cl, uint32_t swapchain_index);
 /*!
  * Get a depth swapchain associated with a (projection with depth) layer
  *
- * @param cla self
+ * @param cl self
  * @param swapchain_index index of **color** swapchain - typically this is the view index.
  *
  * @public @memberof comp_layer
