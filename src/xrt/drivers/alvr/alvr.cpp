@@ -6,6 +6,7 @@
  *
  *
  * Based largely on simulated_hmd.c
+ *  TODO: Fix
  *
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
@@ -32,6 +33,7 @@
 #include "xrt/xrt_results.h"
 
 #include <array>
+#include <cstdlib>
 #include <stdio.h>
 #include <mutex>
 
@@ -86,7 +88,7 @@ alvr_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&hmd->base);
 }
 
-static void
+static xrt_result_t
 alvr_hmd_update_inputs(struct xrt_device *xdev)
 {
 	/*
@@ -94,9 +96,10 @@ alvr_hmd_update_inputs(struct xrt_device *xdev)
 	 * put code to update the attached inputs fields. If not you can use
 	 * the u_device_noop_update_inputs helper to make it a no-op.
 	 */
+	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 alvr_hmd_get_tracked_pose(struct xrt_device *xdev,
                           enum xrt_input_name name,
                           int64_t at_timestamp_ns,
@@ -106,7 +109,8 @@ alvr_hmd_get_tracked_pose(struct xrt_device *xdev,
 
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) {
 		HMD_ERROR(hmd, "unknown input name");
-		return;
+		// TODO: What should this return?
+		return XRT_ERROR_POSE_NOT_ACTIVE;
 	}
 
 	struct xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
@@ -124,10 +128,12 @@ alvr_hmd_get_tracked_pose(struct xrt_device *xdev,
 		math_quat_normalize(&relation.pose.orientation);
 	}
 
-	// HMD_ERROR(hmd, "%f, %f, %f, %u", relation.pose.position.x, relation.pose.orientation.x,
-	//           relation.pose.orientation.y, m_relation_history_get_size(hmd->relation_hist));
+	// HMD_ERROR(hmd, "%f, %f, %f, %ld", relation.pose.position.x, relation.pose.orientation.x,
+	//           relation.pose.orientation.y, at_timestamp_ns);
 
 	*out_relation = relation;
+
+	return XRT_SUCCESS;
 }
 
 static void
@@ -199,13 +205,13 @@ xrt_fov_from_alvr_fov(AlvrFov fov)
 }
 
 xrt_space_relation
-xrt_rel_from_alvr_rel(AlvrSpaceRelation arel)
+xrt_rel_from_alvr_mot(AlvrDeviceMotion amot)
 {
 	return xrt_space_relation{
 	    .relation_flags = XRT_SPACE_RELATION_BITMASK_ALL,
-	    .pose = xrt_pose_from_alvr_pose(arel.pose),
-	    .linear_velocity = xrt_vec3_from_alvr_vec3(arel.linear_velocity),
-	    .angular_velocity = xrt_vec3_from_alvr_vec3(arel.angular_velocity),
+	    .pose = xrt_pose_from_alvr_pose(amot.pose),
+	    .linear_velocity = xrt_vec3_from_alvr_vec3(amot.linear_velocity),
+	    .angular_velocity = xrt_vec3_from_alvr_vec3(amot.angular_velocity),
 	};
 }
 
@@ -281,30 +287,36 @@ alvr_hmd_create(void)
 	u_var_add_root(hmd, "ALVR HMD", true);
 	u_var_add_log_level(hmd, &hmd->log_level, "log_level");
 
-	auto tracking_cb = [hmd](u64 ts_ns, AlvrSpaceRelation hmd_rel) {
-		auto xrel = xrt_rel_from_alvr_rel(hmd_rel);
+	auto tracking_cb = [hmd](u64 ts_ns, AlvrDeviceMotion hmd_mot) {
+		auto xrel = xrt_rel_from_alvr_mot(hmd_mot);
+
+		int64_t xrt_now = os_monotonic_get_ns();
+		// static int64_t delta = std::abs(xrt_now - (int64_t)ts_ns);
+		// HMD_ERROR(hmd, "delta %lu", delta);
 
 		// HMD_ERROR(hmd, "got a tracking callback woo %f, %f, %f, %lu", xrel.pose.position.x,
 		//           xrel.pose.orientation.x, xrel.linear_velocity.x, ts_ns);
 
-		m_relation_history_push(hmd->relation_hist, &xrel, ts_ns);
+		// TODO: Fix, actually measure latency
+		m_relation_history_push(hmd->relation_hist, &xrel, xrt_now - 60);
 	};
 	CallbackManager::get().registerCb<ALVR_EVENT_TRACKING_UPDATED>(std::move(tracking_cb));
 
-	auto viewCb = [hmd](ViewsConfig_Body cfg) {
+	// TODO: Pick a sane default, so that applications don't explode if the headset isn't yet connected
+	auto viewCb = [hmd](ViewsInfo cfg) {
 		HMD_ERROR(hmd, "Got views config");
 
 		std::lock_guard mutexGuard_(hmd->viewMutex);
 
-		hmd->viewPoses[0] = xrt_pose_from_alvr_pose(cfg.local_view_transform[0]);
-		hmd->viewPoses[1] = xrt_pose_from_alvr_pose(cfg.local_view_transform[1]);
+		hmd->viewPoses[0] = xrt_pose_from_alvr_pose(cfg.left.pose);
+		hmd->viewPoses[1] = xrt_pose_from_alvr_pose(cfg.right.pose);
 
 		// TODO: If monado internally access it then it's UB (shouldn't really matter tho)
 		auto &fovs = hmd->base.hmd->distortion.fov;
-		fovs[0] = xrt_fov_from_alvr_fov(cfg.fov[0]);
-		fovs[1] = xrt_fov_from_alvr_fov(cfg.fov[1]);
+		fovs[0] = xrt_fov_from_alvr_fov(cfg.left.fov);
+		fovs[1] = xrt_fov_from_alvr_fov(cfg.right.fov);
 	};
-	CallbackManager::get().registerCb<ALVR_EVENT_VIEWS_CONFIG>(std::move(viewCb));
+	CallbackManager::get().registerCb<ALVR_EVENT_VIEWS_PARAMS>(std::move(viewCb));
 
 	return &hmd->base;
 }

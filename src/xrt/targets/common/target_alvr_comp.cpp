@@ -6,6 +6,7 @@ extern "C" {
 #include "main/comp_target.h"
 }
 
+#include "EventManager.hpp"
 #include <Encoder.hpp>
 #include <monado_interface.h>
 // TODO: We should probably create an api boundary here
@@ -95,7 +96,6 @@ alvr_target_check_ready(comp_target *ct)
 void
 alvr_target_create_images(comp_target *ct, const comp_target_create_images_info *create_info)
 {
-	vk_bundle *vk = get_vk(ct);
 	auto &base = *(comp_target_alvr *)ct;
 
 	ImageRequirements imgReqs = {
@@ -146,6 +146,38 @@ alvr_target_acquire(comp_target *ct, uint32_t *out_index)
 	return VK_SUCCESS;
 }
 
+void set_avec_from_xvec(float* avec, xrt_vec3& xvec) {
+	avec[0] = xvec.x;
+	avec[1] = xvec.y;
+	avec[2] = xvec.z;
+}
+
+AlvrPose apose_from_xpose(xrt_pose& xpose) {
+	auto& rot = xpose.orientation;
+
+	AlvrPose apose {
+		.orientation {
+			.x = rot.x,
+			.y = rot.y,
+			.z = rot.z,
+			.w = rot.w,
+		},
+		.position = {},
+	};
+	set_avec_from_xvec(apose.position, xpose.position);
+
+	return apose;
+}
+
+AlvrFov afov_from_xfov(xrt_fov& xfov) {
+	return AlvrFov {
+		.left = xfov.angle_left,
+		.right = xfov.angle_right,
+		.up = xfov.angle_up,
+		.down = xfov.angle_down,
+	};
+}
+
 VkResult
 alvr_target_present(comp_target *ct,
                     VkQueue queue,
@@ -156,9 +188,23 @@ alvr_target_present(comp_target *ct,
 {
 	auto &base = *(comp_target_alvr *)ct;
 
+	auto& frameParms = ct->c->base.frame_params;
+
+	ViewsInfo viewInfo {
+		.left = {
+			.pose = apose_from_xpose(frameParms.poses[0]),
+			.fov = afov_from_xfov(frameParms.fovs[0]),
+		},
+		.right = {
+			.pose = apose_from_xpose(frameParms.poses[1]),
+			.fov = afov_from_xfov(frameParms.fovs[1]),
+		},
+	};
+
+
 	printf("present\n");
 
-	base.enc.get().present(img_idx, timeline_semaphore_value);
+	base.enc.get().present(img_idx, timeline_semaphore_value, viewInfo);
 
 	// TODO: Figure out whether we need a frame count
 	return VK_SUCCESS;
