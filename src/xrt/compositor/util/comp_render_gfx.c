@@ -772,7 +772,7 @@ do_mesh_from_proj(struct render_gfx *rr,
 	for (uint32_t i = 0; i < d->view_count; i++) {
 		const uint32_t array_index = vds[i]->sub.array_index;
 
-		const struct comp_swapchain_image *image = get_layer_image(layer, 0, vds[i]->sub.image_index);
+		const struct comp_swapchain_image *image = get_layer_image(layer, i, vds[i]->sub.image_index);
 
 		struct xrt_pose src_pose;
 		struct xrt_fov src_fov;
