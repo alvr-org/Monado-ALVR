@@ -20,6 +20,8 @@ struct comp_target_alvr
 
 	comp_target_image imgs[3];
 
+	// TODO: Handling errors on construction becomes a lot harder with all the emplace shenanigans, solve that
+	// somehow (could simply to a dynamic allocation fwiw)
 	Optional<alvr::Encoder> enc;
 
 	uint32_t curimg;
@@ -36,10 +38,16 @@ alvr_target_init_pre_vulkan(comp_target *ct)
 	return true;
 }
 
-vk_bundle *
+comp_target_alvr &
+get_acomp(comp_target *c)
+{
+	return *reinterpret_cast<comp_target_alvr *>(c);
+}
+
+vk_bundle &
 get_vk(comp_target *ct)
 {
-	return &ct->c->base.vk;
+	return ct->c->base.vk;
 }
 
 bool
@@ -54,49 +62,55 @@ alvr_target_init_post_vulkan(comp_target *ct, uint32_t pref_w, uint32_t pref_h)
 	ct->width = pref_w;
 	ct->height = pref_h;
 
-	vk_bundle *vk = get_vk(ct);
+	vk_bundle &vk = get_vk(ct);
 
 	auto lock_mutex = [](MutexProxy *m) { os_mutex_lock(reinterpret_cast<os_mutex *>(m->mutex)); };
 
 	auto unlock_mutex = [](MutexProxy *m) { os_mutex_unlock(reinterpret_cast<os_mutex *>(m->mutex)); };
 
-	AlvrVkInfo info = {.instance = vk->instance,
-	                   .version = vk->version,
-	                   .physDev = vk->physical_device,
-	                   .phyDevIdx = static_cast<u32>(vk->physical_device_index),
-	                   .device = vk->device,
-	                   .queueFamIdx = vk->queue_family_index,
-	                   .queueIdx = vk->queue_index,
-	                   .queue = vk->queue,
-	                   .mutex{.lock = lock_mutex,
-	                          .unlock = unlock_mutex,
-	                          .mutex = MutexProxy{
-	                              .mutex = reinterpret_cast<void *>(&vk->queue_mutex),
-	                          }}};
+	AlvrVkInfo info = {
+	    .instance = vk.instance,
+	    .version = vk.version,
+
+	    .physDev = vk.physical_device,
+	    .phyDevIdx = static_cast<u32>(vk.physical_device_index),
+	    .device = vk.device,
+
+	    .queueFamIdx = vk.queue_family_index,
+	    .queueIdx = vk.queue_index,
+	    .queue = vk.queue,
+	    .queueMutex{.lock = lock_mutex,
+	                .unlock = unlock_mutex,
+	                .mutex =
+	                    MutexProxy{
+	                        .mutex = reinterpret_cast<void *>(&vk.queue_mutex),
+	                    }},
+
+	    .encQueueFamily = vk.encode_queue_family_index,
+	    .encQueue = vk.encode_queue,
+	};
 
 	base.enc.emplace(info);
 
+	// TODO: This should obviously go
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 
-	// TODO: Encoder init here?
 	return true;
 }
 
 bool
 alvr_target_check_ready(comp_target *ct)
 {
-	// TODO: At least act like we're checking anything?
+	auto &acomp = get_acomp(ct);
 
-	// auto& base = *(comp_target_alvr *)ct;
-	// return base.enc.hasValue();
-	return true;
+	return acomp.enc.hasValue();
 }
 
 
 void
 alvr_target_create_images(comp_target *ct, const comp_target_create_images_info *create_info)
 {
-	auto &base = *(comp_target_alvr *)ct;
+	auto &acomp = get_acomp(ct);
 
 	ImageRequirements imgReqs = {
 	    .image_usage = create_info->image_usage,
@@ -107,8 +121,8 @@ alvr_target_create_images(comp_target *ct, const comp_target_create_images_info 
 		imgReqs.formats[i] = create_info->formats[i];
 	}
 
-	auto expt = base.enc.get().createImages(imgReqs);
-	base.enc.get().initEncoding();
+	auto expt = acomp.enc.get().createImages(imgReqs);
+	acomp.enc.get().initEncoding();
 
 	ct->semaphores.render_complete_is_timeline = true;
 	ct->semaphores.render_complete = expt.sem;
@@ -117,64 +131,74 @@ alvr_target_create_images(comp_target *ct, const comp_target_create_images_info 
 	ct->format = VK_FORMAT_R8G8B8A8_UNORM;
 
 	for (int i = 0; i < 3; ++i) {
-		base.imgs[i].handle = expt.imgs[i].img;
-		base.imgs[i].view = expt.imgs[i].view;
+		acomp.imgs[i].handle = expt.imgs[i].img;
+		acomp.imgs[i].view = expt.imgs[i].view;
 	}
 
-	ct->images = base.imgs;
+	ct->images = acomp.imgs;
 	ct->image_count = ALVR_SWAPCHAIN_IMGS;
 
-	base.curimg = 0;
+	acomp.curimg = 0;
 }
 
 bool
 alvr_target_has_images(comp_target *ct)
 {
-	// fine because of exceptions
+	// TODO: Should be fine because of exceptions, but actually checking is a lot better
 	return true;
 }
 
 VkResult
 alvr_target_acquire(comp_target *ct, uint32_t *out_index)
 {
-	auto &base = *(comp_target_alvr *)ct;
-	// TODO: Unfuck
+	auto &acomp = get_acomp(ct);
 
-	*out_index = base.curimg++;
-	base.curimg %= ALVR_SWAPCHAIN_IMGS;
+	// TODO: Write actual pseudo-swapchain implementation (currently works because we ensure the job completed
+	// before we start a new one, not given with sliced encoding)
+	//
+	// Also this logic is kinda weird, but it seems to work
+	*out_index = acomp.curimg++;
+	acomp.curimg %= ALVR_SWAPCHAIN_IMGS;
 
 	return VK_SUCCESS;
 }
 
-void set_avec_from_xvec(float* avec, xrt_vec3& xvec) {
+// TODO: Extract all of these into some sorta helper and potentially c++-ify them
+void
+set_avec_from_xvec(float *avec, xrt_vec3 &xvec)
+{
 	avec[0] = xvec.x;
 	avec[1] = xvec.y;
 	avec[2] = xvec.z;
 }
 
-AlvrPose apose_from_xpose(xrt_pose& xpose) {
-	auto& rot = xpose.orientation;
+AlvrPose
+apose_from_xpose(xrt_pose &xpose)
+{
+	auto &rot = xpose.orientation;
 
-	AlvrPose apose {
-		.orientation {
-			.x = rot.x,
-			.y = rot.y,
-			.z = rot.z,
-			.w = rot.w,
-		},
-		.position = {},
+	AlvrPose apose{
+	    .orientation{
+	        .x = rot.x,
+	        .y = rot.y,
+	        .z = rot.z,
+	        .w = rot.w,
+	    },
+	    .position = {},
 	};
 	set_avec_from_xvec(apose.position, xpose.position);
 
 	return apose;
 }
 
-AlvrFov afov_from_xfov(xrt_fov& xfov) {
-	return AlvrFov {
-		.left = xfov.angle_left,
-		.right = xfov.angle_right,
-		.up = xfov.angle_up,
-		.down = xfov.angle_down,
+AlvrFov
+afov_from_xfov(xrt_fov &xfov)
+{
+	return AlvrFov{
+	    .left = xfov.angle_left,
+	    .right = xfov.angle_right,
+	    .up = xfov.angle_up,
+	    .down = xfov.angle_down,
 	};
 }
 
@@ -188,17 +212,19 @@ alvr_target_present(comp_target *ct,
 {
 	auto &base = *(comp_target_alvr *)ct;
 
-	auto& frameParms = ct->c->base.frame_params;
+	auto &frameParms = ct->c->base.frame_params;
 
-	ViewsInfo viewInfo {
-		.left = {
-			.pose = apose_from_xpose(frameParms.poses[0]),
-			.fov = afov_from_xfov(frameParms.fovs[0]),
-		},
-		.right = {
-			.pose = apose_from_xpose(frameParms.poses[1]),
-			.fov = afov_from_xfov(frameParms.fovs[1]),
-		},
+	ViewsInfo viewInfo{
+	    .left =
+	        {
+	            .pose = apose_from_xpose(frameParms.poses[0]),
+	            .fov = afov_from_xfov(frameParms.fovs[0]),
+	        },
+	    .right =
+	        {
+	            .pose = apose_from_xpose(frameParms.poses[1]),
+	            .fov = afov_from_xfov(frameParms.fovs[1]),
+	        },
 	};
 
 
@@ -229,8 +255,8 @@ alvr_target_calc_frame_pacing(comp_target *ct,
                               int64_t *out_present_slop,
                               int64_t *out_predicted_display)
 {
-	// TODO: Should we give out the information on when we expect it to actually get displayed to improve prediction
-	// or will that just mess it up more?
+	// NOTE: I think it's deriving the point to query poses for from the display time
+	// and how to schedule the rendering from the present time
 
 	// TODO: Do we need the frame index for anything?
 	static int64_t frame = 0;
@@ -270,7 +296,7 @@ alvr_target_info_gpu(comp_target *ct, int64_t frame_id, int64_t gpu_start_ns, in
 {}
 
 bool
-create_target_lel(const comp_target_factory *factory, struct comp_compositor *compositor, comp_target **target)
+create_target_alvr(const comp_target_factory *factory, struct comp_compositor *compositor, comp_target **target)
 {
 	auto t = new comp_target_alvr{.base = {
 	                                  .c = compositor,
@@ -299,20 +325,43 @@ create_target_lel(const comp_target_factory *factory, struct comp_compositor *co
 extern "C" comp_target_factory
 alvr_create_target_factory()
 {
-	const char *device_extensions[] = {
-	    VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,      VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
-	    VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME, VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
-	    VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,   VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
-	    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,         VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
-	    VK_EXT_PHYSICAL_DEVICE_DRM_EXTENSION_NAME,     VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
+	// TODO: Figure out how to handle missing ones
+	//
+	// Can't make this const because the factory api wants a mutable pointer
+	static std::array device_extensions = {
+	    // These are only needed for ffmpeg
+	    VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+	    VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+	    VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME,
+	    VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
+	    VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+	    VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
+
+	    // TODO: Clean these up (YCC is 1.3 spec, right?)
+	    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+	    VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
+	    VK_EXT_PHYSICAL_DEVICE_DRM_EXTENSION_NAME,
+	    VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
+
+	    // These are for vulkan encoding
+	    VK_KHR_VIDEO_QUEUE_EXTENSION_NAME,
+	    VK_KHR_VIDEO_DECODE_QUEUE_EXTENSION_NAME,
+	    VK_KHR_VIDEO_ENCODE_H264_EXTENSION_NAME,
+	    VK_KHR_VIDEO_ENCODE_H265_EXTENSION_NAME,
+	    VK_KHR_VIDEO_ENCODE_AV1_EXTENSION_NAME,
+
 	};
 
 	return comp_target_factory{
-	    .name = "Alvr",
+	    .name = "ALVR",
+	    .identifier = "alvr",
+	    .requires_vulkan_for_create = false,
 	    .is_deferred = false,
+
 	    .required_instance_version = VK_MAKE_VERSION(1, 3, 0),
-	    .optional_device_extensions = device_extensions,
-	    .optional_device_extension_count = 10,
-	    .create_target = create_target_lel,
+	    .optional_device_extensions = device_extensions.data(),
+	    .optional_device_extension_count = device_extensions.size(),
+
+	    .create_target = create_target_alvr,
 	};
 }
