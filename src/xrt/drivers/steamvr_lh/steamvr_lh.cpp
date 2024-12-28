@@ -146,6 +146,7 @@ Context::GetGenericInterface(const char *pchInterfaceVersion, vr::EVRInitError *
 
 	// Internal interfaces
 	MATCH_INTERFACE("IVRServer_XXX", &server);
+	MATCH_INTERFACE("IVRServerInternal_XXX", &server);
 	return nullptr;
 }
 

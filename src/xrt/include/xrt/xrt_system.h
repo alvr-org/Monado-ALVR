@@ -306,8 +306,8 @@ struct xrt_system_devices
 	 * Increment the usage count of a feature.
 	 * When the feature is used for the first time, then the feature will be begun.
 	 *
-	 * @param xsysd   Pointer to self
-	 * @param feature Which feature is being counted.
+	 * @param xsysd Pointer to self
+	 * @param type  Which feature is being counted.
 	 */
 	xrt_result_t (*feature_inc)(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type);
 
@@ -315,8 +315,8 @@ struct xrt_system_devices
 	 * Decrement the usage count of a feature.
 	 * When the feature is not used by the current application any more, then the feature will be ended.
 	 *
-	 * @param xsysd   Pointer to self
-	 * @param feature Which feature is being counted.
+	 * @param xsysd Pointer to self
+	 * @param type  Which feature is being counted.
 	 */
 	xrt_result_t (*feature_dec)(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type);
 

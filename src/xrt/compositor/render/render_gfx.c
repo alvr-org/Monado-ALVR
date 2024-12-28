@@ -30,7 +30,8 @@ vk_from_rtr(struct render_gfx_target_resources *rtr)
 	return rtr->r->vk;
 }
 
-/*gfx_target_resources framebuffer@ref render_gfx.
+/*!
+ * Get the @ref vk_bundle from @ref render_gfx.
  */
 static inline struct vk_bundle *
 vk_from_rr(struct render_gfx *rr)

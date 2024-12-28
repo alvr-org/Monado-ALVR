@@ -339,7 +339,7 @@ log_as_json(const char *file, const char *func, enum u_logging_level level, cons
 
 	// Add message.
 	char msg_buf[LOG_BUFFER_SIZE];
-	vsprintf(msg_buf, format, args);
+	u_truncate_vsnprintf(msg_buf, LOG_BUFFER_SIZE, format, args);
 	cJSON_AddItemToObject(root, "message", cJSON_CreateString(msg_buf));
 
 	// Get string and print to stderr.

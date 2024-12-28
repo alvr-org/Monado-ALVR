@@ -498,7 +498,7 @@ comp_render_cs_layer(struct render_compute *crc,
  *
  * All source layer images needs to be in the correct image layout, no barrier
  * is inserted for them. The target images are barriered from undefined to general
- * so they can be written to, then to the laying defined by @p transition_to.
+ * so they can be written to, then to the layout defined by @p transition_to.
  *
  * Expected layouts:
  *

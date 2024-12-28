@@ -1295,7 +1295,8 @@ t_slam_receive_imu(struct xrt_imu_sink *sink, struct xrt_imu_sample *s)
 	SLAM_TRACE("[%ld] imu t=%ld  a=[%f,%f,%f] w=[%f,%f,%f]", now, ts, a.x, a.y, a.z, w.x, w.y, w.z);
 	// Check monotonically increasing timestamps
 	if (ts <= t.last_imu_ts) {
-		SLAM_WARN("Sample (%ld) is older than last (%ld)", ts, t.last_imu_ts);
+		SLAM_WARN("Sample (%" PRId64 ") is older than last (%" PRId64 ") by %" PRId64 " ns", ts, t.last_imu_ts,
+		          t.last_imu_ts - ts);
 		return;
 	}
 	t.last_imu_ts = ts;
@@ -1347,9 +1348,10 @@ receive_frame(TrackerSlam &t, struct xrt_frame *frame, uint32_t cam_index)
 	// Check monotonically increasing timestamps
 	timepoint_ns &last_ts = t.last_cam_ts[cam_index];
 	timepoint_ns ts = (int64_t)frame->timestamp;
-	SLAM_TRACE("[%ld] cam%d frame t=%ld", os_monotonic_get_ns(), cam_index, ts);
+	SLAM_TRACE("[%" PRId64 "] cam%d frame t=%" PRId64, os_monotonic_get_ns(), cam_index, ts);
 	if (last_ts >= ts) {
-		SLAM_WARN("Frame (%ld) is older than last (%ld)", ts, last_ts);
+		SLAM_WARN("Frame (%" PRId64 ") is older than last (%" PRId64 ") by %" PRId64 " ns", ts, last_ts,
+		          last_ts - ts);
 	}
 	last_ts = ts;
 

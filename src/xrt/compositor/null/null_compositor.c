@@ -506,6 +506,20 @@ null_compositor_destroy(struct xrt_compositor *xc)
 	free(c);
 }
 
+static xrt_result_t
+null_compositor_get_display_refresh_rate(struct xrt_compositor *xc, float *out_display_refresh_rate_hz)
+{
+	struct null_compositor *c = null_compositor(xc);
+
+	*out_display_refresh_rate_hz = c->sys_info.refresh_rates_hz[0];
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+null_compositor_request_display_refresh_rate(struct xrt_compositor *xc, float display_refresh_rate_hz)
+{
+	return XRT_SUCCESS;
+}
 
 /*
  *
@@ -527,6 +541,8 @@ null_compositor_create_system(struct xrt_device *xdev, struct xrt_system_composi
 	iface->discard_frame = null_compositor_discard_frame;
 	iface->layer_commit = null_compositor_layer_commit;
 	iface->destroy = null_compositor_destroy;
+	c->base.base.base.get_display_refresh_rate = null_compositor_get_display_refresh_rate;
+	c->base.base.base.request_display_refresh_rate = null_compositor_request_display_refresh_rate;
 	c->settings.log_level = debug_get_log_option_log();
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;

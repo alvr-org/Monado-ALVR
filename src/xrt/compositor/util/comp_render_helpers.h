@@ -154,7 +154,7 @@ cmd_barrier_view_images(struct vk_bundle *vk,
 	};
 
 	for (uint32_t i = 0; i < d->view_count; i++) {
-		bool already_barried = false;
+		bool already_barriered = false;
 
 		VkImage image = d->views[i].image;
 
@@ -163,12 +163,12 @@ cmd_barrier_view_images(struct vk_bundle *vk,
 			k--; // k is always greater then zero.
 
 			if (d->views[k].image == image) {
-				already_barried = true;
+				already_barriered = true;
 				break;
 			}
 		}
 
-		if (already_barried) {
+		if (already_barriered) {
 			continue;
 		}
 

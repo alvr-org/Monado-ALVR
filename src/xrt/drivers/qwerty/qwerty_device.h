@@ -90,10 +90,30 @@ struct qwerty_controller
 {
 	struct qwerty_device base;
 
-	bool select_clicked;
-	int64_t select_timestamp;
+	bool trigger_clicked;
+	int64_t trigger_timestamp;
 	bool menu_clicked;
 	int64_t menu_timestamp;
+	bool squeeze_clicked;
+	int64_t squeeze_timestamp;
+	bool system_clicked;
+	int64_t system_timestamp;
+
+	bool thumbstick_left_pressed;
+	bool thumbstick_right_pressed;
+	bool thumbstick_up_pressed;
+	bool thumbstick_down_pressed;
+	int64_t thumbstick_timestamp;
+	bool thumbstick_clicked;
+	int64_t thumbstick_click_timestamp;
+
+	bool trackpad_left_pressed;
+	bool trackpad_right_pressed;
+	bool trackpad_up_pressed;
+	bool trackpad_down_pressed;
+	int64_t trackpad_timestamp;
+	bool trackpad_clicked;
+	int64_t trackpad_click_timestamp;
 
 	/*!
 	 * Only used when a qwerty_hmd exists in the system.
@@ -256,18 +276,18 @@ struct qwerty_controller *
 qwerty_controller(struct xrt_device *xd);
 
 /*!
- * Simulate pressing input/select/click
+ * Simulate pressing input/trigger/value to 1.0
  * @public @memberof qwerty_controller
  */
 void
-qwerty_press_select(struct qwerty_controller *qc);
+qwerty_press_trigger(struct qwerty_controller *qc);
 
 /*!
- * Simulate releasing input/select/click
+ * Simulate releasing input/trigger/value to 0.0
  * @public @memberof qwerty_controller
  */
 void
-qwerty_release_select(struct qwerty_controller *qc);
+qwerty_release_trigger(struct qwerty_controller *qc);
 
 /*!
  * Simulate pressing input/menu/click
@@ -282,6 +302,96 @@ qwerty_press_menu(struct qwerty_controller *qc);
  */
 void
 qwerty_release_menu(struct qwerty_controller *qc);
+
+/*!
+ * Simulate pressing input/squeeze/click
+ * @public @memberof qwerty_controller
+ */
+void
+qwerty_press_squeeze(struct qwerty_controller *qc);
+
+/*!
+ * Simulate releasing input/squeeze/click
+ * @public @memberof qwerty_controller
+ */
+void
+qwerty_release_squeeze(struct qwerty_controller *qc);
+
+/*!
+ * Simulate pressing input/system/click
+ * @public @memberof qwerty_controller
+ */
+void
+qwerty_press_system(struct qwerty_controller *qc);
+
+/*!
+ * Simulate releasing input/system/click
+ * @public @memberof qwerty_controller
+ */
+void
+qwerty_release_system(struct qwerty_controller *qc);
+
+//! @public @memberof qwerty_controller
+void
+qwerty_press_thumbstick_left(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_thumbstick_left(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_thumbstick_right(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_thumbstick_right(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_thumbstick_up(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_thumbstick_up(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_thumbstick_down(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_thumbstick_down(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_thumbstick_click(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_thumbstick_click(struct qwerty_controller *qc);
+
+//! @public @memberof qwerty_controller
+void
+qwerty_press_trackpad_left(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_trackpad_left(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_trackpad_right(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_trackpad_right(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_trackpad_up(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_trackpad_up(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_trackpad_down(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_trackpad_down(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_press_trackpad_click(struct qwerty_controller *qc);
+//! @public @memberof qwerty_controller
+void
+qwerty_release_trackpad_click(struct qwerty_controller *qc);
 
 /*!
  * Attach/detach the pose of `qc` to its HMD. Only works when a qwerty_hmd is present.
