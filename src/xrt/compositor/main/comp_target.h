@@ -1,4 +1,5 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2026, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -142,6 +143,12 @@ struct comp_target
 	//! The format that the renderpass targeting this target should use.
 	VkFormat format;
 
+	//! The final layout that the renderpass should leave this target in.
+	VkImageLayout final_layout;
+
+	//! Load ops required for present
+	VkAttachmentLoadOp present_load_op;
+
 	//! Number of images that this target has.
 	uint32_t image_count;
 	//! Array of images and image views for rendering.
@@ -150,8 +157,11 @@ struct comp_target
 	//! Transformation of the current surface, required for pre-rotation
 	VkSurfaceTransformFlagBitsKHR surface_transform;
 
-	// Holds semaphore information.
+	//! Holds semaphore information.
 	struct comp_target_semaphores semaphores;
+
+	//! Whether wait_for_present is supported by this comp_target.
+	bool wait_for_present_supported;
 
 	/*
 	 *
@@ -179,12 +189,25 @@ struct comp_target
 	bool (*check_ready)(struct comp_target *ct);
 
 	/*!
+	 * Is this target shared presentable image?
+	 *
+	 * Call before after @ref create_images
+	 */
+	bool (*is_shared_presentable_image)(struct comp_target *ct);
+
+	/*!
 	 * Create or recreate the image(s) of the target, for swapchain based
 	 * targets this will (re)create the swapchain.
 	 *
+	 * @param ct self
+	 * @param create_info Image creation parameters
+	 * @param present_queue The queue that will be used for presentation operations (must not be NULL)
+	 *
 	 * @pre @ref check_ready returns true
 	 */
-	void (*create_images)(struct comp_target *ct, const struct comp_target_create_images_info *create_info);
+	void (*create_images)(struct comp_target *ct,
+	                      const struct comp_target_create_images_info *create_info,
+	                      struct vk_bundle_queue *present_queue);
 
 	/*!
 	 * Has this target successfully had images created?
@@ -210,7 +233,7 @@ struct comp_target
 	 * @pre @ref acquire succeeded for the same @p semaphore and @p index you are passing
 	 *
 	 * @param ct self
-	 * @param queue The Vulkan queue being used
+	 * @param present_queue The Vulkan queue bundle being used for presentation (must not be NULL)
 	 * @param index The swapchain image index to present
 	 * @param timeline_semaphore_value The value to await on @ref comp_target_semaphores::render_complete
 	 *                                 if @ref comp_target_semaphores::render_complete_is_timeline is true.
@@ -218,11 +241,19 @@ struct comp_target
 	 * @param present_slop_ns TODO
 	 */
 	VkResult (*present)(struct comp_target *ct,
-	                    VkQueue queue,
+	                    struct vk_bundle_queue *present_queue,
 	                    uint32_t index,
 	                    uint64_t timeline_semaphore_value,
 	                    int64_t desired_present_time_ns,
 	                    int64_t present_slop_ns);
+
+	/*!
+	 * Wait for the latest presented image to be displayed to the user.
+	 *
+	 * @param ct self
+	 * @param timeout_ns The amount of time to wait for presentation to succeed.
+	 */
+	VkResult (*wait_for_present)(struct comp_target *ct, time_duration_ns timeout_ns);
 
 	/*!
 	 * Flush any WSI state before rendering.
@@ -293,6 +324,46 @@ struct comp_target
 	void (*set_title)(struct comp_target *ct, const char *title);
 
 	/*!
+	 * Get the available refresh rates for the compositor target
+	 *
+	 * @param ct               The compositor target.
+	 * @param count            The number or refresh rates.
+	 * @param refresh_rates_hz The refresh rates, in Hz. Must be allocated by caller, and have at least
+	 * XRT_MAX_SUPPORTED_REFRESH_RATES elements
+	 */
+	xrt_result_t (*get_refresh_rates)(struct comp_target *ct,
+	                                  uint32_t *out_count,
+	                                  float *out_display_refresh_rates_hz);
+
+	/*!
+	 * Get the current refresh rate for the compositor target
+	 *
+	 * @param ct                           The compositor target.
+	 * @param out_display_refresh_rate_hz  The current refresh rate, in Hz
+	 */
+	xrt_result_t (*get_current_refresh_rate)(struct comp_target *ct, float *out_display_refresh_rate_hz);
+
+	/*!
+	 * Get the current refresh rate for the compositor target
+	 *
+	 * @param ct                      The compositor target.
+	 * @param display_refresh_rate_hz The requested refresh rate, in Hz.
+	 */
+	xrt_result_t (*request_refresh_rate)(struct comp_target *ct, float display_refresh_rate_hz);
+
+	/*!
+	 * Queries if a particular queue supports presentation ops/cmds for the compositor target
+	 *
+	 * @param ct            The compositor target.
+	 * @param queue         The vulkan queue to query
+	 * @param out_supported If the @ref queue supports presentation ops/cmds
+	 *                      for @ref ct present surface.
+	 */
+	VkResult (*queue_supports_present)(struct comp_target *ct,
+	                                   struct vk_bundle_queue *queue,
+	                                   VkBool32 *out_supported);
+
+	/*!
 	 * Destroys this target.
 	 */
 	void (*destroy)(struct comp_target *ct);
@@ -341,17 +412,33 @@ comp_target_check_ready(struct comp_target *ct)
 }
 
 /*!
+ * @copydoc comp_target::is_shared_presentable_image
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline bool
+comp_target_is_shared_presentable_image(struct comp_target *ct)
+{
+	COMP_TRACE_MARKER();
+
+	return ct->is_shared_presentable_image(ct);
+}
+
+/*!
  * @copydoc comp_target::create_images
  *
  * @public @memberof comp_target
  * @ingroup comp_main
  */
 static inline void
-comp_target_create_images(struct comp_target *ct, const struct comp_target_create_images_info *create_info)
+comp_target_create_images(struct comp_target *ct,
+                          const struct comp_target_create_images_info *create_info,
+                          struct vk_bundle_queue *present_queue)
 {
 	COMP_TRACE_MARKER();
 
-	ct->create_images(ct, create_info);
+	ct->create_images(ct, create_info, present_queue);
 }
 
 /*!
@@ -390,7 +477,7 @@ comp_target_acquire(struct comp_target *ct, uint32_t *out_index)
  */
 static inline VkResult
 comp_target_present(struct comp_target *ct,
-                    VkQueue queue,
+                    struct vk_bundle_queue *present_queue,
                     uint32_t index,
                     uint64_t timeline_semaphore_value,
                     int64_t desired_present_time_ns,
@@ -401,11 +488,27 @@ comp_target_present(struct comp_target *ct,
 
 	return ct->present(           //
 	    ct,                       //
-	    queue,                    //
+	    present_queue,            //
 	    index,                    //
 	    timeline_semaphore_value, //
 	    desired_present_time_ns,  //
 	    present_slop_ns);         //
+}
+
+/*!
+ * @copydoc comp_target::wait_for_present
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline VkResult
+comp_target_wait_for_present(struct comp_target *ct, time_duration_ns timeout)
+{
+	COMP_TRACE_MARKER();
+
+	return ct->wait_for_present( //
+	    ct,                      //
+	    timeout);                //
 }
 
 /*!
@@ -548,6 +651,61 @@ comp_target_set_title(struct comp_target *ct, const char *title)
 	COMP_TRACE_MARKER();
 
 	ct->set_title(ct, title);
+}
+
+/*!
+ * @copydoc comp_target::get_refresh_rates
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline xrt_result_t
+comp_target_get_refresh_rates(struct comp_target *ct, uint32_t *count, float *rates)
+{
+	COMP_TRACE_MARKER();
+
+	return ct->get_refresh_rates(ct, count, rates);
+}
+
+/*!
+ * @copydoc comp_target::get_current_refresh_rate
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline xrt_result_t
+comp_target_get_current_refresh_rate(struct comp_target *ct, float *out_display_refresh_rate_hz)
+{
+	COMP_TRACE_MARKER();
+
+	return ct->get_current_refresh_rate(ct, out_display_refresh_rate_hz);
+}
+
+/*!
+ * @copydoc comp_target::request_refresh_rate
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline xrt_result_t
+comp_target_request_refresh_rate(struct comp_target *ct, float ratedisplay_refresh_rate_hz)
+{
+	COMP_TRACE_MARKER();
+
+	return ct->request_refresh_rate(ct, ratedisplay_refresh_rate_hz);
+}
+
+/*!
+ * @copydoc comp_target::queue_supports_present
+ *
+ * @public @memberof comp_target
+ * @ingroup comp_main
+ */
+static inline VkResult
+comp_target_queue_supports_present(struct comp_target *ct, struct vk_bundle_queue *queue, VkBool32 *out_supported)
+{
+	COMP_TRACE_MARKER();
+	return ct->queue_supports_present(ct, queue, out_supported);
 }
 
 /*!

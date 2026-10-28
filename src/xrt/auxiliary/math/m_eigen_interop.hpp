@@ -21,6 +21,15 @@
 
 namespace xrt::auxiliary::math {
 
+/*
+ * This file uses an Eigen::Map to directly reference the memory of our own internal math types as Eigen types.
+ * This means that our own internal math types *must* be memory-layout compatible with the types laid out here. If they
+ * are not, memory corruption or other nastiness will occur when attempting to read/mutate these maps. This is why we
+ * are passing a pointer to the *first* element into the Map constructors, so that when Eigen interprets that raw data
+ * pointer as it's math type, it is reading from the start of the data type.
+ */
+
+
 /*!
  * @brief Wrap an internal quaternion struct in an Eigen type, const overload.
  *
@@ -46,6 +55,30 @@ map_quat(struct xrt_quat &q)
 	return Eigen::Map<Eigen::Quaternionf>{&q.x};
 }
 
+/*!
+ * @brief Wrap an internal 2D vector struct in an Eigen type, const overload.
+ *
+ * Permits zero-overhead manipulation of `const xrt_vec2&` by Eigen routines as
+ * if it were a `const Eigen::Vector2f&`.
+ */
+static inline Eigen::Map<const Eigen::Vector2f>
+map_vec2(const struct xrt_vec2 &v)
+{
+	return Eigen::Map<const Eigen::Vector2f>{&v.x};
+}
+
+/*!
+ * @brief Wrap an internal 2D vector struct in an Eigen type, non-const
+ * overload.
+ *
+ * Permits zero-overhead manipulation of `xrt_vec2&` by Eigen routines as
+ * if it were a `Eigen::Vector2f&`.
+ */
+static inline Eigen::Map<Eigen::Vector2f>
+map_vec2(struct xrt_vec2 &v)
+{
+	return Eigen::Map<Eigen::Vector2f>{&v.x};
+}
 
 /*!
  * @brief Wrap an internal 3D vector struct in an Eigen type, const overload.

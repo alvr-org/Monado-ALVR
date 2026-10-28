@@ -19,9 +19,13 @@
  */
 
 XRT_CHECK_RESULT VkResult
-vk_cmd_pool_init(struct vk_bundle *vk, struct vk_cmd_pool *pool, VkCommandPoolCreateFlags flags)
+vk_cmd_pool_init_for_queue(struct vk_bundle *vk,
+                           struct vk_cmd_pool *pool,
+                           VkCommandPoolCreateFlags flags,
+                           struct vk_bundle_queue *queue)
 {
 	VkResult ret;
+	assert(queue);
 
 	XRT_MAYBE_UNUSED int iret = os_mutex_init(&pool->mutex);
 	assert(iret == 0);
@@ -29,7 +33,7 @@ vk_cmd_pool_init(struct vk_bundle *vk, struct vk_cmd_pool *pool, VkCommandPoolCr
 	VkCommandPoolCreateInfo cmd_pool_info = {
 	    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 	    .flags = flags,
-	    .queueFamilyIndex = vk->queue_family_index,
+	    .queueFamilyIndex = queue->family_index,
 	};
 
 	ret = vk->vkCreateCommandPool(vk->device, &cmd_pool_info, NULL, &pool->pool);
@@ -37,6 +41,8 @@ vk_cmd_pool_init(struct vk_bundle *vk, struct vk_cmd_pool *pool, VkCommandPoolCr
 		VK_ERROR(vk, "vkCreateCommandPool: %s", vk_result_string(ret));
 		os_mutex_destroy(&pool->mutex);
 	}
+
+	pool->queue = queue;
 
 	return ret;
 }
@@ -133,7 +139,7 @@ vk_cmd_pool_submit_cmd_buffer_locked(struct vk_bundle *vk, struct vk_cmd_pool *p
 	    .pCommandBuffers = &cmd_buffer,
 	};
 
-	ret = vk_cmd_submit_locked(vk, 1, &submitInfo, VK_NULL_HANDLE);
+	ret = vk_cmd_submit_locked(vk, pool->queue, 1, &submitInfo, VK_NULL_HANDLE);
 
 	if (ret != VK_SUCCESS) {
 		VK_ERROR(vk, "vk_cmd_submit_locked: %s", vk_result_string(ret));

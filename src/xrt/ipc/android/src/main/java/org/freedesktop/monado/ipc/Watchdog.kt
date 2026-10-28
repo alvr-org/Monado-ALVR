@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /** Client watchdog, to determine whether runtime service should be stopped. */
 class Watchdog(
     private val shutdownDelayMilliseconds: Long,
-    private val shutdownListener: ShutdownListener
+    private val shutdownListener: ShutdownListener,
 ) {
     /**
      * Interface definition for callbacks to be invoked when there's no client connected. Noted that

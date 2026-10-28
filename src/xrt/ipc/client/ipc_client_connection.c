@@ -1,4 +1,5 @@
 // Copyright 2020-2024, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -24,7 +25,7 @@
 #include "util/u_file.h"
 #include "util/u_debug.h"
 #include "util/u_git_tag.h"
-#include "util/u_system_helpers.h"
+#include "util/u_truncate_printf.h"
 
 #include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
@@ -96,7 +97,7 @@ ipc_connect_pipe(struct ipc_connection *ipc_c, const char *pipe_name)
 	HANDLE pipe_inst = CreateFileA(pipe_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (pipe_inst == INVALID_HANDLE_VALUE) {
 		DWORD err = GetLastError();
-		IPC_ERROR(ipc_c, "Connect to %s failed: %d %s", pipe_name, err, ipc_winerror(err));
+		IPC_ERROR(ipc_c, "Connect to %s failed: %lu %s", pipe_name, err, ipc_winerror(err));
 	}
 	return pipe_inst;
 }
@@ -110,7 +111,7 @@ ipc_connect_pipe(struct ipc_connection *ipc_c, const char *pipe_name)
 		return pipe_inst;
 	}
 	DWORD err = GetLastError();
-	IPC_ERROR(ipc_c, "Connect to %s failed: %d %s", pipe_name, err, ipc_winerror(err));
+	IPC_ERROR(ipc_c, "Connect to %s failed: %lu %s", pipe_name, err, ipc_winerror(err));
 	if (err != ERROR_FILE_NOT_FOUND) {
 		return INVALID_HANDLE_VALUE;
 	}
@@ -118,20 +119,22 @@ ipc_connect_pipe(struct ipc_connection *ipc_c, const char *pipe_name)
 	HMODULE hmod;
 	if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 	                        (LPCSTR)ipc_connect_pipe, &hmod)) {
-		IPC_ERROR(ipc_c, "GetModuleHandleExA failed: %d %s", err, ipc_winerror(err));
+		IPC_ERROR(ipc_c, "GetModuleHandleExA failed: %lu %s", err, ipc_winerror(err));
 		return INVALID_HANDLE_VALUE;
 	}
-	char service_path[MAX_PATH];
-	if (!GetModuleFileNameA(hmod, service_path, sizeof(service_path))) {
-		IPC_ERROR(ipc_c, "GetModuleFileNameA failed: %d %s", err, ipc_winerror(err));
+	char current_path[MAX_PATH] = {0};
+	if (!GetModuleFileNameA(hmod, current_path, sizeof(current_path))) {
+		IPC_ERROR(ipc_c, "GetModuleFileNameA failed: %lu %s", err, ipc_winerror(err));
 		return INVALID_HANDLE_VALUE;
 	}
-	char *p = strrchr(service_path, '\\');
+	char *p = strrchr(current_path, '\\');
 	if (!p) {
-		IPC_ERROR(ipc_c, "failed to parse the path %s", service_path);
+		IPC_ERROR(ipc_c, "failed to parse the path %s", current_path);
 		return INVALID_HANDLE_VALUE;
 	}
-	strcpy(p + 1, XRT_SERVICE_EXECUTABLE);
+
+	char service_path[MAX_PATH] = {0};
+	snprintf(service_path, MAX_PATH, "%s\\%s", current_path, XRT_SERVICE_EXECUTABLE);
 	STARTUPINFOA si = {.cb = sizeof(si)};
 	PROCESS_INFORMATION pi;
 	if (!CreateProcessA(NULL, service_path, NULL, NULL, false, 0, NULL, NULL, &si, &pi)) {
@@ -139,14 +142,15 @@ ipc_connect_pipe(struct ipc_connection *ipc_c, const char *pipe_name)
 		p = strrchr(service_path, '\\');
 		if (!p) {
 			err = GetLastError();
-			IPC_INFO(ipc_c, XRT_SERVICE_EXECUTABLE " not found in %s: %d %s", service_path, err,
+			IPC_INFO(ipc_c, XRT_SERVICE_EXECUTABLE " not found in %s: %lu %s", service_path, err,
 			         ipc_winerror(err));
 			return INVALID_HANDLE_VALUE;
 		}
-		strcpy(p + 1, "service\\" XRT_SERVICE_EXECUTABLE);
+
+		snprintf(service_path, MAX_PATH, "%s\\service\\%s", current_path, XRT_SERVICE_EXECUTABLE);
 		if (!CreateProcessA(NULL, service_path, NULL, NULL, false, 0, NULL, NULL, &si, &pi)) {
 			err = GetLastError();
-			IPC_INFO(ipc_c, XRT_SERVICE_EXECUTABLE " not found at %s: %d %s", service_path, err,
+			IPC_INFO(ipc_c, XRT_SERVICE_EXECUTABLE " not found at %s: %lu %s", service_path, err,
 			         ipc_winerror(err));
 			return INVALID_HANDLE_VALUE;
 		}
@@ -161,7 +165,7 @@ ipc_connect_pipe(struct ipc_connection *ipc_c, const char *pipe_name)
 		}
 		err = GetLastError();
 		if (err != ERROR_FILE_NOT_FOUND || WaitForSingleObject(pi.hProcess, 100) != WAIT_TIMEOUT) {
-			IPC_ERROR(ipc_c, "Connect to %s failed: %d %s", pipe_name, err, ipc_winerror(err));
+			IPC_ERROR(ipc_c, "Connect to %s failed: %lu %s", pipe_name, err, ipc_winerror(err));
 			break;
 		}
 	}
@@ -176,7 +180,7 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 	const char pipe_prefix[] = "\\\\.\\pipe\\";
 #define prefix_len sizeof(pipe_prefix) - 1
 	char pipe_name[MAX_PATH + prefix_len];
-	strcpy(pipe_name, pipe_prefix);
+	snprintf(pipe_name, sizeof(pipe_name), "%s", pipe_prefix);
 
 	if (u_file_get_path_in_runtime_dir(XRT_IPC_MSG_SOCK_FILENAME, pipe_name + prefix_len, MAX_PATH) == -1) {
 		U_LOG_E("u_file_get_path_in_runtime_dir failed!");
@@ -190,7 +194,7 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 	DWORD mode = PIPE_READMODE_MESSAGE | PIPE_WAIT;
 	if (!SetNamedPipeHandleState(pipe_inst, &mode, NULL, NULL)) {
 		DWORD err = GetLastError();
-		IPC_ERROR(ipc_c, "SetNamedPipeHandleState(PIPE_READMODE_MESSAGE | PIPE_WAIT) failed: %d %s", err,
+		IPC_ERROR(ipc_c, "SetNamedPipeHandleState(PIPE_READMODE_MESSAGE | PIPE_WAIT) failed: %lu %s", err,
 		          ipc_winerror(err));
 		return false;
 	}
@@ -206,13 +210,21 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 static bool
 ipc_client_socket_connect(struct ipc_connection *ipc_c)
 {
-	struct sockaddr_un addr;
+#ifdef SOCK_CLOEXEC
+	// Make sure the socket is not inherited by child processes. For one, when there is an fd to the socket
+	// in the child process closing the client connection (or killing the connected process)
+	// may not be seen in the server as client disconnection.
+	const int flags = SOCK_CLOEXEC;
+#else
+	const int flags = 0;
+#endif
+	struct sockaddr_un addr = XRT_STRUCT_INIT;
 	int ret;
 
 
 	// create our IPC socket
 
-	ret = socket(PF_UNIX, SOCK_STREAM, 0);
+	ret = socket(PF_UNIX, SOCK_STREAM | flags, 0);
 	if (ret < 0) {
 		IPC_ERROR(ipc_c, "Socket Create Error!");
 		return false;
@@ -228,9 +240,17 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c)
 		return false;
 	}
 
-	memset(&addr, 0, sizeof(addr));
+	// Make sure the path fits.
+	const int dst_size = (int)ARRAY_SIZE(addr.sun_path);
+	if (size >= dst_size) {
+		IPC_ERROR(ipc_c, "Total IPC path too long (%i > %i)", (int)size, dst_size);
+		return false;
+	}
+
+	// Struct zero init at declaration.
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, sock_file);
+	// Use truncate here to avoid warnings.
+	u_truncate_snprintf(addr.sun_path, dst_size, "%s", sock_file);
 
 	ret = connect(socket, (struct sockaddr *)&addr, sizeof(addr));
 	if (ret < 0) {

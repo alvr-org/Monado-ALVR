@@ -36,7 +36,9 @@ enum wmr_headset_type
 	WMR_HEADSET_LENOVO_EXPLORER,
 	WMR_HEADSET_MEDION_ERAZER_X1000,
 	WMR_HEADSET_DELL_VISOR,
+	WMR_HEADSET_ACER_AH100,
 	WMR_HEADSET_ACER_AH101,
+	WMR_HEADSET_FUJITSU_FMVHDS1,
 };
 
 /*!
@@ -59,10 +61,12 @@ enum wmr_headset_type
 #define VR1000_PID 0x0367
 #define REVERB_G1_PID 0x0c6a
 #define REVERB_G2_PID 0x0580
+#define REVERB_G2_OMNICEPT_PID 0x0680
 #define REVERB_G2_CONTROLLER_PID 0x066a /* On 0x045e Microsoft VID */
 
 #define LENOVO_VID 0x17ef
 #define EXPLORER_PID 0xb801
+#define EXPLORER_NO_CONTROLLERS_PID 0xb800
 
 #define DELL_VID 0x413c
 #define VISOR_PID 0xb0d5
@@ -76,7 +80,11 @@ enum wmr_headset_type
 #define MEDION_ERAZER_X1000_PID 0xb5d5
 
 #define ACER_VID 0x0502
+#define AH100_PID 0xb0d5
 #define AH101_PID 0xb0d6
+
+#define FUJITSU_VID 0x04c5
+#define FMVHDS1_PID 0x15b9
 
 /*!
  * @}

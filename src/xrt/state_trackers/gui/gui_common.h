@@ -270,6 +270,22 @@ gui_scene_calibrate(struct gui_program *p,
                     struct xrt_settings_tracking *s);
 
 /*!
+ * Test for audio resampler
+ *
+ * @public @memberof gui_program
+ */
+void
+gui_scene_resampler_test(struct gui_program *p);
+
+/*!
+ * Test for constellation tracker dataset playback.
+ *
+ * @public @memberof gui_program
+ */
+void
+gui_scene_constellation_tracker_test(struct gui_program *p);
+
+/*!
  * @}
  */
 

@@ -57,7 +57,7 @@ open_target_process_dup_handle(struct ipc_message_channel *imc)
 	DWORD flags;
 	if (!GetNamedPipeInfo(imc->ipc_handle, &flags, NULL, NULL, NULL)) {
 		DWORD err = GetLastError();
-		IPC_ERROR(imc, "GetNamedPipeInfo(%p) failed: %d %s", imc->ipc_handle, err, ipc_winerror(err));
+		IPC_ERROR(imc, "GetNamedPipeInfo(%p) failed: %lu %s", imc->ipc_handle, err, ipc_winerror(err));
 		return NULL;
 	}
 
@@ -65,14 +65,14 @@ open_target_process_dup_handle(struct ipc_message_channel *imc)
 	if (flags & PIPE_SERVER_END) {
 		if (!GetNamedPipeClientProcessId(imc->ipc_handle, &pid)) {
 			DWORD err = GetLastError();
-			IPC_ERROR(imc, "GetNamedPipeClientProcessId(%p) failed: %d %s", imc->ipc_handle, err,
+			IPC_ERROR(imc, "GetNamedPipeClientProcessId(%p) failed: %lu %s", imc->ipc_handle, err,
 			          ipc_winerror(err));
 			return NULL;
 		}
 	} else {
 		if (!GetNamedPipeServerProcessId(imc->ipc_handle, &pid)) {
 			DWORD err = GetLastError();
-			IPC_ERROR(imc, "GetNamedPipeServerProcessId(%p) failed: %d %s", imc->ipc_handle, err,
+			IPC_ERROR(imc, "GetNamedPipeServerProcessId(%p) failed: %lu %s", imc->ipc_handle, err,
 			          ipc_winerror(err));
 			return NULL;
 		}
@@ -81,7 +81,7 @@ open_target_process_dup_handle(struct ipc_message_channel *imc)
 	HANDLE h = OpenProcess(PROCESS_DUP_HANDLE, false, pid);
 	if (!h) {
 		DWORD err = GetLastError();
-		IPC_ERROR(imc, "OpenProcess(PROCESS_DUP_HANDLE, pid %d) failed: %d %s", pid, err, ipc_winerror(err));
+		IPC_ERROR(imc, "OpenProcess(PROCESS_DUP_HANDLE, pid %lu) failed: %lu %s", pid, err, ipc_winerror(err));
 	}
 
 	return h;
@@ -109,7 +109,7 @@ ipc_send(struct ipc_message_channel *imc, const void *data, size_t size)
 	DWORD len;
 	if (!WriteFile(imc->ipc_handle, data, DWORD(size), &len, NULL)) {
 		DWORD err = GetLastError();
-		IPC_ERROR(imc, "WriteFile on pipe %p failed: %d %s", imc->ipc_handle, err, ipc_winerror(err));
+		IPC_ERROR(imc, "WriteFile on pipe %p failed: %lu %s", imc->ipc_handle, err, ipc_winerror(err));
 		return XRT_ERROR_IPC_FAILURE;
 	}
 	return XRT_SUCCESS;
@@ -121,7 +121,7 @@ ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size)
 	DWORD len;
 	if (!ReadFile(imc->ipc_handle, out_data, DWORD(size), &len, NULL)) {
 		DWORD err = GetLastError();
-		IPC_ERROR(imc, "ReadFile from pipe %p failed: %d %s", imc->ipc_handle, err, ipc_winerror(err));
+		IPC_ERROR(imc, "ReadFile from pipe %p failed: %lu %s", imc->ipc_handle, err, ipc_winerror(err));
 		return XRT_ERROR_IPC_FAILURE;
 	}
 	return XRT_SUCCESS;
@@ -161,7 +161,7 @@ ipc_send_handles(
 	HANDLE target_process = open_target_process_dup_handle(imc);
 	if (!target_process) {
 		DWORD err = GetLastError();
-		IPC_ERROR(imc, "open_target_process_dup_handle failed: %d %s", err, ipc_winerror(err));
+		IPC_ERROR(imc, "open_target_process_dup_handle failed: %lu %s", err, ipc_winerror(err));
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
@@ -176,7 +176,7 @@ ipc_send_handles(
 		} else if (!DuplicateHandle(current_process, handles[i], target_process, &handle, 0, false,
 		                            DUPLICATE_SAME_ACCESS)) {
 			DWORD err = GetLastError();
-			IPC_ERROR(imc, "DuplicateHandle(%p) failed: %d %s", handles[i], err, ipc_winerror(err));
+			IPC_ERROR(imc, "DuplicateHandle(%p) failed: %lu %s", handles[i], err, ipc_winerror(err));
 			CloseHandle(target_process);
 			return XRT_ERROR_IPC_FAILURE;
 		}

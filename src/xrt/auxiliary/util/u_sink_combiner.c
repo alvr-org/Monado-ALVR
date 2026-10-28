@@ -4,7 +4,7 @@
  * @file
  * @brief  An @ref xrt_frame_sink that combines two frames into a stereo frame.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 
@@ -98,6 +98,29 @@ combine_frames_r8g8b8(struct xrt_frame *l, struct xrt_frame *r, struct xrt_frame
 }
 
 static void
+combine_frames_yuyv422(struct xrt_frame *l, struct xrt_frame *r, struct xrt_frame *f)
+{
+	SINK_TRACE_MARKER();
+
+	uint32_t height = l->height;
+
+	for (uint32_t y = 0; y < height; y++) {
+		uint8_t *dst = f->data + f->stride * y;
+		uint8_t *src = l->data + l->stride * y;
+
+		for (uint32_t x = 0; x < l->width * 2; x++) {
+			*dst++ = *src++;
+		}
+
+		dst = f->data + f->stride * y + l->width * 2;
+		src = r->data + r->stride * y;
+		for (uint32_t x = 0; x < r->width * 2; x++) {
+			*dst++ = *src++;
+		}
+	}
+}
+
+static void
 combine_frames(struct xrt_frame *l, struct xrt_frame *r, struct xrt_frame **out_frame)
 {
 	SINK_TRACE_MARKER();
@@ -105,7 +128,7 @@ combine_frames(struct xrt_frame *l, struct xrt_frame *r, struct xrt_frame **out_
 	assert(l->width == r->width);
 	assert(l->height == r->height);
 	assert(l->format == r->format);
-	assert((l->format == XRT_FORMAT_L8) || (l->format == XRT_FORMAT_R8G8B8));
+	assert((l->format == XRT_FORMAT_L8) || (l->format == XRT_FORMAT_R8G8B8) || (l->format == XRT_FORMAT_YUYV422));
 
 	int64_t diff_ns = l->timestamp - r->timestamp;
 	uint32_t height = l->height;
@@ -120,6 +143,10 @@ combine_frames(struct xrt_frame *l, struct xrt_frame *r, struct xrt_frame **out_
 	f->source_sequence = l->source_sequence;
 
 	switch (l->format) {
+	case XRT_FORMAT_YUYV422: {
+		combine_frames_yuyv422(l, r, f);
+		break;
+	}
 	case XRT_FORMAT_L8: {
 		combine_frames_l8(l, r, f);
 		break;

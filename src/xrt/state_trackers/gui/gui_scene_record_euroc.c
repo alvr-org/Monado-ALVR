@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -24,7 +25,7 @@
 #include "util/u_sink.h"
 #include "util/u_debug.h"
 #include "util/u_pretty_print.h"
-#include "util/u_system_helpers.h"
+#include "b_system_devices.h"
 
 #include "gui_common.h"
 
@@ -45,8 +46,8 @@ void
 gui_scene_record_euroc(struct gui_program *p)
 {
 	// Placeholder so that gui_scene_debug doesn't try to probe.
-	struct u_system_devices *usysd = u_system_devices_allocate();
-	struct xrt_system_devices *xsysd = &usysd->base;
+	struct b_system_devices *bsysd = b_system_devices_allocate();
+	struct xrt_system_devices *xsysd = &bsysd->base;
 	p->xsysd = xsysd;
 
 	struct xrt_frame_context xfctx;
@@ -70,10 +71,10 @@ gui_scene_record_euroc(struct gui_program *p)
 
 
 	struct xrt_slam_sinks *slam_sinks = NULL;
-	slam_sinks = euroc_recorder_create(&xfctx, NULL, 2, false);
+	slam_sinks = euroc_recorder_create(&xfctx, NULL, 2, 1, false);
 
-	u_var_add_root(usysd, "DepthAI Euroc recorder", 0);
-	euroc_recorder_add_ui(slam_sinks, usysd, "");
+	u_var_add_root(bsysd, "DepthAI Euroc recorder", 0);
+	euroc_recorder_add_ui(slam_sinks, bsysd, "");
 
 
 	struct xrt_slam_sinks gen_lock = {0};

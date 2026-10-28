@@ -1,4 +1,5 @@
 // Copyright 2018-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,9 +12,10 @@
 #include "util/u_misc.h"
 
 #include "oxr_chain.h"
+#include "oxr_conversions.h"
 #include "oxr_objects.h"
 #include "oxr_logger.h"
-#include "oxr_handle.h"
+#include "oxr_handle_base.h"
 #include "oxr_swapchain_common.h"
 #include "oxr_xret.h"
 
@@ -37,40 +39,6 @@ convert_create_flags(XrSwapchainCreateFlags xr_flags)
 	}
 
 	return flags;
-}
-
-static enum xrt_swapchain_usage_bits
-convert_usage_bits(XrSwapchainUsageFlags xr_usage)
-{
-	enum xrt_swapchain_usage_bits usage = 0;
-
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_COLOR;
-	}
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL;
-	}
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_UNORDERED_ACCESS_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS;
-	}
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_TRANSFER_SRC;
-	}
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_TRANSFER_DST;
-	}
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_SAMPLED_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_SAMPLED;
-	}
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_MUTABLE_FORMAT_BIT) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_MUTABLE_FORMAT;
-	}
-	// aliased to XR_SWAPCHAIN_USAGE_INPUT_ATTACHMENT_BIT_MND
-	if ((xr_usage & XR_SWAPCHAIN_USAGE_INPUT_ATTACHMENT_BIT_KHR) != 0) {
-		usage |= XRT_SWAPCHAIN_USAGE_INPUT_ATTACHMENT;
-	}
-
-	return usage;
 }
 
 
@@ -288,7 +256,7 @@ oxr_swapchain_common_create(struct oxr_logger *log,
 
 	struct xrt_swapchain_create_info info = {
 	    .create = convert_create_flags(createInfo->createFlags),
-	    .bits = convert_usage_bits(createInfo->usageFlags),
+	    .bits = xr_swapchain_usage_to_xrt(createInfo->usageFlags),
 	    .format = createInfo->format,
 	    .sample_count = createInfo->sampleCount,
 	    .width = createInfo->width,

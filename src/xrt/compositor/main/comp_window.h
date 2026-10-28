@@ -1,4 +1,5 @@
 // Copyright 2019, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -25,6 +26,13 @@ extern "C" {
  * Functions.
  *
  */
+
+/*!
+ * Debug info target factor, always available.
+ *
+ * @ingroup comp_main
+ */
+extern const struct comp_target_factory comp_target_factory_debug_image;
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 

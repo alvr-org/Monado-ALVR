@@ -11,6 +11,7 @@
 
 /* keep sorted */
 
+#cmakedefine XRT_HAVE_BIGCERES
 #cmakedefine XRT_HAVE_BLUETOOTH
 #cmakedefine XRT_HAVE_D3D11
 #cmakedefine XRT_HAVE_D3D12

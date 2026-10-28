@@ -14,7 +14,7 @@
 #include "xrt/xrt_config_have.h"
 
 #ifdef XRT_HAVE_VULKAN
-// pre-emptively include windows.h if applicable so we can specify our own flags for it.
+// preemptively include windows.h if applicable so we can specify our own flags for it.
 #include "xrt/xrt_windows.h"
 
 #define VK_NO_PROTOTYPES

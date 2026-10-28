@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Test for Levenberg-Marquardt kinematic optimizer
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 #include "util/u_logging.h"

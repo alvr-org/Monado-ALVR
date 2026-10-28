@@ -95,12 +95,12 @@ struct SimulatedDisplayTimingData
 	void
 	call_u_pc_info(u_pacing_compositor *upc) const
 	{
-		std::cout << "frame_id:                 " << frame_id << std::endl;
-		std::cout << "desired_present_time_ns:  " << desired_present_time_ns << std::endl;
-		std::cout << "actual_present_time_ns:   " << actual_present_time_ns << std::endl;
-		std::cout << "earliest_present_time_ns: " << earliest_present_time_ns << std::endl;
-		std::cout << "present_margin_ns:        " << present_margin_ns << std::endl;
-		std::cout << "now_ns:                   " << now_ns << "\n" << std::endl;
+		std::cout << "frame_id:                 " << frame_id << '\n';
+		std::cout << "desired_present_time_ns:  " << desired_present_time_ns << '\n';
+		std::cout << "actual_present_time_ns:   " << actual_present_time_ns << '\n';
+		std::cout << "earliest_present_time_ns: " << earliest_present_time_ns << '\n';
+		std::cout << "present_margin_ns:        " << present_margin_ns << '\n';
+		std::cout << "now_ns:                   " << now_ns << "\n" << '\n';
 		u_pc_info(upc, frame_id, desired_present_time_ns, actual_present_time_ns, earliest_present_time_ns,
 		          present_margin_ns, now_ns);
 	}
@@ -198,10 +198,10 @@ static constexpr auto longGpuTime = 2ms;
 
 TEST_CASE("u_pacing_compositor_display_timing")
 {
+	struct u_pc_display_timing_config config = u_pc_display_timing_get_default_config();
 	u_pacing_compositor *upc = nullptr;
 	MockClock clock;
-	REQUIRE(XRT_SUCCESS ==
-	        u_pc_display_timing_create(frame_interval_ns.count(), &U_PC_DISPLAY_TIMING_CONFIG_DEFAULT, &upc));
+	REQUIRE(XRT_SUCCESS == u_pc_display_timing_create(frame_interval_ns.count(), &config, &upc));
 	REQUIRE(upc != nullptr);
 
 	clock.advance(1ms);

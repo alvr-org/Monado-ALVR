@@ -10,13 +10,12 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup drv_wmr
  */
-#include <asm/byteorder.h>
-#include <libusb.h>
-#include <stdlib.h>
-#include <assert.h>
 
 #include "math/m_api.h"
+
 #include "os/os_threading.h"
+#include "xrt/xrt_byte_order.h"
+
 #include "util/u_autoexpgain.h"
 #include "util/u_debug.h"
 #include "util/u_var.h"
@@ -27,6 +26,10 @@
 #include "wmr_config.h"
 #include "wmr_protocol.h"
 #include "wmr_camera.h"
+
+#include <libusb.h>
+#include <stdlib.h>
+#include <assert.h>
 
 //! Specifies whether the user wants to enable autoexposure from the start.
 DEBUG_GET_ONCE_BOOL_OPTION(wmr_autoexposure, "WMR_AUTOEXPOSURE", true)
@@ -51,7 +54,7 @@ update_expgain(struct wmr_camera *cam, struct xrt_frame **frames);
 
 #define CAM_ENDPOINT 0x05
 
-#define NUM_XFERS 4
+#define NUM_XFERS 9
 
 #define WMR_CAMERA_CMD_GAIN 0x80
 #define WMR_CAMERA_CMD_ON 0x81
@@ -99,6 +102,7 @@ struct wmr_camera
 	int slam_cam_count;                                   //!< Number of tracking cameras used for SLAM
 
 	size_t xfer_size;
+	size_t frame_xfer_size;
 	uint32_t frame_width, frame_height;
 	uint8_t last_seq;
 	uint64_t last_frame_ts;
@@ -120,7 +124,7 @@ struct wmr_camera
 
 	struct u_sink_debug debug_sinks[2];
 
-	struct xrt_frame_sink *cam_sinks[WMR_MAX_CAMERAS]; //!< Downstream sinks to push tracking frames to
+	struct xrt_frame_sink *cam_sinks[XRT_TRACKING_MAX_CAMS]; //!< Downstream sinks to push tracking frames to
 
 	enum u_logging_level log_level;
 };
@@ -172,6 +176,13 @@ compute_frame_size(struct wmr_camera *cam)
 
 	F = 26;
 
+	libusb_device *dev = libusb_get_device(cam->dev);
+	int ep_pkt_size = libusb_get_max_packet_size(dev, CAM_ENDPOINT);
+	if (ep_pkt_size < 0) {
+		WMR_CAM_ERROR(cam, "Failed to retrieve endpoint descriptor: result %d", ep_pkt_size);
+		return false;
+	}
+
 	for (i = 0; i < cam->tcam_count; i++) {
 		const struct wmr_camera_config *config = &cam->tcam_confs[i];
 
@@ -204,7 +215,14 @@ compute_frame_size(struct wmr_camera *cam)
 	n_packets = F / (0x6000 - 32);
 	leftover = F - n_packets * (0x6000 - 32);
 
-	cam->xfer_size = n_packets * 0x6000 + 32 + leftover;
+	cam->frame_xfer_size = n_packets * 0x6000 + 32 + leftover;
+
+	// Round up to a multiple of the max packet size to avoid overflows
+	// in case of stalls reading things out
+	size_t round_up = ep_pkt_size - (cam->frame_xfer_size % ep_pkt_size);
+	cam->xfer_size = cam->frame_xfer_size + round_up;
+	WMR_CAM_DEBUG(cam, "Rounding up xfer size by %zu from frame size %zu to %zu", round_up, cam->frame_xfer_size,
+	              cam->xfer_size);
 
 	cam->frame_width = width;
 	cam->frame_height = height;
@@ -282,14 +300,19 @@ img_xfer_cb(struct libusb_transfer *xfer)
 
 	struct wmr_camera *cam = xfer->user_data;
 
+	if (!cam->running) {
+		return;
+	}
+
 	if (xfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		WMR_CAM_DEBUG(cam, "Camera transfer completed with status: %s (%u)", libusb_error_name(xfer->status),
 		              xfer->status);
 		goto out;
 	}
 
-	if (xfer->actual_length < xfer->length) {
-		WMR_CAM_DEBUG(cam, "Camera transfer only delivered %d bytes", xfer->actual_length);
+	if ((size_t)xfer->actual_length < cam->frame_xfer_size) {
+		WMR_CAM_DEBUG(cam, "Camera transfer only delivered %d bytes of %zu per frame", xfer->actual_length,
+		              cam->frame_xfer_size);
 		goto out;
 	}
 
@@ -308,7 +331,7 @@ img_xfer_cb(struct libusb_transfer *xfer)
 	const size_t chunk_size = 0x6000 - 32;
 
 	DRV_TRACE_BEGIN(copy_to_frame);
-	while (dst_remain > 0) {
+	while (dst_remain >= 0x20) {
 		const size_t to_copy = dst_remain > chunk_size ? chunk_size : dst_remain;
 
 		/* 32 byte header seems to contain:
@@ -319,6 +342,11 @@ img_xfer_cb(struct libusb_transfer *xfer)
 		 *                       but repeat every 8 slices. They're different each boot
 		 *                       of the headset. Might just be uninitialised memory?
 		 */
+		uint32_t magic = __le32_to_cpu(*(__le32 *)(src));
+		if (magic != WMR_MAGIC) {
+			WMR_CAM_WARN(cam, "Invalid frame magic (got %x, expected %x). Dropping", magic, WMR_MAGIC);
+			goto drop_frame;
+		}
 		src += 0x20;
 
 		memcpy(dst, src, to_copy);
@@ -328,8 +356,11 @@ img_xfer_cb(struct libusb_transfer *xfer)
 	}
 	DRV_TRACE_END(copy_to_frame);
 
-	/* There should be exactly a 26 byte footer left over */
-	assert(xfer->buffer + xfer->length - src == 26);
+	/* There should be exactly a 26 byte footer left over if we completely consumed the right amount of data */
+	if (xfer->buffer + cam->frame_xfer_size - src != 26) {
+		WMR_CAM_WARN(cam, "Invalid frame. Dropping");
+		goto drop_frame;
+	}
 
 	/* Footer contains:
 	 * __le64 start_ts; - 100ns unit timestamp, from same clock as video_timestamps on the IMU feed
@@ -381,26 +412,30 @@ img_xfer_cb(struct libusb_transfer *xfer)
 	}
 
 	// Push to sinks
-	if (slam_tracking_frame) {
-		DRV_TRACE_IDENT(push_to_sinks);
+	DRV_TRACE_BEGIN(push_to_sinks);
 
-		// Tracking frames usually come at ~30fps
-		struct xrt_frame *frames[WMR_MAX_CAMERAS] = {NULL};
-		for (int i = 0; i < cam->slam_cam_count; i++) {
-			u_frame_create_roi(xf, cam->tcam_confs[i].roi, &frames[i]);
-		}
-
-		update_expgain(cam, frames);
-
-		for (int i = 0; i < cam->slam_cam_count; i++) {
-			xrt_sink_push_frame(cam->cam_sinks[i], frames[i]);
-		}
-
-		for (int i = 0; i < cam->slam_cam_count; i++) {
-			xrt_frame_reference(&frames[i], NULL);
-		}
+	// Tracking frames usually come at ~30fps
+	struct xrt_frame *frames[WMR_MAX_CAMERAS] = {NULL};
+	for (int i = 0; i < cam->slam_cam_count; i++) {
+		u_frame_create_roi(xf, cam->tcam_confs[i].roi, &frames[i]);
 	}
 
+	if (slam_tracking_frame) {
+		update_expgain(cam, frames);
+	}
+
+	for (int i = 0; i < cam->slam_cam_count; i++) {
+		int j = i + (slam_tracking_frame ? 0 : cam->slam_cam_count);
+		xrt_sink_push_frame(cam->cam_sinks[j], frames[i]);
+	}
+
+	for (int i = 0; i < cam->slam_cam_count; i++) {
+		xrt_frame_reference(&frames[i], NULL);
+	}
+
+	DRV_TRACE_END(push_to_sinks);
+
+drop_frame:
 	xrt_frame_reference(&xf, NULL);
 
 out:
@@ -429,7 +464,8 @@ wmr_camera_open(struct wmr_camera_open_config *config)
 
 	for (int i = 0; i < cam->tcam_count; i++) {
 		cam->tcam_confs[i] = *config->tcam_confs[i];
-		cam->cam_sinks[i] = config->tcam_sinks[i];
+		cam->cam_sinks[i] = config->tcam_sinks[i];                                     // SLAM frames
+		cam->cam_sinks[i + cam->tcam_count] = config->tcam_sinks[i + cam->tcam_count]; // Controller frames
 	}
 
 	if (os_thread_helper_init(&cam->usb_thread) != 0) {
@@ -463,6 +499,7 @@ wmr_camera_open(struct wmr_camera_open_config *config)
 	for (i = 0; i < NUM_XFERS; i++) {
 		cam->xfers[i] = libusb_alloc_transfer(0);
 		if (cam->xfers[i] == NULL) {
+			WMR_CAM_ERROR(cam, "Failed to allocate transfer %d", i);
 			res = LIBUSB_ERROR_NO_MEM;
 			goto fail;
 		}
@@ -600,6 +637,8 @@ wmr_camera_start(struct wmr_camera *cam)
 		goto fail;
 	}
 
+	cam->running = true;
+
 	for (int i = 0; i < NUM_XFERS; i++) {
 		uint8_t *recv_buf = malloc(cam->xfer_size);
 
@@ -609,6 +648,7 @@ wmr_camera_start(struct wmr_camera *cam)
 
 		res = libusb_submit_transfer(cam->xfers[i]);
 		if (res < 0) {
+			WMR_CAM_ERROR(cam, "Failed to submit transfer %d", i);
 			goto fail;
 		}
 	}
@@ -649,20 +689,12 @@ wmr_camera_stop(struct wmr_camera *cam)
 
 	res = set_active(cam, false);
 	if (res < 0) {
-		goto fail;
+		WMR_CAM_ERROR(cam, "Error stopping camera input: %s", libusb_error_name(res));
+		return false;
 	}
 
 	WMR_CAM_INFO(cam, "WMR camera stopped");
-
 	return true;
-
-
-fail:
-	if (res < 0) {
-		WMR_CAM_ERROR(cam, "Error stopping camera input: %s", libusb_error_name(res));
-	}
-
-	return false;
 }
 
 static int

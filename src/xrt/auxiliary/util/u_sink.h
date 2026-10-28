@@ -4,29 +4,42 @@
  * @file
  * @brief  @ref xrt_frame_sink converters and other helpers.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 
 #pragma once
 
-#include "os/os_threading.h"
 #include "xrt/xrt_frame.h"
 #include "xrt/xrt_tracking.h"
+
+#include "os/os_threading.h"
+
+#include "tracking/t_constellation.h"
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define U_SINK_MAX_SPLIT_DOWNSTREAMS 5
+
 /*!
  * @see u_sink_quirk_create
  */
 struct u_sink_quirk_params
 {
+	//! Marks frames passing through as side-by-side stereo.
 	bool stereo_sbs;
+	/*!
+	 * Marks the frames passing through as side-by-side stereo, and fixes up the camera's data offset to be readable
+	 * as a standard side-by-side frame.
+	 */
 	bool ps4_cam;
+	//! Sets the stereo format to the correct one for the leap motion and fixes image width.
 	bool leap_motion;
+	//! Reinterprets a raw bayer image as a monochrome L8 image.
+	bool bayer_as_l8;
 };
 
 /*!
@@ -84,6 +97,11 @@ u_sink_create_to_yuv_or_yuyv(struct xrt_frame_context *xfctx,
                              struct xrt_frame_sink *downstream,
                              struct xrt_frame_sink **out_xfs);
 
+void
+u_sink_create_half_scale(struct xrt_frame_context *xfctx,
+                         struct xrt_frame_sink *downstream,
+                         struct xrt_frame_sink **out_xfs);
+
 /*!
  * @public @memberof xrt_frame_sink
  * @see xrt_frame_context
@@ -134,6 +152,17 @@ u_sink_quirk_create(struct xrt_frame_context *xfctx,
 /*!
  * @public @memberof xrt_frame_sink
  * @see xrt_frame_context
+ * Takes a frame and pushes it to a maximum of U_SINK_MAX_SPLIT_DOWNSTREAMS sinks
+ */
+void
+u_sink_split_multi_create(struct xrt_frame_context *xfctx,
+                          struct xrt_frame_sink **downstreams,
+                          size_t downstream_count,
+                          struct xrt_frame_sink **out_xfs);
+
+/*!
+ * @public @memberof xrt_frame_sink
+ * @see xrt_frame_context
  * Takes a frame and pushes it to two sinks
  */
 void
@@ -146,14 +175,14 @@ u_sink_split_create(struct xrt_frame_context *xfctx,
  * Splits Stereo SBS frames into two independent frames
  */
 void
-u_sink_stereo_sbs_to_slam_sbs_create(struct xrt_frame_context *xfctx,
-                                     struct xrt_frame_sink *downstream_left,
-                                     struct xrt_frame_sink *downstream_right,
-                                     struct xrt_frame_sink **out_xfs);
+u_sink_stereo_sbs_split_create(struct xrt_frame_context *xfctx,
+                               struct xrt_frame_sink *downstream_left,
+                               struct xrt_frame_sink *downstream_right,
+                               struct xrt_frame_sink **out_xfs);
 
 /*!
  * Combines stereo frames.
- * Opposite of u_sink_stereo_sbs_to_slam_sbs_create
+ * Opposite of u_sink_stereo_sbs_split_create
  */
 bool
 u_sink_combiner_create(struct xrt_frame_context *xfctx,
@@ -253,6 +282,28 @@ void
 u_imu_sink_force_monotonic_create(struct xrt_frame_context *xfctx,
                                   struct xrt_imu_sink *downstream,
                                   struct xrt_imu_sink **out_imu_sink);
+
+
+/*!
+ * @public @memberof xrt_blob_sink
+ * @see xrt_frame_context
+ * Visualizes blobs by rendering them to a frame and pushing that frame to a downstream sink.
+ * Useful for debugging blob detection.
+ *
+ * @param[in] xfctx The frame context to add this sink to.
+ * @param[in] downstream_blob_sink The blob sink to forward the blobs to.
+ * @param[in] downstream_frame_sink The frame sink to push the visualized frames to.
+ * @param[in] frame_width The width of the frames to render the blobs to.
+ * @param[in] frame_height The height of the frames to render the blobs to.
+ * @param[out] out_xbs The created blob sink.
+ */
+void
+u_sink_blob_visualizer_create(struct xrt_frame_context *xfctx,
+                              struct t_blob_sink *downstream_blob_sink,
+                              struct u_sink_debug *downstream_frame_sink,
+                              uint32_t frame_width,
+                              uint32_t frame_height,
+                              struct t_blob_sink **out_xbs);
 
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Simple util for setting floating-point exceptions and checking for NaNs.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_ht
  */
 

@@ -81,6 +81,11 @@ STRIP_FROM_INC_PATH    = \
                          @SRCDIR@/src/xrt/state_trackers \
                          @SRCDIR@/src/xrt/targets
 
+# Path to generated include files (for vk_helpers.h includes).
+INCLUDE_PATH           = @BUILDDIR@/src/xrt/auxiliary/vk
+
+# Needed to processes generated header files (for vk_helpers.h includes).
+EXTENSION_MAPPING      = .h.inc=C
 
 JAVADOC_AUTOBRIEF      = YES
 

@@ -1,4 +1,5 @@
-// Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2019-2026, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,7 +13,9 @@
 
 #include "util/u_misc.h"
 #include "util/u_pacing.h"
+#include "util/u_debug.h"
 #include "util/u_pretty_print.h"
+#include "util/u_thread_priority.h"
 
 #include "vk/vk_surface_info.h"
 
@@ -29,10 +32,48 @@
  *
  */
 
+/*
+ * For all direct mode outputs 2 is what we want since we want to run
+ * lockstep with the display. Most direct mode swapchains only supports
+ * FIFO mode, and since there is no commonly available Vulkan API to
+ * wait for a specific VBLANK event, even just the latest, we can set
+ * the number of images to two and then acquire immediately after
+ * present. Since the old images are being displayed and the new can't
+ * be flipped this will block until the flip has gone through. Crude but
+ * works well enough on both AMD(Mesa) and Nvidia(Blob).
+ *
+ * When not in direct mode and display to a composited window we
+ * probably want 3, but most compositors on Linux sets the minImageCount
+ * to 3 anyways so we get what we want.
+ */
+DEBUG_GET_ONCE_NUM_OPTION(preferred_at_least_image_count, "XRT_COMPOSITOR_PREFERRED_IMAGE_COUNT", 2)
+DEBUG_GET_ONCE_BOOL_OPTION(use_present_wait, "XRT_COMPOSITOR_USE_PRESENT_WAIT", false)
+DEBUG_GET_ONCE_BOOL_OPTION(use_display_timing, "XRT_COMPOSITOR_USE_DISPLAY_TIMING", true)
+
 static inline struct vk_bundle *
 get_vk(struct comp_target_swapchain *cts)
 {
 	return &cts->base.c->base.vk;
+}
+
+static inline bool
+is_shared_present_mode(struct vk_bundle *vk, VkPresentModeKHR present_mode)
+{
+#ifdef VK_KHR_shared_presentable_image
+	return vk->has_KHR_shared_presentable_image &&                           //
+	       (present_mode == VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR || //
+	        present_mode == VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR);      //
+#else
+	(void)present_mode;
+	return false;
+#endif
+}
+
+static inline bool
+is_shared_presentable_image(struct comp_target_swapchain *cts)
+{
+	struct vk_bundle *vk = get_vk(cts);
+	return is_shared_present_mode(vk, cts->present_mode);
 }
 
 static void
@@ -165,6 +206,14 @@ select_image_count(struct comp_target_swapchain *cts,
                    VkSurfaceCapabilitiesKHR caps,
                    uint32_t preferred_at_least_image_count)
 {
+	if (is_shared_presentable_image(cts)) {
+		/*!
+		 * Ignore caps.minImageCount as it was observed one android device
+		 * it's value was still > 1 for non-shared present modes.
+		 */
+		return 1;
+	}
+
 	// Min is equals to or greater to what we prefer, pick min then.
 	if (caps.minImageCount >= preferred_at_least_image_count) {
 		return caps.minImageCount;
@@ -187,18 +236,43 @@ select_image_count(struct comp_target_swapchain *cts,
 static bool
 check_surface_present_mode(struct comp_target_swapchain *cts,
                            const struct vk_surface_info *info,
+                           VkImageUsageFlags image_usage,
                            VkPresentModeKHR present_mode)
 {
+	struct vk_bundle *vk = get_vk(cts);
+
+	bool image_usage_supported = true;
 	for (uint32_t i = 0; i < info->present_mode_count; i++) {
-		if (info->present_modes[i] == present_mode) {
+		if (info->present_modes[i] != present_mode) {
+			continue;
+		}
+
+#ifdef VK_KHR_shared_presentable_image
+		if (!is_shared_present_mode(vk, present_mode)) {
 			return true;
 		}
+
+		const VkImageUsageFlags supported_image_usage =
+		    info->shared_present_caps.sharedPresentSupportedUsageFlags;
+		if ((supported_image_usage & image_usage) != image_usage) {
+			image_usage_supported = false;
+			break;
+		}
+#endif
+		// Everything checked out!
+		return true;
 	}
 
 	struct u_pp_sink_stack_only sink;
 	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
 
 	u_pp(dg, "Present mode %s not supported, available:", vk_present_mode_string(present_mode));
+
+	if (!image_usage_supported) {
+		u_pp(dg, "Requested image_usage 0x%x not supported for present mode %s.", image_usage,
+		     vk_present_mode_string(present_mode));
+	}
+
 	for (uint32_t i = 0; i < info->present_mode_count; i++) {
 		u_pp(dg, "\n\t%s", vk_present_mode_string(info->present_modes[i]));
 	}
@@ -285,7 +359,10 @@ find_surface_format(struct comp_target_swapchain *cts,
 		return false;
 	}
 
-	COMP_WARN(cts->base.c, "Returning known-wrong color space! Color shift may occur.");
+	COMP_WARN(cts->base.c,
+	          "Returning VkSurfaceFormat with known-wrong color space!\n"
+	          "\tVkSurfaceFormat::format matched one we wanted.\n"
+	          "\tBut color shift will probably be happening.");
 
 done:
 	COMP_DEBUG(cts->base.c,
@@ -346,7 +423,7 @@ do_update_timings_google_display_timing(struct comp_target_swapchain *cts)
 static void
 do_update_timings_vblank_thread(struct comp_target_swapchain *cts)
 {
-	if (!cts->vblank.has_started) {
+	if (!cts->vblank.thread_running) {
 		return;
 	}
 
@@ -431,10 +508,7 @@ vblank_event_func(struct comp_target *ct, int64_t *out_timestamp_ns)
 
 	VkFence vblank_event_fence = VK_NULL_HANDLE;
 	ret = vk->vkRegisterDisplayEventEXT(vk->device, cts->display, &event_info, NULL, &vblank_event_fence);
-	if (ret == VK_ERROR_OUT_OF_HOST_MEMORY) {
-		COMP_ERROR(ct->c, "vkRegisterDisplayEventEXT: %s (started too early?)", vk_result_string(ret));
-		return false;
-	} else if (ret != VK_SUCCESS) {
+	if (ret != VK_SUCCESS) {
 		COMP_ERROR(ct->c, "vkRegisterDisplayEventEXT: %s", vk_result_string(ret));
 		return false;
 	}
@@ -495,8 +569,11 @@ run_vblank_event_thread(void *ptr)
 
 	COMP_DEBUG(ct->c, "Surface thread starting");
 
-	os_thread_helper_name(&cts->vblank.event_thread, "VBlank Events");
+	os_thread_name_self("VBlank Events");
 	U_TRACE_SET_THREAD_NAME("VBlank Events");
+
+	// Try to raise priority of this thread.
+	u_try_to_set_realtime_priority_on_thread(U_LOGGING_INFO, "VBlank Events");
 
 	os_thread_helper_lock(&cts->vblank.event_thread);
 
@@ -516,6 +593,11 @@ run_vblank_event_thread(void *ptr)
 
 		// We should wait for a vblank event.
 		cts->vblank.should_wait = false;
+
+		if (!cts->vblank.event_active) {
+			cts->vblank.event_active = true;
+			continue;
+		}
 
 		// Unlock while waiting.
 		os_thread_helper_unlock(&cts->vblank.event_thread);
@@ -553,7 +635,7 @@ create_vblank_event_thread(struct comp_target *ct)
 	COMP_DEBUG(ct->c, "Started vblank (first pixel out) event thread.");
 
 	// Set this here.
-	cts->vblank.has_started = true;
+	cts->vblank.thread_running = true;
 
 	return true;
 }
@@ -612,21 +694,26 @@ target_init_semaphores(struct comp_target_swapchain *cts)
  */
 
 static void
-comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_target_create_images_info *create_info)
+comp_target_swapchain_create_images(struct comp_target *ct,
+                                    const struct comp_target_create_images_info *create_info,
+                                    struct vk_bundle_queue *present_queue)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 	struct vk_bundle *vk = get_vk(cts);
 	VkBool32 supported;
 	VkResult ret;
 
+	assert(present_queue != NULL);
+
 	int64_t now_ns = os_monotonic_get_ns();
 	// Some platforms really don't like the pacing_compositor code.
-	bool use_display_timing_if_available = cts->timing_usage == COMP_TARGET_USE_DISPLAY_IF_AVAILABLE;
+	bool use_display_timing_if_available =
+	    debug_get_bool_option_use_display_timing() && cts->timing_usage == COMP_TARGET_USE_DISPLAY_IF_AVAILABLE;
 	if (cts->upc == NULL && use_display_timing_if_available && vk->has_GOOGLE_display_timing) {
-		u_pc_display_timing_create(ct->c->settings.nominal_frame_interval_ns,
-		                           &U_PC_DISPLAY_TIMING_CONFIG_DEFAULT, &cts->upc);
+		struct u_pc_display_timing_config config = u_pc_display_timing_get_default_config();
+		u_pc_display_timing_create(ct->c->frame_interval_ns, &config, &cts->upc);
 	} else if (cts->upc == NULL) {
-		u_pc_fake_create(ct->c->settings.nominal_frame_interval_ns, now_ns, &cts->upc);
+		u_pc_fake_create(ct->c->frame_interval_ns, now_ns, &cts->upc);
 	}
 
 	// Free old image views.
@@ -655,22 +742,41 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 		return;
 	}
 
+#ifdef VK_KHR_present_id2
+	cts->surface.present_id2_supported = vk->features.present_id2 && info.present_id2_caps.presentId2Supported;
+#endif
+#ifdef VK_KHR_present_wait2
+	cts->surface.present_wait2_supported =
+	    vk->features.present_wait2 && info.present_wait2_caps.presentWait2Supported;
+#endif
+
+	// If we have the present wait extension, mark it as supported now
+	ct->wait_for_present_supported =
+	    ((vk->features.present_id && vk->features.present_wait) ||
+	     (cts->surface.present_id2_supported && cts->surface.present_wait2_supported)) &&
+	    debug_get_bool_option_use_present_wait();
+
 	// Can we create swapchains from the surface on this device and queue.
-	ret = vk->vkGetPhysicalDeviceSurfaceSupportKHR( //
-	    vk->physical_device,                        // physicalDevice
-	    vk->queue_family_index,                     // queueFamilyIndex
-	    cts->surface.handle,                        // surface
-	    &supported);                                // pSupported
-	if (ret != VK_SUCCESS) {
-		COMP_ERROR(ct->c, "vkGetPhysicalDeviceSurfaceSupportKHR: %s", vk_result_string(ret));
-		goto error_print_and_free;
-	} else if (!supported) {
-		COMP_ERROR(ct->c, "vkGetPhysicalDeviceSurfaceSupportKHR: Surface not supported!");
+	ret = comp_target_queue_supports_present(ct, present_queue, &supported);
+	VK_CHK_WITH_GOTO(ret, "comp_target_queue_supports_present", error_print_and_free);
+	if (!supported) {
+		/*
+		 * As the code is written now this won't actually fail in this
+		 * function, we can happily create the images. But when trying
+		 * to present the images it will fail.
+		 */
+		COMP_ERROR(ct->c, "Queue family (index: %u) does not support presentation ops for %s surfaces.",
+		           present_queue->family_index, ct->name);
 		goto error_print_and_free;
 	}
 
 	// Check that the present mode is supported.
-	if (!check_surface_present_mode(cts, &info, cts->present_mode)) {
+	bool bret = check_surface_present_mode( //
+	    cts,                                //
+	    &info,                              //
+	    create_info->image_usage,           //
+	    cts->present_mode);                 //
+	if (!bret) {
 		goto error_print_and_free;
 	}
 
@@ -712,21 +818,7 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 		extent.height = w2;
 	}
 
-	/*
-	 * For all direct mode outputs 2 is what we want since we want to run
-	 * lockstep with the display. Most direct mode swapchains only supports
-	 * FIFO mode, and since there is no commonly available Vulkan API to
-	 * wait for a specific VBLANK event, even just the latest, we can set
-	 * the number of images to two and then acquire immediately after
-	 * present. Since the old images are being displayed and the new can't
-	 * be flipped this will block until the flip has gone through. Crude but
-	 * works well enough on both AMD(Mesa) and Nvidia(Blob).
-	 *
-	 * When not in direct mode and display to a composited window we
-	 * probably want 3, but most compositors on Linux sets the minImageCount
-	 * to 3 anyways so we get what we want.
-	 */
-	const uint32_t preferred_at_least_image_count = 2;
+	const uint32_t preferred_at_least_image_count = debug_get_num_option_preferred_at_least_image_count();
 
 	// Get the image count.
 	uint32_t image_count = select_image_count(cts, surface_caps, preferred_at_least_image_count);
@@ -773,6 +865,13 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	    .oldSwapchain = old_swapchain_handle,
 	};
 
+#if defined(VK_KHR_present_id2) && defined(VK_KHR_present_wait2)
+	if (cts->surface.present_id2_supported && cts->surface.present_wait2_supported) {
+		swapchain_info.flags |= VK_SWAPCHAIN_CREATE_PRESENT_ID_2_BIT_KHR;
+		swapchain_info.flags |= VK_SWAPCHAIN_CREATE_PRESENT_WAIT_2_BIT_KHR;
+	}
+#endif
+
 	// Print what we are creating.
 	vk_print_swapchain_create_info(vk, &swapchain_info, print_log_level);
 
@@ -797,7 +896,16 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	cts->base.width = extent.width;
 	cts->base.height = extent.height;
 	cts->base.format = cts->surface.format.format;
+	cts->base.final_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	cts->base.surface_transform = surface_caps.currentTransform;
+	cts->base.present_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+#ifdef VK_KHR_shared_presentable_image
+	if (is_shared_presentable_image(cts)) {
+		cts->base.present_load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		cts->base.final_layout = VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR;
+	}
+#endif
 
 	create_image_views(cts);
 
@@ -807,12 +915,12 @@ comp_target_swapchain_create_images(struct comp_target *ct, const struct comp_ta
 	}
 
 	if (vk->has_EXT_display_control && cts->display != VK_NULL_HANDLE) {
-		if (cts->vblank.has_started) {
+		if (cts->vblank.thread_running) {
 			// Already running.
 		} else if (create_vblank_event_thread(ct)) {
 			COMP_INFO(ct->c, "Started vblank event thread!");
 		} else {
-			COMP_ERROR(ct->c, "Failed to register vblank event");
+			COMP_ERROR(ct->c, "Failed to start vblank event thread!");
 		}
 	} else {
 		COMP_INFO(ct->c, "Not using vblank event thread!");
@@ -846,18 +954,37 @@ comp_target_swapchain_acquire_next_image(struct comp_target *ct, uint32_t *out_i
 		return VK_ERROR_INITIALIZATION_FAILED;
 	}
 
-	return vk->vkAcquireNextImageKHR(          //
+#ifdef VK_KHR_shared_presentable_image
+	const bool is_shared_presentable = is_shared_presentable_image(cts);
+
+	if (is_shared_presentable && cts->shared_present_acquired) {
+		*out_index = 0;
+		return vk->vkGetSwapchainStatusKHR(vk->device, cts->swapchain.handle);
+	}
+#endif
+
+	VkResult ret = vk->vkAcquireNextImageKHR(  //
 	    vk->device,                            // device
 	    cts->swapchain.handle,                 // swapchain
 	    UINT64_MAX,                            // timeout
 	    cts->base.semaphores.present_complete, // semaphore
 	    VK_NULL_HANDLE,                        // fence
 	    out_index);                            // pImageIndex
+	VK_CHK_AND_RET(ret, "vkAcquireNextImageKHR");
+
+#ifdef VK_KHR_shared_presentable_image
+	if (is_shared_presentable) {
+		assert(*out_index == 0);
+		cts->shared_present_acquired = true;
+	}
+#endif
+
+	return ret;
 }
 
 static VkResult
 comp_target_swapchain_present(struct comp_target *ct,
-                              VkQueue queue,
+                              struct vk_bundle_queue *present_queue,
                               uint32_t index,
                               uint64_t timeline_semaphore_value,
                               int64_t desired_present_time_ns,
@@ -866,9 +993,21 @@ comp_target_swapchain_present(struct comp_target *ct,
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 	struct vk_bundle *vk = get_vk(cts);
 
-	assert(cts->current_frame_id >= 0);
+	assert(present_queue != NULL);
+	assert(cts->current_frame_id > 0);
 	assert(cts->current_frame_id <= UINT32_MAX);
 
+	VkPresentInfoKHR present_info = {
+	    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+	    .pNext = NULL,
+	    .waitSemaphoreCount = 1,
+	    .pWaitSemaphores = &cts->base.semaphores.render_complete,
+	    .swapchainCount = 1,
+	    .pSwapchains = &cts->swapchain.handle,
+	    .pImageIndices = &index,
+	};
+
+#ifdef VK_GOOGLE_display_timing
 	VkPresentTimeGOOGLE times = {
 	    .presentID = (uint32_t)cts->current_frame_id,
 	    .desiredPresentTime = desired_present_time_ns - present_slop_ns,
@@ -880,25 +1019,55 @@ comp_target_swapchain_present(struct comp_target *ct,
 	    .pTimes = &times,
 	};
 
-	VkPresentInfoKHR presentInfo = {
-	    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-	    .pNext = vk->has_GOOGLE_display_timing ? &timings : NULL,
-	    .waitSemaphoreCount = 1,
-	    .pWaitSemaphores = &cts->base.semaphores.render_complete,
+	if (vk->has_GOOGLE_display_timing) {
+		vk_append_to_pnext_chain((VkBaseInStructure *)&present_info, (VkBaseInStructure *)&timings);
+	}
+#endif
+
+#if defined(VK_KHR_present_id) || defined(VK_KHR_present_id2)
+	uint64_t present_id = (uint64_t)cts->current_frame_id;
+
+#ifdef VK_KHR_present_id2
+	VkPresentId2KHR vk_present_id2 = {
+	    .sType = VK_STRUCTURE_TYPE_PRESENT_ID_2_KHR,
 	    .swapchainCount = 1,
-	    .pSwapchains = &cts->swapchain.handle,
-	    .pImageIndices = &index,
+	    .pPresentIds = &present_id,
 	};
+#endif
+
+#ifdef VK_KHR_present_id
+	VkPresentIdKHR vk_present_id = {
+	    .sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR,
+	    .swapchainCount = 1,
+	    .pPresentIds = &present_id,
+	};
+#endif
+
+#ifdef VK_KHR_present_id2
+	if (cts->surface.present_id2_supported && cts->surface.present_wait2_supported) {
+		vk_append_to_pnext_chain((VkBaseInStructure *)&present_info, (VkBaseInStructure *)&vk_present_id2);
+	} else
+#endif
+
+	{
+#ifdef VK_KHR_present_id
+		if (vk->features.present_id && vk->features.present_wait) {
+			vk_append_to_pnext_chain((VkBaseInStructure *)&present_info,
+			                         (VkBaseInStructure *)&vk_present_id);
+		}
+#endif
+	}
+#endif
 
 
 	// Need to take the queue lock for present.
-	os_mutex_lock(&vk->queue_mutex);
-	VkResult ret = vk->vkQueuePresentKHR(queue, &presentInfo);
-	os_mutex_unlock(&vk->queue_mutex);
+	vk_queue_lock(present_queue);
+	VkResult ret = vk->vkQueuePresentKHR(present_queue->queue, &present_info);
+	vk_queue_unlock(present_queue);
 
 
 #ifdef VK_EXT_display_control
-	if (cts->vblank.has_started) {
+	if (cts->vblank.thread_running) {
 		os_thread_helper_lock(&cts->vblank.event_thread);
 		if (!cts->vblank.should_wait) {
 			cts->vblank.should_wait = true;
@@ -911,11 +1080,50 @@ comp_target_swapchain_present(struct comp_target *ct,
 	return ret;
 }
 
+static VkResult
+comp_target_swapchain_wait_for_present(struct comp_target *ct, time_duration_ns timeout_ns)
+{
+	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
+	struct vk_bundle *vk = get_vk(cts);
+
+#ifdef VK_KHR_present_wait2
+	if (cts->surface.present_wait2_supported) {
+		VkPresentWait2InfoKHR info2 = {
+		    .sType = VK_STRUCTURE_TYPE_PRESENT_WAIT_2_INFO_KHR,
+		    .pNext = NULL,
+		    .presentId = (uint64_t)cts->current_frame_id,
+		    .timeout = timeout_ns,
+		};
+
+		return vk->vkWaitForPresent2KHR(vk->device, cts->swapchain.handle, &info2);
+	}
+
+#endif
+
+#ifdef VK_KHR_present_wait
+	if (!vk->features.present_wait) {
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+
+	// @note current frame ID is incremented by 1 to match the ID given to Vulkan, see comp_target_swapchain_present
+	return vk->vkWaitForPresentKHR(vk->device, cts->swapchain.handle, (uint64_t)cts->current_frame_id, timeout_ns);
+#else
+	return VK_ERROR_EXTENSION_NOT_PRESENT;
+#endif
+}
+
 static bool
 comp_target_swapchain_check_ready(struct comp_target *ct)
 {
 	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
 	return cts->surface.handle != VK_NULL_HANDLE;
+}
+
+static inline bool
+comp_target_swapchain_is_shared_presentable_image(struct comp_target *ct)
+{
+	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
+	return is_shared_presentable_image(cts);
 }
 
 
@@ -1045,10 +1253,10 @@ comp_target_swapchain_cleanup(struct comp_target_swapchain *cts)
 	struct vk_bundle *vk = get_vk(cts);
 
 	// Thread if it has been started must be stopped first.
-	if (cts->vblank.has_started) {
+	if (cts->vblank.thread_running) {
 		// Destroy also stops the thread.
 		os_thread_helper_destroy(&cts->vblank.event_thread);
-		cts->vblank.has_started = false;
+		cts->vblank.thread_running = false;
 	}
 
 	destroy_image_views(cts);
@@ -1074,19 +1282,43 @@ comp_target_swapchain_cleanup(struct comp_target_swapchain *cts)
 	u_pc_destroy(&cts->upc);
 }
 
+static VkResult
+comp_target_swapchain_queue_supports_present(struct comp_target *ct,
+                                             struct vk_bundle_queue *queue,
+                                             VkBool32 *out_supported)
+{
+	COMP_TRACE_MARKER();
+
+	struct comp_target_swapchain *cts = (struct comp_target_swapchain *)ct;
+	struct vk_bundle *vk = get_vk(cts);
+
+	VkResult ret = vk->vkGetPhysicalDeviceSurfaceSupportKHR( //
+	    vk->physical_device,                                 // physicalDevice
+	    queue->family_index,                                 // queueFamilyIndex
+	    cts->surface.handle,                                 // surface
+	    out_supported);                                      // pSupported
+
+	VK_CHK_AND_RET(ret, "vkGetPhysicalDeviceSurfaceSupportKHR");
+	return VK_SUCCESS;
+}
+
 void
 comp_target_swapchain_init_and_set_fnptrs(struct comp_target_swapchain *cts,
                                           enum comp_target_display_timing_usage timing_usage)
 {
 	cts->timing_usage = timing_usage;
 	cts->base.check_ready = comp_target_swapchain_check_ready;
+	cts->base.is_shared_presentable_image = comp_target_swapchain_is_shared_presentable_image;
 	cts->base.create_images = comp_target_swapchain_create_images;
 	cts->base.has_images = comp_target_swapchain_has_images;
 	cts->base.acquire = comp_target_swapchain_acquire_next_image;
 	cts->base.present = comp_target_swapchain_present;
+	cts->base.wait_for_present = comp_target_swapchain_wait_for_present;
 	cts->base.calc_frame_pacing = comp_target_swapchain_calc_frame_pacing;
 	cts->base.mark_timing_point = comp_target_swapchain_mark_timing_point;
 	cts->base.update_timings = comp_target_swapchain_update_timings;
 	cts->base.info_gpu = comp_target_swapchain_info_gpu;
+	cts->base.queue_supports_present = comp_target_swapchain_queue_supports_present;
+
 	os_thread_helper_init(&cts->vblank.event_thread);
 }

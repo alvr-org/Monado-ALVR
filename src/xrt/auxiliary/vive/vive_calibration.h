@@ -4,7 +4,7 @@
  * @file
  * @brief  Vive calibration getters.
  * @author Mateo de Mayo <mateo.demayo@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_vive
  */
 

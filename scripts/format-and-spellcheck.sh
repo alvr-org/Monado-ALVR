@@ -11,7 +11,7 @@ PATCH_DIR=patches
 PATCH_NAME=fixes.diff
 (
     cd $(dirname $0)
-    
+
     # Exit if working tree dirty or uncommitted changes staged.
     if ! git diff-files --quiet; then
         echo "ERROR: Cannot perform check/fix, working tree dirty."
@@ -38,7 +38,7 @@ PATCH_NAME=fixes.diff
         CODESPELL_RESULT=false
     fi
 
-    
+
     echo "Running clang-format..."
     echo
     ./format-project.sh
@@ -47,7 +47,7 @@ PATCH_NAME=fixes.diff
     echo
     ./format-cmake.sh
 
-    
+
     (
         cd ..
         mkdir -p $PATCH_DIR

@@ -1,4 +1,5 @@
 // Copyright 2020-2024 Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -16,6 +17,7 @@
 #include "xrt/xrt_compositor.h"
 #include "xrt/xrt_results.h"
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_future.h"
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_session.h"
 #include "xrt/xrt_instance.h"
@@ -25,29 +27,36 @@
 #include "xrt/xrt_tracking.h"
 #include "xrt/xrt_config_build.h"
 
+#include <assert.h>
 #include <sys/types.h>
 
 
 #define IPC_CRED_SIZE 1    // auth not implemented
-#define IPC_BUF_SIZE 512   // must be >= largest message length in bytes
+#define IPC_BUF_SIZE 2048  // must be >= largest message length in bytes
 #define IPC_MAX_VIEWS 8    // max views we will return configs for
 #define IPC_MAX_FORMATS 32 // max formats our server-side compositor supports
 #define IPC_MAX_DEVICES 8  // max number of devices we will map using shared mem
 #define IPC_MAX_LAYERS XRT_MAX_LAYERS
 #define IPC_MAX_SLOTS 128
-#define IPC_MAX_CLIENTS 8
+#define IPC_MAX_CLIENTS 32
 #define IPC_MAX_RAW_VIEWS 32 // Max views that we can get, artificial limit.
 #define IPC_EVENT_QUEUE_SIZE 32
 
-#define IPC_SHARED_MAX_INPUTS 1024
-#define IPC_SHARED_MAX_OUTPUTS 128
-#define IPC_SHARED_MAX_BINDINGS 64
 
 // example: v21.0.0-560-g586d33b5
 #define IPC_VERSION_NAME_LEN 64
 
 #if defined(XRT_OS_WINDOWS) && !defined(XRT_ENV_MINGW)
 typedef int pid_t;
+#endif
+
+// Define the format to use to print a pid type
+#if defined(XRT_ENV_MINGW)
+// On Mingw64, this is an int64, aka a signed long long
+#define PID_T_FMT "%lli"
+#else
+// On Linux and 'native' Windows, this is an int
+#define PID_T_FMT "%d"
 #endif
 
 /*
@@ -57,11 +66,36 @@ typedef int pid_t;
  */
 
 /*!
+ * Information about a device in the device list.
+ *
+ * @ingroup ipc
+ */
+struct ipc_tracking_origin_list_entry
+{
+	//! Tracking origin ID
+	uint32_t id;
+};
+
+/*!
+ * A list of the current tracking origins.
+ *
+ * @ingroup ipc
+ */
+struct ipc_tracking_origin_list
+{
+	//! Number of tracking origins.
+	uint32_t origin_count;
+
+	//! Compact list of tracking origins.
+	struct ipc_tracking_origin_list_entry origins[XRT_SYSTEM_MAX_DEVICES];
+};
+
+/*!
  * A tracking in the shared memory area.
  *
  * @ingroup ipc
  */
-struct ipc_shared_tracking_origin
+struct ipc_tracking_origin_info
 {
 	//! For debugging.
 	char name[XRT_TRACKING_NAME_LEN];
@@ -74,38 +108,58 @@ struct ipc_shared_tracking_origin
 };
 
 /*!
- * A binding in the shared memory area.
+ * Information about a device in the device list.
  *
  * @ingroup ipc
  */
-struct ipc_shared_binding_profile
+struct ipc_device_list_entry
 {
-	enum xrt_device_name name;
+	//! Device ID
+	uint32_t id;
 
-	//! Number of inputs.
-	uint32_t input_count;
-	//! Offset into the array of pairs where this input bindings starts.
-	uint32_t first_input_index;
-
-	//! Number of outputs.
-	uint32_t output_count;
-	//! Offset into the array of pairs where this output bindings starts.
-	uint32_t first_output_index;
+	//! Device type
+	enum xrt_device_type device_type;
 };
 
 /*!
- * A device in the shared memory area.
+ * List of devices available on the server.
  *
  * @ingroup ipc
  */
-struct ipc_shared_device
+struct ipc_device_list
+{
+	//! Number of devices
+	uint32_t device_count;
+
+	//! Device entries
+	struct ipc_device_list_entry devices[XRT_SYSTEM_MAX_DEVICES];
+};
+
+/*!
+ * Device information sent over IPC.
+ *
+ * Followed by varlen data containing:
+ * - An array of input_count * enum xrt_input_name
+ * - An array of output_count * enum xrt_output_name
+ *
+ * @ingroup ipc
+ */
+struct ipc_device_info
 {
 	//! Enum identifier of the device.
 	enum xrt_device_name name;
 	enum xrt_device_type device_type;
 
+	/*!
+	 * The service-side @ref xrt_device_id, synchronized to IPC clients so that
+	 * @ref xrt_device::id matches across all clients connected to the same
+	 * service. This is distinct from the per-client-connection @c uint32_t
+	 * slot index used to look up devices in IPC messages.
+	 */
+	uint64_t xrt_device_id_val;
+
 	//! Which tracking system origin is this device attached to.
-	uint32_t tracking_origin_index;
+	XRT_ALIGNAS(8) uint32_t tracking_origin_id;
 
 	//! A string describing the device.
 	char str[XRT_DEVICE_NAME_LEN];
@@ -113,31 +167,14 @@ struct ipc_shared_device
 	//! A unique identifier. Persistent across configurations, if possible.
 	char serial[XRT_DEVICE_NAME_LEN];
 
-	//! Number of bindings.
-	uint32_t binding_profile_count;
-	//! 'Offset' into the array of bindings where the bindings starts.
-	uint32_t first_binding_profile_index;
-
 	//! Number of inputs.
 	uint32_t input_count;
-	//! 'Offset' into the array of inputs where the inputs starts.
-	uint32_t first_input_index;
 
 	//! Number of outputs.
 	uint32_t output_count;
-	//! 'Offset' into the array of outputs where the outputs starts.
-	uint32_t first_output_index;
 
-	bool orientation_tracking_supported;
-	bool position_tracking_supported;
-	bool hand_tracking_supported;
-	bool eye_gaze_supported;
-	bool face_tracking_supported;
-	bool body_tracking_supported;
-	bool force_feedback_supported;
-	bool form_factor_check_supported;
-	bool stage_supported;
-	bool battery_status_supported;
+	//! The supported fields.
+	struct xrt_device_supported supported;
 };
 
 /*!
@@ -201,30 +238,6 @@ struct ipc_shared_memory
 	char u_git_tag[IPC_VERSION_NAME_LEN];
 
 	/*!
-	 * Number of elements in @ref itracks that are populated/valid.
-	 */
-	uint32_t itrack_count;
-
-	/*!
-	 * @brief Array of shared tracking origin data.
-	 *
-	 * Only @ref itrack_count elements are populated/valid.
-	 */
-	struct ipc_shared_tracking_origin itracks[XRT_SYSTEM_MAX_DEVICES];
-
-	/*!
-	 * Number of elements in @ref isdevs that are populated/valid.
-	 */
-	uint32_t isdev_count;
-
-	/*!
-	 * @brief Array of shared data per device.
-	 *
-	 * Only @ref isdev_count elements are populated/valid.
-	 */
-	struct ipc_shared_device isdevs[XRT_SYSTEM_MAX_DEVICES];
-
-	/*!
 	 * Various roles for the devices.
 	 */
 	struct
@@ -236,8 +249,17 @@ struct ipc_shared_memory
 
 		struct
 		{
-			int32_t left;
-			int32_t right;
+			struct
+			{
+				int32_t left;
+				int32_t right;
+			} unobstructed;
+
+			struct
+			{
+				int32_t left;
+				int32_t right;
+			} conforming;
 		} hand_tracking;
 	} roles;
 
@@ -269,17 +291,32 @@ struct ipc_shared_memory
 		uint32_t blend_mode_count;
 	} hmd;
 
-	struct xrt_input inputs[IPC_SHARED_MAX_INPUTS];
-
-	struct xrt_output outputs[IPC_SHARED_MAX_OUTPUTS];
-
-	struct ipc_shared_binding_profile binding_profiles[IPC_SHARED_MAX_BINDINGS];
-	struct xrt_binding_input_pair input_pairs[IPC_SHARED_MAX_INPUTS];
-	struct xrt_binding_output_pair output_pairs[IPC_SHARED_MAX_OUTPUTS];
-
 	struct ipc_layer_slot slots[IPC_MAX_SLOTS];
 
 	uint64_t startup_timestamp;
+	struct xrt_plane_detector_begin_info_ext plane_begin_info_ext;
+};
+
+/*!
+ * Pointer-free arguments for creating an @ref xrt_hand_tracker over IPC.
+ */
+struct ipc_hand_tracker_create_info
+{
+	enum xrt_hand hand;
+	enum xrt_input_name requested_sources[2];
+	uint32_t requested_source_count;
+	bool has_locked_xdev;
+	uint32_t locked_xdev_id;
+};
+
+/*!
+ * Pointer-free arguments for creating an @ref xrt_body_tracker over IPC.
+ */
+struct ipc_body_tracker_create_info
+{
+	enum xrt_input_name body_tracking_type;
+	bool has_locked_xdev;
+	uint32_t locked_xdev_id;
 };
 
 /*!
@@ -298,6 +335,19 @@ struct ipc_client_list
 };
 
 /*!
+ * Which types of IO to block for a client.
+ *
+ * @ingroup ipc
+ */
+struct ipc_client_io_blocks
+{
+	bool block_poses;
+	bool block_hand_tracking;
+	bool block_inputs;
+	bool block_outputs;
+};
+
+/*!
  * State for a connected application.
  *
  * @ingroup ipc
@@ -312,12 +362,11 @@ struct ipc_app_state
 	bool session_visible;
 	bool session_focused;
 	bool session_overlay;
-	bool io_active;
+	struct ipc_client_io_blocks io_blocks;
 	uint32_t z_order;
 	pid_t pid;
 	struct xrt_application_info info;
 };
-
 
 /*!
  * Arguments for creating swapchains from native images.
@@ -335,4 +384,11 @@ struct ipc_info_get_view_poses_2
 	struct xrt_fov fovs[XRT_MAX_VIEWS];
 	struct xrt_pose poses[XRT_MAX_VIEWS];
 	struct xrt_space_relation head_relation;
+};
+
+struct ipc_pcm_haptic_buffer
+{
+	uint32_t num_samples;
+	float sample_rate;
+	bool append;
 };

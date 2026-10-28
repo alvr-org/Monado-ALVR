@@ -33,6 +33,7 @@
         - "**/*.gradle"
         - "cmake/**/*"
         - "gradle/**/*"
+        - "flake.*"
         # CI paths
         - ".gitlab-ci.yml"
         - ".gitlab-ci/**/*"

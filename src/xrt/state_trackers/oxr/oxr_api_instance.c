@@ -1,4 +1,5 @@
 // Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -219,7 +220,7 @@ oxr_xrDestroyInstance(XrInstance instance)
 	struct oxr_logger log;
 	OXR_VERIFY_INSTANCE_AND_INIT_LOG(&log, instance, inst, "xrDestroyInstance");
 
-	return oxr_handle_destroy(&log, &inst->handle);
+	return oxr_handle_parent_destroy(&log, &inst->handle);
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL
@@ -256,16 +257,28 @@ oxr_xrResultToString(XrInstance instance, XrResult value, char buffer[XR_MAX_RES
 	struct oxr_logger log;
 	OXR_VERIFY_INSTANCE_AND_INIT_LOG(&log, instance, inst, "xrResultToString");
 
-#define MAKE_RESULT_CASE(VAL, _)                                                                                       \
-	case VAL: snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, #VAL); break;
+	// clang-format off
+#define MAKE_RESULT_CASE(VAL, _) case VAL: snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, #VAL); break;
+#define EXT_RESULT(VAL) if (value == VAL) { snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, #VAL); } else
+	// clang-format on
 
 	switch (value) {
 		XR_LIST_ENUM_XrResult(MAKE_RESULT_CASE);
 	default:
-		snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, "XR_UNKNOWN_%s_%d", value < 0 ? "FAILURE" : "SUCCESS",
-		         value);
+#ifdef OXR_HAVE_MND_query_egl_device
+		EXT_RESULT(XR_ERROR_EGL_EXTENSION_NOT_AVAILABLE_MND)
+		EXT_RESULT(XR_ERROR_EGL_DEVICE_NOT_FOUND_MND)
+#endif
+		// Magic comment to make clang-format happy.
+		{
+			snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, "XR_UNKNOWN_%s_%d",
+			         value < 0 ? "FAILURE" : "SUCCESS", value);
+		}
 	}
+
 	// The function snprintf always null terminates.
+#undef MAKE_RESULT_CASE
+#undef EXT_RESULT
 
 	return XR_SUCCESS;
 }
@@ -279,17 +292,95 @@ oxr_xrStructureTypeToString(XrInstance instance, XrStructureType value, char buf
 	struct oxr_logger log;
 	OXR_VERIFY_INSTANCE_AND_INIT_LOG(&log, instance, inst, "xrStructureTypeToString");
 
-#define MAKE_TYPE_CASE(VAL, _)                                                                                         \
-	case VAL: snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, #VAL); break;
+	static_assert(XR_MAX_STRUCTURE_NAME_SIZE == 64,
+	              "XR_MAX_STRUCTURE_NAME_SIZE has changed, please update the format string");
+
+	// clang-format off
+#define MAKE_TYPE_CASE(VAL, _) case VAL: snprintf(buffer, XR_MAX_STRUCTURE_NAME_SIZE, "%.63s", #VAL); break;
+#define EXT_TYPE(VAL) if (value == VAL) { snprintf(buffer, XR_MAX_STRUCTURE_NAME_SIZE, "%.63s", #VAL); } else
+	// clang-format on
 
 	switch (value) {
 		XR_LIST_ENUM_XrStructureType(MAKE_TYPE_CASE);
-	default: snprintf(buffer, XR_MAX_RESULT_STRING_SIZE, "XR_UNKNOWN_STRUCTURE_TYPE_%d", value);
+	default:
+#ifdef OXR_HAVE_MNDX_xdev_space
+		EXT_TYPE(XR_TYPE_SYSTEM_XDEV_SPACE_PROPERTIES_MNDX)
+		EXT_TYPE(XR_TYPE_CREATE_XDEV_LIST_INFO_MNDX)
+		EXT_TYPE(XR_TYPE_GET_XDEV_INFO_MNDX)
+		EXT_TYPE(XR_TYPE_XDEV_PROPERTIES_MNDX)
+		EXT_TYPE(XR_TYPE_XDEV_HAND_TRACKING_PROPERTIES_MNDX)
+		EXT_TYPE(XR_TYPE_CREATE_XDEV_SPACE_INFO_MNDX)
+		EXT_TYPE(XR_TYPE_CREATE_HAND_TRACKER_XDEV_MNDX)
+#endif
+
+#ifdef OXR_HAVE_MND_query_egl_device
+		EXT_TYPE(XR_TYPE_SYSTEM_EGL_DEVICE_GET_INFO_MND)
+		EXT_TYPE(XR_TYPE_SYSTEM_EGL_DEVICE_MND)
+#endif
+		{
+			snprintf(buffer, XR_MAX_STRUCTURE_NAME_SIZE, "XR_UNKNOWN_STRUCTURE_TYPE_%d", value);
+		}
 	}
+
 	// The function snprintf always null terminates.
+#undef MAKE_TYPE_CASE
+#undef EXT_TYPE
 
 	return XR_SUCCESS;
 }
+
+// ---- XR_KHR_extended_struct_name_lengths extension
+#ifdef OXR_HAVE_KHR_extended_struct_name_lengths
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrStructureTypeToString2KHR(XrInstance instance,
+                                XrStructureType value,
+                                char buffer[XR_MAX_STRUCTURE_NAME_SIZE_EXTENDED_KHR])
+{
+	OXR_TRACE_MARKER();
+
+	struct oxr_instance *inst;
+	struct oxr_logger log;
+	OXR_VERIFY_INSTANCE_AND_INIT_LOG(&log, instance, inst, "xrStructureTypeToString2KHR");
+	OXR_VERIFY_EXTENSION(&log, inst, KHR_extended_struct_name_lengths);
+
+	static_assert(XR_MAX_STRUCTURE_NAME_SIZE_EXTENDED_KHR == 256,
+	              "XR_MAX_STRUCTURE_NAME_SIZE_EXTENDED_KHR has changed, please update the format string");
+
+	// clang-format off
+#define MAKE_TYPE_CASE(VAL, _) case VAL: snprintf(buffer, XR_MAX_STRUCTURE_NAME_SIZE_EXTENDED_KHR, "%.255s", #VAL); break;
+#define EXT_TYPE(VAL) if (value == VAL) { snprintf(buffer, XR_MAX_STRUCTURE_NAME_SIZE_EXTENDED_KHR, "%.255s", #VAL); } else
+	// clang-format on
+
+	switch (value) {
+		XR_LIST_ENUM_XrStructureType(MAKE_TYPE_CASE);
+	default:
+#ifdef OXR_HAVE_MNDX_xdev_space
+		EXT_TYPE(XR_TYPE_SYSTEM_XDEV_SPACE_PROPERTIES_MNDX)
+		EXT_TYPE(XR_TYPE_CREATE_XDEV_LIST_INFO_MNDX)
+		EXT_TYPE(XR_TYPE_GET_XDEV_INFO_MNDX)
+		EXT_TYPE(XR_TYPE_XDEV_PROPERTIES_MNDX)
+		EXT_TYPE(XR_TYPE_XDEV_HAND_TRACKING_PROPERTIES_MNDX)
+		EXT_TYPE(XR_TYPE_CREATE_XDEV_SPACE_INFO_MNDX)
+		EXT_TYPE(XR_TYPE_CREATE_HAND_TRACKER_XDEV_MNDX)
+#endif
+
+#ifdef OXR_HAVE_MND_query_egl_device
+		EXT_TYPE(XR_TYPE_SYSTEM_EGL_DEVICE_GET_INFO_MND)
+		EXT_TYPE(XR_TYPE_SYSTEM_EGL_DEVICE_MND)
+#endif
+		{
+			snprintf(buffer, XR_MAX_STRUCTURE_NAME_SIZE_EXTENDED_KHR, "XR_UNKNOWN_STRUCTURE_TYPE_%d",
+			         value);
+		}
+	}
+
+	// The function snprintf always null terminates.
+#undef MAKE_TYPE_CASE
+#undef EXT_TYPE
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_KHR_extended_struct_name_lengths
 
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrStringToPath(XrInstance instance, const char *pathString, XrPath *out_path)

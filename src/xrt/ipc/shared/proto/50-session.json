@@ -1,0 +1,24 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"session_create": {
+		"in": [
+			{"name": "xsi", "type": "struct xrt_session_info"},
+			{"name": "create_native_compositor", "type": "bool"}
+		]
+	},
+
+	"session_poll_events": {
+		"out": [
+			{"name": "event", "type": "union xrt_session_event"}
+		]
+	},
+
+	"session_request_exit": {},
+
+	"session_begin": {},
+
+	"session_end": {},
+
+	"session_destroy": {}
+}

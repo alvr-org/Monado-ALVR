@@ -7,18 +7,15 @@ mkdir -p deps
 pushd deps
 
 # xr-hardware-git required by libsurvive-git
-# libuvc required by basalt
 
 for PKG in \
-	xr-hardware-git \
-	libsurvive-git \
+	xr-hardware \
+	libsurvive \
 	percetto-git \
-	openhmd-git \
+	openhmd \
 	librealsense \
-	onnxruntime-git \
 	leap-motion \
-	libuvc-git \
-	basalt-monado-git \
+	libuvc \
 
 do
 	wget https://aur.archlinux.org/cgit/aur.git/snapshot/"$PKG".tar.gz
@@ -28,7 +25,7 @@ do
 
 	# makepkg can not be run as root
 	chown nobody:users .
-	su nobody -s /bin/bash -c "MAKEFLAGS=-j$(nproc) makepkg -fs"
+	sudo -u nobody -s /bin/bash -c "MAKEFLAGS=-j$(nproc) makepkg -fs"
 
 	pacman -U --noconfirm *.pkg.*
 	popd

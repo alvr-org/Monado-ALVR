@@ -44,7 +44,7 @@ struct u_pacing_compositor;
  * renamed, and with most implementations removed. Compare with similarly-named
  * files there to see what was removed, and what helper functionality has been
  * factored out and may be reusable. For example, you may be able to use @ref
- * comp_renderer, @ref comp_resources, @ref comp_shaders, and @ref comp_target,
+ * comp_renderer, @ref comp_resources, @ref aux_shaders, and @ref comp_target,
  * among others.
  */
 
@@ -83,6 +83,9 @@ struct null_compositor
 
 	//! The device we are displaying to.
 	struct xrt_device *xdev;
+
+	//! The supported view configurations
+	struct xrt_view_config view_configs[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_COUNT];
 
 	//! Pacing helper to drive us forward.
 	struct u_pacing_compositor *upc;

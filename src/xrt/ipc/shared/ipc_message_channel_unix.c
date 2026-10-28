@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -57,6 +58,64 @@ union imcontrol_buf {
 
 /*
  *
+ * Helpers.
+ *
+ */
+
+static void
+log_fd_io_failure(struct ipc_message_channel *imc,
+                  const char *call,
+                  ssize_t transferred,
+                  int err,
+                  size_t size,
+                  uint32_t handle_count,
+                  const int *fds,
+                  uint32_t fd_count)
+{
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	// Return value and strerror stay on the first line. Every other field is indented.
+	if (transferred < 0) {
+		u_pp(dg, "%s(%i) failed: error: '%i' '%s'!", call, imc->ipc_handle, err, strerror(err));
+	} else {
+		u_pp(dg, "%s(%i) failed: wrong size '%zd', expected '%zu'!", call, imc->ipc_handle, transferred, size);
+	}
+
+	u_pp(dg, "\n\tcount: %u", handle_count);
+	u_pp(dg, "\n\tsize: %zu", size);
+	u_pp(dg, "\n\ttransferred: %zd", transferred);
+
+	for (uint32_t i = 0; i < fd_count; i++) {
+		u_pp(dg, "\n\t\tfd #%u: %i", i, fds[i]);
+	}
+
+	IPC_ERROR(imc, "%s", sink.buffer);
+}
+
+static void
+close_received_scm_rights(const struct msghdr *msg)
+{
+	struct cmsghdr *cmsg = CMSG_FIRSTHDR(msg);
+	if (cmsg == NULL || cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
+		return;
+	}
+
+	if (cmsg->cmsg_len < CMSG_LEN(sizeof(int))) {
+		return;
+	}
+
+	const int *fds = (const int *)CMSG_DATA(cmsg);
+	size_t fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+
+	for (size_t i = 0; i < fd_count; i++) {
+		close(fds[i]);
+	}
+}
+
+
+/*
+ *
  * 'Exported' functions.
  *
  */
@@ -74,23 +133,43 @@ ipc_message_channel_close(struct ipc_message_channel *imc)
 xrt_result_t
 ipc_send(struct ipc_message_channel *imc, const void *data, size_t size)
 {
-	struct msghdr msg = {0};
-	struct iovec iov = {0};
+	const uint8_t *buf = data;
+	size_t sent = 0;
 
-	iov.iov_base = (void *)data;
-	iov.iov_len = size;
+	// SOCK_STREAM sendmsg may return a short count. Send the rest of the buffer.
+	while (sent < size) {
+		struct iovec iov = {
+		    .iov_base = (void *)(buf + sent),
+		    .iov_len = size - sent,
+		};
 
-	msg.msg_name = NULL;
-	msg.msg_namelen = 0;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_flags = 0;
+		struct msghdr msg = {
+		    .msg_name = NULL,
+		    .msg_namelen = 0,
+		    .msg_iov = &iov,
+		    .msg_iovlen = 1,
+		    .msg_flags = 0,
+		};
 
-	ssize_t ret = sendmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
-	if (ret < 0) {
-		int code = errno;
-		IPC_ERROR(imc, "sendmsg(%i) failed: '%i' '%s'!", imc->ipc_handle, code, strerror(code));
-		return XRT_ERROR_IPC_FAILURE;
+		ssize_t ret = sendmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+		if (ret < 0) {
+			int code = errno;
+			if (code == EINTR) {
+				continue;
+			}
+
+			IPC_ERROR(imc, "sendmsg(%i) failed at %zu of %zu: '%i' '%s'!", imc->ipc_handle, sent, size,
+			          code, strerror(code));
+			return XRT_ERROR_IPC_FAILURE;
+		}
+
+		// Defensive: blocking AF_UNIX stream send does not return 0 for non-zero iov_len.
+		if (ret == 0) {
+			IPC_ERROR(imc, "sendmsg(%i) failed at %zu of %zu: sent 0!", imc->ipc_handle, sent, size);
+			return XRT_ERROR_IPC_FAILURE;
+		}
+
+		sent += (size_t)ret;
 	}
 
 	return XRT_SUCCESS;
@@ -99,31 +178,46 @@ ipc_send(struct ipc_message_channel *imc, const void *data, size_t size)
 xrt_result_t
 ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size)
 {
-	// wait for the response
-	struct iovec iov = {0};
-	struct msghdr msg = {0};
+	uint8_t *buf = out_data;
+	size_t got = 0;
 
-	iov.iov_base = out_data;
-	iov.iov_len = size;
+	// SOCK_STREAM recvmsg may return a short count. Read until size bytes arrive.
+	while (got < size) {
+		struct iovec iov = {
+		    .iov_base = buf + got,
+		    .iov_len = size - got,
+		};
 
-	msg.msg_name = 0;
-	msg.msg_namelen = 0;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_flags = 0;
+		struct msghdr msg = {
+		    .msg_name = NULL,
+		    .msg_namelen = 0,
+		    .msg_iov = &iov,
+		    .msg_iovlen = 1,
+		    .msg_flags = 0,
+		};
 
-	ssize_t len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+		ssize_t len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+		if (len < 0) {
+			int code = errno;
+			if (code == EINTR) {
+				continue;
+			}
 
-	if (len < 0) {
-		int code = errno;
-		IPC_ERROR(imc, "recvmsg(%i) failed: '%i' '%s'!", (int)imc->ipc_handle, code, strerror(code));
-		return XRT_ERROR_IPC_FAILURE;
-	}
+			IPC_ERROR(imc, "recvmsg(%i) failed at %zu of %zu: '%i' '%s'!", (int)imc->ipc_handle, got, size,
+			          code, strerror(code));
+			return XRT_ERROR_IPC_FAILURE;
+		}
 
-	if ((size_t)len != size) {
-		IPC_ERROR(imc, "recvmsg(%i) failed: wrong size '%i', expected '%i'!", (int)imc->ipc_handle, (int)len,
-		          (int)size);
-		return XRT_ERROR_IPC_FAILURE;
+		if (len == 0) {
+			IPC_ERROR(imc, "recvmsg(%i) failed: peer closed connection at %zu of %zu!",
+			          (int)imc->ipc_handle, got, size);
+			return XRT_ERROR_IPC_FAILURE;
+		}
+
+		// Defensive: AF_UNIX stream recvmsg does not return more than iov_len.
+		assert((size_t)len <= size - got);
+
+		got += (size_t)len;
 	}
 
 	return XRT_SUCCESS;
@@ -138,29 +232,52 @@ ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, in
 	assert(out_handles != NULL);
 	assert(handle_count != 0);
 
+	/*
+	 * Unusual size sanity check. IPC_BUF_SIZE bounds the fixed command buffer
+	 * only. On Linux, recvmsg stops after the first stream chunk that carries
+	 * SCM_RIGHTS, so fd messages much larger than one socket chunk fail the
+	 * exact-size read below.
+	 */
+	if (size > IPC_BUF_SIZE) {
+		IPC_WARN(imc, "fd message size %u is larger than IPC_BUF_SIZE (%u)", (uint32_t)size,
+		         (uint32_t)IPC_BUF_SIZE);
+	}
+
 	union imcontrol_buf u;
 	const size_t fds_size = sizeof(int) * handle_count;
 	const size_t cmsg_size = CMSG_SPACE(fds_size);
 	memset(u.buf, 0, cmsg_size);
 
-	struct iovec iov = {0};
-	iov.iov_base = out_data;
-	iov.iov_len = size;
+	struct iovec iov = {
+	    .iov_base = out_data,
+	    .iov_len = size,
+	};
 
-	struct msghdr msg = {0};
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = u.buf;
-	msg.msg_controllen = cmsg_size;
+	struct msghdr msg = {
+	    .msg_name = NULL,
+	    .msg_namelen = 0,
+	    .msg_iov = &iov,
+	    .msg_iovlen = 1,
+	    .msg_flags = 0,
+	    .msg_control = u.buf,
+	    .msg_controllen = cmsg_size,
+	};
 
-	ssize_t len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
-	if (len < 0) {
-		IPC_ERROR(imc, "recvmsg(%i) failed: '%s'!", imc->ipc_handle, strerror(errno));
-		return XRT_ERROR_IPC_FAILURE;
-	}
+	// EINTR means this recvmsg moved nothing. A short count can already hold SCM_RIGHTS, so do not retry it.
+	ssize_t len;
+	do {
+		len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+	} while (len < 0 && errno == EINTR);
 
-	if (len == 0) {
-		IPC_ERROR(imc, "recvmsg(%i) failed: no data!", imc->ipc_handle);
+	if (len != (ssize_t)size) {
+		int err = errno;
+
+		// recvmsg may install SCM_RIGHTS before returning a short count.
+		if (len > 0) {
+			close_received_scm_rights(&msg);
+		}
+
+		log_fd_io_failure(imc, "recvmsg", len, err, size, handle_count, NULL, 0);
 		return XRT_ERROR_IPC_FAILURE;
 	}
 
@@ -183,23 +300,36 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
 	assert(size != 0);
 	assert(handles != NULL);
 
+	/*
+	 * Unusual size sanity check. IPC_BUF_SIZE bounds the fixed command buffer
+	 * only. On Linux, recvmsg stops after the first stream chunk that carries
+	 * SCM_RIGHTS, so fd messages much larger than one socket chunk fail the
+	 * exact-size read on the peer.
+	 */
+	if (size > IPC_BUF_SIZE) {
+		IPC_WARN(imc, "fd message size %u is larger than IPC_BUF_SIZE (%u)", (uint32_t)size,
+		         (uint32_t)IPC_BUF_SIZE);
+	}
+
 	const size_t fds_size = sizeof(int) * handle_count;
 
 	union imcontrol_buf u = {0};
 	size_t cmsg_size = CMSG_SPACE(fds_size);
 
-	struct iovec iov = {0};
-	iov.iov_base = (void *)data;
-	iov.iov_len = size;
+	struct iovec iov = {
+	    .iov_base = (void *)data,
+	    .iov_len = size,
+	};
 
-	struct msghdr msg = {0};
-	msg.msg_name = NULL;
-	msg.msg_namelen = 0;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_flags = 0;
-	msg.msg_control = u.buf;
-	msg.msg_controllen = cmsg_size;
+	struct msghdr msg = {
+	    .msg_name = NULL,
+	    .msg_namelen = 0,
+	    .msg_iov = &iov,
+	    .msg_iovlen = 1,
+	    .msg_control = u.buf,
+	    .msg_controllen = cmsg_size,
+	    .msg_flags = 0,
+	};
 
 	struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
 	cmsg->cmsg_level = SOL_SOCKET;
@@ -208,26 +338,18 @@ ipc_send_fds(struct ipc_message_channel *imc, const void *data, size_t size, con
 
 	memcpy(CMSG_DATA(cmsg), handles, fds_size);
 
-	ssize_t ret = sendmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
-	if (ret >= 0) {
+	// EINTR means this sendmsg moved nothing. A short count can already hold SCM_RIGHTS, so do not retry it.
+	ssize_t ret;
+	do {
+		ret = sendmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+	} while (ret < 0 && errno == EINTR);
+
+	if (ret == (ssize_t)size) {
 		return XRT_SUCCESS;
 	}
 
-	/*
-	 * Error path.
-	 */
-
-	struct u_pp_sink_stack_only sink;
-	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
-
-	u_pp(dg, "sendmsg(%i) failed: count: %u, error: '%i' '%s'!", imc->ipc_handle, handle_count, errno,
-	     strerror(errno));
-
-	for (uint32_t i = 0; i < handle_count; i++) {
-		u_pp(dg, "\n\tfd #%i: %i", i, handles[i]);
-	}
-
-	IPC_ERROR(imc, "%s", sink.buffer);
+	int err = errno;
+	log_fd_io_failure(imc, "sendmsg", ret, err, size, handle_count, handles, handle_count);
 
 	return XRT_ERROR_IPC_FAILURE;
 }

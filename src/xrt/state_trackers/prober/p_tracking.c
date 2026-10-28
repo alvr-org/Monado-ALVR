@@ -265,7 +265,7 @@ p_factory_ensure_slam_frameserver(struct p_factory *fact)
 #ifdef XRT_FEATURE_SLAM
 		struct t_slam_tracker_config st_config;
 		t_slam_fill_default_config(&st_config);
-		st_config.cam_count = ep_config.dataset.cam_count;
+		st_config.cam_count = ep_config.playback.cam_count;
 
 		int ret = t_slam_create(&fact->xfctx, &st_config, &fact->xts, &sinks);
 		if (ret != 0) {

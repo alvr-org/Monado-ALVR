@@ -124,6 +124,15 @@ comp_window_wayland_destroy(struct comp_target *ct)
 
 	comp_target_swapchain_cleanup(&cww->base);
 
+	if (cww->xdg_toplevel) {
+		xdg_toplevel_destroy(cww->xdg_toplevel);
+	}
+	if (cww->xdg_surface) {
+		xdg_surface_destroy(cww->xdg_surface);
+	}
+	if (cww->wm_base) {
+		xdg_wm_base_destroy(cww->wm_base);
+	}
 	if (cww->surface) {
 		wl_surface_destroy(cww->surface);
 		cww->surface = NULL;

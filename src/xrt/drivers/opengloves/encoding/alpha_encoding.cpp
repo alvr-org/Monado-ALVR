@@ -7,16 +7,17 @@
  * @ingroup drv_opengloves
  */
 
-#include <string>
-#include <stdexcept>
-
-#include <map>
 #include "util/u_logging.h"
 
 #include "alpha_encoding.h"
 #include "encoding.h"
 
-enum opengloves_alpha_encoding_key
+#include <cstdint>
+#include <map>
+#include <stdexcept>
+#include <string>
+
+enum opengloves_alpha_encoding_key : std::uint8_t
 {
 	OPENGLOVES_ALPHA_ENCODING_FinThumb,
 	OPENGLOVES_ALPHA_ENCODING_FinSplayThumb,

@@ -1,4 +1,5 @@
 // Copyright 2020-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -13,6 +14,7 @@
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_config_os.h"
+#include "xrt/xrt_app_policy.h"
 
 
 #ifdef __cplusplus
@@ -71,12 +73,20 @@ struct xrt_platform_info
 struct xrt_application_info
 {
 	char application_name[XRT_MAX_APPLICATION_NAME_SIZE];
+	bool immediate_disconnect;
 	bool ext_hand_tracking_enabled;
+	bool ext_hand_tracking_data_source_enabled;
 	bool ext_eye_gaze_interaction_enabled;
+	bool ext_future_enabled;
 	bool ext_hand_interaction_enabled;
 	bool htc_facial_tracking_enabled;
 	bool fb_body_tracking_enabled;
 	bool fb_face_tracking2_enabled;
+	bool meta_body_tracking_full_body_enabled;
+	bool meta_body_tracking_calibration_enabled;
+	bool meta_body_tracking_fidelity_enabled;
+	bool android_face_tracking_enabled;
+	bool view_configuration_views_change_supported;
 };
 
 /*!
@@ -122,6 +132,11 @@ struct xrt_instance
 	 */
 
 	/*!
+	 * Checks if the system can be created with create_system().
+	 */
+	xrt_result_t (*is_system_available)(struct xrt_instance *xinst, bool *out_available);
+
+	/*!
 	 * Creates all of the system resources like the devices and system
 	 * compositor. The system compositor is optional.
 	 *
@@ -165,6 +180,19 @@ struct xrt_instance
 	xrt_result_t (*get_prober)(struct xrt_instance *xinst, struct xrt_prober **out_xp);
 
 	/*!
+	 * Creates an application instance, should only be called once per application.
+	 *
+	 * All @ref xrt_app_instance instances created by this function are expected to be destroyed before the
+	 * xrt_instance is destroyed.
+	 *
+	 * @note Code consuming this interface should use xrt_instance_create_app_instance()
+	 *
+	 * @param      xinst      Pointer to self
+	 * @param[out] out_xainst Return of application instance, required.
+	 */
+	xrt_result_t (*create_app_instance)(struct xrt_instance *xinst, struct xrt_app_instance **out_xainst);
+
+	/*!
 	 * Destroy the instance and its owned objects, including the prober (if
 	 * any).
 	 *
@@ -195,6 +223,20 @@ struct xrt_instance
 	struct xrt_instance_android *android_instance;
 };
 
+
+/*!
+ * @copydoc xrt_instance::create_system
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_instance
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_instance_is_system_available(struct xrt_instance *xinst, bool *out_available)
+{
+	return xinst->is_system_available(xinst, out_available);
+}
+
 /*!
  * @copydoc xrt_instance::create_system
  *
@@ -219,10 +261,23 @@ xrt_instance_create_system(struct xrt_instance *xinst,
  *
  * @public @memberof xrt_instance
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_instance_get_prober(struct xrt_instance *xinst, struct xrt_prober **out_xp)
 {
 	return xinst->get_prober(xinst, out_xp);
+}
+
+/*!
+ * @copydoc xrt_instance::create_app_instance
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_instance
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_instance_create_app_instance(struct xrt_instance *xinst, struct xrt_app_instance **out_xainst)
+{
+	return xinst->create_app_instance(xinst, out_xainst);
 }
 
 /*!
@@ -235,7 +290,7 @@ xrt_instance_get_prober(struct xrt_instance *xinst, struct xrt_prober **out_xp)
  *
  * @public @memberof xrt_instance
  */
-static inline void
+XRT_NONNULL_ALL static inline void
 xrt_instance_destroy(struct xrt_instance **xinst_ptr)
 {
 	struct xrt_instance *xinst = *xinst_ptr;
@@ -261,7 +316,7 @@ xrt_instance_destroy(struct xrt_instance **xinst_ptr)
  * Each target must implement this function.
  *
  * @param[in] ii A pointer to a info struct containing information about the
- *               application.
+ *               application, optional can be null.
  * @param[out] out_xinst A pointer to an xrt_instance pointer. Will be
  * populated.
  *

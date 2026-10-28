@@ -64,8 +64,8 @@ print_modes(struct comp_target *ct, VkDisplayModePropertiesKHR *mode_properties,
 	COMP_PRINT_MODE(ct->c, "Available Vk modes for direct mode");
 	for (int i = 0; i < mode_count; i++) {
 		VkDisplayModePropertiesKHR *props = &mode_properties[i];
-		uint16_t width = props->parameters.visibleRegion.width;
-		uint16_t height = props->parameters.visibleRegion.height;
+		uint32_t width = props->parameters.visibleRegion.width;
+		uint32_t height = props->parameters.visibleRegion.height;
 		float refresh = (float)props->parameters.refreshRate / 1000.f;
 
 		COMP_PRINT_MODE(ct->c, "| %2d | %dx%d@%.2f", i, width, height, refresh);
@@ -94,6 +94,11 @@ get_primary_display_mode(struct comp_target_swapchain *cts,
 	    &mode_properties);                      //
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(ct->c, "vk_enumerate_display_mode_properties: %s", vk_result_string(ret));
+		return VK_NULL_HANDLE;
+	}
+	if (mode_count == 0) {
+		COMP_ERROR(ct->c, "No Vulkan display modes available");
+		free(mode_properties);
 		return VK_NULL_HANDLE;
 	}
 
@@ -133,14 +138,11 @@ get_primary_display_mode(struct comp_target_swapchain *cts,
 
 	int64_t new_frame_interval = (int64_t)(1000. * 1000. * 1000. * 1000. / props.parameters.refreshRate);
 
-	COMP_DEBUG(ct->c,
-	           "Updating compositor settings nominal frame interval from %" PRIu64 " (%f Hz) to %" PRIu64
-	           " (%f Hz)",
-	           ct->c->settings.nominal_frame_interval_ns,
-	           1000. * 1000. * 1000. / (float)ct->c->settings.nominal_frame_interval_ns, new_frame_interval,
-	           (float)props.parameters.refreshRate / 1000.);
+	COMP_DEBUG(ct->c, "Updating compositor frame interval from %" PRIu64 " (%f Hz) to %" PRIu64 " (%f Hz)",
+	           ct->c->frame_interval_ns, 1000. * 1000. * 1000. / (float)ct->c->frame_interval_ns,
+	           new_frame_interval, (float)props.parameters.refreshRate / 1000.);
 
-	ct->c->settings.nominal_frame_interval_ns = new_frame_interval;
+	ct->c->frame_interval_ns = new_frame_interval;
 
 	free(mode_properties);
 

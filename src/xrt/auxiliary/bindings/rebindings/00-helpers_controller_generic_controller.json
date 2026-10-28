@@ -1,0 +1,50 @@
+{
+	"/helper/controller/generic/primary_secondary_to_abab": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/primary": "/user/hand/left/input/a",
+			"/user/hand/left/input/primary/click": "/user/hand/left/input/a/click",
+			"/user/hand/left/input/secondary": "/user/hand/left/input/b",
+			"/user/hand/left/input/secondary/click": "/user/hand/left/input/b/click",
+			"/user/hand/right/input/primary": "/user/hand/right/input/a",
+			"/user/hand/right/input/primary/click": "/user/hand/right/input/a/click",
+			"/user/hand/right/input/secondary": "/user/hand/right/input/b",
+			"/user/hand/right/input/secondary/click": "/user/hand/right/input/b/click"
+		}
+	},
+	"/helper/controller/generic/to_abab_controller": {
+		"helper": true,
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/generic/primary_secondary_to_abab"
+		]
+	},
+	"/helper/controller/generic/primary_secondary_to_abxy": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/primary": "/user/hand/left/input/x",
+			"/user/hand/left/input/primary/click": "/user/hand/left/input/x/click",
+			"/user/hand/left/input/secondary": "/user/hand/left/input/y",
+			"/user/hand/left/input/secondary/click": "/user/hand/left/input/y/click",
+			"/user/hand/right/input/primary": "/user/hand/right/input/a",
+			"/user/hand/right/input/primary/click": "/user/hand/right/input/a/click",
+			"/user/hand/right/input/secondary": "/user/hand/right/input/b",
+			"/user/hand/right/input/secondary/click": "/user/hand/right/input/b/click"
+		}
+	},
+	"/helper/controller/generic/to_abxy_controller": {
+		"helper": true,
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/generic/primary_secondary_to_abxy"
+		]
+	}
+}

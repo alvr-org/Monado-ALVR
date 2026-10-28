@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Utility to do batch stereographic projections of images.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 
@@ -329,14 +329,14 @@ slow(projection_state &mi, float x, float y, cv::Point2i &out)
 }
 
 void
-draw_and_clear(cv::Mat img, std::vector<cv::Point> &line_vec, bool good, cv::Scalar color)
+draw_and_clear(cv::Mat img, std::vector<cv::Point> &line_vec, bool good, const cv::Scalar &color)
 {
 	if (!good) {
-		color[0] = 255 - color[0];
-		color[1] = 255 - color[1];
-		color[2] = 255 - color[2];
+		const cv::Scalar bad{255 - color[0], 255 - color[1], 255 - color[2]};
+		cv::polylines(img, line_vec, false, bad);
+	} else {
+		cv::polylines(img, line_vec, false, color);
 	}
-	cv::polylines(img, line_vec, false, color);
 	line_vec.clear();
 }
 
@@ -345,7 +345,7 @@ add_or_draw_line(projection_state &mi,             //
                  int x,                            //
                  int y,                            //
                  std::vector<cv::Point> &line_vec, //
-                 cv::Scalar color,                 //
+                 const cv::Scalar &color,          //
                  bool &good_most_recent,           //
                  bool &started,
                  cv::Mat &img)
@@ -368,7 +368,7 @@ add_or_draw_line(projection_state &mi,             //
 }
 
 void
-draw_boundary(projection_state &mi, cv::Scalar color, cv::Mat img)
+draw_boundary(projection_state &mi, const cv::Scalar &color, cv::Mat img)
 {
 	std::vector<cv::Point> line_vec = {};
 	bool good_most_recent = true;
@@ -404,7 +404,9 @@ draw_boundary(projection_state &mi, cv::Scalar color, cv::Mat img)
 }
 
 void
-project_21_points_unscaled(Eigen::Array<float, 3, 21> &joints_local, Eigen::Quaternionf rot_quat, hand21_2d &out_joints)
+project_21_points_unscaled(Eigen::Array<float, 3, 21> &joints_local,
+                           const Eigen::Quaternionf &rot_quat,
+                           hand21_2d &out_joints)
 {
 	for (int i = 0; i < 21; i++) {
 		Eigen::Vector3f direction = joints_local.col(i); //{d.x, d.y, d.z};
@@ -448,7 +450,7 @@ project_21_points_scaled(projection_state &mi, Eigen::Array<float, 3, 21> &joint
 
 
 Eigen::Quaternionf
-direction(Eigen::Vector3f dir, float twist)
+direction(const Eigen::Vector3f &dir, float twist)
 {
 	Eigen::Quaternionf one = Eigen::Quaternionf().setFromTwoVectors(-Eigen::Vector3f::UnitZ(), dir);
 
@@ -536,11 +538,11 @@ make_projection_instructions(t_camera_model_params &dist,
 		out_instructions.rot_quat = direction(new_direction, twist);
 
 
-		if ((old_direction - dir).norm() < 0.0001) {
+		if ((old_direction - new_direction).norm() < 0.0001) {
 			// We converged
 			break;
 		}
-		old_direction = dir;
+		old_direction = new_direction;
 	}
 
 	// This can basically be removed (we will have converged very well in the above), but for correctness's
@@ -603,7 +605,7 @@ stereographic_project_image(const t_camera_model_params &dist,
                             const projection_instructions &instructions,
                             cv::Mat &input_image,
                             cv::Mat *debug_image,
-                            const cv::Scalar boundary_color,
+                            const cv::Scalar &boundary_color,
                             cv::Mat &out)
 
 {

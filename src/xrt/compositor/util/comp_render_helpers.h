@@ -1,4 +1,5 @@
 // Copyright 2023-2024, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -15,6 +16,10 @@
 
 #include "util/comp_base.h"
 #include "util/comp_render.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /*
@@ -109,6 +114,18 @@ is_layer_unpremultiplied(const struct xrt_layer_data *data)
 	return (data->flags & XRT_LAYER_COMPOSITION_UNPREMULTIPLIED_ALPHA_BIT) != 0;
 }
 
+static inline bool
+is_layer_alpha_inverted(const struct xrt_layer_data *data)
+{
+#ifndef XRT_FEATURE_OPENXR_INVERTED_ALPHA
+	return false;
+#else
+	// The layers without source alpha bit flag are sent to comp with alpha 1.0, so they don't need to be inverted.
+	return (data->flags & XRT_LAYER_COMPOSITION_BLEND_TEXTURE_SOURCE_ALPHA_BIT) != 0 &&
+	       (data->flags & XRT_LAYER_COMPOSITION_INVERTED_ALPHA_BIT) != 0;
+#endif
+}
+
 static inline void
 set_post_transform_rect(const struct xrt_layer_data *data,
                         const struct xrt_normalized_rect *src_norm_rect,
@@ -127,6 +144,21 @@ set_post_transform_rect(const struct xrt_layer_data *data,
 	*out_norm_rect = rect;
 }
 
+static inline void
+apply_bias_and_scale_from_layer(const struct xrt_layer_data *data,
+                                struct xrt_colour_rgba_f32 *out_scale,
+                                struct xrt_colour_rgba_f32 *out_bias)
+{
+	if (data->flags & XRT_LAYER_COMPOSITION_COLOR_BIAS_SCALE) {
+		*out_scale = data->color_scale;
+		*out_bias = data->color_bias;
+	} else {
+		// Use identity scale and zero bias when flag is not set
+		*out_scale = XRT_C11_COMPOUND(struct xrt_colour_rgba_f32){1.0f, 1.0f, 1.0f, 1.0f};
+		*out_bias = XRT_C11_COMPOUND(struct xrt_colour_rgba_f32){0.0f, 0.0f, 0.0f, 0.0f};
+	}
+}
+
 
 /*
  *
@@ -134,16 +166,20 @@ set_post_transform_rect(const struct xrt_layer_data *data,
  *
  */
 
+/*!
+ * This inserts a barrier operation that effects all views[X].squash.image
+ * fields (which are VkImages).
+ */
 static inline void
-cmd_barrier_view_images(struct vk_bundle *vk,
-                        const struct comp_render_dispatch_data *d,
-                        VkCommandBuffer cmd,
-                        VkAccessFlags src_access_mask,
-                        VkAccessFlags dst_access_mask,
-                        VkImageLayout transition_from,
-                        VkImageLayout transition_to,
-                        VkPipelineStageFlags src_stage_mask,
-                        VkPipelineStageFlags dst_stage_mask)
+cmd_barrier_view_squash_images(struct vk_bundle *vk,
+                               const struct comp_render_dispatch_data *d,
+                               VkCommandBuffer cmd,
+                               VkAccessFlags src_access_mask,
+                               VkAccessFlags dst_access_mask,
+                               VkImageLayout transition_from,
+                               VkImageLayout transition_to,
+                               VkPipelineStageFlags src_stage_mask,
+                               VkPipelineStageFlags dst_stage_mask)
 {
 	VkImageSubresourceRange first_color_level_subresource_range = {
 	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -153,16 +189,16 @@ cmd_barrier_view_images(struct vk_bundle *vk,
 	    .layerCount = 1,
 	};
 
-	for (uint32_t i = 0; i < d->view_count; i++) {
+	for (uint32_t i = 0; i < d->squash_view_count; i++) {
 		bool already_barriered = false;
 
-		VkImage image = d->views[i].image;
+		VkImage image = d->views[i].squash.image;
 
 		uint32_t k = i;
 		while (k > 0) {
 			k--; // k is always greater then zero.
 
-			if (d->views[k].image == image) {
+			if (d->views[k].squash.image == image) {
 				already_barriered = true;
 				break;
 			}
@@ -185,3 +221,8 @@ cmd_barrier_view_images(struct vk_bundle *vk,
 		    first_color_level_subresource_range); // subresource_range
 	}
 }
+
+
+#ifdef __cplusplus
+}
+#endif

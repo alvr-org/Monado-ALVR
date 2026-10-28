@@ -1,12 +1,12 @@
 // Copyright 2019, Collabora, Ltd.
 // Copyright 2020, Nova King.
-// Copyright 2021, Moses Turner.
+// Copyright 2021, Moshi Turner.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Interface between North Star distortion and HMD code.
  * @author Nova King <technobaboo@gmail.com>
- * @author Moses Turner <mosesturner@protonmail.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_ns
  */
 

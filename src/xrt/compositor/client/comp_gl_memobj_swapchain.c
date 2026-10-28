@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -7,21 +8,23 @@
  * @ingroup comp_client
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <stdlib.h>
-
-#include <xrt/xrt_config_have.h>
-#include <xrt/xrt_handles.h>
+#include "xrt/xrt_config_have.h"
+#include "xrt/xrt_handles.h"
 
 #include "util/u_misc.h"
+#include "util/u_logging.h"
+#include "util/u_native_images.h"
 
 #include "ogl/ogl_api.h"
 #include "ogl/ogl_helpers.h"
 
 #include "client/comp_gl_client.h"
 #include "client/comp_gl_memobj_swapchain.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
 
 
 /*!
@@ -49,7 +52,7 @@ client_gl_memobj_swapchain_destroy(struct xrt_swapchain *xsc)
 	uint32_t image_count = sc->base.base.base.image_count;
 
 	struct client_gl_compositor *c = sc->base.gl_compositor;
-	enum xrt_result xret = client_gl_compositor_context_begin(&c->base.base, CLIENT_GL_CONTEXT_REASON_OTHER);
+	enum xrt_result xret = client_gl_compositor_context_begin(&c->base, CLIENT_GL_CONTEXT_REASON_OTHER);
 
 	if (image_count > 0) {
 		if (xret == XRT_SUCCESS) {
@@ -63,7 +66,7 @@ client_gl_memobj_swapchain_destroy(struct xrt_swapchain *xsc)
 	}
 
 	if (xret == XRT_SUCCESS) {
-		client_gl_compositor_context_end(&c->base.base, CLIENT_GL_CONTEXT_REASON_OTHER);
+		client_gl_compositor_context_end(&c->base, CLIENT_GL_CONTEXT_REASON_OTHER);
 	}
 
 	// Drop our reference, does NULL checking.
@@ -72,7 +75,7 @@ client_gl_memobj_swapchain_destroy(struct xrt_swapchain *xsc)
 	free(sc);
 }
 
-static bool
+XRT_MAYBE_UNUSED static bool
 client_gl_memobj_swapchain_import(GLuint memory, size_t size, xrt_graphics_buffer_handle_t handle)
 {
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD)
@@ -98,42 +101,59 @@ client_gl_memobj_swapchain_create(struct xrt_compositor *xc,
 	struct client_gl_compositor *c = client_gl_compositor(xc);
 	(void)c;
 
-#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD) || defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_WIN32_HANDLE)
 	if (xscn == NULL) {
+		// Should never hit this path.
+		U_LOG_E("Native swapchain is null!");
 		return NULL;
 	}
+
+
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD) || defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_WIN32_HANDLE)
+	/*
+	 * Native images setup.
+	 */
+
+	const uint32_t image_count = xscn->base.image_count;
+	struct xrt_image_native *native_images = xscn->images;
+
+
+	/*
+	 * Fill out the swapchain.
+	 */
 
 	GLuint binding_enum = 0;
 	GLuint tex_target = 0;
 	ogl_texture_target_for_swapchain_info(info, &tex_target, &binding_enum);
-	struct xrt_swapchain *native_xsc = &xscn->base;
 
 	struct client_gl_memobj_swapchain *sc = U_TYPED_CALLOC(struct client_gl_memobj_swapchain);
 	sc->base.base.base.destroy = client_gl_memobj_swapchain_destroy;
 	sc->base.base.base.reference.count = 1;
-	sc->base.base.base.image_count =
-	    native_xsc->image_count; // Fetch the number of images from the native swapchain.
+	sc->base.base.base.image_count = image_count;
 	sc->base.xscn = xscn;
 	sc->base.tex_target = tex_target;
-
 	sc->base.gl_compositor = c;
 
-	struct xrt_swapchain_gl *xscgl = &sc->base.base;
-	glGenTextures(native_xsc->image_count, xscgl->images);
 
-	glCreateMemoryObjectsEXT(native_xsc->image_count, &sc->memory[0]);
-	for (uint32_t i = 0; i < native_xsc->image_count; i++) {
+	/*
+	 * Create the OpenGL resources.
+	 */
+
+	struct xrt_swapchain_gl *xscgl = &sc->base.base;
+	glGenTextures(image_count, xscgl->images);
+	glCreateMemoryObjectsEXT(image_count, &sc->memory[0]);
+
+	for (uint32_t i = 0; i < image_count; i++) {
 		glBindTexture(tex_target, xscgl->images[i]);
 
-		GLint dedicated = xscn->images[i].use_dedicated_allocation ? GL_TRUE : GL_FALSE;
+		GLint dedicated = native_images[i].use_dedicated_allocation ? GL_TRUE : GL_FALSE;
 		glMemoryObjectParameterivEXT(sc->memory[i], GL_DEDICATED_MEMORY_OBJECT_EXT, &dedicated);
 
-		if (!client_gl_memobj_swapchain_import(sc->memory[i], xscn->images[i].size, xscn->images[i].handle)) {
+		if (!client_gl_memobj_swapchain_import(sc->memory[i], native_images[i].size, native_images[i].handle)) {
 			continue;
 		}
 
 		// We have consumed this now, make sure it's not freed again.
-		xscn->images[i].handle = XRT_GRAPHICS_BUFFER_HANDLE_INVALID;
+		native_images[i].handle = XRT_GRAPHICS_BUFFER_HANDLE_INVALID;
 
 		if (info->array_size == 1) {
 			glTexStorageMem2DEXT(tex_target, info->mip_count, (GLuint)info->format, info->width,
@@ -144,7 +164,14 @@ client_gl_memobj_swapchain_create(struct xrt_compositor *xc,
 		}
 	}
 
+	/*
+	 * In light of better error handling, unref any native images we failed
+	 * to import.
+	 */
+	u_native_images_unref_all(native_images, image_count);
+
 	*out_cglsc = &sc->base;
+
 	return &sc->base.base.base;
 #else
 

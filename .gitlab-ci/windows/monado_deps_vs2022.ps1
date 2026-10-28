@@ -1,5 +1,5 @@
 # Copyright 2019-2022, Mesa contributors
-# Copyright 2022, Collabora, Ltd.
+# Copyright 2022-2025, Collabora, Ltd.
 # SPDX-License-Identifier: MIT
 # Based on https://gitlab.freedesktop.org/mesa/mesa/-/blob/8396df5ad90aeb6ab2267811aba2187954562f81/.gitlab-ci/windows/mesa_deps_vs2019.ps1
 
@@ -29,7 +29,7 @@ $vsInstallerArgs = @(
     "--add"
     "Microsoft.VisualStudio.Component.Windows10SDK"
     "--add"
-    "Microsoft.VisualStudio.Component.Windows11SDK.22000"
+    "Microsoft.VisualStudio.Component.Windows11SDK.26100"
     "--add"
     "Component.Microsoft.Windows.CppWinRT"
     "--add"

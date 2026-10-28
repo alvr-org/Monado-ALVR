@@ -34,6 +34,7 @@ struct wmr_camera_open_config
 };
 
 #ifdef XRT_HAVE_LIBUSB
+
 struct wmr_camera *
 wmr_camera_open(struct wmr_camera_open_config *config);
 void

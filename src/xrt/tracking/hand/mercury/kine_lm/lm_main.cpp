@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Levenberg-Marquardt kinematic optimizer
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Charlton Rodda <charlton.rodda@collabora.com>
  * @ingroup tracking
  */
@@ -969,7 +969,7 @@ optimizer_run(KinematicHandLM *hand,
 	state.smoothing_factor = smoothing_factor;
 
 	xrt_pose blah = XRT_POSE_IDENTITY;
-	hand_init_guess(observation, target_hand_size, state.left_in_right, blah);
+	hand_init_guess(observation, target_hand_size, hand->is_right, state.left_in_right, blah);
 
 	if (hand_was_untracked_last_frame) {
 		OptimizerHandInit(state.last_frame, state.this_frame_pre_rotation);

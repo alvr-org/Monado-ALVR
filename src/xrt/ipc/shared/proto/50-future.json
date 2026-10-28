@@ -1,0 +1,33 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"future_get_state": {
+		"in": [
+			{"name": "future_id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "out_state", "type": "enum xrt_future_state"}
+		]
+	},
+
+	"future_cancel": {
+		"in": [
+			{"name": "future_id", "type": "uint32_t"}
+		]
+	},
+
+	"future_destroy": {
+		"in": [
+			{"name": "future_id", "type": "uint32_t"}
+		]
+	},
+
+	"future_get_result": {
+		"in": [
+			{"name": "future_id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "out_ft_result", "type": "struct xrt_future_result"}
+		]
+	}
+}

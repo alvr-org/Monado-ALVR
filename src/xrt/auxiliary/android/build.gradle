@@ -66,6 +66,6 @@ spotless {
     kotlin {
         target 'src/main/java/**/*.kt'
         // Use ktfmt(https://github.com/facebook/ktfmt) as the default Kotlin formatter.
-        ktfmt('0.43').kotlinlangStyle()
+        ktfmt("$ktfmtVersion").kotlinlangStyle()
     }
 }

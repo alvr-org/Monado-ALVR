@@ -270,7 +270,23 @@ SimpleIMUFusion::handleAccel(Eigen::Vector3d const &accel, timepoint_ns timestam
 
 		// Initially, set it to totally trust gravity.
 		started_ = true;
+
+		// @todo: Remove this pragma when all our CI is updated to Eigen 5, Eigen 3 has this problem.
+#if defined(__GNUC__) && !defined(__clang__)
+		/*
+		 * Eigen's JacobiSVD-based FromTwoVectors triggers a GCC -Wmaybe-uninitialized false
+		 * positive at -O3: the SVD's V matrix is always fully written before being read, but
+		 * GCC's dataflow analysis can't see that through the inlined SIMD loads. Clang doesn't
+		 * know this warning name at all, and errors on the unknown pragma under -Werror.
+		 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif // defined(__GNUC__) && !defined(__clang__)
 		quat_ = Eigen::Quaterniond::FromTwoVectors(accel.normalized(), Eigen::Vector3d::UnitY());
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif // defined(__GNUC__) && !defined(__clang__)
+
 		accel_filter_.addSample(accel, timestamp);
 		gravity_filter_.addSample(accel.norm(), timestamp);
 		last_accel_timestamp_ = timestamp;
@@ -298,7 +314,19 @@ SimpleIMUFusion::handleAccel(Eigen::Vector3d const &accel, timepoint_ns timestam
 	// This should match the global gravity vector if the rotation
 	// is right.
 	Eigen::Vector3d measuredGravityDirection = (quat_ * adjusted_accel).normalized();
+
+#if defined(__GNUC__) && !defined(__clang__)
+	/*
+	 * See the matching comment in handleAccel: GCC -Wmaybe-uninitialized false positive on
+	 * Eigen's JacobiSVD-based FromTwoVectors at -O3.
+	 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif // defined(__GNUC__) && !defined(__clang__)
 	auto incremental = Eigen::Quaterniond::FromTwoVectors(measuredGravityDirection, Eigen::Vector3d::UnitY());
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif // defined(__GNUC__) && !defined(__clang__)
 
 	double alpha = scale * gravity_scale_ * dt;
 	Eigen::Quaterniond scaledIncrementalQuat = Eigen::Quaterniond::Identity().slerp(alpha, incremental);

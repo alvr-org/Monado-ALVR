@@ -1,4 +1,5 @@
-// Copyright 2022-2024, Collabora, Ltd.
+// Copyright 2022-2026, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,13 +9,16 @@
  * @ingroup aux_pretty
  */
 
+#include "xrt/xrt_macro_lists.h"
 #include "util/u_misc.h"
+#include "util/u_extension_list.h"
 #include "util/u_pretty_print.h"
 
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 
 /*
@@ -22,6 +26,10 @@
  * Internal helpers.
  *
  */
+
+// clang-format off
+#define X_MACRO_ENUM_CASE_RETURN_STRING(NAME) case NAME: return #NAME;
+// clang-format on
 
 #define DG(str) (dg.func(dg.ptr, str, strlen(str)))
 
@@ -38,8 +46,20 @@ get_xrt_input_type_short_str(enum xrt_input_type type)
 	case XRT_INPUT_TYPE_HAND_TRACKING: return "HAND_TRACKING";
 	case XRT_INPUT_TYPE_FACE_TRACKING: return "FACE_TRACKING";
 	case XRT_INPUT_TYPE_BODY_TRACKING: return "BODY_TRACKING";
-	default: return "<UNKNOWN>";
 	}
+
+	return "<UNKNOWN>";
+}
+
+const char *
+get_xrt_output_type_short_str(enum xrt_output_type type)
+{
+	switch (type) {
+	case XRT_OUTPUT_TYPE_VIBRATION: return "XRT_OUTPUT_TYPE_VIBRATION";
+	case XRT_OUTPUT_TYPE_FORCE_FEEDBACK: return "XRT_OUTPUT_TYPE_FORCE_FEEDBACK";
+	}
+
+	return "<UNKNOWN>";
 }
 
 void
@@ -64,6 +84,76 @@ stack_only_sink(void *ptr, const char *str, size_t length)
 	// Null terminate and update used.
 	sink->buffer[used] = '\0';
 	sink->used = used;
+}
+
+int
+update_longest_extension_name_length(struct u_extension_list *list, int current_longest_extension)
+{
+	if (list == NULL) {
+		return current_longest_extension;
+	}
+
+	size_t count = u_extension_list_get_size(list);
+	const char *const *data = u_extension_list_get_data(list);
+
+	for (size_t i = 0; i < count; i++) {
+		int len = (int)strlen(data[i]);
+		if (len > current_longest_extension) {
+			current_longest_extension = len;
+		}
+	}
+	return current_longest_extension;
+}
+
+
+/*
+ *
+ * 'Exported' str functions.
+ *
+ */
+
+const char *
+u_str_xrt_input_name_or_null(enum xrt_input_name name)
+{
+	// No default case so we get warnings of missing entries.
+	switch (name) {
+		XRT_INPUT_NAME_LIST(X_MACRO_ENUM_CASE_RETURN_STRING)
+	}
+
+	return NULL;
+}
+
+const char *
+u_str_xrt_output_name_or_null(enum xrt_output_name name)
+{
+	// No default case so we get warnings of missing entries.
+	switch (name) {
+		XRT_OUTPUT_NAME_LIST(X_MACRO_ENUM_CASE_RETURN_STRING)
+	}
+
+	return NULL;
+}
+
+const char *
+u_str_xrt_device_name_or_null(enum xrt_device_name name)
+{
+	// No default case so we get warnings of missing entries.
+	switch (name) {
+		XRT_DEVICE_NAME_LIST(X_MACRO_ENUM_CASE_RETURN_STRING)
+	}
+
+	return NULL;
+}
+
+const char *
+u_str_xrt_result_or_null(xrt_result_t xret)
+{
+	// No default case so we get warnings of missing entries.
+	switch (xret) {
+		XRT_RESULT_LIST(X_MACRO_ENUM_CASE_RETURN_STRING)
+	}
+
+	return NULL;
 }
 
 
@@ -101,7 +191,12 @@ u_pp(struct u_pp_delegate dg, const char *fmt, ...)
 	ret = vsnprintf(dst, size_with_null, fmt, args);
 	va_end(args);
 
-	dg.func(dg.ptr, dst, size);
+	// Second call to `vsnprintf` with a buffer of the right size is supposed to succeed and write the exact amount.
+	assert(ret == (int)size);
+
+	if (ret > 0) {
+		dg.func(dg.ptr, dst, size);
+	}
 
 	if (tmp != dst) {
 		free(dst);
@@ -111,17 +206,13 @@ u_pp(struct u_pp_delegate dg, const char *fmt, ...)
 void
 u_pp_xrt_input_name(struct u_pp_delegate dg, enum xrt_input_name name)
 {
-#define XRT_INPUT_LIST_TO_CASE(NAME, _)                                                                                \
-	case NAME: DG(#NAME); return;
-
-	switch (name) {
-		XRT_INPUT_LIST(XRT_INPUT_LIST_TO_CASE)
+	const char *might_be_null = u_str_xrt_input_name_or_null(name);
+	if (might_be_null != NULL) {
+		DG(might_be_null);
+		return;
 	}
 
-#undef XRT_INPUT_LIST_TO_CASE
-
 	/*
-	 * No default case so we get warnings of missing entries.
 	 * Invalid values handled below.
 	 */
 
@@ -133,51 +224,35 @@ u_pp_xrt_input_name(struct u_pp_delegate dg, enum xrt_input_name name)
 }
 
 void
-u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
+u_pp_xrt_output_name(struct u_pp_delegate dg, enum xrt_output_name name)
 {
-	// clang-format off
-	switch (xret) {
-	case XRT_SUCCESS:                                    DG("XRT_SUCCESS"); return;
-	case XRT_TIMEOUT:                                    DG("XRT_TIMEOUT"); return;
-	case XRT_SPACE_BOUNDS_UNAVAILABLE:                   DG("XRT_SPACE_BOUNDS_UNAVAILABLE"); return;
-	case XRT_ERROR_IPC_FAILURE:                          DG("XRT_ERROR_IPC_FAILURE"); return;
-	case XRT_ERROR_NO_IMAGE_AVAILABLE:                   DG("XRT_ERROR_NO_IMAGE_AVAILABLE"); return;
-	case XRT_ERROR_VULKAN:                               DG("XRT_ERROR_VULKAN"); return;
-	case XRT_ERROR_OPENGL:                               DG("XRT_ERROR_OPENGL"); return;
-	case XRT_ERROR_FAILED_TO_SUBMIT_VULKAN_COMMANDS:     DG("XRT_ERROR_FAILED_TO_SUBMIT_VULKAN_COMMANDS"); return;
-	case XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED: DG("XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED"); return;
-	case XRT_ERROR_ALLOCATION:                           DG("XRT_ERROR_ALLOCATION"); return;
-	case XRT_ERROR_POSE_NOT_ACTIVE:                      DG("XRT_ERROR_POSE_NOT_ACTIVE"); return;
-	case XRT_ERROR_FENCE_CREATE_FAILED:                  DG("XRT_ERROR_FENCE_CREATE_FAILED"); return;
-	case XRT_ERROR_NATIVE_HANDLE_FENCE_ERROR:            DG("XRT_ERROR_NATIVE_HANDLE_FENCE_ERROR"); return;
-	case XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED:        DG("XRT_ERROR_MULTI_SESSION_NOT_IMPLEMENTED"); return;
-	case XRT_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED:         DG("XRT_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED"); return;
-	case XRT_ERROR_EGL_CONFIG_MISSING:                   DG("XRT_ERROR_EGL_CONFIG_MISSING"); return;
-	case XRT_ERROR_THREADING_INIT_FAILURE:               DG("XRT_ERROR_THREADING_INIT_FAILURE"); return;
-	case XRT_ERROR_IPC_SESSION_NOT_CREATED:              DG("XRT_ERROR_IPC_SESSION_NOT_CREATED"); return;
-	case XRT_ERROR_IPC_SESSION_ALREADY_CREATED:          DG("XRT_ERROR_IPC_SESSION_ALREADY_CREATED"); return;
-	case XRT_ERROR_PROBER_NOT_SUPPORTED:                 DG("XRT_ERROR_PROBER_NOT_SUPPORTED"); return;
-	case XRT_ERROR_PROBER_CREATION_FAILED:               DG("XRT_ERROR_PROBER_CREATION_FAILED"); return;
-	case XRT_ERROR_PROBER_LIST_LOCKED:                   DG("XRT_ERROR_PROBER_LIST_LOCKED"); return;
-	case XRT_ERROR_PROBER_LIST_NOT_LOCKED:               DG("XRT_ERROR_PROBER_LIST_NOT_LOCKED"); return;
-	case XRT_ERROR_PROBING_FAILED:                       DG("XRT_ERROR_PROBING_FAILED"); return;
-	case XRT_ERROR_DEVICE_CREATION_FAILED:               DG("XRT_ERROR_DEVICE_CREATION_FAILED"); return;
-	case XRT_ERROR_D3D:                                  DG("XRT_ERROR_D3D"); return;
-	case XRT_ERROR_D3D11:                                DG("XRT_ERROR_D3D11"); return;
-	case XRT_ERROR_D3D12:                                DG("XRT_ERROR_D3D12"); return;
-	case XRT_ERROR_RECENTERING_NOT_SUPPORTED:            DG("XRT_ERROR_RECENTERING_NOT_SUPPORTED"); return;
-	case XRT_ERROR_COMPOSITOR_NOT_SUPPORTED:             DG("XRT_ERROR_COMPOSITOR_NOT_SUPPORTED"); return;
-	case XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED:           DG("XRT_ERROR_IPC_COMPOSITOR_NOT_CREATED"); return;
-	case XRT_ERROR_NOT_IMPLEMENTED:                      DG("XRT_ERROR_NOT_IMPLEMENTED"); return;
-	case XRT_ERROR_UNSUPPORTED_SPACE_TYPE:               DG("XRT_ERROR_UNSUPPORTED_SPACE_TYPE"); return;
-	case XRT_ERROR_ANDROID:                              DG("XRT_ERROR_ANDROID"); return;
-	case XRT_ERROR_FEATURE_NOT_SUPPORTED:                DG("XRT_ERROR_FEATURE_NOT_SUPPORTED"); return;
-	case XRT_ERROR_INPUT_UNSUPPORTED:                    DG("XRT_ERROR_INPUT_UNSUPPORTED"); return;
+	const char *might_be_null = u_str_xrt_output_name_or_null(name);
+	if (might_be_null != NULL) {
+		DG(might_be_null);
+		return;
 	}
-	// clang-format on
 
 	/*
-	 * No default case so we get warnings of missing entries.
+	 * Invalid values handled below.
+	 */
+
+	uint32_t id = XRT_GET_OUTPUT_ID(name);
+	enum xrt_output_type type = XRT_GET_OUTPUT_TYPE(name);
+	const char *str = get_xrt_output_type_short_str(type);
+
+	u_pp(dg, "XRT_OUTPUT_0x%04x_%s", id, str);
+}
+
+void
+u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret)
+{
+	const char *might_be_null = u_str_xrt_result_or_null(xret);
+	if (might_be_null != NULL) {
+		DG(might_be_null);
+		return;
+	}
+
+	/*
 	 * Invalid values handled below.
 	 */
 
@@ -211,6 +286,49 @@ u_pp_xrt_reference_space_type(struct u_pp_delegate dg, enum xrt_reference_space_
 	case XRT_SPACE_REFERENCE_TYPE_INVALID: DG("XRT_SPACE_REFERENCE_TYPE_INVALID"); return;
 	default: u_pp(dg, "XRT_SPACE_REFERENCE_TYPE_0x%08x", type); return;
 	}
+}
+
+void
+u_pp_padded_pretty_ms(u_pp_delegate_t dg, uint64_t value_ns)
+{
+	uint64_t in_us = value_ns / 1000;
+	uint64_t in_ms = in_us / 1000;
+	uint64_t in_1_000_ms = in_ms / 1000;
+	uint64_t in_1_000_000_ms = in_1_000_ms / 1000;
+
+	// Prints " M'TTT'###.FFFms"
+
+	// " M'"
+	if (in_1_000_000_ms >= 1) {
+		u_pp(dg, " %" PRIu64 "'", in_1_000_000_ms);
+	} else {
+		//       " M'"
+		u_pp(dg, "   ");
+	}
+
+	// "TTT'"
+	if (in_1_000_ms >= 1000) {
+		// Need to pad with zeros
+		u_pp(dg, "%03" PRIu64 "'", in_1_000_ms % 1000);
+	} else if (in_1_000_ms >= 1) {
+		// Pad with spaces, we need to write a number.
+		u_pp(dg, "%3" PRIu64 "'", in_1_000_ms);
+	} else {
+		//       "TTT'"
+		u_pp(dg, "    ");
+	}
+
+	// "###"
+	if (in_ms >= 1000) {
+		// Need to pad with zeros
+		u_pp(dg, "%03" PRIu64, in_ms % 1000);
+	} else {
+		// Pad with spaces, always need a numbere here.
+		u_pp(dg, "%3" PRIu64, in_ms % 1000);
+	}
+
+	// ".FFFms"
+	u_pp(dg, ".%03" PRIu64 "ms", in_us % 1000);
 }
 
 
@@ -380,6 +498,78 @@ u_pp_array2d_f64(u_pp_delegate_t dg, const double *arr, size_t n, size_t m, cons
 {
 	u_pp(dg, "\n%s%s = ", indent, name);
 	u_pp_small_array2d_f64(dg, arr, n, m);
+}
+
+
+/*
+ *
+ * Extension list printers.
+ *
+ */
+
+void
+u_pp_string_list(struct u_pp_delegate dg, struct u_extension_list *usl, const char *prefix)
+{
+	uint32_t count = u_extension_list_get_size(usl);
+	const char *const *data = u_extension_list_get_data(usl);
+
+	for (uint32_t i = 0; i < count; i++) {
+		u_pp(dg, "%s%s", prefix, data[i]);
+	}
+}
+
+void
+u_pp_string_list_extensions(struct u_pp_delegate dg,
+                            struct u_extension_list *enabled_list,
+                            struct u_extension_list *optional_list,
+                            struct u_extension_list *skipped_list)
+{
+	assert(optional_list != NULL);
+	assert(skipped_list != NULL);
+
+	uint32_t count = u_extension_list_get_size(enabled_list);
+	const char *const *data = u_extension_list_get_data(enabled_list);
+
+	// Find the longest extension name for alignment
+	int longest_extension = update_longest_extension_name_length(enabled_list, 0);
+	longest_extension = update_longest_extension_name_length(skipped_list, longest_extension);
+	longest_extension = update_longest_extension_name_length(optional_list, longest_extension);
+
+	u_pp(dg, "\n\tEnabled extensions:");
+
+	// Print enabled extensions, marking which are optional
+	uint32_t optional_enabled_count = 0;
+	for (uint32_t i = 0; i < count; i++) {
+		const char *ext = data[i];
+		bool is_optional = u_extension_list_contains(optional_list, ext);
+		if (is_optional) {
+			optional_enabled_count++;
+		}
+
+		u_pp(dg, "\n\t\t%-*s    %s", longest_extension, ext, is_optional ? "optional" : "required");
+	}
+
+	// All optional extensions have been enabled.
+	uint32_t optional_count = u_extension_list_get_size(optional_list);
+	if (optional_enabled_count == optional_count) {
+		return;
+	}
+
+	// Print optional extensions that were not enabled
+	u_pp(dg, "\n\tNot enabled optional extensions:");
+	const char *const *optional_data = u_extension_list_get_data(optional_list);
+	for (uint32_t i = 0; i < optional_count; i++) {
+		const char *ext = optional_data[i];
+		if (u_extension_list_contains(enabled_list, ext)) {
+			continue;
+		}
+
+		// Check if this extension was skipped or unsupported
+		bool was_skipped = u_extension_list_contains(skipped_list, ext);
+		const char *reason = was_skipped ? "skipped" : "unsupported";
+
+		u_pp(dg, "\n\t\t%-*s    %s", longest_extension, ext, reason);
+	}
 }
 
 

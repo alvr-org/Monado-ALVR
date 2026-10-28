@@ -36,6 +36,20 @@ struct vk_surface_info
 #ifdef VK_EXT_display_surface_counter
 	VkSurfaceCapabilities2EXT caps2;
 #endif
+
+#ifdef VK_KHR_get_surface_capabilities2
+#ifdef VK_KHR_present_id2
+	VkSurfaceCapabilitiesPresentId2KHR present_id2_caps;
+#endif
+
+#ifdef VK_KHR_present_wait2
+	VkSurfaceCapabilitiesPresentWait2KHR present_wait2_caps;
+#endif
+
+#ifdef VK_KHR_shared_presentable_image
+	VkSharedPresentSurfaceCapabilitiesKHR shared_present_caps;
+#endif
+#endif
 };
 
 

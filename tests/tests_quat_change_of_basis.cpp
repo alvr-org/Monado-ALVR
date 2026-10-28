@@ -4,7 +4,7 @@
  * @file
  * @brief Test for change-of-basis transformations between left-handed and right-handed coordinate sytems for
  * quaternions.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  */
 #include "math/m_api.h"
 #include "xrt/xrt_defines.h"

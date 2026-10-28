@@ -35,7 +35,7 @@ DEBUG_GET_ONCE_LOG_OPTION(json_log, "JSON_LOG", U_LOGGING_WARN)
 		if (!p) {                                                                                              \
 			JSON_ERROR(__VA_ARGS__);                                                                       \
 			if (fatal) {                                                                                   \
-				assert(false && "Assertion failed: " #predicate);                                      \
+				assert(p && "Assertion failed: " #predicate);                                          \
 				exit(EXIT_FAILURE);                                                                    \
 			}                                                                                              \
 		}                                                                                                      \
@@ -114,9 +114,25 @@ public:
 		parent = nullptr;
 	}
 
-	JSONNode(JSONNode &&) = default;
+	JSONNode(JSONNode &&node)
+	{
+		*this = std::move(node);
+	}
 
 	JSONNode(const JSONNode &node)
+	{
+		*this = node;
+	};
+
+	JSONNode &
+	operator=(JSONNode &&rhs)
+	{
+		swap(*this, rhs);
+		return *this;
+	}
+
+	JSONNode &
+	operator=(const JSONNode &node)
 	{
 		is_owner = node.is_owner;
 		parent = node.parent;
@@ -125,15 +141,7 @@ public:
 		} else {
 			cjson = node.cjson; // Shallow copy
 		}
-	};
 
-	JSONNode &
-	operator=(JSONNode &&) = default;
-
-	JSONNode &
-	operator=(JSONNode rhs)
-	{
-		swap(*this, rhs);
 		return *this;
 	};
 

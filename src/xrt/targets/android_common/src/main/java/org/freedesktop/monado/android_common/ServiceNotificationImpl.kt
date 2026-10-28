@@ -51,12 +51,12 @@ class ServiceNotificationImpl @Inject constructor() : IServiceNotification {
                 NotificationChannel(
                     CHANNEL_ID,
                     nameAndLogoProvider.getLocalizedRuntimeName(),
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_LOW,
                 )
             notificationChannel.description =
                 context.getString(
                     R.string.channel_desc,
-                    nameAndLogoProvider.getLocalizedRuntimeName()
+                    nameAndLogoProvider.getLocalizedRuntimeName(),
                 )
             notificationChannel.setShowBadge(false)
             notificationChannel.enableLights(false)
@@ -72,7 +72,7 @@ class ServiceNotificationImpl @Inject constructor() : IServiceNotification {
      */
     override fun buildNotification(
         context: Context,
-        pendingShutdownIntent: PendingIntent
+        pendingShutdownIntent: PendingIntent,
     ): Notification {
         createChannel(context)
 
@@ -80,7 +80,7 @@ class ServiceNotificationImpl @Inject constructor() : IServiceNotification {
             Notification.Action.Builder(
                     Icon.createWithResource(context, R.drawable.ic_feathericons_x),
                     context.getString(R.string.notifExitRuntime),
-                    pendingShutdownIntent
+                    pendingShutdownIntent,
                 )
                 .build()
         // Make a notification for our foreground service
@@ -92,7 +92,7 @@ class ServiceNotificationImpl @Inject constructor() : IServiceNotification {
                 .setContentText(
                     context.getString(
                         R.string.notif_text,
-                        nameAndLogoProvider.getLocalizedRuntimeName()
+                        nameAndLogoProvider.getLocalizedRuntimeName(),
                     )
                 )
                 .setShowWhen(false)
@@ -108,7 +108,7 @@ class ServiceNotificationImpl @Inject constructor() : IServiceNotification {
                 Notification.Action.Builder(
                         Icon.createWithResource(context, R.drawable.ic_feathericons_settings),
                         context.getString(R.string.notifConfigure),
-                        pendingIntent
+                        pendingIntent,
                     )
                     .build()
             builder.addAction(configureAction)

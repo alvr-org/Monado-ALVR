@@ -1,4 +1,5 @@
 // Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -9,19 +10,14 @@
  * @ingroup comp_client
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <stdlib.h>
+#include "xrt/xrt_config_have.h"
+#include "xrt/xrt_config_os.h"
+#include "xrt/xrt_handles.h"
 
 #include "util/u_misc.h"
 #include "util/u_logging.h"
 #include "util/u_debug.h"
-#include "util/u_handles.h"
-
-#include <xrt/xrt_config_have.h>
-#include <xrt/xrt_config_os.h>
-#include <xrt/xrt_handles.h>
+#include "util/u_native_images.h"
 
 #include "ogl/egl_api.h"
 #include "ogl/ogl_api.h"
@@ -31,10 +27,15 @@
 #include "client/comp_egl_client.h"
 #include "client/comp_gl_eglimage_swapchain.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
 
 #ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
 #include <android/hardware_buffer.h>
 #endif
+
 
 static enum u_logging_level log_level;
 
@@ -87,13 +88,8 @@ static void
 client_gl_eglimage_swapchain_destroy(struct xrt_swapchain *xsc)
 {
 	struct client_gl_eglimage_swapchain *sc = client_gl_eglimage_swapchain(xsc);
-	uint32_t image_count = sc->base.base.base.image_count;
 
 	client_gl_eglimage_swapchain_teardown_storage(sc);
-	for (uint32_t i = 0; i < image_count; i++) {
-		u_graphics_buffer_unref(&sc->base.xscn->images[i].handle);
-	}
-	sc->base.base.base.image_count = 0;
 
 	// Drop our reference, does NULL checking.
 	xrt_swapchain_native_reference(&sc->base.xscn, NULL);
@@ -178,9 +174,11 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 	log_level = debug_get_log_option_egl_swapchain_log();
 
 	if (xscn == NULL) {
-		EGL_SC_ERROR("Native compositor is null");
+		// Should never hit this path.
+		EGL_SC_ERROR("Native swapchain is null!");
 		return NULL;
 	}
+
 
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD)
 	uint32_t format = gl_format_to_drm_fourcc(info->format);
@@ -201,26 +199,40 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 	}
 #endif // defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD)
 
-	struct xrt_swapchain *native_xsc = &xscn->base;
 
-	struct client_gl_eglimage_swapchain *sc = U_TYPED_CALLOC(struct client_gl_eglimage_swapchain);
-	sc->base.base.base.destroy = client_gl_eglimage_swapchain_destroy;
-	sc->base.base.base.reference.count = 1;
-	sc->base.base.base.image_count =
-	    native_xsc->image_count; // Fetch the number of images from the native swapchain.
-	sc->base.xscn = xscn;
-	sc->display = ceglc->current.dpy;
+	/*
+	 * Native images setup.
+	 */
 
-	struct xrt_swapchain_gl *xscgl = &sc->base.base;
+	const uint32_t image_count = xscn->base.image_count;
+	struct xrt_image_native *native_images = xscn->images;
 
-	glGenTextures(native_xsc->image_count, xscgl->images);
+
+	/*
+	 * Fill out the swapchain.
+	 */
 
 	GLuint binding_enum = 0;
 	GLuint tex_target = 0;
 	ogl_texture_target_for_swapchain_info(info, &tex_target, &binding_enum);
-	sc->base.tex_target = tex_target;
 
-	for (uint32_t i = 0; i < native_xsc->image_count; i++) {
+	struct client_gl_eglimage_swapchain *sc = U_TYPED_CALLOC(struct client_gl_eglimage_swapchain);
+	sc->base.base.base.destroy = client_gl_eglimage_swapchain_destroy;
+	sc->base.base.base.reference.count = 1;
+	sc->base.base.base.image_count = image_count;
+	sc->base.tex_target = tex_target;
+	sc->base.xscn = xscn;
+	sc->display = ceglc->current.dpy;
+
+
+	/*
+	 * Create the EGL & OpenGL resources.
+	 */
+
+	struct xrt_swapchain_gl *xscgl = &sc->base.base;
+	glGenTextures(image_count, xscgl->images);
+
+	for (uint32_t i = 0; i < image_count; i++) {
 
 		// Bind new texture name to the target.
 		glBindTexture(tex_target, xscgl->images[i]);
@@ -230,29 +242,28 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 #if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
 		// see
 		// https://android.googlesource.com/platform/cts/+/e59c1e8ef5c19ff49bd53dd5d039f9a773d877ec/tests/tests/nativehardware/jni/AHardwareBufferGLTest.cpp#1416
-		native_buffer = eglGetNativeClientBufferANDROID(xscn->images[i].handle);
+		native_buffer = eglGetNativeClientBufferANDROID(native_images[i].handle);
 
 		AHardwareBuffer_Desc desc;
-		AHardwareBuffer_describe(xscn->images[i].handle, &desc);
+		AHardwareBuffer_describe(native_images[i].handle, &desc);
 
 		if (NULL == native_buffer) {
 			EGL_SC_ERROR("eglGetNativeClientBufferANDROID failed");
-			client_gl_eglimage_swapchain_teardown_storage(sc);
-			free(sc);
-			return NULL;
+			goto error;
 		}
-		EGLint attrs[] = {
-		    EGL_IMAGE_PRESERVED_KHR,
-		    EGL_TRUE,
-		    EGL_PROTECTED_CONTENT_EXT,
-		    (desc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) ? EGL_TRUE : EGL_FALSE,
-		    EGL_NONE,
-		    EGL_NONE,
-		    EGL_NONE,
-		};
 
-		EGL_SC_INFO("EGL_PROTECTED_CONTENT_EXT %s",
-		            (desc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) ? "TRUE" : "FALSE");
+		EGLint protected = (desc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT) ? EGL_TRUE : EGL_FALSE;
+
+		// clang-format off
+		EGLint attrs[] = {
+		    EGL_IMAGE_PRESERVED_KHR,               EGL_TRUE,
+		    EGL_PROTECTED_CONTENT_EXT,             protected,
+		    EGL_NONE,                              EGL_NONE, // Reserved for sRGB
+		    EGL_NONE, // Terminator
+		};
+		// clang-format on
+
+		EGL_SC_INFO("EGL_PROTECTED_CONTENT_EXT %s", protected ? "TRUE" : "FALSE");
 
 		if (is_gl_format_srgb(info->format)) {
 			attrs[4] = EGL_GL_COLORSPACE_KHR;
@@ -261,21 +272,18 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 
 		EGLenum source = EGL_NATIVE_BUFFER_ANDROID;
 #elif defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD)
-		EGLint attrs[] = {EGL_IMAGE_PRESERVED_KHR,
-		                  EGL_TRUE,
-		                  EGL_WIDTH,
-		                  info->width,
-		                  EGL_HEIGHT,
-		                  info->height,
-		                  EGL_LINUX_DRM_FOURCC_EXT,
-		                  format,
-		                  EGL_DMA_BUF_PLANE0_FD_EXT,
-		                  xscn->images[i].handle,
-		                  EGL_DMA_BUF_PLANE0_OFFSET_EXT,
-		                  0,
-		                  EGL_DMA_BUF_PLANE0_PITCH_EXT,
-		                  row_pitch,
-		                  EGL_NONE};
+		// clang-format off
+		EGLint attrs[] = {
+		    EGL_IMAGE_PRESERVED_KHR,               EGL_TRUE,
+		    EGL_WIDTH,                             info->width,
+		    EGL_HEIGHT,                            info->height,
+		    EGL_LINUX_DRM_FOURCC_EXT,              format,
+		    EGL_DMA_BUF_PLANE0_FD_EXT,             native_images[i].handle,
+		    EGL_DMA_BUF_PLANE0_OFFSET_EXT,         0,
+		    EGL_DMA_BUF_PLANE0_PITCH_EXT,          row_pitch,
+		    EGL_NONE, // Terminator
+		};
+		// clang-format on
 		EGLenum source = EGL_LINUX_DMA_BUF_EXT;
 #else
 #error "need port"
@@ -283,10 +291,9 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 		sc->egl_images[i] = eglCreateImageKHR(sc->display, EGL_NO_CONTEXT, source, native_buffer, attrs);
 		if (EGL_NO_IMAGE_KHR == sc->egl_images[i]) {
 			EGL_SC_ERROR("eglCreateImageKHR failed");
-			client_gl_eglimage_swapchain_teardown_storage(sc);
-			free(sc);
-			return NULL;
+			goto error;
 		}
+
 		/*!
 		 * @todo this matches the behavior of the Google test, but is
 		 * not itself tested or fully rationalized.
@@ -301,6 +308,20 @@ client_gl_eglimage_swapchain_create(struct xrt_compositor *xc,
 		}
 	}
 
+	/*
+	 * eglCreateImageKHR does not take ownership of the native images, so we
+	 * need to unref them here. This is true for both FDs and AHBs.
+	 */
+	u_native_images_unref_all(native_images, image_count);
+
 	*out_sc = &sc->base;
+
 	return &sc->base.base.base;
+
+
+error:
+	client_gl_eglimage_swapchain_teardown_storage(sc);
+	free(sc);
+
+	return NULL;
 }

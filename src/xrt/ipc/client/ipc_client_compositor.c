@@ -1,4 +1,5 @@
 // Copyright 2020, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -47,9 +48,6 @@
  *
  */
 
-//! Define to test the loopback allocator.
-#undef IPC_USE_LOOPBACK_IMAGE_ALLOCATOR
-
 /*!
  * Client proxy for an xrt_compositor_native implementation over IPC.
  * @implements xrt_compositor_native
@@ -79,11 +77,6 @@ struct ipc_client_compositor
 
 	//! To get better wake up in wait frame.
 	struct os_precise_sleeper sleeper;
-
-#ifdef IPC_USE_LOOPBACK_IMAGE_ALLOCATOR
-	//! To test image allocator.
-	struct xrt_image_native_allocator loopback_xina;
-#endif
 };
 
 /*!
@@ -177,7 +170,7 @@ ipc_compositor_swapchain_destroy(struct xrt_swapchain *xsc)
 	xret = ipc_call_swapchain_destroy(icc->ipc_c, ics->id);
 
 	// Can't return anything here, just continue.
-	IPC_CHK_ONLY_PRINT(icc->ipc_c, xret, "ipc_call_compositor_semaphore_destroy");
+	IPC_CHK_ONLY_PRINT(icc->ipc_c, xret, "ipc_call_swapchain_destroy");
 
 	free(xsc);
 }
@@ -288,6 +281,11 @@ swapchain_server_create(struct ipc_client_compositor *icc,
 	    &use_dedicated_allocation,    // out
 	    remote_handles,               // handles
 	    XRT_MAX_SWAPCHAIN_IMAGES);    // handles
+	if (xret == XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED) {
+		// Don't error print this, will spam CTS logs.
+		IPC_DEBUG(icc->ipc_c, "Got XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED");
+		return xret;
+	}
 	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_swapchain_create");
 
 	struct ipc_client_swapchain *ics = U_TYPED_CALLOC(struct ipc_client_swapchain);
@@ -345,7 +343,12 @@ swapchain_server_import(struct ipc_client_compositor *icc,
 	    handles,                      // handles
 	    image_count,                  // handles
 	    &id);                         // out
-	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_swapchain_create");
+	if (xret == XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED) {
+		// Don't error print this, not an error.
+		IPC_DEBUG(icc->ipc_c, "Got XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED");
+		return xret;
+	}
+	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_swapchain_import");
 
 	struct ipc_client_swapchain *ics = U_TYPED_CALLOC(struct ipc_client_swapchain);
 	ics->base.base.image_count = image_count;
@@ -758,7 +761,7 @@ ipc_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_
 	 * We are probably in a really bad state if we fail, at
 	 * least print out the error and continue as best we can.
 	 */
-	IPC_CHK_ONLY_PRINT(icc->ipc_c, xret, "ipc_call_compositor_layer_sync_with_semaphore");
+	IPC_CHK_ONLY_PRINT(icc->ipc_c, xret, "ipc_call_compositor_layer_sync");
 
 	// Reset.
 	icc->layers.layer_count = 0;
@@ -925,113 +928,6 @@ ipc_compositor_init(struct ipc_client_compositor *icc, struct xrt_compositor_nat
 
 /*
  *
- * Loopback image allocator.
- *
- */
-
-#ifdef IPC_USE_LOOPBACK_IMAGE_ALLOCATOR
-static inline xrt_result_t
-ipc_compositor_images_allocate(struct xrt_image_native_allocator *xina,
-                               const struct xrt_swapchain_create_info *xsci,
-                               size_t in_image_count,
-                               struct xrt_image_native *out_images)
-{
-	struct ipc_client_compositor *icc = container_of(xina, struct ipc_client_compositor, loopback_xina);
-
-	int remote_fds[IPC_MAX_SWAPCHAIN_FDS] = {0};
-	xrt_result_t xret;
-	uint32_t image_count;
-	uint32_t handle;
-	uint64_t size;
-
-	for (size_t i = 0; i < ARRAY_SIZE(remote_fds); i++) {
-		remote_fds[i] = -1;
-	}
-
-	for (size_t i = 0; i < in_image_count; i++) {
-		out_images[i].fd = -1;
-		out_images[i].size = 0;
-	}
-
-	xret = ipc_call_swapchain_create( //
-	    icc->ipc_c,                   // connection
-	    xsci,                         // in
-	    &handle,                      // out
-	    &image_count,                 // out
-	    &size,                        // out
-	    remote_fds,                   // fds
-	    IPC_MAX_SWAPCHAIN_FDS);       // fds
-	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_swapchain_create");
-
-	/*
-	 * It's okay to destroy it immediately, the native handles are
-	 * now owned by us and we keep the buffers alive that way.
-	 */
-	xret = ipc_call_swapchain_destroy(icc->ipc_c, handle);
-	assert(xret == XRT_SUCCESS);
-
-	// Clumsy way of handling this.
-	if (image_count < in_image_count) {
-		for (uint32_t k = 0; k < image_count && k < in_image_count; k++) {
-			/*
-			 * Overly-broad condition: we know that any fd not touched by
-			 * ipc_call_swapchain_create will be -1.
-			 */
-			if (remote_fds[k] >= 0) {
-				close(remote_fds[k]);
-				remote_fds[k] = -1;
-			}
-		}
-
-		return XRT_ERROR_IPC_FAILURE;
-	}
-
-	// Copy up to in_image_count, or image_count what ever is lowest.
-	uint32_t i = 0;
-	for (; i < image_count && i < in_image_count; i++) {
-		out_images[i].fd = remote_fds[i];
-		out_images[i].size = size;
-	}
-
-	// Close any fds we are not interested in.
-	for (; i < image_count; i++) {
-		/*
-		 * Overly-broad condition: we know that any fd not touched by
-		 * ipc_call_swapchain_create will be -1.
-		 */
-		if (remote_fds[i] >= 0) {
-			close(remote_fds[i]);
-			remote_fds[i] = -1;
-		}
-	}
-
-	return XRT_SUCCESS;
-}
-
-static inline xrt_result_t
-ipc_compositor_images_free(struct xrt_image_native_allocator *xina,
-                           size_t image_count,
-                           struct xrt_image_native *out_images)
-{
-	for (uint32_t i = 0; i < image_count; i++) {
-		close(out_images[i].fd);
-		out_images[i].fd = -1;
-		out_images[i].size = 0;
-	}
-
-	return XRT_SUCCESS;
-}
-
-static inline void
-ipc_compositor_images_destroy(struct xrt_image_native_allocator *xina)
-{
-	// Noop
-}
-#endif
-
-
-/*
- *
  * System compositor.
  *
  */
@@ -1047,6 +943,23 @@ ipc_syscomp_create_native_compositor(struct xrt_system_compositor *xsc,
 	IPC_ERROR(icc->ipc_c, "This function shouldn't be called!");
 
 	return XRT_ERROR_IPC_FAILURE;
+}
+
+xrt_result_t
+ipc_syscomp_get_view_config(struct xrt_system_compositor *xsc,
+                            enum xrt_view_type view_type,
+                            struct xrt_view_config *out_view_config)
+{
+	struct ipc_client_compositor *icc = container_of(xsc, struct ipc_client_compositor, system);
+	xrt_result_t xret;
+
+	xret = ipc_call_system_compositor_get_view_config( //
+	    icc->ipc_c,                                    // ipc_c
+	    view_type,                                     // view_type
+	    out_view_config);                              // out_view_config
+	IPC_CHK_AND_RET(icc->ipc_c, xret, "ipc_call_system_compositor_get_view_config");
+
+	return XRT_SUCCESS;
 }
 
 void
@@ -1110,20 +1023,10 @@ ipc_client_create_system_compositor(struct ipc_connection *ipc_c,
 	struct ipc_client_compositor *c = U_TYPED_CALLOC(struct ipc_client_compositor);
 
 	c->system.create_native_compositor = ipc_syscomp_create_native_compositor;
+	c->system.get_view_config = ipc_syscomp_get_view_config;
 	c->system.destroy = ipc_syscomp_destroy;
 	c->ipc_c = ipc_c;
 	c->xina = xina;
-
-
-#ifdef IPC_USE_LOOPBACK_IMAGE_ALLOCATOR
-	c->loopback_xina.images_allocate = ipc_compositor_images_allocate;
-	c->loopback_xina.images_free = ipc_compositor_images_free;
-	c->loopback_xina.destroy = ipc_compositor_images_destroy;
-
-	if (c->xina == NULL) {
-		c->xina = &c->loopback_xina;
-	}
-#endif
 
 	// Fetch info from the system compositor.
 	get_system_info(c, &c->system.info);

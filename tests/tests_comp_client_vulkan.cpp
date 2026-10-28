@@ -1,4 +1,5 @@
 // Copyright 2022-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -20,7 +21,7 @@
 #include "catch_amalgamated.hpp"
 #include "util/comp_vulkan.h"
 #include "util/u_logging.h"
-#include "util/u_string_list.h"
+#include "util/u_extension_list.h"
 #include "vk/vk_helpers.h"
 #include "xrt/xrt_compositor.h"
 #include <xrt/xrt_deleters.hpp>
@@ -85,21 +86,20 @@ static const char *required_device_extensions[] = {
 
 
 using unique_string_list =
-    std::unique_ptr<u_string_list, xrt::deleters::ptr_ptr_deleter<u_string_list, &u_string_list_destroy>>;
+    std::unique_ptr<u_extension_list, xrt::deleters::ptr_ptr_deleter<u_extension_list, &u_extension_list_destroy>>;
 
 static void
-xrt_comp_vk_destroy(struct xrt_compositor_vk **ptr_xcvk)
+xrt_comp_vk_destroy(struct xrt_compositor **ptr_xc)
 {
-	if (!ptr_xcvk) {
+	if (!ptr_xc) {
 		return;
 	}
-	xrt_compositor *xc = &(*ptr_xcvk)->base;
+	xrt_compositor *xc = *ptr_xc;
 	xrt_comp_destroy(&xc);
 }
 
 using unique_compositor_vk =
-    std::unique_ptr<struct xrt_compositor_vk,
-                    xrt::deleters::ptr_ptr_deleter<struct xrt_compositor_vk, &xrt_comp_vk_destroy>>;
+    std::unique_ptr<struct xrt_compositor, xrt::deleters::ptr_ptr_deleter<struct xrt_compositor, &xrt_comp_vk_destroy>>;
 
 TEST_CASE("client_compositor", "[.][needgpu]")
 {
@@ -108,35 +108,39 @@ TEST_CASE("client_compositor", "[.][needgpu]")
 
 	// every backend needs at least the common extensions
 	unique_string_list required_instance_ext_list{
-	    u_string_list_create_from_array(instance_extensions_common, ARRAY_SIZE(instance_extensions_common))};
+	    u_extension_list_create_from_array(instance_extensions_common, ARRAY_SIZE(instance_extensions_common))};
 
-	unique_string_list optional_instance_ext_list{u_string_list_create()};
+	unique_string_list optional_instance_ext_list{u_extension_list_create()};
 
 	unique_string_list required_device_extension_list{
-	    u_string_list_create_from_array(required_device_extensions, ARRAY_SIZE(required_device_extensions))};
+	    u_extension_list_create_from_array(required_device_extensions, ARRAY_SIZE(required_device_extensions))};
 
-	unique_string_list optional_device_extension_list{u_string_list_create()};
+	unique_string_list optional_device_extension_list{u_extension_list_create()};
 
-	comp_vulkan_arguments args{VK_MAKE_VERSION(1, 0, 0),
-	                           vkGetInstanceProcAddr,
-	                           required_instance_ext_list.get(),
-	                           optional_instance_ext_list.get(),
-	                           required_device_extension_list.get(),
-	                           optional_device_extension_list.get(),
-	                           U_LOGGING_TRACE,
-	                           false /* only_compute_queue */,
-	                           true /*timeline_semaphore*/,
-	                           -1,
-	                           -1};
+	comp_vulkan_arguments args{
+	    VK_MAKE_VERSION(1, 0, 0),
+	    vkGetInstanceProcAddr,
+	    required_instance_ext_list.get(),
+	    optional_instance_ext_list.get(),
+	    required_device_extension_list.get(),
+	    optional_device_extension_list.get(),
+	    U_LOGGING_TRACE,
+	    false /* only_compute_queue */,
+	    true /*timeline_semaphore*/,
+	    -1,
+	    false,
+	    xrt_uuid_t{},
+	    -1,
+	};
 	vk_bundle vk_bundle_storage{};
 	vk_bundle *vk = &vk_bundle_storage;
 	comp_vulkan_results results{};
 	REQUIRE(comp_vulkan_init_bundle(vk, &args, &results));
-	struct xrt_compositor_vk *xcvk = xrt_gfx_vk_provider_create( //
-	    xcn,                                                     //
-	    vk->instance,                                            //
-	    vkGetInstanceProcAddr,                                   //
-	    vk->physical_device,                                     //
+	struct xrt_compositor *xcvk = xrt_gfx_vk_provider_create( //
+	    xcn,                                                  //
+	    vk->instance,                                         //
+	    vkGetInstanceProcAddr,                                //
+	    vk->physical_device,                                  //
 	    vk->device,
 #if defined(XRT_GRAPHICS_SYNC_HANDLE_IS_FD)          //
 	    vk->external.fence_sync_fd,              //
@@ -152,9 +156,9 @@ TEST_CASE("client_compositor", "[.][needgpu]")
 	    vk->has_KHR_image_format_list, // image_format_list_enabled
 	    false,                         // debug_utils_enabled
 	    false,                         // renderdoc_enabled
-	    vk->queue_family_index,        //
-	    vk->queue_index);
-	struct xrt_compositor *xc = &xcvk->base;
+	    vk->main_queue->family_index,  //
+	    vk->main_queue->index);
+	struct xrt_compositor *xc = xcvk;
 
 	SECTION("CreateSwapchain calls native create")
 	{

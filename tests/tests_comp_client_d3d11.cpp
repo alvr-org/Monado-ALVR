@@ -35,8 +35,7 @@ TEST_CASE("client_compositor", "[.][needgpu]")
 	wil::com_ptr<ID3D11Device> device;
 	wil::com_ptr<ID3D11DeviceContext> context;
 	std::tie(device, context) = createDevice();
-	struct xrt_compositor_d3d11 *xcd3d = client_d3d11_compositor_create(xcn, device.get());
-	struct xrt_compositor *xc = &xcd3d->base;
+	struct xrt_compositor *xc = client_d3d11_compositor_create(xcn, device.get());
 
 	SECTION("Swapchain create and import")
 	{

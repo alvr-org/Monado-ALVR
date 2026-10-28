@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Test for m_vec3_angle.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  */
 #include "xrt/xrt_defines.h"
 #include <math/m_vec3.h>

@@ -10,9 +10,10 @@
 
 #pragma once
 
-#include <asm/byteorder.h>
-#include <stdint.h>
 #include "os/os_hid.h"
+#include "xrt/xrt_byte_order.h"
+
+#include <stdint.h>
 
 #define VIVE_CONTROLLER_BUTTON_REPORT_ID 0x01
 

@@ -19,6 +19,10 @@ extern "C" {
 struct u_pacing_app_factory;
 
 
+typedef xrt_result_t (*comp_multi_view_config_callback_func_t)(struct xrt_compositor_native *xcn,
+                                                               enum xrt_view_type view_type,
+                                                               struct xrt_view_config *out_view_config);
+
 /*!
  * Create a "system compositor" that can handle multiple clients (each
  * through a "multi compositor") and that drives a single native compositor.
@@ -36,6 +40,7 @@ struct u_pacing_app_factory;
 xrt_result_t
 comp_multi_create_system_compositor(struct xrt_compositor_native *xcn,
                                     struct u_pacing_app_factory *upaf,
+                                    comp_multi_view_config_callback_func_t get_view_config_callback,
                                     const struct xrt_system_compositor_info *xsci,
                                     bool do_warm_start,
                                     struct xrt_system_compositor **out_xsysc);

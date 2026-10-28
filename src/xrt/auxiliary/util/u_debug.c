@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -81,7 +82,7 @@ get_option_raw(char *chars, size_t char_count, const char *name)
 	return chars;
 }
 
-#elif defined XRT_OS_LINUX
+#elif defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 
 static const char *
 get_option_raw(char *chars, size_t char_count, const char *name)

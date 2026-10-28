@@ -1,0 +1,10 @@
+<resources>
+    <!--
+        Copyright 2025, Collabora, Ltd.
+        SPDX-License-Identifier: BSL-1.0
+    -->
+
+    <string name="qr">Cardboard QR scan</string>
+    <string name="look_for_the_qr_code_on_your_cardboard_headset">Look for the QR code on your Cardboard headset</string>
+
+</resources>

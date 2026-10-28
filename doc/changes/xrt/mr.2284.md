@@ -1,4 +1,0 @@
----
-- mr.1655
----
-Add: Introduce `XRT_ERROR_UNSUPPORTED_SPACE_TYPE`, `XRT_ERROR_ANDROID`

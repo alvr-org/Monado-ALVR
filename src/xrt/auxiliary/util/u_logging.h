@@ -1,4 +1,5 @@
-// Copyright 2020-2024, Collabora, Ltd.
+// Copyright 2020-2025, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,6 +13,7 @@
 #pragma once
 
 #include "xrt/xrt_compiler.h"
+#include "xrt/xrt_results.h"
 
 #include "util/u_pretty_print.h"
 
@@ -67,6 +69,17 @@ typedef void (*u_log_sink_func_t)(const char *file,
                                   const char *format,
                                   va_list args,
                                   void *data);
+
+/*!
+ * Function typedef for filtering log messages.
+ *
+ * @param file   Source file name associated with a message.
+ * @param line   Source file line associated with a message.
+ * @param func   Function name associated with a message.
+ * @param level  Message level: used for formatting or forwarding to native log functions.
+ * @return true if message should be logged, false to filter it out.
+ */
+typedef bool (*u_log_filter_func_t)(const char *file, int line, const char *func, enum u_logging_level level);
 
 /*!
  * For places where you really want printf, prints a new-line.
@@ -176,12 +189,109 @@ typedef void (*u_log_sink_func_t)(const char *file,
 		}                                                                                                      \
 	} while (false)
 
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then returns @p XRET.
+ *
+ * @param COND_LEVEL Log level used for @p cond_level, in logging helpers.
+ * @param XRET       The @p xrt_result_t to check.
+ * @param FUNC_STR   String literal with the function name, used for logging.
+ */
+#define U_LOG_CHK_AND_RET(COND_LEVEL, XRET, FUNC_STR)                                                                  \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			u_log_print_result(COND_LEVEL, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                  \
+			return _ret;                                                                                   \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then gotos @p GOTO.
+ *
+ * @param COND_LEVEL Log level used for @p cond_level, in logging helpers.
+ * @param XRET       The @p xrt_result_t to check.
+ * @param FUNC_STR   String literal with the function name, used for logging.
+ * @param GOTO      Goto label to jump to on error.
+ */
+#define U_LOG_CHK_WITH_GOTO(COND_LEVEL, XRET, FUNC_STR, GOTO)                                                          \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			u_log_print_result(COND_LEVEL, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                  \
+			goto GOTO;                                                                                     \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then returns @p RET.
+ *
+ * @param COND_LEVEL Log level used for @p cond_level, in logging helpers.
+ * @param XRET       The @p xrt_result_t to check.
+ * @param FUNC_STR   String literal with the function name, used for logging.
+ * @param RET       The value that is returned on error.
+ */
+#define U_LOG_CHK_WITH_RET(COND_LEVEL, XRET, FUNC_STR, RET)                                                            \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			u_log_print_result(COND_LEVEL, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                  \
+			return RET;                                                                                    \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, it only prints and does nothing else.
+ *
+ * @param COND_LEVEL Log level used for @p cond_level, in logging helpers.
+ * @param XRET       The @p xrt_result_t to check.
+ * @param FUNC_STR   String literal with the function name, used for logging.
+ */
+#define U_LOG_CHK_ONLY_PRINT(COND_LEVEL, XRET, FUNC_STR)                                                               \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			u_log_print_result(COND_LEVEL, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                  \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
+ * @p FUNC_STR string has failed, then it will always return the value.
+ *
+ * @param COND_LEVEL Log level used for @p cond_level, in logging helpers.
+ * @param XRET       The @p xrt_result_t to check and always return.
+ * @param FUNC_STR   String literal with the function name, used for logging.
+ */
+#define U_LOG_CHK_ALWAYS_RET(COND_LEVEL, XRET, FUNC_STR)                                                               \
+	do {                                                                                                           \
+		xrt_result_t _ret = XRET;                                                                              \
+		if (_ret != XRT_SUCCESS) {                                                                             \
+			u_log_print_result(COND_LEVEL, __FILE__, __LINE__, __func__, _ret, FUNC_STR);                  \
+		}                                                                                                      \
+		return _ret;                                                                                           \
+	} while (false)
 
 /*!
  * Returns the global logging level, subsystems own logging level take precedence.
  */
 enum u_logging_level
 u_log_get_global_level(void);
+
+/*!
+ * Sets the output file for the logging instead of stderr, this function is
+ * externally synchronized with ALL other logging functions. Which means do not
+ * call any other logging function from different threads during a call to this
+ * function. Also to avoid leaks call this function with NULL to close the
+ * internally managed FILE object.
+ *
+ * WANRING THIS FUNCTION IS EXTERNALLY SYNCHRONIZED WITH ALL OTHER FUNCTIONS.
+ */
+void
+u_log_set_output_file(const char *filename);
 
 /*!
  * @brief Main non-device-related log implementation function: do not call directly, use a macro that wraps it.
@@ -271,6 +381,34 @@ u_log_xdev_hex(const char *file,
  */
 void
 u_log_set_sink(u_log_sink_func_t func, void *data);
+
+/*!
+ * Helper to print the results of called functions that return xret results, if
+ * the result is @p XRT_SUCCESS will log with info, otherwise error. Will also
+ * check if logging should be done with @p cond_level.
+ *
+ * @param cond_level What the current logging level is.
+ * @param file       Callee site (__FILE__).
+ * @param line       Callee site (__LINE__).
+ * @param calling_fn Callee site (__func__).
+ * @param xret       Result from the called function.
+ * @param called_fn  Which function that this return is from.
+ */
+void
+u_log_print_result(enum u_logging_level cond_level,
+                   const char *file,
+                   int line,
+                   const char *calling_fn,
+                   xrt_result_t xret,
+                   const char *called_fn);
+
+/*!
+ * @brief Add function to set the filter
+ *
+ * @param filter Filter function to set
+ */
+void
+u_log_set_filter(u_log_filter_func_t filter);
 
 /*!
  * @}
@@ -389,6 +527,14 @@ u_log_set_sink(u_log_sink_func_t func, void *data);
 		u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);                                                 \
 		u_pp_xrt_input_name(dg, name);                                                                         \
 		U_LOG_XDEV_IFL_E(xdev, cond_level, "Unsupported input: %s", sink.buffer);                              \
+	} while (false);
+
+#define U_LOG_XDEV_UNSUPPORTED_OUTPUT(xdev, cond_level, name)                                                          \
+	do {                                                                                                           \
+		struct u_pp_sink_stack_only sink;                                                                      \
+		u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);                                                 \
+		u_pp_xrt_output_name(dg, name);                                                                        \
+		U_LOG_XDEV_IFL_E(xdev, cond_level, "Unsupported output: %s", sink.buffer);                             \
 	} while (false);
 
 /*!

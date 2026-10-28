@@ -4,7 +4,7 @@
  * @file
  * @brief  OpenGL sink functions.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup gui
  */
 
@@ -142,6 +142,7 @@ gui_ogl_sink_update(struct gui_ogl_texture *tex)
 	// Too large of stride for GLint.
 	if (frame->stride > INT_MAX) {
 		U_LOG_E("Stride unreasonably large!");
+		xrt_frame_reference(&frame, NULL);
 		return;
 	}
 

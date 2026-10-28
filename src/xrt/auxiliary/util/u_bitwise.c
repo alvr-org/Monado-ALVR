@@ -9,7 +9,7 @@
  */
 #include "util/u_bitwise.h"
 
-#include <stdio.h>
+#include <assert.h>
 #include <limits.h>
 
 int
@@ -33,8 +33,11 @@ get_bits(const unsigned char *b, int start, int num)
 int
 sign_extend_13(uint32_t i)
 {
+	assert((i & ~UINT32_C(0x1FFF)) == 0);
 
-#define INCOMING_INT_WIDTH (13)
-#define ADJUSTMENT ((sizeof(i) * CHAR_BIT) - INCOMING_INT_WIDTH)
-	return ((int)(i << ADJUSTMENT)) >> ADJUSTMENT;
+	struct
+	{
+		int value : 13;
+	} data = {i & 0x1FFF};
+	return data.value;
 }

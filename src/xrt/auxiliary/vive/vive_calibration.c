@@ -4,7 +4,7 @@
  * @file
  * @brief  Vive calibration getters.
  * @author Mateo de Mayo <mateo.demayo@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_vive
  */
 
@@ -41,7 +41,7 @@ vive_get_camera_calibration(const struct vive_config *d, int cam_index)
 {
 	struct t_camera_calibration calib;
 
-	const struct index_camera *camera = &d->cameras.view[cam_index];
+	const struct vive_index_camera *camera = &d->cameras.view[cam_index];
 	calib.image_size_pixels.w = camera->intrinsics.image_size_pixels.w;
 	calib.image_size_pixels.h = camera->intrinsics.image_size_pixels.h;
 

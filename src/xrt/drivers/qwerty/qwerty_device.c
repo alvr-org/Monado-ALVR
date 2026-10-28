@@ -59,27 +59,6 @@
 #define QWERTY_WARN(qd, ...) U_LOG_XDEV_IFL_W(&qd->base, qd->sys->log_level, __VA_ARGS__)
 #define QWERTY_ERROR(qd, ...) U_LOG_XDEV_IFL_E(&qd->base, qd->sys->log_level, __VA_ARGS__)
 
-static struct xrt_binding_input_pair simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_WMR_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_WMR_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_WMR_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_WMR_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair simple_outputs[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_WMR_HAPTIC},
-};
-
-static struct xrt_binding_profile binding_profiles[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs,
-        .input_count = ARRAY_SIZE(simple_inputs),
-        .outputs = simple_outputs,
-        .output_count = ARRAY_SIZE(simple_outputs),
-    },
-};
-
 static void
 qwerty_system_remove(struct qwerty_system *qs, struct qwerty_device *qd);
 
@@ -177,8 +156,8 @@ qwerty_update_inputs(struct xrt_device *xd)
 	return XRT_SUCCESS;
 }
 
-static void
-qwerty_set_output(struct xrt_device *xd, enum xrt_output_name name, const union xrt_output_value *value)
+static xrt_result_t
+qwerty_set_output(struct xrt_device *xd, enum xrt_output_name name, const struct xrt_output_value *value)
 {
 	struct qwerty_device *qd = qwerty_device(xd);
 	float frequency = value->vibration.frequency;
@@ -190,6 +169,8 @@ qwerty_set_output(struct xrt_device *xd, enum xrt_output_name name, const union 
 		            "\tfrequency=%.2f amplitude=%.2f duration=%" PRId64,
 		            xd->str, frequency, amplitude, duration);
 	}
+
+	return XRT_SUCCESS;
 }
 
 static xrt_result_t
@@ -364,8 +345,11 @@ qwerty_controller_create(bool is_left, struct qwerty_hmd *qhmd)
 	xd->inputs[QWERTY_AIM].name = XRT_INPUT_WMR_AIM_POSE;
 	xd->outputs[QWERTY_VIBRATION].name = XRT_OUTPUT_NAME_WMR_HAPTIC;
 
-	xd->binding_profiles = binding_profiles;
-	xd->binding_profile_count = ARRAY_SIZE(binding_profiles);
+	/*
+	 * @todo Restore the ability to test the Logitech MX Ink controller from qwerty.
+	 * The legacy binding profile that mapped MX Ink onto this WMR controller was
+	 * removed with xrt_binding_profile.
+	 */
 
 	xd->update_inputs = qwerty_update_inputs;
 	xd->get_tracked_pose = qwerty_get_tracked_pose;

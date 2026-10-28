@@ -35,6 +35,7 @@ XRT_MAYBE_UNUSED static const char *NV_DIRECT_ALLOWLIST[] = {
     "Valve Corporation Index HMD", // Valve Index
     "Seiko/Epson SEC144A",         // Samsung Odyssey+
     "HPN",                         // Reverb G2
+    "Bigscreen, Inc. Beyond",      // Bigscreen Beyond
     "PNP",                         // NorthStar (Generic)
 };
 

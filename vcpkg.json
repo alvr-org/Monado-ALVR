@@ -1,7 +1,7 @@
 {
     "name": "monado",
     "homepage": "https://monado.freedesktop.org",
-    "version-string": "24.0",
+    "version-string": "25.1",
     "dependencies": [
         {
             "name": "wil",
@@ -49,5 +49,6 @@
                 "opencv"
             ]
         }
-    }
+    },
+    "builtin-baseline": "4334d8b4c8916018600212ab4dd4bbdc343065d1"
 }

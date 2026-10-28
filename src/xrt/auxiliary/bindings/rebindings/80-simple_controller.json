@@ -1,0 +1,248 @@
+{
+	"simple_to_index_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/valve/index_controller",
+		"helpers": [
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/output"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": "/user/hand/left/input/b",
+			"/user/hand/left/input/menu/click": "/user/hand/left/input/b/click",
+			"/user/hand/left/input/select": "/user/hand/left/input/trigger/value",
+			"/user/hand/left/input/select/click": "/user/hand/left/input/trigger/value",
+			"/user/hand/right/input/menu": "/user/hand/right/input/b",
+			"/user/hand/right/input/menu/click": "/user/hand/right/input/b/click",
+			"/user/hand/right/input/select": "/user/hand/right/input/trigger/value",
+			"/user/hand/right/input/select/click": "/user/hand/right/input/trigger/value"
+		}
+	},
+	"simple_to_vive_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/htc/vive_controller",
+		"helpers": [
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/output"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/left/input/select": "/user/hand/left/input/trigger/value",
+			"/user/hand/left/input/select/click": "/user/hand/left/input/trigger/value",
+			"/user/hand/right/input/menu": true,
+			"/user/hand/right/input/menu/click": true,
+			"/user/hand/right/input/select": "/user/hand/right/input/trigger/value",
+			"/user/hand/right/input/select/click": "/user/hand/right/input/trigger/value"
+		}
+	},
+	"simple_to_daydream_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/google/daydream_controller",
+		"helpers": ["/helper/controller/identity/poses"],
+		"bindings": {
+			"/user/hand/left/input/menu": false,
+			"/user/hand/left/input/menu/click": false,
+			"/user/hand/left/input/select": true,
+			"/user/hand/left/input/select/click": true,
+			"/user/hand/left/output/haptic": false,
+			"/user/hand/right/input/menu": false,
+			"/user/hand/right/input/menu/click": false,
+			"/user/hand/right/input/select": true,
+			"/user/hand/right/input/select/click": true,
+			"/user/hand/right/output/haptic": false
+		}
+	},
+	"simple_to_mixed_reality_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/hp/mixed_reality_controller",
+		"helpers": ["/helper/controller/simple/to_menu_controller"]
+	},
+	"simple_to_touch_controller_rift_cv1": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_rift_cv1",
+		"helpers": ["/helper/controller/simple/to_left_menu_controller"]
+	},
+	"simple_to_motion_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/microsoft/motion_controller",
+		"helpers": ["/helper/controller/simple/to_menu_controller"]
+	},
+	"simple_to_ml2_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/ml/ml2_controller",
+		"helpers": ["/helper/controller/simple/to_menu_controller"]
+	},
+	"simple_to_ball_on_a_stick_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/mndx/ball_on_a_stick_controller",
+		"helpers": ["/helper/controller/simple/to_menu_controller"]
+	},
+	"simple_to_flipvr": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/mndx/flipvr",
+		"helpers": ["/helper/controller/simple/to_controller"],
+		"bindings": {
+			"/user/hand/left/input/menu": false,
+			"/user/hand/left/input/menu/click": false,
+			"/user/hand/right/input/menu": "/user/hand/right/input/b",
+			"/user/hand/right/input/menu/click": "/user/hand/right/input/b/click"
+		}
+	},
+	"simple_to_hydra": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/mndx/hydra",
+		"helpers": [
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_to_trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": false,
+			"/user/hand/left/input/menu/click": false,
+			"/user/hand/left/output/haptic": false,
+			"/user/hand/right/input/menu": false,
+			"/user/hand/right/input/menu/click": false,
+			"/user/hand/right/output/haptic": false
+		}
+	},
+	"simple_to_pssense_controller_mndx": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/mndx/pssense_controller_mndx",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_identifier_to_trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": "/user/hand/left/input/share_mndx",
+			"/user/hand/left/input/menu/click": "/user/hand/left/input/share_mndx/click",
+			"/user/hand/right/input/menu": "/user/hand/right/input/options_mndx",
+			"/user/hand/right/input/menu/click": "/user/hand/right/input/options_mndx/click"
+		}
+	},
+	"simple_to_touch_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/oculus/touch_controller",
+		"helpers": ["/helper/controller/simple/to_left_menu_controller"]
+	},
+	"simple_to_odyssey_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/samsung/odyssey_controller",
+		"helpers": ["/helper/controller/simple/to_menu_controller"]
+	},
+	"simple_to_touch_plus_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/meta/touch_plus_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_identifier_to_trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/right/input/menu": false,
+			"/user/hand/right/input/menu/click": false
+		}
+	},
+	"simple_to_touch_pro_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/meta/touch_pro_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_identifier_to_trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/right/input/menu": false,
+			"/user/hand/right/input/menu/click": false
+		}
+	},
+	"simple_to_touch_controller_quest_1_rift_s": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_quest_1_rift_s",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_identifier_to_trigger",
+			"/helper/controller/simple/right_menu_to_system"
+		]
+	},
+	"simple_to_touch_controller_quest_2": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_quest_2",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_identifier_to_trigger",
+			"/helper/controller/simple/right_menu_to_system"
+		]
+	},
+	"simple_to_pico4_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/bytedance/pico4_controller",
+		"helpers": [
+			"/helper/controller/identity/menu",
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/simple/select_identifier_to_trigger"
+		]
+	},
+	"simple_to_generic_controller": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/khr/generic_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/transform/grip_surface_to_palm",
+			"/helper/controller/simple/select_identifier_to_trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": "/user/hand/left/input/primary",
+			"/user/hand/left/input/menu/click": "/user/hand/left/input/primary/click",
+			"/user/hand/right/input/menu": "/user/hand/right/input/primary",
+			"/user/hand/right/input/menu/click": "/user/hand/right/input/primary/click"
+		}
+	},
+	"simple_to_hand_interaction_ext": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/ext/hand_interaction_ext",
+		"helpers": [
+			"/helper/controller/no/output",
+			"/helper/controller/identity/poses"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": false,
+			"/user/hand/left/input/menu/click": false,
+			"/user/hand/left/input/select": "/user/hand/left/input/pinch_ext/value",
+			"/user/hand/left/input/select/click": "/user/hand/left/input/pinch_ext/value",
+			"/user/hand/right/input/menu": false,
+			"/user/hand/right/input/menu/click": false,
+			"/user/hand/right/input/select": "/user/hand/right/input/pinch_ext/value",
+			"/user/hand/right/input/select/click": "/user/hand/right/input/pinch_ext/value"
+		}
+	},
+	"simple_to_mx_ink_stylus_logitech": {
+		"source_profile": "/interaction_profiles/khr/simple_controller",
+		"target_profile": "/interaction_profiles/logitech/mx_ink_stylus_logitech",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": "/user/hand/left/input/cluster_front_logitech",
+			"/user/hand/left/input/menu/click": "/user/hand/left/input/cluster_front_logitech/click",
+			"/user/hand/left/input/palm_ext": "/user/hand/left/input/grip_surface",
+			"/user/hand/left/input/palm_ext/pose": "/user/hand/left/input/grip_surface/pose",
+			"/user/hand/left/input/select": "/user/hand/left/input/tip_logitech/force",
+			"/user/hand/left/input/select/click": "/user/hand/left/input/tip_logitech/force",
+			"/user/hand/right/input/menu": "/user/hand/right/input/cluster_front_logitech",
+			"/user/hand/right/input/menu/click": "/user/hand/right/input/cluster_front_logitech/click",
+			"/user/hand/right/input/palm_ext": "/user/hand/right/input/grip_surface",
+			"/user/hand/right/input/palm_ext/pose": "/user/hand/right/input/grip_surface/pose",
+			"/user/hand/right/input/select": "/user/hand/right/input/tip_logitech/force",
+			"/user/hand/right/input/select/click": "/user/hand/right/input/tip_logitech/force"
+		}
+	}
+}

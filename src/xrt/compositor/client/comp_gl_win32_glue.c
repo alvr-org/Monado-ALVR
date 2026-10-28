@@ -16,7 +16,7 @@
 #include "client/comp_gl_win32_client.h"
 
 
-struct xrt_compositor_gl *
+struct xrt_compositor *
 xrt_gfx_provider_create_gl_win32(struct xrt_compositor_native *xcn, void *hDC, void *hGLRC)
 {
 	struct client_gl_win32_compositor *xcc = client_gl_win32_compositor_create(xcn, hDC, hGLRC);

@@ -8,6 +8,7 @@
 # include <dlfcn.h>
 # include <unistd.h>
 # include <tuple>
+# include <stdlib.h>
 #endif
 
 // External Dependencies
@@ -16,6 +17,7 @@
 // Standard Dependencies
 #include <atomic>
 #include <string>
+#include <vector>
 
 // Local Dependencies
 #include "jnipp.h"
@@ -43,6 +45,7 @@ namespace jni
         ScopedEnv() noexcept : _vm(nullptr), _env(nullptr), _attached(false) {}
         ~ScopedEnv();
 
+        // Caution - throws if VM is nullptr!
         void init(JavaVM* vm);
         JNIEnv* get() const noexcept { return _env; }
 
@@ -129,9 +132,9 @@ namespace jni
     /**
         Convert from a UTF-32 string to a UTF-16 Java string.
      */
-    std::basic_string<jchar> toJString(const wchar_t* str, size_t length)
+    std::vector<jchar> toJString(const wchar_t* str, size_t length)
     {
-        std::basic_string<jchar> result;
+        std::vector<jchar> result;
 
         result.reserve(length * 2);    // Worst case scenario.
 
@@ -144,11 +147,11 @@ namespace jni
                 ch -= uint32_t(0x10000);
 
                 // Add the first of the two-segment character.
-                result += jchar(0xD800 + (ch >> 10));
+                result.push_back(jchar(0xD800 + (ch >> 10)));
                 ch = wchar_t(0xDC00) + (ch & 0x03FF);
             }
 
-            result += jchar(ch);
+            result.push_back(jchar(ch));
         }
 
         return result;
@@ -156,34 +159,40 @@ namespace jni
 
 #endif // _WIN32
 
-    static bool isEnvChanged(JavaVM* vm, ScopedEnv& threadLocalEnv) {
-        if (vm == nullptr)
-	{
-            return false;
-        }
-        JNIEnv *curEnv = nullptr;
-        getEnv(vm, &curEnv);
-        return curEnv != threadLocalEnv.get();
-    }
-
-
-    JNIEnv* env()
+    static ScopedEnv &scopedEnvInstance() noexcept
     {
         static thread_local ScopedEnv env;
+        return env;
+    }
 
-        if (env.get() != nullptr && (!isAttached(javaVm) || isEnvChanged(javaVm, env)))
+    // may return nullptr, beware!
+    JNIEnv *env_noexcept() noexcept
+    {
+        ScopedEnv& env = scopedEnvInstance();
+        if (env.get() != nullptr && !isAttached(javaVm))
         {
             // we got detached, so clear it.
             // will be re-populated from static javaVm below.
             env = ScopedEnv{};
         }
 
-        if (env.get() == nullptr)
+        if (env.get() == nullptr && javaVm != nullptr)
         {
             env.init(javaVm);
         }
 
         return env.get();
+    }
+
+    JNIEnv* env()
+    {
+        JNIEnv *ret = env_noexcept();
+        if (ret == nullptr)
+        {
+            throw InitializationException("JNI not initialized");
+        }
+
+        return ret;
     }
 
     static jclass findClass(const char* name)
@@ -317,10 +326,9 @@ namespace jni
 
     Object::~Object() noexcept
     {
-        JNIEnv* env;
-        try {
-            env = jni::env();
-        } catch (const jni::InitializationException &) {
+        JNIEnv* env = jni::env_noexcept();
+        if (env == nullptr)
+        {
             // Better be empty. Cannot do anything useful.
             return;
         }
@@ -482,6 +490,13 @@ namespace jni
         return Object(result, DeleteLocalInput);
     }
 
+    jarray Object::callMethod(method_t method, internal::value_t* args, internal::ReturnTypeWrapper<jarray> const&) const
+    {
+        auto result = env()->CallObjectMethodA(_handle, method, (jvalue*) args);
+        handleJavaExceptions();
+        return (jarray)result;
+    }
+
     byte_t Object::getFieldValue(field_t field, internal::ReturnTypeWrapper<byte_t> const&) const
     {
         return env()->GetByteField(_handle, field);
@@ -584,7 +599,7 @@ namespace jni
         jobject handle = env->NewString((const jchar*) value.c_str(), jsize(value.length()));
 #else
         auto jstr = toJString(value.c_str(), value.length());
-        jobject handle = env->NewString(jstr.c_str(), jsize(jstr.length()));
+        jobject handle = env->NewString(jstr.data(), jsize(jstr.size()));
 #endif
         env->SetObjectField(_handle, field, handle);
         env->DeleteLocalRef(handle);
@@ -597,7 +612,7 @@ namespace jni
         jobject handle = env->NewString((const jchar*) value, jsize(std::wcslen(value)));
 #else
         auto jstr = toJString(value, std::wcslen(value));
-        jobject handle = env->NewString(jstr.c_str(), jsize(jstr.length()));
+        jobject handle = env->NewString(jstr.data(), jsize(jstr.size()));
 #endif
         env->SetObjectField(_handle, field, handle);
         env->DeleteLocalRef(handle);
@@ -651,7 +666,7 @@ namespace jni
         return Class(getClass(), Temporary).getField(name, signature);
     }
 
-    jobject Object::makeLocalReference() const 
+    jobject Object::makeLocalReference() const
     {
         if (isNull())
             return nullptr;
@@ -881,7 +896,7 @@ namespace jni
         jobject handle = env->NewString((const jchar*) value.c_str(), jsize(value.length()));
 #else
         auto jstr = toJString(value.c_str(), value.length());
-        jobject handle = env->NewString(jstr.c_str(), jsize(jstr.length()));
+        jobject handle = env->NewString(jstr.data(), jsize(jstr.size()));
 #endif
         env->SetStaticObjectField(getHandle(), field, handle);
         env->DeleteLocalRef(handle);
@@ -1287,7 +1302,7 @@ namespace jni
         jobject jvalue = env->NewString((const jchar*) value.c_str(), jsize(value.length()));
 #else
         auto jstr = toJString(value.c_str(), value.length());
-        jobject jvalue = env->NewString(jstr.c_str(), jsize(jstr.length()));
+        jobject jvalue = env->NewString(jstr.data(), jsize(jstr.size()));
 #endif
         env->SetObjectArrayElement(jobjectArray(getHandle()), index, jvalue);
         env->DeleteLocalRef(jvalue);
@@ -1532,7 +1547,7 @@ namespace jni
     JNIEnv* env();
 
 #ifndef _WIN32
-    extern std::basic_string<jchar> toJString(const wchar_t* str, size_t length);
+    extern std::vector<jchar> toJString(const wchar_t* str, size_t length);
 #endif
 
     namespace internal
@@ -1613,13 +1628,13 @@ namespace jni
         void valueArg(value_t* v, const std::wstring& a)
         {
             auto jstr = toJString(a.c_str(), a.length());
-            ((jvalue*) v)->l = env()->NewString(jstr.c_str(), jsize(jstr.length()));
+            ((jvalue*) v)->l = env()->NewString(jstr.data(), jsize(jstr.size()));
         }
 
         void valueArg(value_t* v, const wchar_t* a)
         {
             auto jstr = toJString(a, std::wcslen(a));
-            ((jvalue*) v)->l = env()->NewString(jstr.c_str(), jsize(jstr.length()));
+            ((jvalue*) v)->l = env()->NewString(jstr.data(), jsize(jstr.size()));
         }
 
 #endif

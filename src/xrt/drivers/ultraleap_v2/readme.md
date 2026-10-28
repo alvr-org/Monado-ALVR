@@ -1,7 +1,7 @@
 # About Monado's UltraLeap driver
 
 <!--
-Copyright 2021, Moses Turner
+Copyright 2021, Moshi Turner
 SPDX-License-Identifier: BSL-1.0
 -->
 

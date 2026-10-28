@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Levenberg-Marquardt kinematic optimizer
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 
@@ -53,7 +53,11 @@ sympy_guess_distance(float angle, float wrist_extra_distance_meters, float hand_
 }
 
 bool
-hand_init_guess(one_frame_input &observation, const float hand_size, xrt_pose left_in_right, xrt_pose &out_wrist_guess)
+hand_init_guess(one_frame_input &observation,
+                const float hand_size,
+                bool is_right,
+                xrt_pose left_in_right,
+                xrt_pose &out_wrist_guess)
 {
 	int num_observation_views = 0;
 
@@ -147,7 +151,7 @@ hand_init_guess(one_frame_input &observation, const float hand_size, xrt_pose le
 	wrist_global_sum = m_vec3_mul_scalar(wrist_global_sum, 1.0f / (float)num_observation_views);
 	midpxm_global_sum = m_vec3_mul_scalar(midpxm_global_sum, 1.0f / (float)num_observation_views);
 	indpxm_global_sum = m_vec3_mul_scalar(indpxm_global_sum, 1.0f / (float)num_observation_views);
-	litpxm_global_sum = m_vec3_mul_scalar(wrist_global_sum, 1.0f / (float)num_observation_views);
+	litpxm_global_sum = m_vec3_mul_scalar(litpxm_global_sum, 1.0f / (float)num_observation_views);
 
 	out_wrist_guess.position = wrist_global_sum;
 
@@ -172,6 +176,11 @@ hand_init_guess(one_frame_input &observation, const float hand_size, xrt_pose le
 	// Negated
 	xrt_vec3 plus_x = m_vec3_normalize(litpxm_global_sum - indpxm_global_sum);
 #endif
+
+	// little to index finger is the other direction in the right hand
+	if (is_right) {
+		plus_x *= -1;
+	}
 
 	plus_x = m_vec3_orthonormalize(plus_z, plus_x);
 	math_quat_from_plus_x_z(&plus_x, &plus_z, &out_wrist_guess.orientation);

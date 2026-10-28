@@ -1,0 +1,29 @@
+// Copyright 2020-2025, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
+// SPDX-License-Identifier: BSL-1.0
+/*!
+ * @file
+ * @brief  Generated bindings data.
+ * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @ingroup oxr_main
+ *
+ * GENERATED CODE - see src/xrt/state_trackers/oxr/bindings/!
+ */
+
+#include <string.h>
+#include "oxr_objects.h"
+#include "oxr_generated_bindings.h"
+
+// clang-format off
+
+$verify_functions
+
+struct oxr_profile_template oxr_profile_templates[$template_count] = { // array of oxr_profile_template
+$profile_templates
+}; // /array of oxr_profile_template
+
+struct oxr_rebinding_profile_template oxr_rebinding_profile_templates[$rebinding_template_count] = { // array of oxr_rebinding_profile_template
+$rebinding_profile_templates
+}; // /array of oxr_rebinding_profile_template
+
+// clang-format on

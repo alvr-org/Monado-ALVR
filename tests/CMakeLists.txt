@@ -1,4 +1,5 @@
 # Copyright 2018-2024, Collabora, Ltd.
+# Copyright 2024-2026, NVIDIA CORPORATION.
 #
 # SPDX-License-Identifier: BSL-1.0
 
@@ -6,9 +7,11 @@ set(tests
     tests_cxx_wrappers
     tests_deque
     tests_generic_callbacks
+    tests_glue_device
+    tests_glue_frameserver
+    tests_glue_traits
     tests_history_buf
     tests_id_ringbuffer
-    tests_input_transform
     tests_json
     tests_lowpass_float
     tests_lowpass_integer
@@ -27,10 +30,19 @@ if(XRT_HAVE_D3D11)
 	list(APPEND tests tests_aux_d3d_d3d11 tests_comp_client_d3d11)
 endif()
 if(XRT_HAVE_D3D12)
-	list(APPEND tests tests_comp_client_d3d12)
+	list(APPEND tests tests_aux_d3d_d3d12 tests_comp_client_d3d12)
 endif()
 if(XRT_HAVE_VULKAN)
-	list(APPEND tests tests_comp_client_vulkan tests_uv_to_tangent)
+	list(
+		APPEND
+		tests
+		tests_comp_client_vulkan
+		tests_uv_to_tangent
+		tests_render_pipeline_cache
+		)
+endif()
+if(XRT_FEATURE_OPENXR)
+	list(APPEND tests tests_input_transform tests_binding_registry)
 endif()
 if(XRT_HAVE_OPENGL
    AND XRT_HAVE_OPENGL_GLX
@@ -43,31 +55,34 @@ endif()
 if(XRT_BUILD_DRIVER_HANDTRACKING)
 	list(APPEND tests tests_levenbergmarquardt)
 endif()
+if(TARGET ipc_server)
+	list(APPEND tests tests_ipc_thread_shutdown)
+endif()
 
 foreach(testname ${tests})
 	add_executable(${testname} ${testname}.cpp)
 	target_link_libraries(${testname} PRIVATE xrt-external-catch2)
 	target_link_libraries(${testname} PRIVATE aux_util)
 	add_test(NAME ${testname} COMMAND ${testname} --success --allow-running-no-tests)
+	set_target_properties(${testname} PROPERTIES FOLDER monado_tests)
 endforeach()
 
 # For tests that require more than just aux_util, link those other libs down here.
 
 target_link_libraries(tests_cxx_wrappers PRIVATE xrt-interfaces)
+target_link_libraries(tests_glue_device PRIVATE xrt-interfaces aux_glue)
+target_link_libraries(tests_glue_frameserver PRIVATE xrt-interfaces aux_glue)
+target_link_libraries(tests_glue_traits PRIVATE xrt-interfaces aux_glue)
 target_link_libraries(tests_history_buf PRIVATE aux_math)
-target_link_libraries(tests_input_transform PRIVATE st_oxr xrt-interfaces xrt-external-openxr)
 target_link_libraries(tests_lowpass_float PRIVATE aux_math)
 target_link_libraries(tests_lowpass_integer PRIVATE aux_math)
-target_link_libraries(tests_quatexpmap PRIVATE aux_math)
+target_link_libraries(tests_quatexpmap PRIVATE xrt-external-tinyceres aux_math)
 target_link_libraries(tests_rational PRIVATE aux_math)
 target_link_libraries(tests_relation_chain PRIVATE aux_math)
 target_link_libraries(tests_pose PRIVATE aux_math)
 target_link_libraries(tests_quat_change_of_basis PRIVATE aux_math)
 target_link_libraries(tests_quat_swing_twist PRIVATE aux_math)
 target_link_libraries(tests_vec3_angle PRIVATE aux_math)
-
-target_include_directories(tests_quat_change_of_basis SYSTEM PRIVATE ${EIGEN3_INCLUDE_DIR})
-target_include_directories(tests_quat_swing_twist SYSTEM PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 if(XRT_BUILD_DRIVER_HANDTRACKING)
 	target_link_libraries(
@@ -87,6 +102,7 @@ if(XRT_HAVE_D3D11)
 endif()
 
 if(XRT_HAVE_D3D12)
+	target_link_libraries(tests_aux_d3d_d3d12 PRIVATE aux_d3d)
 	target_link_libraries(tests_comp_client_d3d12 PRIVATE comp_client comp_mock)
 endif()
 
@@ -94,9 +110,31 @@ if(XRT_HAVE_VULKAN)
 	target_link_libraries(
 		tests_comp_client_vulkan PRIVATE comp_client comp_mock comp_util aux_vk
 		)
-	target_link_libraries(tests_uv_to_tangent PRIVATE comp_render)
+	target_link_libraries(tests_uv_to_tangent PRIVATE aux_render)
+	target_link_libraries(
+		tests_render_pipeline_cache
+		PRIVATE
+			aux_render_cache
+			comp_util
+			aux_vk
+			aux_shaders
+			xrt-interfaces
+		)
+	get_target_property(_aux_shaders_binary_dir aux_shaders BINARY_DIR)
+	target_include_directories(
+		tests_render_pipeline_cache SYSTEM PRIVATE ${_aux_shaders_binary_dir}
+		)
+	add_dependencies(tests_render_pipeline_cache aux_shaders render_shader_specialization)
 endif()
 
+if(XRT_FEATURE_OPENXR)
+	target_link_libraries(
+		tests_input_transform PRIVATE st_oxr xrt-interfaces xrt-external-openxr
+		)
+	target_link_libraries(
+		tests_binding_registry PRIVATE st_oxr xrt-interfaces xrt-external-openxr
+		)
+endif()
 if(_have_opengl_test)
 	target_link_libraries(
 		tests_comp_client_opengl PRIVATE comp_client comp_mock aux_ogl SDL2::SDL2
@@ -106,4 +144,17 @@ endif()
 
 if(XRT_HAVE_VULKAN AND XRT_HAVE_D3D11)
 	target_link_libraries(tests_aux_d3d_d3d11 PRIVATE comp_util aux_vk)
+endif()
+
+if(XRT_HAVE_VULKAN AND XRT_HAVE_D3D12)
+	target_link_libraries(tests_aux_d3d_d3d12 PRIVATE comp_util aux_vk)
+endif()
+
+if(TARGET ipc_server)
+	target_sources(
+		tests_ipc_thread_shutdown
+		PRIVATE ../src/xrt/ipc/server/ipc_server_thread_shutdown.c
+		)
+	target_link_libraries(tests_ipc_thread_shutdown PRIVATE ipc_shared aux_os base)
+	set_tests_properties(tests_ipc_thread_shutdown PROPERTIES TIMEOUT 10)
 endif()

@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -78,6 +79,9 @@ struct sdl_compositor
 	//! Base native compositor.
 	struct comp_base base;
 
+	//! The supported view configurations
+	struct xrt_view_config view_configs[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_COUNT];
+
 	//! Pacing helper to drive us forward.
 	struct u_pacing_compositor *upc;
 
@@ -119,8 +123,8 @@ struct sdl_program
 	//! Instance base.
 	struct xrt_instance xinst_base;
 
-	//! System, implemented for now using helper code.
-	struct u_system *usys;
+	//! System, implemented using base code.
+	struct b_system *bsys;
 
 	//! System devices base.
 	struct xrt_system_devices xsysd_base;

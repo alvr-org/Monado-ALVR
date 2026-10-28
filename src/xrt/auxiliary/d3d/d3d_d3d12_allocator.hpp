@@ -31,7 +31,6 @@ namespace xrt::auxiliary::d3d::d3d12 {
  * @param xsci Swapchain create info: note that the format is assumed to be a DXGI_FORMAT (conversion to typeless is
  * automatic)
  * @param image_count The number of images to create.
- * @param keyed_mutex Whether to create images with a shared "keyed mutex" as well
  * @param[out] out_images A vector that will be cleared and populated with the images.
  * @param[out] out_handles A vector that will be cleared and populated with the corresponding native handles.
  * @param[out] out_image_mem_size The image memory allocation size in bytes

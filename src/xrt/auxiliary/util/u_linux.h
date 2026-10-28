@@ -28,9 +28,11 @@ extern "C" {
  * @param name      Thread name to be used in logging.
  * @param log_level Logging level to control chattiness.
  *
+ * @return          Returns true/false if setting real-time priority was successful
+ *
  * @ingroup aux_util
  */
-void
+bool
 u_linux_try_to_set_realtime_priority_on_thread(enum u_logging_level log_level, const char *name);
 
 

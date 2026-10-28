@@ -1,5 +1,18 @@
 # Copyright 2020-2021, Collabora, Ltd.
+# Copyright 2025-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
+
+###
+# Merge split protocol JSON files into single proto.json
+file(GLOB PROTO_JSON_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shared/proto/*.json")
+
+merge_json_files(
+	OUTPUT
+	"${CMAKE_CURRENT_BINARY_DIR}/proto.json"
+	SOURCES
+	${PROTO_JSON_FILES}
+	IGNORE_SCHEMA
+	)
 
 ###
 # Generator
@@ -16,16 +29,32 @@ foreach(
 		OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${fn}"
 		COMMAND
 			${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/shared/proto.py
-			${CMAKE_CURRENT_SOURCE_DIR}/shared/proto.json
-			"${CMAKE_CURRENT_BINARY_DIR}/${fn}"
+			${CMAKE_CURRENT_BINARY_DIR}/proto.json "${CMAKE_CURRENT_BINARY_DIR}/${fn}"
 		VERBATIM
 		DEPENDS
 			${CMAKE_CURRENT_SOURCE_DIR}/shared/proto.py
 			${CMAKE_CURRENT_SOURCE_DIR}/shared/ipcproto/common.py
-			${CMAKE_CURRENT_SOURCE_DIR}/shared/proto.json
+			${CMAKE_CURRENT_BINARY_DIR}/proto.json
+			${CMAKE_CURRENT_SOURCE_DIR}/shared/ipc_protocol_generated.h.template
 		COMMENT "Generating ${fn} from protocol JSON description"
 		)
 endforeach()
+
+# Generate IPC structures list in the build root
+add_custom_command(
+	OUTPUT "${CMAKE_BINARY_DIR}/ipc-structs.txt"
+	COMMAND
+		${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/shared/proto.py
+		${CMAKE_CURRENT_BINARY_DIR}/proto.json "${CMAKE_BINARY_DIR}/ipc-structs.txt"
+	VERBATIM
+	DEPENDS
+		${CMAKE_CURRENT_SOURCE_DIR}/shared/proto.py
+		${CMAKE_CURRENT_SOURCE_DIR}/shared/ipcproto/common.py
+		${CMAKE_CURRENT_BINARY_DIR}/proto.json
+	COMMENT "Generating ipc-structs.txt from protocol JSON description"
+	)
+
+add_custom_target(ipc_structs_list ALL DEPENDS "${CMAKE_BINARY_DIR}/ipc-structs.txt")
 
 set(IPC_COMMON_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/ipc_protocol_generated.h
@@ -61,15 +90,28 @@ add_library(
 	${CMAKE_CURRENT_BINARY_DIR}/ipc_client_generated.c
 	${CMAKE_CURRENT_BINARY_DIR}/ipc_client_generated.h
 	client/ipc_client.h
+	client/ipc_client_app_policy.c
 	client/ipc_client_compositor.c
 	client/ipc_client_connection.c
 	client/ipc_client_device.c
+	client/ipc_client_future.c
+	client/ipc_client_body_tracker.c
+	client/ipc_client_body_tracker.h
+	client/ipc_client_hand_tracker.c
+	client/ipc_client_hand_tracker.h
+	client/ipc_client_io_cache.c
+	client/ipc_client_io_cache.h
 	client/ipc_client_hmd.c
 	client/ipc_client_instance.c
 	client/ipc_client_session.c
 	client/ipc_client_space_overseer.c
 	client/ipc_client_system.c
 	client/ipc_client_system_devices.c
+	client/ipc_client_system_devices.h
+	client/ipc_client_tracking_origin.c
+	client/ipc_client_tracking_origin.h
+	client/ipc_client_xdev.c
+	client/ipc_client_xdev.h
 	)
 target_include_directories(
 	ipc_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
@@ -83,7 +125,7 @@ if(WIN32)
 
 	target_link_libraries(ipc_client PRIVATE winmm)
 endif()
-target_link_libraries(ipc_client PRIVATE aux_util ipc_shared)
+target_link_libraries(ipc_client PRIVATE aux_util ipc_shared base)
 
 if(ANDROID)
 	# Need android_instance_base on the client side too.
@@ -99,8 +141,17 @@ add_library(
 	${CMAKE_CURRENT_BINARY_DIR}/ipc_server_generated.h
 	server/ipc_server.h
 	server/ipc_server_handler.c
+	server/ipc_server_handler_app_policy.c
+	server/ipc_server_handler_body_tracker.c
+	server/ipc_server_handler_hand_tracker.c
+	server/ipc_server_handler_io_cache.c
+	server/ipc_server_handler_swapchain.c
 	server/ipc_server_per_client_thread.c
 	server/ipc_server_process.c
+	server/ipc_server_thread_shutdown.c
+	server/ipc_server_thread_shutdown.h
+	server/ipc_server_objects.c
+	server/ipc_server_objects.h
 	)
 target_include_directories(
 	ipc_server

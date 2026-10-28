@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Interface for Levenberg-Marquardt kinematic optimizer
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 #pragma once

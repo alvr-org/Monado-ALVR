@@ -10,13 +10,15 @@
 // IWYU pragma: no_include <asm/int-ll64.h>
 // IWYU pragma: no_include <linux/byteorder/little_endian.h>
 
-#include <asm/byteorder.h>
 #include <stdint.h>
 #include <string.h>
 #include <zlib.h>
 #include <stdio.h>
 
 #include "math/m_api.h"
+
+#include "xrt/xrt_byte_order.h"
+
 #include "util/u_debug.h"
 #include "util/u_logging.h"
 

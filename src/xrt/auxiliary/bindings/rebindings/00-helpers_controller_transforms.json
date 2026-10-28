@@ -1,0 +1,66 @@
+{
+	"/helper/controller/transform/squeeze_click": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/squeeze": true,
+			"/user/hand/left/input/squeeze/value": "/user/hand/left/input/squeeze/click",
+			"/user/hand/right/input/squeeze": true,
+			"/user/hand/right/input/squeeze/value": "/user/hand/right/input/squeeze/click"
+		}
+	},
+	"/helper/controller/transform/thumbstick_to_joystick": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumbstick": "/user/hand/left/input/joystick",
+			"/user/hand/left/input/thumbstick/click": "/user/hand/left/input/joystick/click",
+			"/user/hand/left/input/thumbstick/dpad_down": "/user/hand/left/input/joystick/dpad_down",
+			"/user/hand/left/input/thumbstick/dpad_left": "/user/hand/left/input/joystick/dpad_left",
+			"/user/hand/left/input/thumbstick/dpad_right": "/user/hand/left/input/joystick/dpad_right",
+			"/user/hand/left/input/thumbstick/dpad_up": "/user/hand/left/input/joystick/dpad_up",
+			"/user/hand/left/input/thumbstick/x": "/user/hand/left/input/joystick/x",
+			"/user/hand/left/input/thumbstick/xy": "/user/hand/left/input/joystick/xy",
+			"/user/hand/left/input/thumbstick/y": "/user/hand/left/input/joystick/y",
+			"/user/hand/right/input/thumbstick": "/user/hand/right/input/joystick",
+			"/user/hand/right/input/thumbstick/click": "/user/hand/right/input/joystick/click",
+			"/user/hand/right/input/thumbstick/dpad_down": "/user/hand/right/input/joystick/dpad_down",
+			"/user/hand/right/input/thumbstick/dpad_left": "/user/hand/right/input/joystick/dpad_left",
+			"/user/hand/right/input/thumbstick/dpad_right": "/user/hand/right/input/joystick/dpad_right",
+			"/user/hand/right/input/thumbstick/dpad_up": "/user/hand/right/input/joystick/dpad_up",
+			"/user/hand/right/input/thumbstick/x": "/user/hand/right/input/joystick/x",
+			"/user/hand/right/input/thumbstick/xy": "/user/hand/right/input/joystick/xy",
+			"/user/hand/right/input/thumbstick/y": "/user/hand/right/input/joystick/y"
+		}
+	},
+	"/helper/controller/transform/thumbstick_to_trackpad": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumbstick": "/user/hand/left/input/trackpad",
+			"/user/hand/left/input/thumbstick/click": "/user/hand/left/input/trackpad/click",
+			"/user/hand/left/input/thumbstick/dpad_down": "/user/hand/left/input/trackpad/dpad_down",
+			"/user/hand/left/input/thumbstick/dpad_left": "/user/hand/left/input/trackpad/dpad_left",
+			"/user/hand/left/input/thumbstick/dpad_right": "/user/hand/left/input/trackpad/dpad_right",
+			"/user/hand/left/input/thumbstick/dpad_up": "/user/hand/left/input/trackpad/dpad_up",
+			"/user/hand/left/input/thumbstick/x": "/user/hand/left/input/trackpad/x",
+			"/user/hand/left/input/thumbstick/xy": "/user/hand/left/input/trackpad/xy",
+			"/user/hand/left/input/thumbstick/y": "/user/hand/left/input/trackpad/y",
+			"/user/hand/right/input/thumbstick": "/user/hand/right/input/trackpad",
+			"/user/hand/right/input/thumbstick/click": "/user/hand/right/input/trackpad/click",
+			"/user/hand/right/input/thumbstick/dpad_down": "/user/hand/right/input/trackpad/dpad_down",
+			"/user/hand/right/input/thumbstick/dpad_left": "/user/hand/right/input/trackpad/dpad_left",
+			"/user/hand/right/input/thumbstick/dpad_right": "/user/hand/right/input/trackpad/dpad_right",
+			"/user/hand/right/input/thumbstick/dpad_up": "/user/hand/right/input/trackpad/dpad_up",
+			"/user/hand/right/input/thumbstick/x": "/user/hand/right/input/trackpad/x",
+			"/user/hand/right/input/thumbstick/xy": "/user/hand/right/input/trackpad/xy",
+			"/user/hand/right/input/thumbstick/y": "/user/hand/right/input/trackpad/y"
+		}
+	},
+	"/helper/controller/transform/grip_surface_to_palm": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/grip_surface": "/user/hand/left/input/palm_ext",
+			"/user/hand/left/input/grip_surface/pose": "/user/hand/left/input/palm_ext/pose",
+			"/user/hand/right/input/grip_surface": "/user/hand/right/input/palm_ext",
+			"/user/hand/right/input/grip_surface/pose": "/user/hand/right/input/palm_ext/pose"
+		}
+	}
+}

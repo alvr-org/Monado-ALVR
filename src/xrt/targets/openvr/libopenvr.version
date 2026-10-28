@@ -1,0 +1,13 @@
+/*
+ * Copyright 2018-2020, Collabora, Ltd.
+ * Copyright 2026, Beyley Cardellio
+ * SPDX-License-Identifier: BSL-1.0
+ */
+
+OPENVR {
+    global: 
+		VRClientCoreFactory; 
+		HmdSystemFactory;
+	# Hide everything else.
+	local: *;
+};

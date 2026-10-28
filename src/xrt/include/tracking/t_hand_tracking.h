@@ -109,8 +109,8 @@ struct t_camera_extra_info
  */
 struct t_hand_tracking_create_info
 {
-	struct t_camera_extra_info cams_info;   //!< Extra camera info
-	struct xrt_hand_masks_sink *masks_sink; //!< Optional sink to stream hand bounding boxes to
+	struct t_camera_extra_info cams_info;     //!< Extra camera info
+	struct xrt_device_masks_sink *masks_sink; //!< Optional sink to stream hand bounding boxes to
 };
 
 /*!

@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -16,10 +17,11 @@
 
 #include "util/u_threading.h"
 #include "util/u_logging.h"
-
 #include "shared/ipc_utils.h"
 #include "shared/ipc_protocol.h"
 #include "shared/ipc_message_channel.h"
+
+#include "ipc_client_tracking_origin.h"
 
 #include <stdio.h>
 
@@ -36,108 +38,11 @@
 #define IPC_WARN(IPC_C, ...) U_LOG_IFL_W((IPC_C)->imc.log_level, __VA_ARGS__)
 #define IPC_ERROR(IPC_C, ...) U_LOG_IFL_E((IPC_C)->imc.log_level, __VA_ARGS__)
 
-/*!
- * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
- * @p FUNC_STR string has failed, then returns @p XRET. The argument @p IPC_C
- * will be used to look up the @p cond_level for the @ref ipc_print_result call.
- *
- * @param IPC_C    Client connection, used to look up @p cond_level.
- * @param XRET     The @p xrt_result_t to check.
- * @param FUNC_STR String literal with the function name, used for logging.
- *
- * @ingroup ipc_client
- */
-#define IPC_CHK_AND_RET(IPC_C, XRET, FUNC_STR)                                                                         \
-	do {                                                                                                           \
-		xrt_result_t _ret = XRET;                                                                              \
-		if (_ret != XRT_SUCCESS) {                                                                             \
-			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
-			return _ret;                                                                                   \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
- * @p FUNC_STR string has failed, then gotos @p GOTO. The argument @p IPC_C
- * will be used to look up the @p cond_level for the @ref ipc_print_result call.
- *
- * @param IPC_C    Client connection, used to look up @p cond_level.
- * @param XRET     The @p xrt_result_t to check.
- * @param FUNC_STR String literal with the function name, used for logging.
- * @param GOTO     Goto label to jump to on error.
- *
- * @ingroup ipc_client
- */
-#define IPC_CHK_WITH_GOTO(IPC_C, XRET, FUNC_STR, GOTO)                                                                 \
-	do {                                                                                                           \
-		xrt_result_t _ret = XRET;                                                                              \
-		if (_ret != XRT_SUCCESS) {                                                                             \
-			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
-			goto GOTO;                                                                                     \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
- * @p FUNC_STR string has failed, then returns @p RET. The argument @p IPC_C
- * will be used to look up the @p cond_level for the @ref ipc_print_result call.
- *
- * @param IPC_C    Client connection, used to look up @p cond_level.
- * @param XRET     The @p xrt_result_t to check.
- * @param FUNC_STR String literal with the function name, used for logging.
- * @param RET      The value that is returned on error.
- *
- * @ingroup ipc_client
- */
-#define IPC_CHK_WITH_RET(IPC_C, XRET, FUNC_STR, RET)                                                                   \
-	do {                                                                                                           \
-		xrt_result_t _ret = XRET;                                                                              \
-		if (_ret != XRT_SUCCESS) {                                                                             \
-			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
-			return RET;                                                                                    \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
- * @p FUNC_STR string has failed, it only prints and does nothing else. The
- * argument @p IPC_C will be used to look up the @p cond_level for the
- * @ref ipc_print_result call.
- *
- * @param IPC_C    Client connection, used to look up @p cond_level.
- * @param XRET     The @p xrt_result_t to check.
- * @param FUNC_STR String literal with the function name, used for logging.
- *
- * @ingroup ipc_client
- */
-#define IPC_CHK_ONLY_PRINT(IPC_C, XRET, FUNC_STR)                                                                      \
-	do {                                                                                                           \
-		xrt_result_t _ret = XRET;                                                                              \
-		if (_ret != XRT_SUCCESS) {                                                                             \
-			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
-		}                                                                                                      \
-	} while (false)
-
-/*!
- * This define will error if `XRET` is not `XRT_SUCCESS`, printing out that the
- * @p FUNC_STR string has failed, then it will always return the value. The
- * argument @p IPC_C will be used to look up the @p cond_level for the
- * @ref ipc_print_result call.
- *
- * @param IPC_C    Client connection, used to look up @p cond_level.
- * @param XRET     The @p xrt_result_t to check and always return.
- * @param FUNC_STR String literal with the function name, used for logging.
- *
- * @ingroup ipc_client
- */
-#define IPC_CHK_ALWAYS_RET(IPC_C, XRET, FUNC_STR)                                                                      \
-	do {                                                                                                           \
-		xrt_result_t _ret = XRET;                                                                              \
-		if (_ret != XRT_SUCCESS) {                                                                             \
-			ipc_print_result((IPC_C)->imc.log_level, __FILE__, __LINE__, __func__, _ret, FUNC_STR);        \
-		}                                                                                                      \
-		return _ret;                                                                                           \
-	} while (false)
+#define IPC_CHK_AND_RET(IPC_C, ...) U_LOG_CHK_AND_RET((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_CHK_WITH_GOTO(IPC_C, ...) U_LOG_CHK_WITH_GOTO((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_CHK_WITH_RET(IPC_C, ...) U_LOG_CHK_WITH_RET((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_CHK_ONLY_PRINT(IPC_C, ...) U_LOG_CHK_ONLY_PRINT((IPC_C)->imc.log_level, __VA_ARGS__)
+#define IPC_CHK_ALWAYS_RET(IPC_C, ...) U_LOG_CHK_ALWAYS_RET((IPC_C)->imc.log_level, __VA_ARGS__)
 
 
 /*
@@ -147,6 +52,7 @@
  */
 
 struct xrt_compositor_native;
+struct ipc_client_system_devices;
 
 
 /*!
@@ -166,38 +72,12 @@ struct ipc_connection
 #endif // XRT_OS_ANDROID
 };
 
-/*!
- * An IPC client proxy for an @ref xrt_device.
- *
- * @implements xrt_device
- * @ingroup ipc_client
- */
-struct ipc_client_xdev
-{
-	struct xrt_device base;
-
-	struct ipc_connection *ipc_c;
-
-	uint32_t device_id;
-};
-
 
 /*
  *
  * Internal functions.
  *
  */
-
-/*!
- * Convenience helper to go from a xdev to @ref ipc_client_xdev.
- *
- * @ingroup ipc_client
- */
-static inline struct ipc_client_xdev *
-ipc_client_xdev(struct xrt_device *xdev)
-{
-	return (struct ipc_client_xdev *)xdev;
-}
 
 /*!
  * Create an IPC client system compositor.
@@ -237,10 +117,14 @@ ipc_client_create_native_compositor(struct xrt_system_compositor *xsysc,
                                     struct xrt_compositor_native **out_xcn);
 
 struct xrt_device *
-ipc_client_hmd_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *xtrack, uint32_t device_id);
+ipc_client_hmd_create(struct ipc_connection *ipc_c,
+                      struct ipc_client_tracking_origin_manager *ictom,
+                      uint32_t device_id);
 
 struct xrt_device *
-ipc_client_device_create(struct ipc_connection *ipc_c, struct xrt_tracking_origin *xtrack, uint32_t device_id);
+ipc_client_device_create(struct ipc_connection *ipc_c,
+                         struct ipc_client_tracking_origin_manager *ictom,
+                         uint32_t device_id);
 
 struct xrt_system *
 ipc_client_system_create(struct ipc_connection *ipc_c, struct xrt_system_compositor *xsysc);
@@ -248,8 +132,27 @@ ipc_client_system_create(struct ipc_connection *ipc_c, struct xrt_system_composi
 struct xrt_space_overseer *
 ipc_client_space_overseer_create(struct ipc_connection *ipc_c);
 
-struct xrt_system_devices *
-ipc_client_system_devices_create(struct ipc_connection *ipc_c);
+uint32_t
+ipc_client_space_get_id(struct xrt_space *space);
+
+/*!
+ * Wrap a service-side space id in a client @ref xrt_space handle.
+ *
+ * @param ipc_c     Connection the space id belongs to.
+ * @param id        Service-side space id.
+ * @param out_space Pointer to receive the created client space.
+ */
+void
+ipc_client_space_create(struct ipc_connection *ipc_c, uint32_t id, struct xrt_space **out_space);
+
+xrt_result_t
+ipc_client_system_devices_create(struct ipc_connection *ipc_c, struct ipc_client_system_devices **out_icsd);
 
 struct xrt_session *
 ipc_client_session_create(struct ipc_connection *ipc_c);
+
+struct xrt_future *
+ipc_client_future_create(struct ipc_connection *ipc_c, uint32_t future_id);
+
+struct xrt_app_instance *
+ipc_client_create_app_instance(struct ipc_connection *ipc_c);

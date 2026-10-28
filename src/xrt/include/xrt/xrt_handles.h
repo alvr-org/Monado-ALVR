@@ -1,4 +1,5 @@
 // Copyright 2020, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -235,13 +236,18 @@ xrt_graphics_buffer_is_valid(xrt_graphics_buffer_handle_t handle)
  */
 #define XRT_GRAPHICS_BUFFER_HANDLE_INVALID NULL
 
-#elif defined(XRT_OS_ANDROID) && !defined(XRT_OS_ANDROID_USE_AHB) || defined(XRT_OS_LINUX)
+#elif defined(XRT_OS_ANDROID) && !defined(XRT_OS_ANDROID_USE_AHB) || defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 
 /*!
  * The type underlying buffers shared between compositor clients and the main
  * compositor.
  *
  * On Linux, this is a file descriptor.
+ *
+ * We selected the graphics handle to be FDs on OSX because that allowed the
+ * code to compile, but it's probably not what we want to actually use on OSX.
+ * So we will need to change that down the line, as it looks like OSX uses byte
+ * only arrays to share MTLTextures.
  */
 typedef int xrt_graphics_buffer_handle_t;
 

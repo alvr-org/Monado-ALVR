@@ -1,9 +1,10 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2025, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief AHardwareBuffer backed image buffer allocator.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
+ * @author Simon Zeni <simon.zeni@collabora.com>
  * @ingroup aux_android
  */
 
@@ -46,6 +47,58 @@ vk_format_to_ahardwarebuffer(uint64_t format)
 	case VK_FORMAT_R8G8B8A8_UNORM: return AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM;
 	default: return 0;
 	}
+}
+
+static uint64_t
+swapchain_usage_to_ahardwarebuffer(enum xrt_swapchain_create_flags create, enum xrt_swapchain_usage_bits bits)
+{
+	uint64_t ahb_usage = 0;
+	if (bits & (XRT_SWAPCHAIN_USAGE_SAMPLED | XRT_SWAPCHAIN_USAGE_INPUT_ATTACHMENT)) {
+		ahb_usage |= AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE;
+	}
+
+	if (bits & (XRT_SWAPCHAIN_USAGE_COLOR | XRT_SWAPCHAIN_USAGE_DEPTH_STENCIL)) {
+		ahb_usage |= AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER;
+	}
+
+	if (create & XRT_SWAPCHAIN_CREATE_PROTECTED_CONTENT) {
+		ahb_usage |= AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
+	}
+
+	// Fallback if no bits are set
+	if (ahb_usage == 0) {
+		ahb_usage = AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE;
+	}
+
+	return ahb_usage;
+}
+
+bool
+ahardwarebuffer_is_supported(uint64_t format,
+                             enum xrt_swapchain_create_flags create,
+                             enum xrt_swapchain_usage_bits xbits)
+{
+	// Minimal buffer description to probe support
+	AHardwareBuffer_Desc desc = {
+	    .width = 16,
+	    .height = 16,
+	    .layers = 1,
+	    .format = vk_format_to_ahardwarebuffer(format),
+	    .usage = swapchain_usage_to_ahardwarebuffer(create, xbits),
+	};
+
+#if __ANDROID_API__ >= 29
+	return AHardwareBuffer_isSupported(&desc);
+#else
+	AHardwareBuffer *buffer;
+	int ret = AHardwareBuffer_allocate(&desc, &buffer);
+	if (ret) {
+		return false;
+	}
+
+	AHardwareBuffer_release(buffer);
+	return true;
+#endif
 }
 
 xrt_result_t

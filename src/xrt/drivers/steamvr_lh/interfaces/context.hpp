@@ -9,12 +9,14 @@
 
 #pragma once
 
+#include <condition_variable>
 #include <unordered_map>
 #include <memory>
 #include <optional>
 #include <chrono>
 #include <deque>
 #include <mutex>
+#include <thread>
 
 #include "openvr_driver.h"
 
@@ -28,24 +30,9 @@
 
 #include "xrt/xrt_tracking.h"
 
-enum IndexFinger
-{
-	Invalid = -1,
-	Index = 1,
-	Middle,
-	Ring,
-	Pinky,
-};
-
-struct IndexFingerInput
-{
-	int64_t timestamp;
-	IndexFinger finger;
-	float value;
-};
-
 struct xrt_input;
 class Device;
+class ControllerDevice;
 class Context final : public xrt_tracking_origin,
                       public vr::IVRDriverContext,
                       public vr::IVRServerDriverHost,
@@ -55,7 +42,28 @@ class Context final : public xrt_tracking_origin,
                       public std::enable_shared_from_this<Context>
 
 {
+public:
 	Settings settings;
+
+	struct Vec2Components
+	{
+		vr::VRInputComponentHandle_t x;
+		vr::VRInputComponentHandle_t y;
+	};
+
+	/*
+	 * All data types are are locked by `devices_mut`
+	 */
+	struct
+	{
+		vr::VRInputComponentHandle_t next_handle;
+		std::unordered_map<vr::VRInputComponentHandle_t, xrt_input *> handle_to_input;
+		std::unordered_map<vr::VRInputComponentHandle_t, Vec2Components *> vec2_inputs;
+		std::unordered_map<xrt_input *, std::unique_ptr<Vec2Components>> vec2_input_to_components;
+		std::unordered_map<vr::VRInputComponentHandle_t, ControllerDevice *> skeleton_to_controller;
+	} input;
+
+private:
 	Resources resources;
 	IOBuffer iobuf;
 	DriverManager man;
@@ -65,24 +73,15 @@ class Context final : public xrt_tracking_origin,
 
 	uint64_t current_frame{0};
 
-	std::vector<vr::VRInputComponentHandle_t> handles;
-	std::unordered_map<vr::VRInputComponentHandle_t, xrt_input *> handle_to_input;
-	std::unordered_map<vr::VRInputComponentHandle_t, IndexFingerInput *> handle_to_finger;
-	struct Vec2Components
-	{
-		vr::VRInputComponentHandle_t x;
-		vr::VRInputComponentHandle_t y;
-	};
-	std::unordered_map<vr::VRInputComponentHandle_t, Vec2Components *> vec2_inputs;
-	std::unordered_map<xrt_input *, std::unique_ptr<Vec2Components>> vec2_input_to_components;
-
 	struct Event
 	{
 		std::chrono::steady_clock::time_point insert_time;
 		vr::VREvent_t inner;
 	};
 	std::deque<Event> events;
+	size_t events_tail{0};
 	std::mutex event_queue_mut;
+	std::condition_variable event_popped;
 
 	Device *
 	prop_container_to_device(vr::PropertyContainerHandle_t handle);
@@ -93,9 +92,7 @@ class Context final : public xrt_tracking_origin,
 	                        vr::VRInputComponentHandle_t *handle);
 
 	xrt_input *
-	update_component_common(vr::VRInputComponentHandle_t handle,
-	                        double offset,
-	                        std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now());
+	update_component_common_locked(vr::VRInputComponentHandle_t handle, double offset);
 
 	bool
 	setup_hmd(const char *serial, vr::ITrackedDeviceServerDriver *driver);
@@ -104,22 +101,36 @@ class Context final : public xrt_tracking_origin,
 	setup_controller(const char *serial, vr::ITrackedDeviceServerDriver *driver);
 	std::vector<vr::IServerTrackedDeviceProvider *> providers;
 
-	inline vr::VRInputComponentHandle_t
-	new_handle()
-	{
-		vr::VRInputComponentHandle_t h = handles.size() + 1;
-		handles.push_back(h);
-		return h;
-	}
-
 public:
 	Context(const std::string &steam_install, const std::string &steamvr_install, u_logging_level level);
 
-	// These are owned by monado, context is destroyed when these are destroyed
+	// These are owned by Monado, context is destroyed when these are destroyed
+	std::mutex devices_mut{};
 	class HmdDevice *hmd{nullptr};
 	class ControllerDevice *controller[16]{nullptr};
+
+	bool in_setup{true};
 	const u_logging_level log_level;
 
+	void
+	wait_for_discover();
+
+	void
+	extend_discover();
+
+private:
+	std::condition_variable discover_cv;
+	std::chrono::steady_clock::time_point discover_end_time;
+	//! Devices published to `hmd`/`controller` that the driver has not finished activating (`devices_mut`).
+	size_t devices_in_setup{0};
+	std::atomic<bool> frame_thread_run;
+	std::binary_semaphore frame_thread_event{0};
+	std::thread frame_thread;
+
+	void
+	add_event_locked(vr::VREvent_t event);
+
+public:
 	~Context();
 
 	[[nodiscard]] static std::shared_ptr<Context>
@@ -127,14 +138,14 @@ public:
 	       const std::string &steamvr_install,
 	       std::vector<vr::IServerTrackedDeviceProvider *> providers);
 
-	void
-	run_frame();
+	size_t
+	add_haptic_event(vr::VREvent_HapticVibration_t event, size_t old_event_index);
 
 	void
-	maybe_run_frame(uint64_t new_frame);
-
-	void
-	add_haptic_event(vr::VREvent_HapticVibration_t event);
+	add_vendor_event(vr::EVREventType type, const vr::VREvent_Data_t &data = {})
+	{
+		VendorSpecificEvent(0, type, data, 0);
+	}
 
 	void
 	Log(const char *pchLogMessage) override;
@@ -240,6 +251,26 @@ public:
 	                        vr::EVRSkeletalMotionRange eMotionRange,
 	                        const vr::VRBoneTransform_t *pTransforms,
 	                        uint32_t unTransformCount) override;
+
+	vr::EVRInputError
+	CreatePoseComponent(vr::PropertyContainerHandle_t ulContainer,
+	                    const char *pchName,
+	                    vr::VRInputComponentHandle_t *pHandle) override;
+
+	vr::EVRInputError
+	UpdatePoseComponent(vr::VRInputComponentHandle_t ulComponent,
+	                    const vr::HmdMatrix34_t *pMatPoseOffset,
+	                    double fTimeOffset) override;
+
+	vr::EVRInputError
+	CreateEyeTrackingComponent(vr::PropertyContainerHandle_t ulContainer,
+	                           const char *pchName,
+	                           vr::VRInputComponentHandle_t *pHandle) override;
+
+	vr::EVRInputError
+	UpdateEyeTrackingComponent(vr::VRInputComponentHandle_t ulComponent,
+	                           const vr::VREyeTrackingData_t *pEyeTrackingData,
+	                           double fTimeOffset) override;
 
 	/***** IVRProperties methods *****/
 

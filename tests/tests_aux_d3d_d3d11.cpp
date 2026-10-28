@@ -88,31 +88,29 @@ tryImport(struct vk_bundle *vk, std::vector<HANDLE> const &handles, const struct
 	std::vector<xrt_image_native> xins;
 	xins.reserve(image_count);
 
-	// Keep this around until after successful import, then detach all.
-	std::vector<wil::unique_handle> handlesForImport;
-	handlesForImport.reserve(image_count);
-
 	for (HANDLE handle : handles) {
-		wil::unique_handle duped{u_graphics_buffer_ref(handle)};
+		/*!
+		 * If shared resources have been allocated without using NT handles we can't use DuplicateHandle
+		 *(like u_graphics_buffer_ref does internally) or CloseHandle (which wil::~unique_handle will call).
+		 * More info:
+		 * https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiresource-getsharedhandle#remarks
+		 * When using KMT handles, their validity is tied to the underlying video memory (I guess that means a
+		 * ID3D11Texture2D object).
+		 */
 		xrt_image_native xin;
-		xin.handle = duped.get();
+		xin.handle = handle;
 		xin.size = 0;
 		xin.use_dedicated_allocation = use_dedicated_allocation;
+		xin.is_dxgi_handle = true;
 
-		handlesForImport.emplace_back(std::move(duped));
 		xins.emplace_back(xin);
 	}
 
 	// Import into a vulkan image collection
-	bool result = VK_SUCCESS == vk_ic_from_natives(vk, &vk_info, xins.data(), (uint32_t)xins.size(), vkic.get());
+	const VkResult ret = vk_ic_from_natives(vk, &vk_info, xins.data(), (uint32_t)xins.size(), vkic.get());
+	VK_CHK_WITH_RET(ret, "vk_ic_from_natives", false);
 
-	if (result) {
-		// The imported swapchain took ownership of them now, release them from ownership here.
-		for (auto &h : handlesForImport) {
-			h.release();
-		}
-	}
-	return result;
+	return true;
 }
 #else
 

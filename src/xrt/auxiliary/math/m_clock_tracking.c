@@ -6,8 +6,13 @@
  * @author Jan Schmidt <jan@centricular.com>
  * @ingroup aux_math
  */
+
+#include "xrt/xrt_defines.h"
+
 #include "util/u_misc.h"
+
 #include "m_clock_tracking.h"
+
 
 /* Fixed constants for discontinuity detection and
  * subsequent hold-off. These could be made configurable
@@ -122,7 +127,9 @@ m_clock_windowed_skew_tracker_push(struct m_clock_windowed_skew_tracker *t,
 		}
 		t->clock_reset_ts = 0;
 	}
+
 	t->last_observation = obs;
+	t->have_last_observation = true;
 
 	if (t->current_window_samples < t->max_window_samples) {
 		/* Window is still being filled */
@@ -176,7 +183,7 @@ m_clock_windowed_skew_tracker_push(struct m_clock_windowed_skew_tracker *t,
 	t->current_window_pos = (t->current_window_pos + 1) % t->max_window_samples;
 
 	/* Update the moving average skew */
-	size_t w = t->current_window_samples;
+	ssize_t w = t->current_window_samples;
 	t->current_skew = (t->current_min_skew + t->current_skew * (w - 1)) / w;
 	t->have_skew_estimate = true;
 }
@@ -204,5 +211,16 @@ m_clock_windowed_skew_tracker_to_remote(struct m_clock_windowed_skew_tracker *t,
 	}
 
 	*remote_ts = local_ts - t->current_skew;
+	return true;
+}
+
+bool
+m_clock_windowed_skew_tracker_get_skew(struct m_clock_windowed_skew_tracker *t, time_duration_ns *skew_ns)
+{
+	if (!t->have_skew_estimate) {
+		return false;
+	}
+
+	*skew_ns = t->current_skew;
 	return true;
 }

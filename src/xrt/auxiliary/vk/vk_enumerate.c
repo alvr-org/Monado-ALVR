@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -121,6 +122,29 @@ out:
 	*out_props = props;
 
 	return VK_SUCCESS;
+}
+
+void
+vk_get_physical_device_queue_family_properties(struct vk_bundle *vk,
+                                               VkPhysicalDevice physical_device,
+                                               uint32_t *out_prop_count,
+                                               VkQueueFamilyProperties **out_props)
+{
+	VkQueueFamilyProperties *props = NULL;
+	uint32_t prop_count = 0;
+
+	vk->vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &prop_count, NULL);
+	if (prop_count == 0) {
+		goto out;
+	}
+
+	props = U_TYPED_ARRAY_CALLOC(VkQueueFamilyProperties, prop_count);
+	assert(props != NULL);
+	vk->vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &prop_count, props);
+
+out:
+	*out_prop_count = prop_count;
+	*out_props = props;
 }
 
 #ifdef VK_KHR_surface

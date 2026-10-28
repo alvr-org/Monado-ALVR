@@ -1,4 +1,5 @@
 // Copyright 2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -7,11 +8,14 @@
  * @ingroup ipc_client
  */
 
-#include "client/ipc_client.h"
-#include "client/ipc_client_connection.h"
-#include "shared/ipc_message_channel.h"
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_space.h"
+
+#include "shared/ipc_message_channel.h"
+
+#include "client/ipc_client.h"
+#include "client/ipc_client_xdev.h"
+#include "client/ipc_client_connection.h"
 
 #include "ipc_client_generated.h"
 
@@ -73,13 +77,7 @@ space_destroy(struct xrt_space *xs)
 static void
 alloc_space_with_id(struct ipc_client_space_overseer *icspo, uint32_t id, struct xrt_space **out_space)
 {
-	struct ipc_client_space *icsp = U_TYPED_CALLOC(struct ipc_client_space);
-	icsp->base.reference.count = 1;
-	icsp->base.destroy = space_destroy;
-	icsp->ipc_c = icspo->ipc_c;
-	icsp->id = id;
-
-	*out_space = &icsp->base;
+	ipc_client_space_create(icspo->ipc_c, id, out_space);
 }
 
 
@@ -314,6 +312,26 @@ set_reference_space_offset(struct xrt_space_overseer *xso,
 	return ipc_call_space_set_reference_space_offset(icspo->ipc_c, type, offset);
 }
 
+static xrt_result_t
+add_device(struct xrt_space_overseer *xso, struct xrt_device *xdev)
+{
+	return XRT_ERROR_NOT_IMPLEMENTED;
+}
+
+static xrt_result_t
+remove_device(struct xrt_space_overseer *xso, struct xrt_device *xdev)
+{
+	return XRT_ERROR_NOT_IMPLEMENTED;
+}
+
+static xrt_result_t
+attach_device(struct xrt_space_overseer *xso, struct xrt_device *xdev, struct xrt_space *space)
+{
+	// For IPC client, attachable devices are handled on the server side.
+	// This should not be called from the client in the typical use case.
+	return XRT_ERROR_NOT_IMPLEMENTED;
+}
+
 static void
 destroy(struct xrt_space_overseer *xso)
 {
@@ -370,6 +388,9 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 	icspo->base.set_tracking_origin_offset = set_tracking_origin_offset;
 	icspo->base.get_reference_space_offset = get_reference_space_offset;
 	icspo->base.set_reference_space_offset = set_reference_space_offset;
+	icspo->base.add_device = add_device;
+	icspo->base.remove_device = remove_device;
+	icspo->base.attach_device = attach_device;
 	icspo->base.destroy = destroy;
 	icspo->ipc_c = ipc_c;
 
@@ -391,4 +412,24 @@ ipc_client_space_overseer_create(struct ipc_connection *ipc_c)
 #undef CREATE
 
 	return &icspo->base;
+}
+
+uint32_t
+ipc_client_space_get_id(struct xrt_space *space)
+{
+	assert(space != NULL);
+
+	return ipc_client_space(space)->id;
+}
+
+void
+ipc_client_space_create(struct ipc_connection *ipc_c, uint32_t id, struct xrt_space **out_space)
+{
+	struct ipc_client_space *icsp = U_TYPED_CALLOC(struct ipc_client_space);
+	icsp->base.reference.count = 1;
+	icsp->base.destroy = space_destroy;
+	icsp->ipc_c = ipc_c;
+	icsp->id = id;
+
+	*out_space = &icsp->base;
 }

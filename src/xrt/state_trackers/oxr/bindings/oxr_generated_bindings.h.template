@@ -1,0 +1,136 @@
+// Copyright 2020-2025, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
+// SPDX-License-Identifier: BSL-1.0
+/*!
+ * @file
+ * @brief  Generated bindings data.
+ * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @ingroup oxr_main
+ *
+ * GENERATED CODE - see src/xrt/state_trackers/oxr/bindings/!
+ */
+
+#pragma once
+
+#include <stddef.h>
+#include "xrt/xrt_defines.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef uint64_t XrPath; // OpenXR typedef'
+typedef uint64_t XrVersion; // OpenXR typedef'
+
+struct oxr_extension_status;
+
+#define OXR_BINDINGS_PROFILE_TEMPLATE_COUNT $template_count
+#define OXR_BINDINGS_REBINDING_PROFILE_TEMPLATE_COUNT $rebinding_template_count
+
+// clang-format off
+
+$verify_protos
+
+#define PATHS_PER_BINDING_TEMPLATE 16
+enum oxr_binding_point_kind
+{
+	OXR_BINDING_POINT_KIND_INPUT,
+	OXR_BINDING_POINT_KIND_OUTPUT,
+	OXR_BINDING_POINT_KIND_UPGRADE,
+	OXR_BINDING_POINT_KIND_DPAD,
+};
+
+enum oxr_dpad_binding_point
+{
+	OXR_DPAD_BINDING_POINT_NONE,
+	OXR_DPAD_BINDING_POINT_UP,
+	OXR_DPAD_BINDING_POINT_DOWN,
+	OXR_DPAD_BINDING_POINT_LEFT,
+	OXR_DPAD_BINDING_POINT_RIGHT,
+	OXR_DPAD_BINDING_POINT_CENTER,
+};
+
+enum oxr_binding_value_transform
+{
+	OXR_BINDING_VALUE_TRANSFORM_NONE,
+	OXR_BINDING_VALUE_TRANSFORM_VEC2_GET_X,
+	OXR_BINDING_VALUE_TRANSFORM_VEC2_GET_Y,
+};
+
+struct oxr_dpad_emulation_template
+{
+	const char *path;
+	const char *subaction_path;
+	enum xrt_input_name position;
+	enum xrt_input_name activate; // XRT_INPUT_NAME_INVALID when unset
+};
+
+struct oxr_binding_point_template
+{
+	enum oxr_binding_point_kind kind;
+	const char *subaction_path;
+	const char *steamvr_path;
+	const char *localized_name;
+	const char *priority_group;
+	const char *path;
+	const char *upgrade_boolean_path;
+	const char *upgrade_float_path;
+	const char *upgrade_vec2_path;
+	const char *upgrade_pose_path;
+	const char *upgrade_haptic_path;
+	enum oxr_dpad_binding_point dpad_binding_point;
+	const char *dpad_emulation_path;
+	enum oxr_binding_value_transform value_transform;
+	enum xrt_input_name input;
+	enum xrt_output_name output;
+};
+
+typedef bool (*path_verify_fn_t)(const struct oxr_extension_status *extensions, XrVersion openxr_version, const char *, size_t);
+typedef void (*ext_verify_fn_t)(const struct oxr_extension_status *extensions, XrVersion openxr_version, bool *out_supported, bool *out_enabled);
+
+struct oxr_profile_template
+{
+	enum xrt_device_name name;
+	const char *path;
+	const char *localized_name;
+	const char *steamvr_input_profile_path;
+	const char *steamvr_controller_type;
+	struct oxr_binding_point_template *bindings;
+	size_t binding_count;
+	struct oxr_dpad_emulation_template *dpad_emulations;
+	size_t dpad_emulation_count;
+	struct {
+		struct {
+			uint32_t major;
+			uint32_t minor;
+		} promoted;
+	} openxr_version;
+
+	path_verify_fn_t subpath_fn;
+	path_verify_fn_t dpad_path_fn;
+	path_verify_fn_t dpad_emulator_fn;
+	ext_verify_fn_t ext_verify_fn;
+	const char *extension_name;
+};
+
+struct oxr_rebinding_binding_template
+{
+	const char *source_path;
+	const char *target_path;
+};
+
+struct oxr_rebinding_profile_template
+{
+	const char *source_profile_path;
+	const char *target_profile_path;
+	struct oxr_rebinding_binding_template *bindings;
+	size_t binding_count;
+};
+
+extern struct oxr_profile_template oxr_profile_templates[OXR_BINDINGS_PROFILE_TEMPLATE_COUNT];
+extern struct oxr_rebinding_profile_template
+    oxr_rebinding_profile_templates[OXR_BINDINGS_REBINDING_PROFILE_TEMPLATE_COUNT];
+// clang-format on
+#ifdef __cplusplus
+}
+#endif

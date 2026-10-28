@@ -1,20 +1,23 @@
 // Copyright 2018-2019, Collabora, Ltd.
+// Copyright 2026, Beyley Cardellio
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Holds debug utils/messenger related functions.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
+ * @author Beyley Cardellio <ep1cm1n10n123@gmail.com>
  * @ingroup oxr_main
  */
-
-#include <stdlib.h>
 
 #include "util/u_debug.h"
 #include "util/u_misc.h"
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
-#include "oxr_handle.h"
+#include "oxr_handle_base.h"
+
+#include <stdlib.h>
+
 
 static XrResult
 oxr_messenger_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
@@ -26,7 +29,7 @@ oxr_messenger_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 	 * Instances keep typed pointers to messengers around too.
 	 * Remove ourselves.
 	 */
-	for (size_t i = 0; i < XRT_MAX_HANDLE_CHILDREN; ++i) {
+	for (size_t i = 0; i < XRT_MAX_DEBUG_MESSENGERS; ++i) {
 		if (inst->messengers[i] == mssngr) {
 			inst->messengers[i] = NULL;
 			free(mssngr);
@@ -45,7 +48,7 @@ oxr_create_messenger(struct oxr_logger *log,
 {
 
 	struct oxr_debug_messenger **parent_slot = NULL;
-	for (size_t i = 0; i < XRT_MAX_HANDLE_CHILDREN; ++i) {
+	for (size_t i = 0; i < XRT_MAX_DEBUG_MESSENGERS; ++i) {
 		if (inst->messengers[i] == NULL) {
 			parent_slot = &(inst->messengers[i]);
 			break;

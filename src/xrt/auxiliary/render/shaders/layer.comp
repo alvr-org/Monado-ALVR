@@ -1,0 +1,656 @@
+// Copyright 2021-2023, Collabora Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
+// Author: Jakob Bornecrantz <jakob@collabora.com>
+// Author: Christoph Haag <christoph.haag@collabora.com>
+// SPDX-License-Identifier: BSL-1.0
+
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "srgb.inc.glsl"
+#include "hsv.inc.glsl"
+#include "layer_defines.inc.glsl"
+
+#define LAYER ubo.layers[layer]
+
+#define RENDER_MAX_LAYERS (128) // has to match RENDER_MAX_LAYERS in render_interface.h
+
+struct layer_data
+{
+	uint layer_type;
+	uint unpremultiplied_alpha;
+	uint inverted_alpha;
+
+	// This struct is used in an array, gets padded to vec4.
+	uint _padding0;
+};
+
+struct image_info
+{
+	uint color_image_index;
+	uint depth_image_index;
+
+	// This struct is used in an array, gets padded to vec4.
+	uint _padding0;
+	uint _padding1;
+};
+
+// Must match render_chroma_key_info in C code.
+struct chroma_key_info
+{
+	float hsv_min_h;
+	float hsv_min_s;
+	float hsv_min_v;
+	float hsv_max_h;
+	float hsv_max_s;
+	float hsv_max_v;
+	float curve;
+	float despill;
+};
+
+const float PI = acos(-1);
+
+// Should we do timewarp.
+layout(constant_id = 1) const bool k_do_timewarp = false;
+layout(constant_id = 2) const bool k_do_color_correction = true;
+
+//! This is always set by the render_resource pipeline creation code to the actual limit.
+layout(constant_id = 3) const int k_sampler_array_size = 16;
+
+//! See RENDER_LAYER_DEFAULT_INSET_BLEND_EDGE in render_interface.h for default value.
+layout(constant_id = 4) const float k_inset_blend_edge = 0.0;
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+// layer 0 color, [optional: layer 0 depth], layer 1, ...
+layout(set = 0, binding = 0) uniform sampler2D source[k_sampler_array_size];
+layout(set = 0, binding = 2) uniform writeonly restrict image2D target;
+struct Layer {
+	vec4 post_transform;
+
+	// Per-layer data.
+	layer_data layer_data;
+
+	// which image/sampler(s) correspond to each layer
+	image_info image_info;
+
+	// shared between cylinder and equirect2
+	mat4 mv_inverse;
+
+
+	// for cylinder layer
+	vec4 cylinder_data;
+
+
+	// for equirect2 layer
+	vec4 eq2_data;
+
+
+	// for projection layers
+
+	// fov and timewarp matrix
+	mat4 transform;
+
+	// per-layer chroma key settings
+	chroma_key_info chroma_key;
+
+	// for quad layers
+
+	// all quad transforms and coordinates are in view space
+	vec4 quad_position;
+	vec4 quad_normal;
+	mat4 inverse_quad_transform;
+
+	// quad extent in world scale
+	vec2 quad_extent;
+
+	// color scale and bias for all layers
+	vec4 color_scale;
+	vec4 color_bias;
+};
+layout(set = 0, binding = 3, std140) uniform restrict Config
+{
+	ivec4 view;
+	ivec4 layer_count;
+
+	vec4 pre_transform;
+	Layer layers[RENDER_MAX_LAYERS];
+} ubo;
+
+vec4 apply_chroma_key(vec4 color, uint layer)
+{
+	float curve = LAYER.chroma_key.curve;
+
+	if (curve <= 0.0) {
+		return color; // Chroma key disabled
+	}
+
+	vec3 hsv_a = vec3(LAYER.chroma_key.hsv_min_h, LAYER.chroma_key.hsv_min_s, LAYER.chroma_key.hsv_min_v);
+	vec3 hsv_b = vec3(LAYER.chroma_key.hsv_max_h, LAYER.chroma_key.hsv_max_s, LAYER.chroma_key.hsv_max_v);
+	float despill = LAYER.chroma_key.despill;
+
+	// Sort so S/V min/max are correct regardless of input order
+	// Hue is left unsorted to preserve wrapping semantics
+	vec3 hsv_min = vec3(hsv_a.x, min(hsv_a.y, hsv_b.y), min(hsv_a.z, hsv_b.z));
+	vec3 hsv_max = vec3(hsv_b.x, max(hsv_a.y, hsv_b.y), max(hsv_a.z, hsv_b.z));
+
+	// Convert to sRGB then to HSV for color matching
+	vec3 srgb = k_do_color_correction ? from_linear_to_srgb(color.rgb) : color.rgb;
+	vec3 hsv = rgb_to_hsv(srgb);
+
+	// Compute distance from the HSV range (0 = inside, >0 = outside)
+	float h_dist = hue_distance(hsv.x, hsv_min.x, hsv_max.x);
+	float s_dist = range_distance(hsv.y, hsv_min.y, hsv_max.y);
+	float v_dist = range_distance(hsv.z, hsv_min.z, hsv_max.z);
+	float dist = length(vec3(h_dist, s_dist, v_dist));
+
+	// Apply power curve: <1 = softer falloff, 1 = linear, >1 = harder cutoff
+	float chroma_alpha = clamp(pow(dist, curve), 0.0, 1.0);
+
+	// Despill: reduce saturation of pixels near the key color
+	float despill_strength = despill * (1.0 - chroma_alpha);
+	hsv.y *= (1.0 - despill_strength);
+	vec3 rgb_despill = hsv_to_rgb(hsv);
+	color.rgb = k_do_color_correction ? from_srgb_to_linear(rgb_despill) : rgb_despill;
+
+	// Pre-multiply RGB by the chroma alpha
+	return vec4(color.rgb * chroma_alpha, color.a * chroma_alpha);
+}
+
+float invert_alpha(float alpha, uint layer)
+{
+	if (LAYER.layer_data.inverted_alpha != 0) {
+		alpha = 1.0 - alpha;
+	}
+
+	return alpha;
+}
+
+vec2 position_to_view_uv(ivec2 extent, uint ix, uint iy)
+{
+	// Turn the index into floating point.
+	vec2 xy = vec2(float(ix), float(iy));
+
+	// The inverse of the extent of a view image is the pixel size in [0 .. 1] space.
+	vec2 extent_pixel_size = vec2(1.0 / float(extent.x), 1.0 / float(extent.y));
+
+	// Per-target pixel we move the size of the pixels.
+	vec2 view_uv = xy * extent_pixel_size;
+
+	// Emulate a triangle sample position by offset half target pixel size.
+	view_uv = view_uv + extent_pixel_size / 2.0;
+
+	return view_uv;
+}
+
+vec2 transform_uv_fov_timewarp(vec2 uv, uint layer)
+{
+	vec4 values = vec4(uv, -1, 1);
+
+	// From uv to tan angle (tangent space).
+	values.xy = fma(values.xy, ubo.pre_transform.zw, ubo.pre_transform.xy);
+	values.y = -values.y; // Flip to OpenXR coordinate system.
+
+	// Apply FOV and timewarp.
+	values = LAYER.transform * values;
+	values.xy = values.xy * (1.0 / max(values.w, 0.00001));
+
+	// From [-1, 1] to [0, 1]
+	values.xy = values.xy * 0.5 + 0.5;
+
+	return values.xy;
+}
+
+vec2 transform_uv_subimage(vec2 uv, uint layer)
+{
+	vec2 values = uv;
+
+	// To deal with OpenGL flip and sub image view.
+	values.xy = fma(values.xy, LAYER.post_transform.zw, LAYER.post_transform.xy);
+
+	return values.xy;
+}
+
+vec4 do_cylinder(vec2 view_uv, uint layer)
+{
+	// Get ray position in model space.
+	const vec3 ray_origin = (LAYER.mv_inverse * vec4(0, 0, 0, 1)).xyz;
+
+	// [0 .. 1] to tangent lengths (at unit Z).
+	const vec2 uv = fma(view_uv, ubo.pre_transform.zw, ubo.pre_transform.xy);
+
+	// With Z at the unit plane and flip y for OpenXR coordinate system,
+	// transform the ray into model space.
+	const vec3 ray_dir = normalize((LAYER.mv_inverse * vec4(uv.x, -uv.y, -1, 0)).xyz);
+
+	const float radius = LAYER.cylinder_data.x;
+	const float central_angle = LAYER.cylinder_data.y;
+	const float aspect_ratio = LAYER.cylinder_data.z;
+
+	vec3 dir_from_cyl;
+	// CPU code will set +INFINITY to zero.
+	if (radius == 0) {
+		dir_from_cyl = ray_dir;
+	} else {
+		// Find if the cylinder intersects with the ray direction
+		// Inspired by Inigo Quilez
+		// https://iquilezles.org/articles/intersectors/
+
+		const vec3 axis = vec3(0.f, 1.f, 0.f);
+
+		float card = dot(axis, ray_dir);
+		float caoc = dot(axis, ray_origin);
+		float a = 1.f - card * card;
+		float b = dot(ray_origin, ray_dir) - caoc * card;
+		float c = dot(ray_origin, ray_origin) - caoc * caoc - radius * radius;
+		float h = b * b - a * c;
+		if(h < 0.f) {
+			// no intersection
+			return vec4(0.f);
+		}
+
+		h = sqrt(h);
+		vec2 distances = vec2(-b - h, -b + h) / a;
+
+		if (distances.y < 0) {
+			return vec4(0.f);
+		}
+
+		dir_from_cyl = normalize(ray_origin + (ray_dir * distances.y));
+	}
+
+	const float lon = atan(dir_from_cyl.x, -dir_from_cyl.z) / (2 * PI) + 0.5; // => [0, 1]
+	// float lat = -asin(dir_from_cyl.y); // => [-π/2, π/2]
+	// float y = tan(lat); // => [-inf, inf]
+	// simplified: -y/sqrt(1 - y^2)
+	const float y = -dir_from_cyl.y / sqrt(1 - (dir_from_cyl.y * dir_from_cyl.y)); // => [-inf, inf]
+
+	vec4 out_color = vec4(0.f);
+
+#ifdef DEBUG
+	const int lon_int = int(lon * 1000.f);
+	const int y_int = int(y * 1000.f);
+
+	if (lon < 0.001 && lon > -0.001) {
+		out_color = vec4(1, 0, 0, 1);
+	} else if (lon_int % 50 == 0) {
+		out_color = vec4(1, 1, 1, 1);
+	} else if (y_int % 50 == 0) {
+		out_color = vec4(1, 1, 1, 1);
+	} else {
+		out_color = vec4(lon, y, 0, 1);
+	}
+#endif
+
+	const float chan = central_angle / (PI * 2.f);
+
+	// height in radii, radius only matters for determining intersection
+	const float height = central_angle / aspect_ratio;
+
+	// Normalize [0, 2π] to [0, 1]
+	const float uhan = 0.5 + chan / 2.f;
+	const float lhan = 0.5 - chan / 2.f;
+
+	const float ymin = -height / 2;
+	const float ymax = height / 2;
+
+	if (y < ymax && y > ymin && lon < uhan && lon > lhan) {
+		// map configured display region to whole texture
+		vec2 offset = vec2(lhan, ymin);
+		vec2 extent = vec2(uhan - lhan, ymax - ymin);
+		vec2 sample_point = (vec2(lon, y) - offset) / extent;
+
+		vec2 uv_sub = fma(sample_point, LAYER.post_transform.zw, LAYER.post_transform.xy);
+
+		uint index = LAYER.image_info.color_image_index;
+#ifdef DEBUG
+		out_color += texture(source[index], uv_sub) / 2.f;
+#else
+
+		out_color = texture(source[index], uv_sub);
+#endif
+	} else {
+		out_color += vec4(0.f);
+	}
+
+	return out_color;
+}
+
+vec4 do_equirect2(vec2 view_uv, uint layer)
+{
+	// Get ray position in model space.
+	const vec3 ray_origin = (LAYER.mv_inverse * vec4(0, 0, 0, 1)).xyz;
+
+	// [0 .. 1] to tangent lengths (at unit Z).
+	const vec2 uv = fma(view_uv, ubo.pre_transform.zw, ubo.pre_transform.xy);
+
+	// With Z at the unit plane and flip y for OpenXR coordinate system,
+	// transform the ray into model space.
+	const vec3 ray_dir = normalize((LAYER.mv_inverse * vec4(uv.x, -uv.y, -1, 0)).xyz);
+
+	const float radius = LAYER.eq2_data.x;
+	const float central_horizontal_angle = LAYER.eq2_data.y;
+	const float upper_vertical_angle = LAYER.eq2_data.z;
+	const float lower_vertical_angle = LAYER.eq2_data.w;
+
+	vec3 dir_from_sph;
+	// CPU code will set +INFINITY to zero.
+	if (radius == 0) {
+		dir_from_sph = ray_dir;
+	} else {
+		// Find if the sphere intersects with the ray using Pythagoras'
+		// theroem with a triangle formed by QC, H and the radius.
+		// Inspired by Inigo Quilez
+		// https://iquilezles.org/articles/intersectors/
+
+		const float B = dot(ray_origin, ray_dir);
+		// QC is the point where the ray passes closest
+		const vec3 QC = ray_origin - B * ray_dir;
+		// If the distance is father than the radius, no hit
+		float H = radius * radius - dot(QC, QC);
+		if (H < 0.0) {
+			// no intersection
+			return vec4(0.f);
+		}
+
+		H = sqrt(H);
+
+		vec2 distances = vec2(-B - H, -B + H);
+		if (distances.y < 0) {
+			return vec4(0.f);
+		}
+
+		dir_from_sph = normalize(ray_origin + (ray_dir * distances.y));
+	}
+
+	const float lon = atan(dir_from_sph.x, -dir_from_sph.z) / (2 * PI) + 0.5;
+	const float lat = acos(dir_from_sph.y) / PI;
+
+	vec4 out_color = vec4(0.f);
+
+#ifdef DEBUG
+	const int lon_int = int(lon * 1000.f);
+	const int lat_int = int(lat * 1000.f);
+
+	if (lon < 0.001 && lon > -0.001) {
+		out_color = vec4(1, 0, 0, 1);
+	} else if (lon_int % 50 == 0) {
+		out_color = vec4(1, 1, 1, 1);
+	} else if (lat_int % 50 == 0) {
+		out_color = vec4(1, 1, 1, 1);
+	} else {
+		out_color = vec4(lon, lat, 0, 1);
+	}
+#endif
+
+	const float chan = central_horizontal_angle / (PI * 2.0f);
+
+	// Normalize [0, 2π] to [0, 1]
+	const float uhan = 0.5 + chan / 2.0f;
+	const float lhan = 0.5 - chan / 2.0f;
+
+	// Normalize [-π/2, π/2] to [0, 1]
+	const float uvan = upper_vertical_angle / PI + 0.5f;
+	const float lvan = lower_vertical_angle / PI + 0.5f;
+
+	if (lat < uvan && lat > lvan && lon < uhan && lon > lhan) {
+		// map configured display region to whole texture
+		vec2 ll_offset = vec2(lhan, lvan);
+		vec2 ll_extent = vec2(uhan - lhan, uvan - lvan);
+		vec2 sample_point = (vec2(lon, lat) - ll_offset) / ll_extent;
+
+		vec2 uv_sub = fma(sample_point, LAYER.post_transform.zw, LAYER.post_transform.xy);
+
+		uint index = LAYER.image_info.color_image_index;
+#ifdef DEBUG
+		out_color += texture(source[index], uv_sub) / 2.0;
+#else
+
+		out_color = texture(source[index], uv_sub);
+#endif
+	} else {
+		out_color += vec4(0.f);
+	}
+
+	return out_color;
+}
+
+vec4 do_projection_uv(vec2 view_uv, uint layer, out vec2 out_uv)
+{
+	uint source_image_index = LAYER.image_info.color_image_index;
+
+	// Apply FOV and timewarp transformation.
+	view_uv = transform_uv_fov_timewarp(view_uv, layer);
+
+	// Output view space coordinates, before subimage. Inset layer blend
+	// expects coordinates to be in range [0..1] across the layer, anything
+	// outside that is considered out of the view frustum, and sub image view
+	// coordinates may not cover the whole range. Set before view coordinates
+	// are rejected so that an early return still reports these to the inset
+	// layer blend code.
+	out_uv = view_uv;
+
+	// Reject coordinates outside the view frustum.
+	bool in_frustum_bounds =
+		all(greaterThanEqual(view_uv, vec2(0.0))) &&
+		all(lessThan(view_uv, vec2(1.0)));
+	if (!in_frustum_bounds) {
+		return vec4(0.0);
+	}
+
+	// Map from view space coordinates to sub image view coordinates.
+	vec2 image_uv = transform_uv_subimage(view_uv, layer);
+
+	// Sample the source.
+	vec4 colour = vec4(texture(source[source_image_index], image_uv).rgba);
+
+	return colour;
+}
+
+vec4 do_projection_inset(vec2 view_uv, uint layer, out float out_inset_blend_factor)
+{
+	vec2 uv = vec2(0.0, 0.0);
+	vec4 colour = do_projection_uv(view_uv, layer, uv);
+
+	vec2 negative_edges = smoothstep(0, k_inset_blend_edge, uv);
+	vec2 positive_edges = smoothstep(1.0, 1.0 - k_inset_blend_edge, uv);
+	vec2 inset_blend_factor = min(negative_edges, positive_edges);
+	out_inset_blend_factor = min(inset_blend_factor.x, inset_blend_factor.y);
+
+	return colour;
+}
+
+vec4 do_projection(vec2 view_uv, uint layer)
+{
+	vec2 uv = vec2(0.5, 0.5);
+	return do_projection_uv(view_uv, layer, uv);
+}
+
+vec3 get_direction(vec2 uv)
+{
+	// Skip the DIM/STRETCH/OFFSET stuff and go directly to values
+	vec4 values = vec4(uv, -1, 1);
+
+	// From uv to tan angle (tangent space).
+	values.xy = fma(values.xy, ubo.pre_transform.zw, ubo.pre_transform.xy);
+	values.y = -values.y; // Flip to OpenXR coordinate system.
+
+	// This works because values.xy are now in tangent space, that is the
+	// `tan(a)` on each of the x and y axis. That means values.xyz now
+	// define a point on the plane that sits at Z -1 and has a normal that
+	// runs parallel to the Z-axis. So if you run normalize you get a normal
+	// that points at that point.
+	vec3 direction = normalize(values.xyz);
+
+	return direction;
+}
+
+vec4 do_quad(vec2 view_uv, uint layer)
+{
+	uint source_image_index = LAYER.image_info.color_image_index;
+
+	// center point of the plane in view space.
+	vec3 quad_position = LAYER.quad_position.xyz;
+
+	// normal vector of the plane.
+	vec3 normal = LAYER.quad_normal.xyz;
+	normal = normalize(normal);
+
+	// coordinate system is the view space, therefore the camera/eye position is in the origin.
+	vec3 camera = vec3(0.0, 0.0, 0.0);
+
+	// default color white should never be visible
+	vec4 colour = vec4(1.0, 1.0, 1.0, 1.0);
+
+	//! @todo can we get better "pixel stuck" on projection layers with timewarp uv?
+	// never use the timewarp uv here because it depends on the projection layer pose
+	vec2 uv = view_uv;
+
+	/*
+	* To fill in the view_uv texel on the target texture, an imaginary ray is shot through texels on the target
+	* texture. When this imaginary ray hits a quad layer, it means that when the respective color at the hit
+	* intersection is picked for the current view_uv texel, the final image as seen through the headset will
+	* show this view_uv texel at the respective location.
+	*/
+	vec3 direction = get_direction(uv);
+	direction = normalize(direction);
+
+	float denominator = dot(direction, normal);
+
+	// denominator is negative when vectors point towards each other, 0 when perpendicular,
+	// and positive when vectors point in a similar direction, i.e. direction vector faces quad backface, which we don't render.
+	if (denominator < 0.00001) {
+		// shortest distance between origin and plane defined by normal + quad_position
+		float dist = dot(camera - quad_position, normal);
+
+		// distance between origin and intersection point on the plane.
+		float intersection_dist = (dot(camera, normal) + dist) / -denominator;
+
+		// layer is behind camera as defined by direction vector
+		if (intersection_dist < 0) {
+			colour = vec4(0.0, 0.0, 0.0, 0.0);
+			return colour;
+		}
+
+		vec3 intersection = camera + intersection_dist * direction;
+
+		// ps for "plane space"
+		vec2 intersection_ps = (LAYER.inverse_quad_transform * vec4(intersection.xyz, 1.0)).xy;
+
+		bool in_plane_bounds =
+			intersection_ps.x >= - LAYER.quad_extent.x / 2. && //
+			intersection_ps.x <= LAYER.quad_extent.x / 2. && //
+			intersection_ps.y >= - LAYER.quad_extent.y / 2. && //
+			intersection_ps.y <= LAYER.quad_extent.y / 2.;
+
+		if (in_plane_bounds) {
+			// intersection_ps is in [-quad_extent .. quad_extent]. Transform to  [0 .. quad_extent], then scale to [ 0 .. 1 ] for sampling
+			vec2 plane_uv = (intersection_ps.xy + LAYER.quad_extent / 2.) / LAYER.quad_extent;
+
+			// sample on the desired subimage, not the entire texture
+			plane_uv = fma(plane_uv, LAYER.post_transform.zw, LAYER.post_transform.xy);
+
+			colour = texture(source[source_image_index], plane_uv);
+		} else {
+			// intersection on infinite plane outside of plane bounds
+			colour = vec4(0.0, 0.0, 0.0, 0.0);
+			return colour;
+		}
+	} else {
+		// no intersection with front face of infinite plane or perpendicular
+		colour = vec4(0.0, 0.0, 0.0, 0.0);
+		return colour;
+	}
+
+	// Only invert alpha if we have a color, i.e. in plane bounds.
+	colour.a = invert_alpha(colour.a, layer);
+
+	return vec4(colour);
+}
+
+vec4 do_layers(vec2 view_uv)
+{
+	vec4 accum = vec4(0, 0, 0, 0);
+
+	int layer_count = ubo.layer_count.x;
+	for (uint layer = 0; layer < layer_count; layer++) {
+		vec4 rgba = vec4(0, 0, 0, 0);
+
+		switch (LAYER.layer_data.layer_type) {
+		case LAYER_COMP_TYPE_NOOP:
+			continue;
+		case LAYER_COMP_TYPE_QUAD:
+			rgba = do_quad(view_uv, layer);
+			// Quad alpha inversion is done inside
+			break;
+		case LAYER_COMP_TYPE_CYLINDER:
+			rgba = do_cylinder(view_uv, layer);
+			rgba.a = invert_alpha(rgba.a, layer);
+			break;
+		case LAYER_COMP_TYPE_EQUIRECT2:
+			rgba = do_equirect2(view_uv, layer);
+			rgba.a = invert_alpha(rgba.a, layer);
+			break;
+		case LAYER_COMP_TYPE_PROJECTION:
+			rgba = do_projection(view_uv, layer);
+			rgba.a = invert_alpha(rgba.a, layer);
+			rgba = apply_chroma_key(rgba, layer);
+			break;
+		case LAYER_COMP_TYPE_CONTEXT:
+			// The second layer is the inset, which handles both.
+			continue;
+		case LAYER_COMP_TYPE_INSET:
+			float inset_blend_factor = 0.0;
+			vec4 context_rgba = do_projection(view_uv, layer - 1);
+			vec4 inset_rgba = do_projection_inset(view_uv, layer, inset_blend_factor);
+
+			/*
+			 * We handle this here so that any additional effects
+			 * are applied after the two "layers" are blended,
+			 * so the quad views layer is treated as one layer.
+			 */
+			rgba = mix(context_rgba, inset_rgba, inset_blend_factor);
+			rgba = apply_chroma_key(rgba, layer);
+			break;
+		default: break;
+		}
+
+		// Apply color scale and bias
+		rgba = clamp(rgba * LAYER.color_scale + LAYER.color_bias, 0.0, 1.0);
+
+		if (LAYER.layer_data.unpremultiplied_alpha != 0) {
+			// Unpremultipled blend factor of src.a.
+			accum.rgb = mix(accum.rgb, rgba.rgb, rgba.a);
+		} else {
+			// Premultiplied blend factor of 1.
+			accum.rgb = (accum.rgb * (1 - rgba.a)) + rgba.rgb;
+		}
+		accum.a = fma((1.f - rgba.a), accum.a, rgba.a);
+	}
+
+	return accum;
+}
+
+void main()
+{
+	uint ix = gl_GlobalInvocationID.x;
+	uint iy = gl_GlobalInvocationID.y;
+
+	ivec2 offset = ivec2(ubo.view.xy);
+	ivec2 extent = ivec2(ubo.view.zw);
+
+	if (ix >= extent.x || iy >= extent.y) {
+		return;
+	}
+
+	vec2 view_uv = position_to_view_uv(extent, ix, iy);
+
+	vec4 colour = do_layers(view_uv);
+
+	if (k_do_color_correction) {
+		// Do colour correction here since there are no automatic conversion in hardware available.
+		colour.rgb = from_linear_to_srgb(colour.rgb);
+	}
+
+	imageStore(target, ivec2(offset.x + ix, offset.y + iy), colour);
+}

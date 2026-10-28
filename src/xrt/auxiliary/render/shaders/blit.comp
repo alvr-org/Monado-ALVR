@@ -1,0 +1,12 @@
+// Copyright 2026, Beyley Cardellio
+// Author: Beyley Cardellio <ep1cm1n10n123@gmail.com>
+// SPDX-License-Identifier: BSL-1.0
+
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define BLIT_SOURCE_MULTISAMPLED 0
+
+#include "blit.inc.glsl"
+
+void main() { blit(); }

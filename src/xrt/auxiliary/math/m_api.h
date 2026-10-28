@@ -4,7 +4,7 @@
  * @file
  * @brief  C interface to math library.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <mosesturner@protonmail.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Nis Madsen <nima_zero_one@protonmail.com>
  *
  * @see xrt_vec3
@@ -17,6 +17,8 @@
 #pragma once
 
 #include "xrt/xrt_defines.h"
+
+#include "math/m_mathinclude.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +76,25 @@ extern "C" {
  * @ingroup aux_math
  */
 #define CLAMP(X, A, B) (MIN(MAX((X), (A)), (B)))
+
+/*!
+ * Degrees to radians conversion.
+ *
+ * @ingroup aux_math
+ */
+// clang-format off
+// @todo: Remove the clang-format off/on when we move to a newer clang-format in CI.
+#define DEG_TO_RAD(DEG) ((DEG) * M_PI / 180.)
+// clang-format on
+
+/*!
+ * Radians to degrees conversion.
+ *
+ * @ingroup aux_math
+ */
+// clang-format off
+#define RAD_TO_DEG(RAD) ((RAD) * 180.0 / M_PI)
+// clang-format on
 
 
 /*
@@ -172,6 +193,18 @@ math_vec3_translation_from_isometry(const struct xrt_matrix_4x4 *isometry, struc
 void
 math_vec3_normalize(struct xrt_vec3 *in);
 
+/*!
+ * Convert a vec3 from the OpenCV coordinate system to the OpenXR coordinate system and back. OpenCV camera space
+ * coordinates has +Y down and +Z away from the user.
+ *
+ * The input and output may be the same pointer.
+ *
+ * @relates xrt_vec3
+ * @ingroup aux_math
+ */
+void
+math_vec3_convert_from_opencv(const struct xrt_vec3 *in, struct xrt_vec3 *out);
+
 
 /*
  *
@@ -196,6 +229,18 @@ math_vec3_f64_cross(const struct xrt_vec3_f64 *l, const struct xrt_vec3_f64 *r, 
  */
 void
 math_vec3_f64_normalize(struct xrt_vec3_f64 *in);
+
+/*!
+ * Convert a vec3_f64 from the OpenCV coordinate system to the OpenXR coordinate system. OpenCV camera space coordinates
+ * has +Y down and +Z away from the user.
+ *
+ * The input and output may be the same pointer.
+ *
+ * @relates xrt_vec3
+ * @ingroup aux_math
+ */
+void
+math_vec3_f64_convert_from_opencv(const struct xrt_vec3_f64 *in, struct xrt_vec3_f64 *out);
 
 
 /*
@@ -272,6 +317,15 @@ math_quat_from_vec_a_to_vec_b(const struct xrt_vec3 *vec_a, const struct xrt_vec
  */
 bool
 math_quat_validate(const struct xrt_quat *quat);
+
+/*!
+ * Check if this quat is (approximately) identity.
+ *
+ * @relates xrt_quat
+ * @ingroup aux_math
+ */
+bool
+math_quat_is_identity(const struct xrt_quat *quat, float epsilon);
 
 /*!
  * Check if this quat is within 1% of unit length.
@@ -400,7 +454,8 @@ math_quat_finite_difference(const struct xrt_quat *quat0,
                             struct xrt_vec3 *out_ang_vel);
 
 /*!
- * Takes a rotation vector equal to half of a Rodrigues rotation vector and returns its corresponding unit quaternion.
+ * Takes a Rodrigues rotation vector and returns its corresponding unit quaternion.
+ *
  * Useful for head tracking and pose-prediction.
  *
  * @relates xrt_quat
@@ -408,11 +463,12 @@ math_quat_finite_difference(const struct xrt_quat *quat0,
  * @ingroup aux_math
  */
 void
-math_quat_exp(const struct xrt_vec3 *axis_angle, struct xrt_quat *out_quat);
+math_quat_exp_so3(const struct xrt_vec3 *axis_angle, struct xrt_quat *out_quat);
 
 
 /*!
- * Takes a unit quaternion and returns a rotation vector equal to half of its corresponding Rodrigues rotation vector.
+ * Takes a unit quaternion and returns its corresponding Rodrigues rotation vector.
+ *
  * Useful for head tracking and pose-prediction.
  *
  * @relates xrt_quat
@@ -420,7 +476,7 @@ math_quat_exp(const struct xrt_vec3 *axis_angle, struct xrt_quat *out_quat);
  * @ingroup aux_math
  */
 void
-math_quat_ln(const struct xrt_quat *quat, struct xrt_vec3 *out_axis_angle);
+math_quat_ln_so3(const struct xrt_quat *quat, struct xrt_vec3 *out_axis_angle);
 
 /*!
  * Used to rotate a derivative like a angular velocity.
@@ -798,6 +854,38 @@ math_pose_transform(const struct xrt_pose *transform, const struct xrt_pose *pos
 void
 math_pose_transform_point(const struct xrt_pose *transform, const struct xrt_vec3 *point, struct xrt_vec3 *out_point);
 
+/*!
+ * Convert a pose from the OpenCV coordinate system to the OpenXR coordinate system and back. OpenCV camera space
+ * coordinates has +Y down and +Z away from the user.
+ *
+ * The input and output may be the same pointer.
+ *
+ * @relates xrt_pose
+ * @ingroup aux_math
+ */
+void
+math_pose_convert_from_opencv(const struct xrt_pose *in, struct xrt_pose *out);
+
+
+/*
+ *
+ * Space relation functions.
+ *
+ */
+
+
+/*!
+ * Convert a space relation from the OpenCV coordinate system to the OpenXR coordinate system and back. OpenCV camera
+ * space coordinates has +Y down and +Z away from the user.
+ *
+ * The input and output may be the same pointer.
+ *
+ * @relates xrt_space_relation
+ * @ingroup aux_math
+ */
+void
+math_space_relation_convert_from_opencv(const struct xrt_space_relation *in, struct xrt_space_relation *out);
+
 
 /*
  *
@@ -877,6 +965,33 @@ math_compute_fovs(double w_total,
                   double h_1,
                   double vertfov_total,
                   struct xrt_fov *fov);
+
+/*!
+ * Compute the FOV to use when parallelizing canted views.
+ *
+ * Some applications do not support rendering for view orientations that are
+ * not parallel to each other.
+ * When using a headset with physically canted displays, such applications
+ * require parallelizing the views, i.e. forcing the orientations of the views
+ * to be parallel.
+ * When the application passes content rendered for parallel views to the
+ * compositor, the compositor typically reprojects this content such that it
+ * matches the physical canting of the displays, effectively rotating the view
+ * orientation.
+ *
+ * When rotating the view orientation, parts of the FOV are cut off on the side
+ * the view rotates away from and parts of previously unseen content is pulled
+ * in from the side the view rotates towards. Therefore, when parallezing
+ * views, the application should render with an adjusted FOV that covers the
+ * area that will be in the FOV of the view *after* the compositor reprojects
+ * it back to the physical canted orientation.
+ *
+ * @ingroup aux_math
+ */
+void
+math_compute_parallelized_fov(const struct xrt_fov *fov,
+                              const struct xrt_quat *canted_view_orientation,
+                              struct xrt_fov *out_parallelized_fov);
 
 #ifdef __cplusplus
 }

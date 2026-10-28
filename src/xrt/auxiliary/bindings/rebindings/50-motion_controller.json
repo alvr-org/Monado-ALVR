@@ -1,0 +1,21 @@
+{
+	"motion_controller_to_odyssey_controller": {
+		"source_profile": "/interaction_profiles/microsoft/motion_controller",
+		"target_profile": "/interaction_profiles/samsung/odyssey_controller",
+		"helpers": [
+			"/helper/controller/identity/menu",
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/system",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trackpad",
+			"/helper/controller/identity/trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/squeeze": true,
+			"/user/hand/left/input/squeeze/click": true,
+			"/user/hand/right/input/squeeze": true,
+			"/user/hand/right/input/squeeze/click": true
+		}
+	}
+}

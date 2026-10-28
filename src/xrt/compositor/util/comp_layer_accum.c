@@ -89,7 +89,7 @@ comp_layer_accum_projection_depth(struct comp_layer_accum *cla,
 	U_ZERO_ARRAY(layer->sc_array);
 	for (uint32_t i = 0; i < data->view_count; ++i) {
 		layer->sc_array[i] = xsc[i];
-		layer->sc_array[i + data->view_count] = d_xsc[i];
+		layer->sc_array[XRT_MAX_VIEWS + i] = d_xsc[i];
 	}
 	layer->data = *data;
 

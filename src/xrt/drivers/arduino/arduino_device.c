@@ -348,30 +348,6 @@ arduino_device_get_tracked_pose(struct xrt_device *xdev,
 
 /*
  *
- * Bindings
- *
- */
-
-static struct xrt_binding_input_pair simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_DAYDREAM_BAR_CLICK},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_DAYDREAM_CIRCLE_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_DAYDREAM_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_DAYDREAM_POSE},
-};
-
-static struct xrt_binding_profile binding_profiles[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs,
-        .input_count = ARRAY_SIZE(simple_inputs),
-        .outputs = NULL,
-        .output_count = 0,
-    },
-};
-
-
-/*
- *
  * Prober functions.
  *
  */
@@ -393,8 +369,6 @@ arduino_device_create(struct os_ble_device *ble)
 	ad->base.inputs[4].name = XRT_INPUT_DAYDREAM_VOLDN_CLICK;
 	ad->base.inputs[5].name = XRT_INPUT_DAYDREAM_VOLUP_CLICK;
 	ad->base.inputs[6].name = XRT_INPUT_DAYDREAM_TOUCHPAD;
-	ad->base.binding_profiles = binding_profiles;
-	ad->base.binding_profile_count = ARRAY_SIZE(binding_profiles);
 
 	static int controller_num = 0;
 	snprintf(ad->base.str, XRT_DEVICE_NAME_LEN, "Arduino");
@@ -405,9 +379,9 @@ arduino_device_create(struct os_ble_device *ble)
 
 	m_imu_3dof_init(&ad->fusion, M_IMU_3DOF_USE_GRAVITY_DUR_300MS);
 
-#define DEG_TO_RAD ((double)M_PI / 180.0)
+#define DEG_TO_RAD_MULTIPLIER ((double)M_PI / 180.0)
 	float accel_ticks_to_float = (4.0 * MATH_GRAVITY_M_S2) / INT16_MAX;
-	float gyro_ticks_to_float = (2000.0 * DEG_TO_RAD) / INT16_MAX;
+	float gyro_ticks_to_float = (2000.0 * DEG_TO_RAD_MULTIPLIER) / INT16_MAX;
 
 	m_imu_pre_filter_init(&ad->pre_filter, accel_ticks_to_float, gyro_ticks_to_float);
 	m_imu_pre_filter_set_switch_x_and_y(&ad->pre_filter);
@@ -430,8 +404,8 @@ arduino_device_create(struct os_ble_device *ble)
 	u_var_add_ro_vec3_f32(ad, &ad->fusion.last.accel, "last.accel");
 	u_var_add_ro_vec3_f32(ad, &ad->fusion.last.gyro, "last.gyro");
 
-	ad->base.orientation_tracking_supported = true;
-	ad->base.position_tracking_supported = false;
+	ad->base.supported.orientation_tracking = true;
+	ad->base.supported.position_tracking = false;
 	ad->base.device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
 
 	ARDUINO_DEBUG(ad, "Created device!");

@@ -1,0 +1,10 @@
+{
+	"blubur_s1_mndx_to_psvr2_mndx": {
+		"source_profile": "/interaction_profiles/mndx/blubur_s1_mndx",
+		"target_profile": "/interaction_profiles/mndx/psvr2_mndx",
+		"bindings": {
+			"/user/head/input/menu": "/user/head/input/system",
+			"/user/head/input/menu/click": "/user/head/input/system/click"
+		}
+	}
+}

@@ -36,21 +36,14 @@ DEBUG_GET_ONCE_LOG_OPTION(daydream_log, "DAYDREAM_LOG", U_LOGGING_WARN)
  */
 enum daydream_input_index
 {
+	DAYDREAM_POSE,
 	DAYDREAM_TOUCHPAD_CLICK,
 	DAYDREAM_BAR_CLICK,
 	DAYDREAM_CIRCLE_CLICK,
 	DAYDREAM_VOLUP_CLICK,
 	DAYDREAM_VOLDN_CLICK,
 	DAYDREAM_TOUCHPAD,
-
-};
-
-/*!
- * Input package for Daydream.
- */
-struct daydream_input_packet
-{
-	uint8_t data[20];
+	DAYDREAM_INPUT_COUNT,
 };
 
 
@@ -67,7 +60,10 @@ daydream_device(struct xrt_device *xdev)
 }
 
 static void
-daydream_update_input_click(struct daydream_device *daydream, int index, int64_t now, uint32_t bit)
+daydream_update_input_click(struct daydream_device *daydream,
+                            enum daydream_input_index index,
+                            int64_t now,
+                            uint32_t bit)
 {
 
 	daydream->base.inputs[index].timestamp = now;
@@ -191,14 +187,14 @@ daydream_run_thread(void *ptr)
 	struct daydream_parsed_input input; // = {0};
 
 	// wait for a package to sync up, it's discarded but that's okay.
-	if (!daydream_read_one_packet(daydream, buffer, 20)) {
+	if (!daydream_read_one_packet(daydream, buffer, ARRAY_SIZE(buffer))) {
 		// Does null checking and sets to null.
 		time_state_destroy(&time);
 		return NULL;
 	}
 
 	timepoint_ns then_ns = time_state_get_now(time);
-	while (daydream_read_one_packet(daydream, buffer, 20)) {
+	while (daydream_read_one_packet(daydream, buffer, ARRAY_SIZE(buffer))) {
 
 		timepoint_ns now_ns = time_state_get_now(time);
 
@@ -246,8 +242,8 @@ daydream_get_fusion_pose(struct daydream_device *daydream,
 	out_relation->pose.orientation = daydream->fusion.rot;
 
 	//! @todo assuming that orientation is actually currently tracked.
-	out_relation->relation_flags = (enum xrt_space_relation_flags)(XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
-	                                                               XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT);
+	out_relation->relation_flags =
+	    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT;
 }
 
 static void
@@ -284,11 +280,11 @@ daydream_device_update_inputs(struct xrt_device *xdev)
 	os_mutex_lock(&daydream->lock);
 
 	// clang-format off
-	daydream_update_input_click(daydream, 1, now, DAYDREAM_TOUCHPAD_BUTTON_MASK);
-	daydream_update_input_click(daydream, 2, now, DAYDREAM_BAR_BUTTON_MASK);
-	daydream_update_input_click(daydream, 3, now, DAYDREAM_CIRCLE_BUTTON_MASK);
-	daydream_update_input_click(daydream, 4, now, DAYDREAM_VOLDN_BUTTON_MASK);
-	daydream_update_input_click(daydream, 5, now, DAYDREAM_VOLUP_BUTTON_MASK);
+	daydream_update_input_click(daydream, DAYDREAM_TOUCHPAD_CLICK, now, DAYDREAM_TOUCHPAD_BUTTON_MASK);
+	daydream_update_input_click(daydream, DAYDREAM_BAR_CLICK, now, DAYDREAM_BAR_BUTTON_MASK);
+	daydream_update_input_click(daydream, DAYDREAM_CIRCLE_CLICK, now, DAYDREAM_CIRCLE_BUTTON_MASK);
+	daydream_update_input_click(daydream, DAYDREAM_VOLUP_CLICK, now, DAYDREAM_VOLUP_BUTTON_MASK);
+	daydream_update_input_click(daydream, DAYDREAM_VOLDN_CLICK, now, DAYDREAM_VOLDN_BUTTON_MASK);
 	// clang-format on
 
 	daydream->base.inputs[DAYDREAM_TOUCHPAD].timestamp = now;
@@ -327,30 +323,6 @@ daydream_device_get_tracked_pose(struct xrt_device *xdev,
 
 /*
  *
- * Bindings
- *
- */
-
-static struct xrt_binding_input_pair simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_DAYDREAM_BAR_CLICK},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_DAYDREAM_CIRCLE_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_DAYDREAM_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_DAYDREAM_POSE},
-};
-
-static struct xrt_binding_profile binding_profiles[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs,
-        .input_count = ARRAY_SIZE(simple_inputs),
-        .outputs = NULL,
-        .output_count = 0,
-    },
-};
-
-
-/*
- *
  * Prober functions.
  *
  */
@@ -358,22 +330,20 @@ static struct xrt_binding_profile binding_profiles[1] = {
 struct daydream_device *
 daydream_device_create(struct os_ble_device *ble)
 {
-	enum u_device_alloc_flags flags = (enum u_device_alloc_flags)(U_DEVICE_ALLOC_TRACKING_NONE);
-	struct daydream_device *dd = U_DEVICE_ALLOCATE(struct daydream_device, flags, 8, 0);
+	struct daydream_device *dd =
+	    U_DEVICE_ALLOCATE(struct daydream_device, U_DEVICE_ALLOC_TRACKING_NONE, DAYDREAM_INPUT_COUNT, 0);
 
 	dd->base.name = XRT_DEVICE_DAYDREAM;
 	dd->base.destroy = daydream_device_destroy;
 	dd->base.update_inputs = daydream_device_update_inputs;
 	dd->base.get_tracked_pose = daydream_device_get_tracked_pose;
-	dd->base.inputs[0].name = XRT_INPUT_DAYDREAM_POSE;
-	dd->base.inputs[1].name = XRT_INPUT_DAYDREAM_TOUCHPAD_CLICK;
-	dd->base.inputs[2].name = XRT_INPUT_DAYDREAM_BAR_CLICK;
-	dd->base.inputs[3].name = XRT_INPUT_DAYDREAM_CIRCLE_CLICK;
-	dd->base.inputs[4].name = XRT_INPUT_DAYDREAM_VOLDN_CLICK;
-	dd->base.inputs[5].name = XRT_INPUT_DAYDREAM_VOLUP_CLICK;
-	dd->base.inputs[6].name = XRT_INPUT_DAYDREAM_TOUCHPAD;
-	dd->base.binding_profiles = binding_profiles;
-	dd->base.binding_profile_count = ARRAY_SIZE(binding_profiles);
+	dd->base.inputs[DAYDREAM_POSE].name = XRT_INPUT_DAYDREAM_POSE;
+	dd->base.inputs[DAYDREAM_TOUCHPAD_CLICK].name = XRT_INPUT_DAYDREAM_TOUCHPAD_CLICK;
+	dd->base.inputs[DAYDREAM_BAR_CLICK].name = XRT_INPUT_DAYDREAM_BAR_CLICK;
+	dd->base.inputs[DAYDREAM_CIRCLE_CLICK].name = XRT_INPUT_DAYDREAM_CIRCLE_CLICK;
+	dd->base.inputs[DAYDREAM_VOLUP_CLICK].name = XRT_INPUT_DAYDREAM_VOLUP_CLICK;
+	dd->base.inputs[DAYDREAM_VOLDN_CLICK].name = XRT_INPUT_DAYDREAM_VOLDN_CLICK;
+	dd->base.inputs[DAYDREAM_TOUCHPAD].name = XRT_INPUT_DAYDREAM_TOUCHPAD;
 
 	static int controller_num = 0;
 	snprintf(dd->base.str, XRT_DEVICE_NAME_LEN, "Daydream");
@@ -389,6 +359,9 @@ daydream_device_create(struct os_ble_device *ble)
 
 	daydream_get_calibration(dd);
 
+	os_mutex_init(&dd->lock);
+	os_thread_helper_init(&dd->oth);
+
 	// Everything done, finally start the thread.
 	int ret = os_thread_helper_start(&dd->oth, daydream_run_thread, dd);
 	if (ret != 0) {
@@ -402,8 +375,8 @@ daydream_device_create(struct os_ble_device *ble)
 	u_var_add_ro_vec3_f32(dd, &dd->fusion.last.accel, "last.accel");
 	u_var_add_ro_vec3_f32(dd, &dd->fusion.last.gyro, "last.gyro");
 
-	dd->base.orientation_tracking_supported = true;
-	dd->base.position_tracking_supported = false;
+	dd->base.supported.orientation_tracking = true;
+	dd->base.supported.position_tracking = false;
 	dd->base.device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
 
 	DAYDREAM_DEBUG(dd, "Created device!");

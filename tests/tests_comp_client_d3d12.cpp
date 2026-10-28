@@ -37,8 +37,7 @@ TEST_CASE("d3d12_client_compositor", "[.][needgpu]")
 	D3D12_COMMAND_QUEUE_DESC desc{D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 	                              D3D12_COMMAND_QUEUE_FLAG_NONE, 0};
 	device->CreateCommandQueue(&desc, IID_PPV_ARGS(queue.put()));
-	struct xrt_compositor_d3d12 *xcd3d = client_d3d12_compositor_create(xcn, device.get(), queue.get());
-	struct xrt_compositor *xc = &xcd3d->base;
+	struct xrt_compositor *xc = client_d3d12_compositor_create(xcn, device.get(), queue.get());
 
 	SECTION("Swapchain create and import")
 	{

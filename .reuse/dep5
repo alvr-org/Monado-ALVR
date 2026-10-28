@@ -6,6 +6,7 @@ Files: doc/changes/drivers/*
   doc/changes/misc_features/*
   doc/changes/misc_fixes/*
   doc/changes/state_trackers/*
+  doc/changes/libmonado/*
   doc/changes/ipc/*
   doc/changes/xrt/*
   doc/changes/auxiliary/*
@@ -13,7 +14,7 @@ Files: doc/changes/drivers/*
   doc/changes/doc/*
   doc/changes/big/*
   doc/changes/tracking/*
-Copyright: 2020-2021, Collabora, Ltd. and the Monado contributors
+Copyright: 2020-2025, Collabora, Ltd. and the Monado contributors
 License: CC0-1.0
 Comment: Prevents needing a license header per fragment between releases.
 
@@ -47,11 +48,6 @@ Copyright: 2009-2017, Dave Gamble and cJSON contributors
 License: MIT
 Comment: SPDX-License-Identifier missing.
  Debian calls this "Expat" for clarity.
-
-Files: src/external/Catch2/catch/*
-Copyright: 2020, Two Blue Cubes Ltd.
-License: BSL-1.0
-Comment: SPDX-License-Identifier missing.
 
 Files: src/external/jnipp/*
 Copyright: 2016-2020, Mitchell Dowd
@@ -94,12 +90,17 @@ Copyright: 2017, Sean Barrett
 License: MIT OR Unlicense
 Comment: SPDX-License-Identifier missing.
 
+Files: src/external/bcdec/bcdec*
+Copyright: 2022, Sergii Kudlai
+License: MIT OR Unlicense
+Comment: SPDX-License-Identifier missing.
+
 Files: src/external/glad/include/EGL/eglplatform.h
 Copyright: 2007-2020, The Khronos Group Inc.
 License: Apache-2.0
 Comment: SPDX-License-Identifier missing.
 
-Files:  src/external/glad/include/KHR/khrplatform.h
+Files: src/external/glad/include/KHR/khrplatform.h
 Copyright: 2008-2018, The Khronos Group Inc.
 License: LicenseRef-Khronos-Free-Use-License-for-Software-and-Documentation
 Comment: SPDX-License-Identifier missing.
@@ -110,7 +111,7 @@ License: CC0-1.0 and Apache-2.0
 Comment: This is generated from Khronos's XML (https://github.com/KhronosGroup/EGL-Registry/blob/main/api/egl.xml)
  which is under the Apache-2.0 license.
 
-Files:  src/external/glad/src/*
+Files: src/external/glad/src/*
 Copyright: 2013-2023, David Herberth
 License: CC0-1.0 and Apache-2.0
 Comment: This is generated from Khronos's XML (https://github.com/KhronosGroup/EGL-Registry/blob/main/api/egl.xml)
@@ -121,17 +122,32 @@ Copyright: 2011-2022, Petteri Aimonen
 License: Zlib
 Comment: License information global from repository.
 
-Files:  src/external/tracy/*
+Files: src/external/tracy/*
 Copyright: 2017-2022, Bartosz Taudul
 License: BSD-3-Clause
 Comment: SPDX-License-Identifier missing.
 
-Files:  src/external/valve-file-vdf/*
+Files: src/external/valve-file-vdf/*
 Copyright: 2016-2023, Matthias Moeller
 License: MIT
 Comment: SPDX-License-Identifier missing.
 
-Files:  flake.lock
+Files: flake.lock
 Copyright: No copyright
 License: CC0-1.0
 Comment: Computer-generated files do not have a copyright per US law.
+
+Files: src/xrt/auxiliary/android_cardboard/src/main/res/drawable/cardboard_oss_qr.png
+ src/external/cardboard/*
+Copyright: 2019 Google LLC
+License: Apache-2.0
+Comment: SPDX-License-Identifier missing.
+
+Files: src/external/metrics/*
+Copyright: 2022, Collabora, Ltd.
+License: BSL-1.0
+
+Files: src/xrt/auxiliary/bindings/rebindings/*
+Copyright: 2026, NVIDIA CORPORATION.
+License: BSL-1.0 OR CC0-1.0
+Comment: JSON data files cannot carry SPDX headers cleanly.

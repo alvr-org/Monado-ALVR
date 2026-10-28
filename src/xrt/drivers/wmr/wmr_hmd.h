@@ -54,17 +54,6 @@ struct wmr_headset_descriptor
 	void (*screen_enable_func)(struct wmr_hmd *wh, bool enable);
 };
 
-struct wmr_hmd_distortion_params
-{
-	//! Inverse affine transform to move from (undistorted) pixels
-	//! to image plane / normalised image coordinates
-	struct xrt_matrix_3x3 inv_affine_xform;
-
-	//! tan(angle) FoV min/max for X and Y in the input texture
-	struct xrt_vec2 tex_x_range;
-	struct xrt_vec2 tex_y_range;
-};
-
 /*!
  * @implements xrt_device
  */
@@ -84,8 +73,6 @@ struct wmr_hmd
 	struct os_thread_helper oth;
 
 	enum u_logging_level log_level;
-
-	int32_t left_view_y_offset, right_view_y_offset;
 
 	/*!
 	 * This is the Hololens Sensors device, this is where we get all of the
@@ -113,9 +100,6 @@ struct wmr_hmd
 	uint16_t raw_ipd;
 	//! Latest proximity sensor value read from the device.
 	uint8_t proximity_sensor;
-
-	//! Distortion related parameters
-	struct wmr_hmd_distortion_params distortion_params[2];
 
 	struct hololens_sensors_packet packet;
 

@@ -73,9 +73,9 @@ vk_implicit_wait_image(struct oxr_logger *log, struct oxr_swapchain *sc, const X
 
 	assert(index < INT32_MAX);
 
-	struct xrt_swapchain *xsc = (struct xrt_swapchain *)sc->swapchain;
-
 	if (!WAIT_IN_ACQUIRE) {
+		struct xrt_swapchain *xsc = (struct xrt_swapchain *)sc->swapchain;
+
 		XrDuration timeout = waitInfo->timeout;
 
 		// We have already waited in acquire.

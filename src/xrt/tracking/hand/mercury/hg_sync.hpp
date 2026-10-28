@@ -4,17 +4,20 @@
  * @file
  * @brief  Mercury main header!
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 
 #pragma once
 
 #include "hg_interface.h"
+#include "hg_hand_size_opt.hpp"
 #include "hg_debug_instrumentation.hpp"
 
 #include "tracking/t_hand_tracking.h"
 #include "tracking/t_camera_models.h"
+
+#include "onnx/onnx_wrapper.hpp"
 
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_frame.h"
@@ -53,6 +56,7 @@ namespace xrt::tracking::hand::mercury {
 
 using namespace xrt::auxiliary::util;
 using namespace xrt::auxiliary::math;
+using namespace xrt::auxiliary::onnx;
 
 #define HG_TRACE(hgt, ...) U_LOG_IFL_T(hgt->log_level, __VA_ARGS__)
 #define HG_DEBUG(hgt, ...) U_LOG_IFL_D(hgt->log_level, __VA_ARGS__)
@@ -152,13 +156,9 @@ struct model_input_wrap
 	const char *name;
 };
 
-struct onnx_wrap
+struct onnx_state
 {
-	const OrtApi *api = nullptr;
-	OrtEnv *env = nullptr;
-
-	OrtMemoryInfo *meminfo = nullptr;
-	OrtSession *session = nullptr;
+	std::unique_ptr<OnnxWrapper> wrap = {};
 
 	std::vector<model_input_wrap> wraps = {};
 };
@@ -176,7 +176,7 @@ struct hand_region_of_interest
 	float size_px;
 
 	bool found;
-	bool hand_detection_confidence;
+	float hand_detection_confidence;
 };
 
 
@@ -200,8 +200,8 @@ struct keypoint_estimation_run_info
 struct ht_view
 {
 	HandTracking *hgt;
-	onnx_wrap detection;
-	onnx_wrap keypoint[2];
+	onnx_state detection;
+	onnx_state keypoint[2];
 	int view;
 
 	struct t_camera_extra_info_one_view camera_info;
@@ -217,17 +217,6 @@ struct ht_view
 	struct hand_region_of_interest regions_of_interest_this_frame[2]; // left, right
 
 	struct keypoint_estimation_run_info run_info[2];
-};
-
-
-struct hand_size_refinement
-{
-	int num_hands;
-	float out_hand_size;
-	float out_hand_confidence;
-	float hand_size_refinement_schedule_x = 0;
-	float hand_size_refinement_schedule_y = 0;
-	bool optimizing = true;
 };
 
 struct model_output_visualizers
@@ -254,7 +243,7 @@ public:
 
 	struct u_sink_debug debug_sink_ann = {};
 	struct u_sink_debug debug_sink_model = {};
-	struct xrt_hand_masks_sink *hand_masks_sink;
+	struct xrt_device_masks_sink *hand_masks_sink;
 
 	float multiply_px_coord_for_undistort;
 
@@ -270,9 +259,9 @@ public:
 
 	struct model_output_visualizers visualizers;
 
-	u_worker_thread_pool *pool;
+	u_worker_thread_pool *pool = nullptr;
 
-	u_worker_group *group;
+	u_worker_group *group = nullptr;
 
 
 	float baseline = {};
@@ -286,7 +275,7 @@ public:
 
 	enum u_logging_level log_level = U_LOGGING_INFO;
 
-	lm::KinematicHandLM *kinematic_hands[2];
+	lm::KinematicHandLM *kinematic_hands[2] = {nullptr};
 
 	// These are produced by the keypoint estimator and consumed by the nonlinear optimizer
 	// left hand, right hand THEN left view, right view
@@ -321,7 +310,7 @@ public:
 
 	int detection_counter = 0;
 
-	struct hand_size_refinement refinement = {};
+	/// Regularly updated from `hand_size_refinement`.
 	float target_hand_size = STANDARD_HAND_SIZE;
 
 
@@ -338,6 +327,8 @@ public:
 	u_frame_times_widget ft_widget = {};
 
 	struct hg_tuneable_values tuneable_values;
+
+	HandSizeRefinement hand_size_refinement{};
 
 public:
 	explicit HandTracking();
@@ -363,19 +354,24 @@ public:
 
 
 void
-init_hand_detection(HandTracking *hgt, onnx_wrap *wrap);
+init_hand_detection(HandTracking *hgt, onnx_state *wrap);
 
+void
+init_keypoint_estimation(HandTracking *hgt, onnx_state *wrap);
+
+// These are passed into C callbacks, so they have to be extern "C".
+extern "C" {
+//! Runs hand detection, expects `ptr` to be a `hand_detection_run_info *`
 void
 run_hand_detection(void *ptr);
 
-void
-init_keypoint_estimation(HandTracking *hgt, onnx_wrap *wrap);
-
+//! Runs keypoint estimation, excpets `ptr` to be a `keypoint_estimation_run_info *`
 void
 run_keypoint_estimation(void *ptr);
+};
 
 void
-release_onnx_wrap(onnx_wrap *wrap);
+release_onnx_state(onnx_state *wrap);
 
 
 void
@@ -401,7 +397,7 @@ stereographic_project_image(const t_camera_model_params &dist,
                             const projection_instructions &instructions,
                             cv::Mat &input_image,
                             cv::Mat *debug_image,
-                            const cv::Scalar boundary_color,
+                            const cv::Scalar &boundary_color,
                             cv::Mat &out);
 
 

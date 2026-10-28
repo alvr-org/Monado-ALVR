@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Levenberg-Marquardt kinematic optimizer
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 
@@ -17,6 +17,10 @@
 namespace xrt::tracking::hand::mercury::lm {
 
 bool
-hand_init_guess(one_frame_input &observation, const float hand_size, xrt_pose left_in_right, xrt_pose &out_wrist_guess);
+hand_init_guess(one_frame_input &observation,
+                const float hand_size,
+                bool is_right,
+                xrt_pose left_in_right,
+                xrt_pose &out_wrist_guess);
 
 } // namespace xrt::tracking::hand::mercury::lm

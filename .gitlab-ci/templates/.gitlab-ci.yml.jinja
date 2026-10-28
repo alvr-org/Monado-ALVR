@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileCopyrightText: 2018-2024 Collabora, Ltd. and the Monado contributors
+# SPDX-FileCopyrightText: 2018-2026 Collabora, Ltd. and the Monado contributors
 
 {# ignore the warning, this is actually the template to edit. #}
 ###############################################
@@ -22,10 +22,13 @@ The following will update all files from templates:
 make -f .gitlab-ci/ci-scripts.mk
 #}
 
-# workflow:
-#   rules:
-#     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-#     - if: $CI_PIPELINE_SOURCE == 'push'
+workflow:
+  rules:
+    # Switch between branch and merge request pipelines to avoid duplication
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
 
 variables:
   FDO_UPSTREAM_REPO: "monado/monado"
@@ -37,7 +40,10 @@ include:
 {% for distro in distributions %}
       - "/templates/{{distro.name}}.yml"
 {% endfor %}
-  # - local: .gitlab-ci/containers/ci-container-prep.yml
+  - project: 'freedesktop/ci-templates'
+    ref: {{fdo_ci_templates_sha}}
+    file: '/templates/ci-fairy.yml'
+
 
   # This include is for compatibility with the fdo CI restrictions/checks
   # needed due to https://gitlab.freedesktop.org/freedesktop/freedesktop/-/issues/438
@@ -45,7 +51,9 @@ include:
 
 stages:
   - container_prep
+  - verify
   - build
+  - check
   - package
   - reprepro
   - pages
@@ -68,7 +76,7 @@ stages:
 format-and-spellcheck:
   extends:
     - {{base_job_to_use_image_containing("codespell")}}
-  stage: build
+  stage: verify
   script:
     - scripts/format-and-spellcheck.sh
   artifacts:
@@ -81,12 +89,29 @@ format-and-spellcheck:
 reuse:
   extends:
     - .build-rules
-  stage: build
+  stage: verify
   image:
     name: fsfe/reuse:latest
     entrypoint: [""]
   script:
     - reuse lint
+
+check-signoff:
+  extends:
+    - .fdo.ci-fairy
+  stage: verify
+  script:
+    - ci-fairy check-commits --signed-off-by --textwidth 0 --junit-xml=results.xml
+  variables:
+    GIT_DEPTH: 100
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  artifacts:
+    reports:
+      junit: results.xml
+
 
 {% macro make_cmake_args(cmake_defines) %}
 {% if cmake_defines is defined and cmake_defines %}
@@ -129,38 +154,46 @@ reuse:
 {% endif %}
 
   script:
-
     - .gitlab-ci/prebuild.sh
-{#- regular or NDK cmake builds -#}
-{%- if "cmake" in job.name or "ndk" in job.name %}
-
-    - .gitlab-ci/ci-cmake-build.sh {{- make_cmake_args(job.cmake_defines) }}
-
 {#- gradle builds -#}
-{%- elif "android" in job.name %}
+{% if "android" in job.name %}
 
 {% if "Release" in job.name %}
     - base64 --decode ${MONADO_ANDROID_KEYSTORE} > monado-release.jks
 {% endif %}
     - .gitlab-ci/ci-gradle-build.sh {{ job.target }}
 
+{#- regular or NDK cmake builds -#}
 {%- else %}
 
-{# error message #}
-  CANNOT GUESS JOB TYPE
+    - .gitlab-ci/ci-cmake-build.sh {{- make_cmake_args(job.cmake_defines) }}
+{%- if job.pahole %}
 
-{%- endif %}
-
-{%- if "cmake" in job.name %}
+    - mkdir -p "{{ job.name}}"
+    - pahole --sizes --class_name file://build/ipc-structs.txt build/src/xrt/targets/openxr/libopenxr_monado.so > "{{ job.name}}/ipc-sizes.txt"{% endif %}
+{%- if not "ndk" in job.name %}
 
     - cd build && ctest --output-on-failure
-{%- endif %}
+{% endif %}
+{% endif %}
 
-{%- if job.artifact_path %}
+{%- if job.artifact_path or job.pahole %}
 
   artifacts:
+{%- if job.name == "debian:trixie"%}
+
+    untracked: true
+{%- endif %}
+
     paths:
+{%- if job.artifact_path%}
+
       - {{ job.artifact_path }}
+{%- endif %}
+{%- if job.pahole%}
+
+      - {{ job.name }}/ipc-sizes.txt
+{%- endif %}
 {%- endif %}
 
 {% endfor -%} {%- endfor -%} {%- endfor %}
@@ -181,6 +214,37 @@ windows:
 {% macro packaging_job_name(distro, image) -%}
 {{ image_name(distro, image) }}:package
 {%- endmacro %}
+
+# Check compatibility of IPC protocol between 32 and 64 bits
+ipc-32-64-compatibility:
+  stage: check
+  extends:
+    - .build-rules
+  dependencies: ["debian:bookworm", "debian:bookworm:32bit"]
+  needs: ["debian:bookworm", "debian:bookworm:32bit"]
+  script:
+    - diff -du "debian:bookworm/ipc-sizes.txt" "debian:bookworm:32bit/ipc-sizes.txt"
+    - cmp "debian:bookworm/ipc-sizes.txt" "debian:bookworm:32bit/ipc-sizes.txt"
+
+debian:trixie:clang-tidy:
+  extends:
+    - .build-rules
+    - .monado.image.debian:trixie
+  stage: check
+  needs:
+    - debian:trixie
+  script:
+    - run-clang-tidy -quiet -allow-no-checks -p build
+
+ndk:arm64-v8a:clang-tidy:
+  extends:
+    - .build-rules
+    - .monado.image.debian:trixie-ndk
+  stage: check
+  needs:
+    - ndk:arm64-v8a
+  script:
+    - run-clang-tidy -quiet -allow-no-checks -p build
 
 {% for distro in distributions -%} {%- for image in distro.images if "deb_version_suffix" in image %}
 

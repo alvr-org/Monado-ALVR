@@ -12,7 +12,7 @@
 
 using xrt::auxiliary::util::GenericCallbacks;
 
-enum class MyEvent
+enum class MyEvent : std::uint8_t
 {
 	ACQUIRED = 1u << 0u,
 	LOST = 1u << 1u,
@@ -153,7 +153,7 @@ TEST_CASE("u_generic_callbacks")
 }
 
 
-enum MyCEvent
+enum class MyCEvent : std::uint8_t
 {
 	MY_C_EVENT_ACQUIRE = 1u << 0u,
 	MY_C_EVENT_LOST = 1u << 1u,

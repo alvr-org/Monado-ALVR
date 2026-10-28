@@ -7,7 +7,7 @@
 # http://www.boost.org/LICENSE_1_0.txt)
 #
 # Original Author:
-# 2021 Moses Turner <moses@collabora.com>
+# 2021 Moshi Turner <moshiturner@protonmail.com>
 
 #.rst:
 # FindLeapV2

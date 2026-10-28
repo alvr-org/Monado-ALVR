@@ -68,7 +68,7 @@ client_gl_xlib_compositor_destroy(struct xrt_compositor *xc)
 {
 	struct client_gl_xlib_compositor *c = client_gl_xlib_compositor(xc);
 
-	client_gl_compositor_close(&c->base);
+	client_gl_compositor_fini(&c->base);
 
 	free(c);
 }
@@ -203,7 +203,7 @@ client_gl_xlib_compositor_create(struct xrt_compositor_native *xcn,
 		return NULL;
 	}
 
-	c->base.base.base.destroy = client_gl_xlib_compositor_destroy;
+	c->base.base.destroy = client_gl_xlib_compositor_destroy;
 
 	return c;
 }

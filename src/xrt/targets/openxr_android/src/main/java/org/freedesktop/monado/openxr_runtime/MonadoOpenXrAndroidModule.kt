@@ -1,8 +1,8 @@
-// Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2020-2025, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
- * @brief  Module that binds all the dependencies we inject with Hilt.
+ * @brief  Module that binds all the required dependencies we inject with Hilt.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  */
 

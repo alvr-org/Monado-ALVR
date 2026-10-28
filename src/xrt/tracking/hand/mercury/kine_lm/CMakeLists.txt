@@ -19,8 +19,6 @@ target_link_libraries(
 		xrt-optimized-math
 	)
 
-target_include_directories(t_ht_mercury_kine_lm SYSTEM PRIVATE ${EIGEN3_INCLUDE_DIR})
-
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
 	target_compile_options(t_ht_mercury_kine_lm PRIVATE -ftemplate-backtrace-limit=20)
 endif()

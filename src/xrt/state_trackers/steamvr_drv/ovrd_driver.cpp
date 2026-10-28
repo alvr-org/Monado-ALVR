@@ -1,4 +1,5 @@
 // Copyright 2020,2024 Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -6,12 +7,14 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Christoph Haag <christoph.haag@collabora.com>
  * @author Daniel Willmott <web@dan-w.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup st_ovrd
  */
 
 #include <cstring>
+#include <cassert>
+#include <array>
 #include <thread>
 
 #include "math/m_api.h"
@@ -27,8 +30,8 @@ extern "C" {
 #include "os/os_time.h"
 #include "util/u_debug.h"
 #include "util/u_device.h"
-#include "util/u_builders.h"
 #include "util/u_hand_tracking.h"
+#include "util/u_builder_helpers.h"
 
 #include "xrt/xrt_space.h"
 #include "xrt/xrt_system.h"
@@ -36,7 +39,7 @@ extern "C" {
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_instance.h"
 
-#include "bindings/b_generated_bindings.h"
+#include "b_ovrd_generated_bindings.h"
 }
 #include "math/m_vec3.h"
 
@@ -413,6 +416,14 @@ public:
 		case XRT_DEVICE_VIVE_TRACKER_GEN2:
 		case XRT_DEVICE_VIVE_TRACKER_GEN3:
 		case XRT_DEVICE_VIVE_TRACKER_TUNDRA: m_render_model = "{htc}vr_tracker_vive_1_0"; break;
+		case XRT_DEVICE_FLIPVR:
+			if (hand == XRT_HAND_LEFT) {
+				m_render_model = "{shiftall}flipvr_controller_vc1b_left";
+			}
+			if (hand == XRT_HAND_RIGHT) {
+				m_render_model = "{shiftall}flipvr_controller_vc1b_right";
+			}
+			break;
 		case XRT_DEVICE_PSMV:
 		case XRT_DEVICE_HYDRA:
 		case XRT_DEVICE_DAYDREAM:
@@ -562,7 +573,7 @@ public:
 
 			AddControl("/input/trackpad/y", XRT_INPUT_INDEX_TRACKPAD, &y);
 
-			if (m_xdev->hand_tracking_supported) {
+			if (m_xdev->supported.hand_tracking) {
 				ovrd_log("Enabling skeletal input as this device supports it");
 
 				// skeletal input compatibility with games is a bit funky with any controllers
@@ -573,7 +584,7 @@ public:
 
 				AddSkeletonControl(("/input/skeleton/" + str_hand).c_str(),
 				                   ("/skeleton/hand/" + str_hand).c_str(),
-				                   XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
+				                   XRT_INPUT_HT_UNOBSTRUCTED_RIGHT);
 				RunFrame();
 			} else
 				ovrd_log("Not enabling skeletal input as this device does not support it");
@@ -620,6 +631,44 @@ public:
 
 			AddOutputControl(XRT_OUTPUT_NAME_PSMV_RUMBLE_VIBRATION, "/output/haptic");
 		} break;
+		case XRT_DEVICE_FLIPVR: {
+
+			AddControl("/input/trigger/value", XRT_INPUT_FLIPVR_TRIGGER_VALUE, NULL);
+
+			AddControl("/input/trigger/click", XRT_INPUT_FLIPVR_TRIGGER_CLICK, NULL);
+			AddControl("/input/trigger/touch", XRT_INPUT_FLIPVR_TRIGGER_TOUCH, NULL);
+
+			AddControl("/input/system/click", XRT_INPUT_FLIPVR_SYSTEM_CLICK, NULL);
+
+			AddControl("/input/a/click", XRT_INPUT_FLIPVR_A_CLICK, NULL);
+			AddControl("/input/a/touch", XRT_INPUT_FLIPVR_A_TOUCH, NULL);
+
+			AddControl("/input/b/click", XRT_INPUT_FLIPVR_B_CLICK, NULL);
+			AddControl("/input/b/touch", XRT_INPUT_FLIPVR_B_TOUCH, NULL);
+
+			AddControl("/input/a/click", XRT_INPUT_FLIPVR_X_CLICK, NULL);
+			AddControl("/input/a/touch", XRT_INPUT_FLIPVR_X_TOUCH, NULL);
+
+			AddControl("/input/b/click", XRT_INPUT_FLIPVR_Y_CLICK, NULL);
+			AddControl("/input/b/touch", XRT_INPUT_FLIPVR_Y_TOUCH, NULL);
+
+			AddControl("/input/grip/value", XRT_INPUT_FLIPVR_SQUEEZE_VALUE, NULL);
+
+			AddControl("/input/grip/click", XRT_INPUT_FLIPVR_SQUEEZE_CLICK, NULL);
+
+			struct MonadoInputComponent x = {true, true, false};
+			struct MonadoInputComponent y = {true, false, true};
+
+			AddControl("/input/thumbstick/click", XRT_INPUT_FLIPVR_THUMBSTICK_CLICK, NULL);
+
+			AddControl("/input/thumbstick/touch", XRT_INPUT_FLIPVR_THUMBSTICK_TOUCH, NULL);
+
+			AddControl("/input/thumbstick/x", XRT_INPUT_FLIPVR_THUMBSTICK, &x);
+
+			AddControl("/input/thumbstick/y", XRT_INPUT_FLIPVR_THUMBSTICK, &y);
+
+			AddOutputControl(XRT_OUTPUT_NAME_FLIPVR_HAPTIC, "/output/haptic");
+		}
 
 		case XRT_DEVICE_TOUCH_CONTROLLER: break;    // TODO
 		case XRT_DEVICE_WMR_CONTROLLER: break;      // TODO
@@ -763,7 +812,7 @@ public:
 		m_pose.poseIsValid = false;
 		m_pose.deviceIsConnected = true;
 		m_pose.result = vr::TrackingResult_Uninitialized;
-		m_pose.willDriftInYaw = !m_xdev->position_tracking_supported;
+		m_pose.willDriftInYaw = !m_xdev->supported.position_tracking;
 
 		if (m_emulate_index_controller) {
 			m_input_profile = std::string("{indexcontroller}/input/index_controller_profile.json");
@@ -861,12 +910,14 @@ public:
 			grip_name = XRT_INPUT_VIVE_GRIP_POSE;
 		} else if (m_xdev->name == XRT_DEVICE_INDEX_CONTROLLER) {
 			grip_name = XRT_INPUT_INDEX_GRIP_POSE;
+		} else if (m_xdev->name == XRT_DEVICE_FLIPVR) {
+			grip_name = XRT_INPUT_FLIPVR_GRIP_POSE;
 		} else if (m_xdev->name == XRT_DEVICE_PSMV) {
 			grip_name = XRT_INPUT_PSMV_GRIP_POSE;
 		} else if (m_xdev->name == XRT_DEVICE_DAYDREAM) {
 			grip_name = XRT_INPUT_DAYDREAM_POSE;
 		} else if (m_xdev->name == XRT_DEVICE_HYDRA) {
-			grip_name = XRT_INPUT_HYDRA_POSE;
+			grip_name = XRT_INPUT_HYDRA_GRIP_POSE;
 		} else if (m_xdev->name == XRT_DEVICE_TOUCH_CONTROLLER) {
 			grip_name = XRT_INPUT_TOUCH_GRIP_POSE;
 		} else if (m_xdev->name == XRT_DEVICE_SIMPLE_CONTROLLER) {
@@ -965,31 +1016,57 @@ public:
 			}
 		}
 
-		if (m_xdev->hand_tracking_supported && m_skeletal_input_control.control_handle) {
-			vr::VRBoneTransform_t bone_transforms[OPENVR_BONE_COUNT];
+		if (m_xdev->supported.hand_tracking && m_skeletal_input_control.control_handle) {
+			constexpr const std::size_t sk_comp_size = 2;
 
-			timepoint_ns now_ns = os_monotonic_get_ns();
-			struct xrt_hand_joint_set out_joint_set_value;
-			int64_t out_timestamp_ns;
+			using ht_input_name_list = std::array<const enum xrt_input_name, sk_comp_size>;
+			constexpr const std::array<const ht_input_name_list, sk_comp_size> ht_input_name_map = {
+			    ht_input_name_list{
+			        XRT_INPUT_HT_UNOBSTRUCTED_LEFT,
+			        XRT_INPUT_HT_CONFORMING_LEFT,
+			    },
+			    ht_input_name_list{
+			        XRT_INPUT_HT_UNOBSTRUCTED_RIGHT,
+			        XRT_INPUT_HT_CONFORMING_RIGHT,
+			    },
+			};
+			using bone_transform_list = std::array<vr::VRBoneTransform_t, OPENVR_BONE_COUNT>;
+			using bone_transforms_list = std::vector<bone_transform_list>;
 
-			m_xdev->get_hand_tracking(m_xdev,
-			                          m_hand == XRT_HAND_LEFT ? XRT_INPUT_GENERIC_HAND_TRACKING_LEFT
-			                                                  : XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT,
-			                          now_ns, &out_joint_set_value, &out_timestamp_ns);
+			bone_transforms_list bone_transforms;
+			bone_transforms.reserve(sk_comp_size);
+			const auto &ht_input_names = ht_input_name_map[m_hand];
+			const timepoint_ns now_ns = os_monotonic_get_ns();
 
-			hand_joint_set_to_bone_transform(out_joint_set_value, bone_transforms, m_hand);
-			// hand_joint_set_to_bone_transforms(out_joint_set_value, bone_transforms);
+			for (size_t i = 0; i < ht_input_names.size(); ++i) {
+				int64_t out_timestamp_ns;
+				struct xrt_hand_joint_set joint_set_value = {};
+				if (m_xdev->get_hand_tracking(m_xdev, ht_input_names[i], now_ns, &joint_set_value,
+				                              &out_timestamp_ns) != XRT_SUCCESS) {
+					continue;
+				}
+				auto &bts = bone_transforms.emplace_back();
+				hand_joint_set_to_bone_transform(joint_set_value, bts.data(), m_hand);
+				// hand_joint_set_to_bone_transforms(out_joint_set_value, bone_transforms);
+			}
+
+			if (bone_transforms.empty())
+				return;
+			if (bone_transforms.size() < sk_comp_size) {
+				bone_transforms.push_back(bone_transforms.back());
+			}
+			assert(bone_transforms.size() >= sk_comp_size);
 
 			vr::EVRInputError err = vr::VRDriverInput()->UpdateSkeletonComponent(
 			    m_skeletal_input_control.control_handle, vr::VRSkeletalMotionRange_WithoutController,
-			    bone_transforms, OPENVR_BONE_COUNT);
+			    bone_transforms[0].data(), OPENVR_BONE_COUNT);
 			if (err != vr::VRInputError_None) {
 				ovrd_log("error updating skeleton: %i ", err);
 			}
 
-			err = vr::VRDriverInput()->UpdateSkeletonComponent(m_skeletal_input_control.control_handle,
-			                                                   vr::VRSkeletalMotionRange_WithController,
-			                                                   bone_transforms, OPENVR_BONE_COUNT);
+			err = vr::VRDriverInput()->UpdateSkeletonComponent(
+			    m_skeletal_input_control.control_handle, vr::VRSkeletalMotionRange_WithController,
+			    bone_transforms[1].data(), OPENVR_BONE_COUNT);
 			if (err != vr::VRInputError_None) {
 				ovrd_log("error updating skeleton: %i ", err);
 			}
@@ -1080,7 +1157,8 @@ public:
 
 		//! @todo more than 2 views
 		struct xrt_space_relation head_relation;
-		xrt_device_get_view_poses(xdev, &ipd_vec, now_ns, 2, &head_relation, m_fovs, m_view_pose);
+		xrt_device_get_view_poses(xdev, &ipd_vec, now_ns, XRT_VIEW_TYPE_STEREO, 2, &head_relation, m_fovs,
+		                          m_view_pose);
 
 		//! @todo more versatile IPD calculation
 		float actual_ipd = -m_view_pose[0].position.x + m_view_pose[1].position.x;
@@ -1091,9 +1169,8 @@ public:
 		ovrd_log("Display Frequency: %f\n", m_flDisplayFrequency);
 		ovrd_log("IPD: %f\n", m_flIPD);
 	};
-	virtual ~CDeviceDriver_Monado(){};
-
 	// clang-format off
+	virtual ~CDeviceDriver_Monado() {};
 
 	// ITrackedDeviceServerDriver
 	virtual vr::EVRInitError Activate(vr::TrackedDeviceIndex_t unObjectId);
@@ -1111,6 +1188,7 @@ public:
 	virtual void GetEyeOutputViewport(vr::EVREye eEye, uint32_t *pnX, uint32_t *pnY, uint32_t *pnWidth, uint32_t *pnHeight);
 	virtual void GetProjectionRaw(vr::EVREye eEye, float *pfLeft, float *pfRight, float *pfTop, float *pfBottom);
 	virtual vr::DistortionCoordinates_t ComputeDistortion(vr::EVREye eEye, float fU, float fV);
+	virtual bool ComputeInverseDistortion(vr::HmdVector2_t *pResult, vr::EVREye eEye, uint32_t unChannel, float fU, float fV);
 
 	// clang-format on
 
@@ -1295,9 +1373,9 @@ CDeviceDriver_Monado::GetPose()
 
 	    .result = vr::TrackingResult_Running_OK,
 	    .poseIsValid = (rel.relation_flags & XRT_SPACE_RELATION_ORIENTATION_VALID_BIT) != 0,
-	    .willDriftInYaw = !m_xdev->position_tracking_supported,
+	    .willDriftInYaw = !m_xdev->supported.position_tracking,
 	    //! @todo: Monado head model?
-	    .shouldApplyHeadModel = !m_xdev->position_tracking_supported,
+	    .shouldApplyHeadModel = !m_xdev->supported.position_tracking,
 	    .deviceIsConnected = true,
 	};
 	apply_pose(&rel, &t);
@@ -1401,8 +1479,9 @@ CDeviceDriver_Monado::ComputeDistortion(vr::EVREye eEye, float fU, float fV)
 
 	struct xrt_uv_triplet d;
 
-	if (!m_xdev->compute_distortion(m_xdev, eEye, U, V, &d)) {
-		ovrd_log("Failed to compute distortion for view %d at %f,%f!\n", eEye, U, V);
+	xrt_result_t xret = m_xdev->compute_distortion(m_xdev, eEye, U, V, &d);
+	if (xret != XRT_SUCCESS) {
+		ovrd_log("Failed to compute distortion for view %d at %f,%f! Got error %d\n", eEye, U, V, xret);
 
 		vr::DistortionCoordinates_t coordinates;
 		coordinates.rfBlue[0] = U;
@@ -1426,6 +1505,14 @@ CDeviceDriver_Monado::ComputeDistortion(vr::EVREye eEye, float fU, float fV)
 	// %f,%f!\n", eEye, U, V, d.r.x, d.r.y, d.g.x, d.g.y, d.b.x, d.b.y);
 
 	return coordinates;
+}
+
+bool
+CDeviceDriver_Monado::ComputeInverseDistortion(
+    vr::HmdVector2_t *pResult, vr::EVREye eEye, uint32_t unChannel, float fU, float fV)
+{
+	// Unsupported, so return false
+	return false;
 }
 
 
@@ -1513,16 +1600,16 @@ CServerDriver_Monado::Init(vr::IVRDriverContext *pDriverContext)
 
 	struct xrt_device *left_xdev = nullptr;
 	if (system_roles.left >= 0 && system_roles.left < XRT_SYSTEM_MAX_DEVICES) {
-		left_xdev = m_xsysd->xdevs[system_roles.left];
+		left_xdev = m_xsysd->static_xdevs[system_roles.left];
 	}
 	struct xrt_device *right_xdev = nullptr;
 	if (system_roles.right >= 0 && system_roles.right < XRT_SYSTEM_MAX_DEVICES) {
-		right_xdev = m_xsysd->xdevs[system_roles.right];
+		right_xdev = m_xsysd->static_xdevs[system_roles.right];
 	}
 
 	// use steamvr room setup instead
 	struct xrt_vec3 offset = {0, 0, 0};
-	u_builder_setup_tracking_origins(m_xhmd, left_xdev, right_xdev, &offset);
+	u_builder_setup_tracking_origins(m_xhmd, nullptr, left_xdev, right_xdev, nullptr, &offset);
 
 	if (left_xdev) {
 		m_left = new CDeviceDriver_Monado_Controller(m_xinst, left_xdev, XRT_HAND_LEFT);
@@ -1578,7 +1665,7 @@ CServerDriver_Monado::HandleHapticEvent(vr::VREvent_t *event)
 		return;
 	}
 
-	union xrt_output_value out;
+	struct xrt_output_value out;
 	out.vibration.amplitude = amp;
 	if (duration > 0.00001) {
 		out.vibration.duration_ns = (time_duration_ns)(duration * 1000.f * 1000.f * 1000.f);

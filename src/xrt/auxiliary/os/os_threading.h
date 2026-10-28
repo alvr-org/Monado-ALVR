@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -17,19 +18,32 @@
 
 #include "os/os_time.h"
 
-#if defined(XRT_OS_LINUX) || defined(XRT_ENV_MINGW)
+#if defined(XRT_OS_OSX)
+#include <unistd.h>
+#include <pthread.h>
+#include <assert.h>
+
+#elif defined(XRT_OS_LINUX) || defined(XRT_ENV_MINGW)
+#include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <assert.h>
 #define OS_THREAD_HAVE_SETNAME
+#define OS_THREAD_HAVE_SEMAPHORE
+
 #elif defined(XRT_OS_WINDOWS)
+#include "xrt/xrt_windows.h"
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
 #include <assert.h>
 #define OS_THREAD_HAVE_SETNAME
+#define OS_THREAD_HAVE_SEMAPHORE
+
 #else
+
 #error "OS not supported"
+
 #endif
 
 #ifdef __cplusplus
@@ -221,6 +235,18 @@ os_cond_signal(struct os_cond *oc)
 }
 
 /*!
+ * Broadcast (signal to multiple threads).
+ *
+ * @public @memberof os_cond
+ */
+static inline int
+os_cond_broadcast(struct os_cond *oc)
+{
+	assert(oc->initialized);
+	return pthread_cond_broadcast(&oc->cond);
+}
+
+/*!
  * Wait.
  *
  * Be sure to call this in a loop, testing some other condition that you
@@ -326,21 +352,41 @@ os_thread_destroy(struct os_thread *ost)
 {}
 
 /*!
- * Make a best effort to name our thread.
+ * Gets the number of hardware threads available.
+ */
+static inline int64_t
+os_hardware_thread_count(void)
+{
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
+	return (int64_t)sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(XRT_OS_WINDOWS)
+	SYSTEM_INFO sysinfo = XRT_STRUCT_INIT;
+	GetSystemInfo(&sysinfo);
+	return (int64_t)sysinfo.dwNumberOfProcessors;
+#else
+#error "OS not supported"
+	return -1;
+#endif
+}
+
+/*!
+ * Make a best effort to name the current thread.
  *
- * @public @memberof os_thread
+ * Due to an easy race condition caused by musl starting threads before the
+ * handle is written into memory, only this function is exposed, since
+ * it is the safer option when called by the thread itself.
  */
 static inline void
-os_thread_name(struct os_thread *ost, const char *name)
+os_thread_name_self(const char *name)
 {
 #ifdef OS_THREAD_HAVE_SETNAME
-	pthread_setname_np(ost->thread, name);
+	pthread_setname_np(pthread_self(), name);
 #else
-	(void)ost;
 	(void)name;
 #endif
 }
 
+#ifdef OS_THREAD_HAVE_SEMAPHORE
 /*
  *
  * Semaphore.
@@ -437,6 +483,7 @@ os_semaphore_destroy(struct os_semaphore *os)
 {
 	sem_destroy(&os->sem);
 }
+#endif // OS_THREAD_HAVE_SEMAPHORE
 
 
 /*
@@ -683,22 +730,6 @@ static inline void
 os_thread_helper_signal_locked(struct os_thread_helper *oth)
 {
 	pthread_cond_signal(&oth->cond);
-}
-
-/*!
- * Make a best effort to name our thread.
- *
- * @public @memberof os_thread_helper
- */
-static inline void
-os_thread_helper_name(struct os_thread_helper *oth, const char *name)
-{
-#ifdef OS_THREAD_HAVE_SETNAME
-	pthread_setname_np(oth->thread, name);
-#else
-	(void)oth;
-	(void)name;
-#endif
 }
 
 /*!

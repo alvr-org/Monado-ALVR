@@ -10,7 +10,7 @@
 #include "ogl/ogl_api.h"
 #include "gui_sdl2.h"
 #include "util/u_git_tag.h"
-
+#include <stdio.h>
 
 /*
  *

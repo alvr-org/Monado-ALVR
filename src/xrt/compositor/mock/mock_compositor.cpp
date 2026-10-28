@@ -1,4 +1,5 @@
 // Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -96,6 +97,11 @@ mock_compositor_swapchain_create(struct xrt_compositor *xc,
 	mcsc->info = *info;
 	mc->next_id++;
 
+	// Destroy unrefs every handle, and the zero from calloc is a valid fd.
+	for (uint32_t i = 0; i < XRT_MAX_SWAPCHAIN_IMAGES; i++) {
+		mcsc->handles[i] = XRT_GRAPHICS_BUFFER_HANDLE_INVALID;
+	}
+
 	*out_xsc = &mcsc->base.base;
 	if (mc->compositor_hooks.create_swapchain) {
 		return mc->compositor_hooks.create_swapchain(mc, mcsc, info, out_xsc);
@@ -130,6 +136,11 @@ mock_compositor_swapchain_import(struct xrt_compositor *xc,
 	mcsc->id = mc->next_id;
 	mcsc->info = *info;
 	mc->next_id++;
+
+	// Destroy unrefs every handle, and the zero from calloc is a valid fd.
+	for (uint32_t i = 0; i < XRT_MAX_SWAPCHAIN_IMAGES; i++) {
+		mcsc->handles[i] = XRT_GRAPHICS_BUFFER_HANDLE_INVALID;
+	}
 
 	*out_xsc = &mcsc->base.base;
 	if (mc->compositor_hooks.import_swapchain) {

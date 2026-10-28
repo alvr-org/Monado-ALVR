@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2025-2026, Collabora, Ltd. and the Monado contributors
+
+# Disable all checks in this folder.
+# misc-definitions-in-headers is a dummy check to avoid the `Error: no checks enabled.` error from
+# clang-tidy prior to version 18 without the `--allow-empty-check` option
+# See https://stackoverflow.com/a/58379342/22230066
+Checks: '-*'

@@ -1,4 +1,5 @@
 # Copyright 2019-2023, Collabora, Ltd.
+# Copyright 2025-2026, NVIDIA CORPORATION.
 #
 # SPDX-License-Identifier: BSL-1.0
 #
@@ -18,7 +19,7 @@ The following functions are provided by this module:
 .. command:: generate_openxr_runtime_manifest_buildtree
 
   Generates a runtime manifest suitable for use in the build tree,
-  with absolute paths, at configure time::
+  with absolute paths, at build time::
 
     generate_openxr_runtime_manifest_buildtree(
         RUNTIME_TARGET <target>          # Name of your runtime target
@@ -29,9 +30,11 @@ The following functions are provided by this module:
 
 .. command:: generate_openxr_runtime_manifest_at_install
 
-  Generates a runtime manifest at install time and installs it where desired::
+  Generates a runtime manifest at install time and installs it where desired.
+  A configure-generated install script invokes the Python helper when
+  ``cmake --install`` runs so absolute paths use the effective install prefix::
 
-    generate_openxr_runtime_manifest_buildtree(
+    generate_openxr_runtime_manifest_at_install(
         RUNTIME_TARGET <target>            # Name of your runtime target
         DESTINATION <dest>                 # The install-prefix-relative path to install the manifest to.
         RELATIVE_RUNTIME_DIR <dir>         # The install-prefix-relative path that the runtime library is installed to.
@@ -46,14 +49,16 @@ The following functions are provided by this module:
         )
 #]]
 
-# This module is mostly just argument parsing, the guts are in GenerateKhrManifest
-
 get_filename_component(_OXR_MANIFEST_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}"
                        PATH)
-include("${_OXR_MANIFEST_CMAKE_DIR}/GenerateKhrManifest.cmake")
-
+set(_OXR_MANIFEST_SCRIPT
+    "${_OXR_MANIFEST_CMAKE_DIR}/generate_openxr_runtime_manifest.py"
+    CACHE INTERNAL "" FORCE)
 set(_OXR_MANIFEST_TEMPLATE
     "${_OXR_MANIFEST_CMAKE_DIR}/openxr_manifest.in.json"
+    CACHE INTERNAL "" FORCE)
+set(_OXR_MANIFEST_INSTALL_SCRIPT
+    "${_OXR_MANIFEST_CMAKE_DIR}/GenerateOpenXRRuntimeManifest.cmake.in"
     CACHE INTERNAL "" FORCE)
 
 function(generate_openxr_runtime_manifest_buildtree)
@@ -73,19 +78,31 @@ function(generate_openxr_runtime_manifest_buildtree)
         message(FATAL_ERROR "Need OUT_FILE specified!")
     endif()
 
-    generate_khr_manifest_buildtree(
-        MANIFEST_DESCRIPTION
-        "OpenXR runtime manifest"
-        MANIFEST_TEMPLATE
-        "${_genmanifest_MANIFEST_TEMPLATE}"
-        TARGET
-        "${_genmanifest_RUNTIME_TARGET}"
-        OUT_FILE
-        "${_genmanifest_OUT_FILE}"
-        LIBMONADO
-        "${_genmanifest_LIBMONADO}"
-    )
+    set(_genmanifest_cmd
+        "${Python3_EXECUTABLE}"
+        "${_OXR_MANIFEST_SCRIPT}"
+        buildtree
+        --out-file "${_genmanifest_OUT_FILE}"
+        --target-path "$<TARGET_FILE:${_genmanifest_RUNTIME_TARGET}>"
+        --template "${_genmanifest_MANIFEST_TEMPLATE}"
+        )
+    if(_genmanifest_LIBMONADO)
+        list(APPEND _genmanifest_cmd
+             --libmonado-path "$<TARGET_FILE:${_genmanifest_LIBMONADO}>")
+    endif()
+    if(WIN32)
+        list(APPEND _genmanifest_cmd --win32)
+    endif()
 
+    add_custom_command(
+        TARGET ${_genmanifest_RUNTIME_TARGET}
+        POST_BUILD
+        BYPRODUCTS "${_genmanifest_OUT_FILE}"
+        COMMAND ${_genmanifest_cmd}
+        COMMENT
+            "Generating OpenXR runtime manifest named ${_genmanifest_OUT_FILE} for build tree usage"
+        VERBATIM
+        )
 endfunction()
 
 function(generate_openxr_runtime_manifest_at_install)
@@ -119,36 +136,38 @@ function(generate_openxr_runtime_manifest_at_install)
     if(NOT _genmanifest_OUT_FILENAME)
         set(_genmanifest_OUT_FILENAME "${_genmanifest_RUNTIME_TARGET}.json")
     endif()
+    if(NOT _genmanifest_COMPONENT)
+        set(_genmanifest_COMPONENT Unspecified)
+    endif()
 
-    set(_genmanifest_fwdargs)
+    set(_runtime_filename
+        "${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_RUNTIME_TARGET}${CMAKE_SHARED_MODULE_SUFFIX}"
+        )
+    set(_libmonado_filename)
+    if(_genmanifest_LIBMONADO)
+        set(_libmonado_filename
+            "${CMAKE_SHARED_MODULE_PREFIX}${_genmanifest_LIBMONADO}${CMAKE_SHARED_MODULE_SUFFIX}"
+            )
+    endif()
 
+    set(_manifest_file
+        "${CMAKE_CURRENT_BINARY_DIR}/${_genmanifest_OUT_FILENAME}")
+
+    set(_oxr_path_type soname)
     if(_genmanifest_ABSOLUTE_RUNTIME_PATH)
-        list(APPEND _genmanifest_fwdargs ABSOLUTE_TARGET_PATH)
+        set(_oxr_path_type absolute)
+    elseif(_genmanifest_RUNTIME_DIR_RELATIVE_TO_MANIFEST)
+        set(_oxr_path_type relative)
     endif()
 
-    if(_genmanifest_RUNTIME_DIR_RELATIVE_TO_MANIFEST)
-        list(APPEND _genmanifest_fwdargs TARGET_DIR_RELATIVE_TO_MANIFEST
-             "${_genmanifest_RUNTIME_DIR_RELATIVE_TO_MANIFEST}")
-    endif()
-    if(_genmanifest_COMPONENT)
-        list(APPEND _genmanifest_fwdargs COMPONENT "${_genmanifest_COMPONENT}")
-    endif()
+    set(_install_script
+        "${CMAKE_CURRENT_BINARY_DIR}/install_manifest_${_genmanifest_RUNTIME_TARGET}.cmake"
+        )
+    configure_file(
+        "${_OXR_MANIFEST_INSTALL_SCRIPT}"
+        "${_install_script}"
+        @ONLY
+        )
 
-    generate_khr_manifest_at_install(
-        ${_genmanifest_fwdargs}
-        MANIFEST_DESCRIPTION
-        "OpenXR runtime manifest"
-        MANIFEST_TEMPLATE
-        "${_genmanifest_MANIFEST_TEMPLATE}"
-        TARGET
-        "${_genmanifest_RUNTIME_TARGET}"
-        DESTINATION
-        "${_genmanifest_DESTINATION}"
-        RELATIVE_TARGET_DIR
-        "${_genmanifest_RELATIVE_RUNTIME_DIR}"
-        OUT_FILENAME
-        "${_genmanifest_OUT_FILENAME}"
-        LIBMONADO
-        "${_genmanifest_LIBMONADO}"
-    )
+    install(SCRIPT "${_install_script}" COMPONENT ${_genmanifest_COMPONENT})
 endfunction()

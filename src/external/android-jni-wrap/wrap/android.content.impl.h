@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2025, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 // Author: Rylie Pavlik <rylie.pavlik@collabora.com>
 // Inline implementations: do not include on its own!
@@ -64,6 +64,11 @@ inline java::io::File Context::getExternalFilesDir(std::string const &type) {
     assert(!isNull());
     return java::io::File(
         object().call<jni::Object>(Meta::data().getExternalFilesDir, type));
+}
+
+inline java::io::File Context::getFilesDir() {
+    assert(!isNull());
+    return java::io::File(object().call<jni::Object>(Meta::data().getFilesDir));
 }
 
 inline void Context::startActivity(Intent const &intent) {

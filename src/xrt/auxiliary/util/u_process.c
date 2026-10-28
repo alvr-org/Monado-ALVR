@@ -52,8 +52,7 @@ struct u_process *
 u_process_create_if_not_running(void)
 {
 #ifdef XRT_HAVE_LIBBSD
-
-	char tmp[PATH_MAX];
+	char tmp[PATH_MAX] = {0};
 	if (get_pidfile_path(tmp) < 0) {
 		U_LOG_W("Failed to determine runtime dir, not creating pidfile");
 		return NULL;
@@ -62,16 +61,17 @@ u_process_create_if_not_running(void)
 	U_LOG_T("Using pidfile %s", tmp);
 
 	pid_t otherpid;
-
 	struct pidfh *pfh = pidfile_open(tmp, 0600, &otherpid);
-	if (errno == EEXIST || pfh == NULL) {
-		U_LOG_T("Failed to create pidfile (%s): Another Monado instance may be running", strerror(errno));
+	if (pfh == NULL) {
 		// other process is locking pid file
+		if (errno == EEXIST) {
+			U_LOG_E("Monado is already running, pid %d", otherpid);
+		}
+		U_LOG_E("Failed to create pidfile %s: %s", tmp, strerror(errno));
 		return NULL;
 	}
 
 	// either new or stale pidfile opened
-
 	int write_ret = pidfile_write(pfh);
 	if (write_ret != 0) {
 		pidfile_close(pfh);

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Wrapper for m_imu_3dof that can be placed inside (and freed along with!) an `xrt_imu_sink` pipeline.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 

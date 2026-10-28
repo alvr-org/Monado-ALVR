@@ -51,54 +51,6 @@ enum wmr_controller_og_input_index
 #define SET_ODYSSEY_INPUT(wcb, NAME)                                                                                   \
 	(wcb->base.inputs[WMR_CONTROLLER_INDEX_##NAME].name = XRT_INPUT_ODYSSEY_CONTROLLER_##NAME)
 
-/*
- *
- * Bindings
- *
- */
-
-static struct xrt_binding_input_pair simple_inputs_og[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_WMR_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_WMR_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_WMR_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_WMR_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair simple_outputs_og[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_WMR_HAPTIC},
-};
-
-static struct xrt_binding_profile binding_profiles_og[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs_og,
-        .input_count = ARRAY_SIZE(simple_inputs_og),
-        .outputs = simple_outputs_og,
-        .output_count = ARRAY_SIZE(simple_outputs_og),
-    },
-};
-
-static struct xrt_binding_input_pair simple_inputs_odyssey[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_ODYSSEY_CONTROLLER_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_ODYSSEY_CONTROLLER_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_ODYSSEY_CONTROLLER_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_ODYSSEY_CONTROLLER_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair simple_outputs_odyssey[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_ODYSSEY_CONTROLLER_HAPTIC},
-};
-
-static struct xrt_binding_profile binding_profiles_odyssey[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs_odyssey,
-        .input_count = ARRAY_SIZE(simple_inputs_odyssey),
-        .outputs = simple_outputs_odyssey,
-        .output_count = ARRAY_SIZE(simple_outputs_odyssey),
-    },
-};
-
 
 /* OG WMR Controller inputs struct */
 struct wmr_controller_og_input
@@ -280,12 +232,8 @@ handle_input_packet(struct wmr_controller_base *wcb, uint64_t time_ns, uint8_t *
 	struct wmr_controller_og *ctrl = (struct wmr_controller_og *)(wcb);
 	bool b = wmr_controller_og_packet_parse(ctrl, buffer, buf_size);
 	if (b) {
-		m_imu_3dof_update(&wcb->fusion,
-		                  ctrl->last_inputs.imu.timestamp_ticks * WMR_MOTION_CONTROLLER_NS_PER_TICK,
-		                  &ctrl->last_inputs.imu.acc, &ctrl->last_inputs.imu.gyro);
-
-		wcb->last_imu_timestamp_ns = time_ns;
-		wcb->last_angular_velocity = ctrl->last_inputs.imu.gyro;
+		wmr_controller_base_handle_imu_sample(wcb, time_ns, ctrl->last_inputs.imu.timestamp_ticks,
+		                                      &ctrl->last_inputs.imu.acc, &ctrl->last_inputs.imu.gyro);
 	}
 
 	return b;
@@ -320,15 +268,6 @@ wmr_controller_og_update_inputs(struct xrt_device *xdev)
 }
 
 static void
-wmr_controller_og_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	DRV_TRACE_MARKER();
-
-	// struct wmr_controller_base *d = wmr_controller_base(xdev);
-	// Todo: implement
-}
-
-static void
 wmr_controller_og_destroy(struct xrt_device *xdev)
 {
 	struct wmr_controller_base *wcb = (struct wmr_controller_base *)(xdev);
@@ -341,7 +280,8 @@ struct wmr_controller_base *
 wmr_controller_og_create(struct wmr_controller_connection *conn,
                          enum xrt_device_type controller_type,
                          uint16_t pid,
-                         enum u_logging_level log_level)
+                         enum u_logging_level log_level,
+                         struct xrt_fs *src)
 {
 	DRV_TRACE_MARKER();
 
@@ -349,21 +289,21 @@ wmr_controller_og_create(struct wmr_controller_connection *conn,
 	struct wmr_controller_og *ctrl = U_DEVICE_ALLOCATE(struct wmr_controller_og, flags, 11, 1);
 	struct wmr_controller_base *wcb = (struct wmr_controller_base *)(ctrl);
 
-	if (!wmr_controller_base_init(wcb, conn, controller_type, log_level)) {
+	if (!wmr_controller_base_init(wcb, conn, controller_type, log_level, wmr_controller_og_destroy, src)) {
 		wmr_controller_og_destroy(&wcb->base);
 		return NULL;
 	}
 
 	wcb->handle_input_packet = handle_input_packet;
 
+	// Only set those we want to overwrite.
+	wcb->base.update_inputs = wmr_controller_og_update_inputs;
+
 	if (pid == ODYSSEY_CONTROLLER_PID) {
 		wcb->base.name = XRT_DEVICE_SAMSUNG_ODYSSEY_CONTROLLER;
 	} else {
 		wcb->base.name = XRT_DEVICE_WMR_CONTROLLER;
 	}
-	wcb->base.destroy = wmr_controller_og_destroy;
-	wcb->base.update_inputs = wmr_controller_og_update_inputs;
-	wcb->base.set_output = wmr_controller_og_set_output;
 
 	if (pid == ODYSSEY_CONTROLLER_PID) {
 		SET_ODYSSEY_INPUT(wcb, MENU_CLICK);
@@ -380,8 +320,6 @@ wmr_controller_og_create(struct wmr_controller_connection *conn,
 
 		wcb->base.outputs[0].name = XRT_OUTPUT_NAME_ODYSSEY_CONTROLLER_HAPTIC;
 
-		wcb->base.binding_profiles = binding_profiles_odyssey;
-		wcb->base.binding_profile_count = ARRAY_SIZE(binding_profiles_odyssey);
 	} else {
 		SET_WMR_INPUT(wcb, MENU_CLICK);
 		SET_WMR_INPUT(wcb, HOME_CLICK);
@@ -396,9 +334,6 @@ wmr_controller_og_create(struct wmr_controller_connection *conn,
 		SET_WMR_INPUT(wcb, AIM_POSE);
 
 		wcb->base.outputs[0].name = XRT_OUTPUT_NAME_WMR_HAPTIC;
-
-		wcb->base.binding_profiles = binding_profiles_og;
-		wcb->base.binding_profile_count = ARRAY_SIZE(binding_profiles_og);
 	}
 
 	for (uint32_t i = 0; i < wcb->base.input_count; i++) {

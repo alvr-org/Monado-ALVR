@@ -40,29 +40,6 @@
 /* Set to 1 to print controller states continuously */
 #define DUMP_CONTROLLER_STATE 0
 
-#define DEG_TO_RAD(D) ((D)*M_PI / 180.)
-
-static struct xrt_binding_input_pair simple_inputs_rift_s[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_TOUCH_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_TOUCH_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_TOUCH_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_TOUCH_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair simple_outputs_rift_s[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_TOUCH_HAPTIC},
-};
-
-static struct xrt_binding_profile binding_profiles_rift_s[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs_rift_s,
-        .input_count = ARRAY_SIZE(simple_inputs_rift_s),
-        .outputs = simple_outputs_rift_s,
-        .output_count = ARRAY_SIZE(simple_outputs_rift_s),
-    },
-};
-
 enum touch_controller_input_index
 {
 	/* Left controller */
@@ -173,9 +150,9 @@ handle_imu_update(struct rift_s_controller *ctrl,
 			return;
 		}
 
-		ctrl->last_imu_device_time_ns += (timepoint_ns)dt * OS_NS_PER_USEC;
+		ctrl->last_imu_device_time_ns += (timepoint_ns)dt * U_TIME_1US_IN_NS;
 	} else {
-		ctrl->last_imu_device_time_ns = (timepoint_ns)imu_timestamp * OS_NS_PER_USEC;
+		ctrl->last_imu_device_time_ns = (timepoint_ns)imu_timestamp * U_TIME_1US_IN_NS;
 		ctrl->imu_time_valid = true;
 	}
 	ctrl->imu_timestamp32 = imu_timestamp;
@@ -374,10 +351,8 @@ ctrl_config_cb(bool success, uint8_t *response_bytes, int response_bytes_len, st
 	if (response_bytes_len < 16) {
 		char buf[16384] = "";
 		int bufsize = sizeof(buf) - 2;
-		int printed = 0;
 
-		printed += rift_s_snprintf_hexdump_buffer(buf + printed, bufsize - printed, "Controller Config",
-		                                          response_bytes, response_bytes_len);
+		rift_s_snprintf_hexdump_buffer(buf, bufsize, "Controller Config", response_bytes, response_bytes_len);
 
 		RIFT_S_ERROR("Failed to read controller config block - only got %d bytes\n%s", response_bytes_len, buf);
 		return;
@@ -510,12 +485,6 @@ rift_s_controller_update_inputs(struct xrt_device *xdev)
 }
 
 static void
-rift_s_controller_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	/* TODO: Implement haptic sending */
-}
-
-static void
 rift_s_controller_get_fusion_pose(struct rift_s_controller *ctrl,
                                   enum xrt_input_name name,
                                   int64_t at_timestamp_ns,
@@ -612,11 +581,9 @@ rift_s_controller_create(struct rift_s_system *sys, enum xrt_device_type device_
 
 	os_mutex_init(&ctrl->mutex);
 
+	u_device_populate_function_pointers(&ctrl->base, rift_s_controller_get_tracked_pose, rift_s_controller_destroy);
 	ctrl->base.update_inputs = rift_s_controller_update_inputs;
-	ctrl->base.set_output = rift_s_controller_set_output;
-	ctrl->base.get_tracked_pose = rift_s_controller_get_tracked_pose;
 	ctrl->base.get_view_poses = u_device_get_view_poses;
-	ctrl->base.destroy = rift_s_controller_destroy;
 	ctrl->base.name = XRT_DEVICE_TOUCH_CONTROLLER;
 	ctrl->base.device_type = device_type;
 
@@ -659,9 +626,6 @@ rift_s_controller_create(struct rift_s_system *sys, enum xrt_device_type device_
 	SET_TOUCH_INPUT(ctrl, AIM_POSE);
 
 	ctrl->base.outputs[0].name = XRT_OUTPUT_NAME_TOUCH_HAPTIC;
-
-	ctrl->base.binding_profiles = binding_profiles_rift_s;
-	ctrl->base.binding_profile_count = ARRAY_SIZE(binding_profiles_rift_s);
 
 	u_var_add_root(ctrl, ctrl->base.str, true);
 	u_var_add_gui_header(ctrl, NULL, "Tracking");

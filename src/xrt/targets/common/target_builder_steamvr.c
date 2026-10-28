@@ -1,5 +1,6 @@
 // Copyright 2023, Duncan Spaulding.
 // Copyright 2022-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,9 +9,7 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup xrt_iface
  */
-#include "util/u_builders.h"
 #include "xrt/xrt_config_drivers.h"
-
 
 #include <assert.h>
 #include <stdbool.h>
@@ -22,17 +21,19 @@
 #include "xrt/xrt_prober.h"
 
 #include "util/u_debug.h"
+#include "util/u_device.h"
 #include "util/u_system_helpers.h"
 
 #include "vive/vive_builder.h"
 
 #include "target_builder_interface.h"
+#include "target_builder_helpers.h"
 
 #include "steamvr_lh/steamvr_lh_interface.h"
 #include "xrt/xrt_results.h"
 
 #include "xrt/xrt_space.h"
-#include "util/u_space_overseer.h"
+#include "b_space_overseer.h"
 
 #ifndef XRT_BUILD_DRIVER_STEAMVR_LIGHTHOUSE
 #error "This builder requires the SteamVR Lighthouse driver"
@@ -71,10 +72,7 @@ static const char *driver_list[] = {
 
 struct steamvr_builder
 {
-	struct xrt_builder base;
-
-	struct xrt_device *head;
-	struct xrt_device *left_ht, *right_ht;
+	struct t_builder base;
 
 	bool is_valve_index;
 };
@@ -116,62 +114,50 @@ steamvr_destroy(struct xrt_builder *xb)
 }
 
 static xrt_result_t
-steamvr_open_system(struct xrt_builder *xb,
-                    cJSON *config,
-                    struct xrt_prober *xp,
-                    struct xrt_session_event_sink *broadcast,
-                    struct xrt_system_devices **out_xsysd,
-                    struct xrt_space_overseer **out_xso)
+steamvr_open_system_impl(struct xrt_builder *xb,
+                         cJSON *config,
+                         struct xrt_prober *xp,
+                         struct xrt_tracking_origin *origin,
+                         struct xrt_system_devices *xsysd,
+                         struct xrt_frame_context *xfctx,
+                         struct t_builder_options *tbo)
 {
-	struct steamvr_builder *svrb = (struct steamvr_builder *)xb;
-
-	assert(out_xsysd != NULL);
-	assert(*out_xsysd == NULL);
-
-	enum xrt_result result = steamvr_lh_create_devices(out_xsysd);
+	enum xrt_result result = steamvr_lh_create_devices(xp, xsysd);
 
 	if (result != XRT_SUCCESS) {
 		SVR_ERROR("Unable to create devices");
-		steamvr_destroy(xb);
 		return result;
 	}
 
-	struct xrt_system_devices *xsysd = NULL;
-	xsysd = *out_xsysd;
+	int head, eyes, face, left, right, gamepad;
+	u_device_assign_xdev_roles(xsysd->static_xdevs, xsysd->static_xdev_count, &head, &eyes, &face, &left, &right,
+	                           &gamepad);
 
-	if (xsysd->static_roles.head == NULL) {
+	if (head == XRT_DEVICE_ROLE_UNASSIGNED) {
 		SVR_ERROR("Unable to find HMD");
-		steamvr_destroy(xb);
 		return XRT_ERROR_DEVICE_CREATION_FAILED;
 	}
 
-	svrb->head = xsysd->static_roles.head;
+#define SET_HT_ROLES(SRC)                                                                                              \
+	tbo->hand_tracking.SRC.left = u_system_devices_get_ht_device_##SRC##_left(xsysd);                              \
+	tbo->hand_tracking.SRC.right = u_system_devices_get_ht_device_##SRC##_right(xsysd);
+	SET_HT_ROLES(unobstructed)
+	SET_HT_ROLES(conforming)
+#undef SET_HT_ROLES
 
-	svrb->left_ht = u_system_devices_get_ht_device_left(xsysd);
-	xsysd->static_roles.hand_tracking.left = svrb->left_ht;
+	tbo->head = xsysd->static_xdevs[head];
 
-	svrb->right_ht = u_system_devices_get_ht_device_right(xsysd);
-	xsysd->static_roles.hand_tracking.right = svrb->right_ht;
+	if (left != XRT_DEVICE_ROLE_UNASSIGNED) {
+		tbo->left = xsysd->static_xdevs[left];
+	}
+	if (right != XRT_DEVICE_ROLE_UNASSIGNED) {
+		tbo->right = xsysd->static_xdevs[right];
+	}
+	if (gamepad != XRT_DEVICE_ROLE_UNASSIGNED) {
+		tbo->gamepad = xsysd->static_xdevs[gamepad];
+	}
 
-	/*
-	 * Space overseer.
-	 */
-
-	struct u_space_overseer *uso = u_space_overseer_create(broadcast);
-
-	struct xrt_pose T_stage_local = XRT_POSE_IDENTITY;
-
-	u_space_overseer_legacy_setup( //
-	    uso,                       // uso
-	    xsysd->xdevs,              // xdevs
-	    xsysd->xdev_count,         // xdev_count
-	    svrb->head,                // head
-	    &T_stage_local,            // local_offset
-	    false,                     // root_is_unbounded
-	    true                       // per_app_local_spaces
-	);
-
-	*out_xso = (struct xrt_space_overseer *)uso;
+	tbo->T_stage_local = (struct xrt_pose)XRT_POSE_IDENTITY;
 
 	return result;
 }
@@ -187,13 +173,16 @@ struct xrt_builder *
 t_builder_steamvr_create(void)
 {
 	struct steamvr_builder *svrb = U_TYPED_CALLOC(struct steamvr_builder);
-	svrb->base.estimate_system = steamvr_estimate_system;
-	svrb->base.open_system = steamvr_open_system;
-	svrb->base.destroy = steamvr_destroy;
-	svrb->base.identifier = "steamvr";
-	svrb->base.name = "SteamVR proprietary wrapper (Vive, Index, Tundra trackers, etc.) devices builder";
-	svrb->base.driver_identifiers = driver_list;
-	svrb->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	return &svrb->base;
+	svrb->base.base.estimate_system = steamvr_estimate_system;
+	svrb->base.base.open_system = t_builder_open_system_static_roles;
+	svrb->base.base.destroy = steamvr_destroy;
+	svrb->base.base.identifier = "steamvr";
+	svrb->base.base.name = "SteamVR proprietary wrapper (Vive, Index, Tundra trackers, etc.) devices builder";
+	svrb->base.base.driver_identifiers = driver_list;
+	svrb->base.base.driver_identifier_count = ARRAY_SIZE(driver_list);
+
+	svrb->base.open_system_static_roles = steamvr_open_system_impl;
+
+	return &svrb->base.base;
 }

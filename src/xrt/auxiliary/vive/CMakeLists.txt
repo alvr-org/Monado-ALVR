@@ -3,12 +3,12 @@
 
 add_library(
 	aux_vive STATIC
-	vive_bindings.c
-	vive_bindings.h
 	vive_builder.c
 	vive_builder.h
 	vive_calibration.c
 	vive_calibration.h
+	vive_common.h
+	vive_common.c
 	vive_config.h
 	vive_config.c
 	vive_poses.h

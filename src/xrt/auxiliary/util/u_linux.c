@@ -86,7 +86,7 @@ print_thread_info(struct u_pp_delegate dg, enum u_logging_level log_level, pthre
  *
  */
 
-void
+bool
 u_linux_try_to_set_realtime_priority_on_thread(enum u_logging_level log_level, const char *name)
 {
 	pthread_t this_thread = pthread_self();
@@ -136,4 +136,6 @@ u_linux_try_to_set_realtime_priority_on_thread(enum u_logging_level log_level, c
 	} else {
 		LOG_I("%s", sink.buffer);
 	}
+
+	return ret == 0;
 }

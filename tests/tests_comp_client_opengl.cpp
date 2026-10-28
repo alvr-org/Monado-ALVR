@@ -70,7 +70,7 @@ TEST_CASE("opengl_client_compositor", "[.][needgpu]")
 #error "not implemented"
 #endif
 	REQUIRE(c);
-	struct xrt_compositor *xc = &c->base.base.base;
+	struct xrt_compositor *xc = &c->base.base;
 
 	SECTION("Swapchain create and import")
 	{

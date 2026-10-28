@@ -1,5 +1,5 @@
 // Copyright 2020-2021, N Madsen.
-// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2026, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -85,6 +85,7 @@ check_and_get_interface(struct xrt_prober_device *device,
 		switch (device->product_id) {
 		case REVERB_G1_PID: *out_hmd_type = WMR_HEADSET_REVERB_G1; return true;
 		case REVERB_G2_PID: *out_hmd_type = WMR_HEADSET_REVERB_G2; return true;
+		case REVERB_G2_OMNICEPT_PID: *out_hmd_type = WMR_HEADSET_REVERB_G2; return true;
 		case VR1000_PID: *out_hmd_type = WMR_HEADSET_HP_VR1000; return true;
 		default: U_LOG_IFL_T(log_level, "No matching PID!"); return false;
 		}
@@ -94,6 +95,7 @@ check_and_get_interface(struct xrt_prober_device *device,
 
 		switch (device->product_id) {
 		case EXPLORER_PID: *out_hmd_type = WMR_HEADSET_LENOVO_EXPLORER; return true;
+		case EXPLORER_NO_CONTROLLERS_PID: *out_hmd_type = WMR_HEADSET_LENOVO_EXPLORER; return true;
 		default: U_LOG_IFL_T(log_level, "No matching PID!"); return false;
 		}
 
@@ -129,7 +131,16 @@ check_and_get_interface(struct xrt_prober_device *device,
 		U_LOG_IFL_T(log_level, "ACER_VID");
 
 		switch (device->product_id) {
+		case AH100_PID: *out_hmd_type = WMR_HEADSET_ACER_AH100; return true;
 		case AH101_PID: *out_hmd_type = WMR_HEADSET_ACER_AH101; return true;
+		default: U_LOG_IFL_T(log_level, "No matching PID!"); return false;
+		}
+
+	case FUJITSU_VID:
+		U_LOG_IFL_T(log_level, "FUJITSU_VID");
+
+		switch (device->product_id) {
+		case FMVHDS1_PID: *out_hmd_type = WMR_HEADSET_FUJITSU_FMVHDS1; return true;
 		default: U_LOG_IFL_T(log_level, "No matching PID!"); return false;
 		}
 
@@ -418,6 +429,10 @@ wmr_create_bt_controller(struct xrt_prober *xp,
 	    XRT_PROBER_STRING_PRODUCT,              //
 	    (uint8_t *)product_name,                //
 	    sizeof(product_name));                  //
+	if (ret <= 0) {
+		U_LOG_IFL_E(log_level, "Failed to get WMR Bluetooth controller string descriptor");
+		return XRT_ERROR_DEVICE_CREATION_FAILED;
+	}
 
 	enum xrt_device_type controller_type = XRT_DEVICE_TYPE_UNKNOWN;
 	const int interface_controller = 0;

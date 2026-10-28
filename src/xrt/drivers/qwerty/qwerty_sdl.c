@@ -11,7 +11,9 @@
 #include "util/u_device.h"
 #include "xrt/xrt_device.h"
 #include <SDL2/SDL.h>
+#include <SDL_scancode.h>
 #include <assert.h>
+#include <string.h>
 
 // Amount of look_speed units a mouse delta of 1px in screen space will rotate the device
 #define SENSITIVITY 0.1f
@@ -47,10 +49,13 @@ static struct qwerty_device *
 default_qwerty_device(struct xrt_device **xdevs, size_t xdev_count, struct qwerty_system *qsys)
 {
 	int head;
+	int eyes;
+	int face;
 	int left;
 	int right;
-	head = left = right = XRT_DEVICE_ROLE_UNASSIGNED;
-	u_device_assign_xdev_roles(xdevs, xdev_count, &head, &left, &right);
+	int gamepad;
+	head = eyes = face = left = right = gamepad = XRT_DEVICE_ROLE_UNASSIGNED;
+	u_device_assign_xdev_roles(xdevs, xdev_count, &head, &eyes, &face, &left, &right, &gamepad);
 
 	struct xrt_device *xd_hmd = qsys->hmd ? &qsys->hmd->base.base : NULL;
 	struct xrt_device *xd_left = &qsys->lctrl->base.base;
@@ -75,10 +80,13 @@ static struct qwerty_controller *
 default_qwerty_controller(struct xrt_device **xdevs, size_t xdev_count, struct qwerty_system *qsys)
 {
 	int head;
+	int eyes;
+	int face;
 	int left;
 	int right;
-	head = left = right = XRT_DEVICE_ROLE_UNASSIGNED;
-	u_device_assign_xdev_roles(xdevs, xdev_count, &head, &left, &right);
+	int gamepad;
+	head = eyes = face = left = right = gamepad = XRT_DEVICE_ROLE_UNASSIGNED;
+	u_device_assign_xdev_roles(xdevs, xdev_count, &head, &eyes, &face, &left, &right, &gamepad);
 
 	struct xrt_device *xd_left = &qsys->lctrl->base.base;
 	struct xrt_device *xd_right = &qsys->rctrl->base.base;
@@ -135,10 +143,10 @@ qwerty_process_event(struct xrt_device **xdevs, size_t xdev_count, SDL_Event eve
 
 	// clang-format off
 	// CTRL/ALT keys logic
-	bool alt_down = event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_LALT;
-	bool alt_up = event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_LALT;
-	bool ctrl_down = event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_LCTRL;
-	bool ctrl_up = event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_LCTRL;
+	bool alt_down = event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_LALT;
+	bool alt_up = event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_LALT;
+	bool ctrl_down = event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_LCTRL;
+	bool ctrl_up = event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_LCTRL;
 	if (alt_down) alt_pressed = true;
 	if (alt_up) alt_pressed = false;
 	if (ctrl_down) ctrl_pressed = true;
@@ -166,37 +174,37 @@ qwerty_process_event(struct xrt_device **xdevs, size_t xdev_count, SDL_Event eve
 	qsys->rctrl_focused = qdev == qd_right;
 
 	// WASDQE Movement
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_a) qwerty_press_left(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_a) qwerty_release_left(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_d) qwerty_press_right(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_d) qwerty_release_right(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_w) qwerty_press_forward(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_w) qwerty_release_forward(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s) qwerty_press_backward(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_s) qwerty_release_backward(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_e) qwerty_press_up(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_e) qwerty_release_up(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_q) qwerty_press_down(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_q) qwerty_release_down(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_A) qwerty_press_left(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_A) qwerty_release_left(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_D) qwerty_press_right(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_D) qwerty_release_right(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_W) qwerty_press_forward(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_W) qwerty_release_forward(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_S) qwerty_press_backward(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_S) qwerty_release_backward(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_E) qwerty_press_up(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_E) qwerty_release_up(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_Q) qwerty_press_down(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_Q) qwerty_release_down(qdev);
 
 	// Arrow keys rotation
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_LEFT) qwerty_press_look_left(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_LEFT) qwerty_release_look_left(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RIGHT) qwerty_press_look_right(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_RIGHT) qwerty_release_look_right(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_UP) qwerty_press_look_up(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_UP) qwerty_release_look_up(qdev);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_DOWN) qwerty_press_look_down(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_DOWN) qwerty_release_look_down(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_LEFT) qwerty_press_look_left(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_LEFT) qwerty_release_look_left(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_RIGHT) qwerty_press_look_right(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_RIGHT) qwerty_release_look_right(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_UP) qwerty_press_look_up(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_UP) qwerty_release_look_up(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_DOWN) qwerty_press_look_down(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_DOWN) qwerty_release_look_down(qdev);
 
 	// Movement speed
 	if (event.type == SDL_MOUSEWHEEL) qwerty_change_movement_speed(qdev, event.wheel.y);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_KP_PLUS) qwerty_change_movement_speed(qdev, 1);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_KP_MINUS) qwerty_change_movement_speed(qdev, -1);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_KP_PLUS) qwerty_change_movement_speed(qdev, 1);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_KP_MINUS) qwerty_change_movement_speed(qdev, -1);
 
 	// Sprinting
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_LSHIFT) qwerty_press_sprint(qdev);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_LSHIFT) qwerty_release_sprint(qdev);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_LSHIFT) qwerty_press_sprint(qdev);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_LSHIFT) qwerty_release_sprint(qdev);
 
 	// Mouse rotation
 	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_RIGHT) {
@@ -215,39 +223,39 @@ qwerty_process_event(struct xrt_device **xdevs, size_t xdev_count, SDL_Event eve
 	if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_MIDDLE) qwerty_press_squeeze(qctrl);
 	if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_MIDDLE) qwerty_release_squeeze(qctrl);
 
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_n) qwerty_press_menu(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_n) qwerty_release_menu(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_b) qwerty_press_system(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_b) qwerty_release_system(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_N) qwerty_press_menu(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_N) qwerty_release_menu(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_B) qwerty_press_system(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_B) qwerty_release_system(qctrl);
 
 	// Thumbstick
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_f) qwerty_press_thumbstick_left(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_f) qwerty_release_thumbstick_left(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_h) qwerty_press_thumbstick_right(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_h) qwerty_release_thumbstick_right(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_t) qwerty_press_thumbstick_up(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_t) qwerty_release_thumbstick_up(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_g) qwerty_press_thumbstick_down(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_g) qwerty_release_thumbstick_down(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_v) qwerty_press_thumbstick_click(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_v) qwerty_release_thumbstick_click(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_F) qwerty_press_thumbstick_left(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_F) qwerty_release_thumbstick_left(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_H) qwerty_press_thumbstick_right(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_H) qwerty_release_thumbstick_right(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_T) qwerty_press_thumbstick_up(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_T) qwerty_release_thumbstick_up(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_G) qwerty_press_thumbstick_down(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_G) qwerty_release_thumbstick_down(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_V) qwerty_press_thumbstick_click(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_V) qwerty_release_thumbstick_click(qctrl);
 
 	// Trackpad
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_j) qwerty_press_trackpad_left(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_j) qwerty_release_trackpad_left(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_l) qwerty_press_trackpad_right(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_l) qwerty_release_trackpad_right(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_i) qwerty_press_trackpad_up(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_i) qwerty_release_trackpad_up(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_k) qwerty_press_trackpad_down(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_k) qwerty_release_trackpad_down(qctrl);
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_m) qwerty_press_trackpad_click(qctrl);
-	if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_m) qwerty_release_trackpad_click(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_J) qwerty_press_trackpad_left(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_J) qwerty_release_trackpad_left(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_L) qwerty_press_trackpad_right(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_L) qwerty_release_trackpad_right(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_I) qwerty_press_trackpad_up(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_I) qwerty_release_trackpad_up(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_K) qwerty_press_trackpad_down(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_K) qwerty_release_trackpad_down(qctrl);
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_M) qwerty_press_trackpad_click(qctrl);
+	if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_M) qwerty_release_trackpad_click(qctrl);
 
 	// clang-format on
 
 	// Controllers follow/unfollow HMD
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_c && event.key.repeat == 0) {
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_C && event.key.repeat == 0) {
 		if (qdev != qd_hmd) {
 			qwerty_follow_hmd(qctrl, !qctrl->follow_hmd);
 		} else { // If no controller is focused, set both to the same state
@@ -258,7 +266,7 @@ qwerty_process_event(struct xrt_device **xdevs, size_t xdev_count, SDL_Event eve
 	}
 
 	// Reset controller poses
-	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_r && event.key.repeat == 0) {
+	if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_R && event.key.repeat == 0) {
 		if (qdev != qd_hmd) {
 			qwerty_reset_controller_pose(qctrl);
 		} else { // If no controller is focused, reset both

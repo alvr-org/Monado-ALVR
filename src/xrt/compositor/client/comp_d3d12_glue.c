@@ -12,7 +12,7 @@
 
 #include <stdlib.h>
 
-struct xrt_compositor_d3d12 *
+struct xrt_compositor *
 xrt_gfx_d3d12_provider_create(struct xrt_compositor_native *xcn, ID3D12Device *device, ID3D12CommandQueue *queue)
 {
 	return client_d3d12_compositor_create(xcn, device, queue);

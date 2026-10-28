@@ -1,4 +1,5 @@
 // Copyright 2022, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -28,7 +29,59 @@ extern "C" {
  * they can easily be chained together to form a debug message printing out
  * various information. Most of the final logging functions in Monado inserts a
  * newline at the end of the message and we don't want two to be inserted.
+ *
+ * There are also helpers that goes from an enum to a string that that doesn't
+ * use the delegate to do the printing, these returns string that are compiled
+ * into the binary. They will return 'UNKNOWN' if they don't know the value.
+ * But can be made to return NULL on unknown.
  */
+
+/*!
+ * Returns a string of the input name, or NULL if invalid.
+ *
+ * @ingroup aux_pretty
+ */
+const char *
+u_str_xrt_input_name_or_null(enum xrt_input_name name);
+
+/*!
+ * Returns a string of the output name, or NULL if invalid.
+ *
+ * @ingroup aux_pretty
+ */
+const char *
+u_str_xrt_output_name_or_null(enum xrt_output_name name);
+
+/*!
+ * Returns a string of the device name, or NULL if invalid.
+ *
+ * @ingroup aux_pretty
+ */
+const char *
+u_str_xrt_device_name_or_null(enum xrt_device_name name);
+
+/*!
+ * Returns a string of the result, or NULL if invalid.
+ *
+ * @ingroup aux_pretty
+ */
+const char *
+u_str_xrt_result_or_null(xrt_result_t xret);
+
+#define U_STR_NO_NULL(NAME, TYPE)                                                                                      \
+	static inline const char *NAME(TYPE enumerate)                                                                 \
+	{                                                                                                              \
+		const char *str = NAME##_or_null(enumerate);                                                           \
+		return str != NULL ? str : "UNKNOWN";                                                                  \
+	}
+
+U_STR_NO_NULL(u_str_xrt_input_name, enum xrt_input_name)
+U_STR_NO_NULL(u_str_xrt_output_name, enum xrt_output_name)
+U_STR_NO_NULL(u_str_xrt_device_name, enum xrt_device_name)
+U_STR_NO_NULL(u_str_xrt_result, xrt_result_t)
+
+#undef U_STR_NO_NULL
+
 
 /*!
  * Function prototype for receiving pretty printed strings.
@@ -78,6 +131,14 @@ void
 u_pp_xrt_input_name(struct u_pp_delegate dg, enum xrt_input_name name);
 
 /*!
+ * Pretty prints the @ref xrt_output_name.
+ *
+ * @ingroup aux_pretty
+ */
+void
+u_pp_xrt_output_name(struct u_pp_delegate dg, enum xrt_output_name name);
+
+/*!
  * Pretty prints the @ref xrt_result_t.
  *
  * @ingroup aux_pretty
@@ -92,6 +153,20 @@ u_pp_xrt_result(struct u_pp_delegate dg, xrt_result_t xret);
  */
 void
 u_pp_xrt_reference_space_type(struct u_pp_delegate dg, enum xrt_reference_space_type type);
+
+
+/*!
+ * Pretty prints a milliseconds padded to be at least 16 characters, the
+ * formatting is meant to be human readable, does not use locale.
+ *
+ * Formatted as:  " M'TTT'###.FFFms"
+ * Zero:          "         0.000ms"
+ *
+ * If the value is 10 seconds or larger (MM) then it will be longer then 16
+ * characters.
+ */
+void
+u_pp_padded_pretty_ms(u_pp_delegate_t dg, uint64_t value_ns);
 
 
 /*
@@ -159,6 +234,45 @@ u_pp_array2d_f64(u_pp_delegate_t dg, const double *arr, size_t n, size_t m, cons
 /*!
  * @}
  */
+
+
+/*
+ *
+ * Extension list printers.
+ *
+ */
+
+struct u_extension_list;
+
+/*!
+ * @brief Print all the strings in the list with the given prefix.
+ *
+ * @param dg delegate to use for printing
+ * @param usl list of strings to print (must not be NULL)
+ * @param prefix prefix to add to each string to be printed (must not be NULL)
+ * @ingroup aux_pretty
+ */
+XRT_NONNULL_ALL void
+u_pp_string_list(struct u_pp_delegate dg, struct u_extension_list *usl, const char *prefix);
+
+/*!
+ * @brief Pretty print the extension list with extension information.
+ *
+ * It will start on a new line with the enabled extensions, showing which are
+ * required vs optional. Then if there are optional extensions not enabled it
+ * will list those separately, distinguishing between unsupported and skipped.
+ *
+ * @param dg delegate to use for printing
+ * @param enabled_list list of extensions that were enabled (must not be NULL)
+ * @param optional_list optional list to compare against (must not be NULL)
+ * @param skipped_list list of extensions that were skipped (must not be NULL)
+ * @ingroup aux_pretty
+ */
+XRT_NONNULL_ALL void
+u_pp_string_list_extensions(struct u_pp_delegate dg,
+                            struct u_extension_list *enabled_list,
+                            struct u_extension_list *optional_list,
+                            struct u_extension_list *skipped_list);
 
 
 /*

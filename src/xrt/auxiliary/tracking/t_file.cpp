@@ -10,6 +10,7 @@
  */
 
 #include "tracking/t_calibration_opencv.hpp"
+#include "tracking/t_tracking.h"
 #include "util/u_misc.h"
 #include "util/u_logging.h"
 #include "util/u_json.hpp"
@@ -28,7 +29,7 @@ DEBUG_GET_ONCE_LOG_OPTION(calib_log, "CALIB_LOG", U_LOGGING_INFO)
 		bool p = predicate;                                                                                    \
 		if (!p) {                                                                                              \
 			U_LOG(U_LOGGING_ERROR, __VA_ARGS__);                                                           \
-			assert(false && "CALIB_ASSERT failed: " #predicate);                                           \
+			assert(p && "CALIB_ASSERT failed: " #predicate);                                               \
 			exit(EXIT_FAILURE);                                                                            \
 		}                                                                                                      \
 	} while (false);
@@ -82,8 +83,7 @@ calibration_get_undistort_map(t_camera_calibration &calib,
 	//              calibration for does not match what was saved
 	cv::Size image_size(calib.image_size_pixels.w, calib.image_size_pixels.h);
 
-	switch (calib.distortion_model) {
-	case (T_DISTORTION_FISHEYE_KB4):
+	if (t_camera_distortion_model_is_opencv_fisheye(wrap.distortion_model)) {
 		cv::fisheye::initUndistortRectifyMap(wrap.intrinsics_mat,        // cameraMatrix
 		                                     wrap.distortion_mat,        // distCoeffs
 		                                     rectify_transform_optional, // R
@@ -92,8 +92,7 @@ calibration_get_undistort_map(t_camera_calibration &calib,
 		                                     CV_32FC1,                   // m1type
 		                                     ret.remap_x,                // map1
 		                                     ret.remap_y);               // map2
-		break;
-	case T_DISTORTION_OPENCV_RADTAN_5:
+	} else if (t_camera_distortion_model_is_opencv_non_fisheye(wrap.distortion_model)) {
 		cv::initUndistortRectifyMap(wrap.intrinsics_mat,        // cameraMatrix
 		                            wrap.distortion_mat,        // distCoeffs
 		                            rectify_transform_optional, // R
@@ -102,8 +101,8 @@ calibration_get_undistort_map(t_camera_calibration &calib,
 		                            CV_32FC1,                   // m1type
 		                            ret.remap_x,                // map1
 		                            ret.remap_y);               // map2
-		break;
-	default: assert(false);
+	} else {
+		assert(!"Unsupported distortion model");
 	}
 
 	return ret;
@@ -120,13 +119,14 @@ StereoRectificationMaps::StereoRectificationMaps(t_stereo_camera_calibration *da
 	cv::Size image_size(data->view[0].image_size_pixels.w, data->view[0].image_size_pixels.h);
 	StereoCameraCalibrationWrapper wrapped(data);
 
+	t_camera_distortion_model distortion_model = data->view[0].distortion_model;
+
 	/*
 	 * Generate our rectification maps
 	 *
 	 * Here cv::noArray() means zero distortion.
 	 */
-	switch (data->view[0].distortion_model) {
-	case T_DISTORTION_FISHEYE_KB4: {
+	if (t_camera_distortion_model_is_opencv_fisheye(distortion_model)) {
 #if 0
 		//! @todo for some reason this looks weird?
 		// Alpha of 1.0 kinda works, not really.
@@ -175,8 +175,7 @@ StereoRectificationMaps::StereoRectificationMaps(t_stereo_camera_calibration *da
 		                  NULL,                           // validPixROI1
 		                  NULL);                          // validPixROI2
 #endif
-	} break;
-	case T_DISTORTION_OPENCV_RADTAN_5: {
+	} else if (t_camera_distortion_model_is_opencv_non_fisheye(distortion_model)) {
 		// Have the same principal point on both.
 		int flags = cv::CALIB_ZERO_DISPARITY;
 		// Get all of the pixels from the camera.
@@ -201,8 +200,8 @@ StereoRectificationMaps::StereoRectificationMaps(t_stereo_camera_calibration *da
 		                  cv::Size(),                     // newImageSize
 		                  NULL,                           // validPixROI1
 		                  NULL);                          // validPixROI2
-	} break;
-	default: assert(false);
+	} else {
+		assert(!"Unsupported distortion model");
 	}
 
 	view[0].rectify = calibration_get_undistort_map(data->view[0], view[0].rotation_mat, view[0].projection_mat);

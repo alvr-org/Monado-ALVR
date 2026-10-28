@@ -1,4 +1,5 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -105,11 +106,11 @@ static constexpr auto kFenceTimeout = 500ms;
  * Wraps the real compositor providing a D3D12 based interface.
  *
  * @ingroup comp_client
- * @implements xrt_compositor_d3d12
+ * @implements xrt_compositor
  */
 struct client_d3d12_compositor
 {
-	struct xrt_compositor_d3d12 base = {};
+	struct xrt_compositor base = {};
 
 	//! Owning reference to the backing native compositor
 	struct xrt_compositor_native *xcn{nullptr};
@@ -801,6 +802,10 @@ client_d3d12_compositor_layer_projection(struct xrt_compositor *xc,
 	}
 	struct xrt_layer_data d = *data;
 
+	// Scale to compensate for power-of-two texture sizes.
+	for (uint32_t i = 0; i < data->view_count; ++i) {
+		client_d3d12_swapchain_scale_rect(xsc[i], &d.proj.v[i].sub.norm_rect);
+	}
 	// No flip required: D3D12 swapchain image convention matches Vulkan.
 	return xrt_comp_layer_projection(&c->xcn->base, xdev, xscn, &d);
 }
@@ -1017,6 +1022,11 @@ client_d3d12_compositor_destroy(struct xrt_compositor *xc)
 static void
 client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_compositor *c)
 {
+	struct xrt_compositor_semaphore *xcsem{nullptr};
+	HANDLE timeline_semaphore_handle_raw{};
+	xrt_result_t xret;
+
+	// Set the value to something non-zero.
 	c->timeline_semaphore_value = 1;
 
 	// See if we can make a "timeline semaphore", also known as ID3D12Fence
@@ -1024,9 +1034,15 @@ client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_composi
 		return;
 	}
 
-	struct xrt_compositor_semaphore *xcsem = nullptr;
-	wil::unique_handle timeline_semaphore_handle;
-	if (XRT_SUCCESS != xrt_comp_create_semaphore(&(c->xcn->base), timeline_semaphore_handle.put(), &xcsem)) {
+	/*
+	 * This call returns a HANDLE in the out_handle argument, it is owned by
+	 * the returned xrt_compositor_semaphore object we should not track it.
+	 */
+	xret = xrt_comp_create_semaphore(   //
+	    &(c->xcn->base),                // xc
+	    &timeline_semaphore_handle_raw, // out_handle
+	    &xcsem);                        // out_xcsem
+	if (xret != XRT_SUCCESS) {
 		D3D_WARN(c, "Native compositor tried but failed to created a timeline semaphore for us.");
 		return;
 	}
@@ -1038,10 +1054,7 @@ client_d3d12_compositor_init_try_timeline_semaphores(struct client_d3d12_composi
 	// Try to import, importFence throws on failure.
 	wil::com_ptr<ID3D12Fence1> fence = xrt::auxiliary::d3d::d3d12::importFence( //
 	    *(c->device),                                                           //
-	    timeline_semaphore_handle.get());                                       //
-
-	// The fence now owns the handle., importFence throws on failure.
-	timeline_semaphore_handle.release();
+	    timeline_semaphore_handle_raw);                                         //
 
 	// Check flags.
 	D3D12_FENCE_FLAGS flags = fence->GetCreationFlags();
@@ -1097,7 +1110,7 @@ client_d3d12_compositor_init_try_internal_blocking(struct client_d3d12_composito
 	c->fence = std::move(fence);
 }
 
-struct xrt_compositor_d3d12 *
+struct xrt_compositor *
 client_d3d12_compositor_create(struct xrt_compositor_native *xcn, ID3D12Device *device, ID3D12CommandQueue *queue)
 try {
 	std::unique_ptr<struct client_d3d12_compositor> c = std::make_unique<struct client_d3d12_compositor>();
@@ -1127,27 +1140,27 @@ try {
 	if (!c->fence) {
 		D3D_WARN(c, "No sync mechanism for D3D12 was successful!");
 	}
-	c->base.base.get_swapchain_create_properties = client_d3d12_compositor_get_swapchain_create_properties;
-	c->base.base.create_swapchain = client_d3d12_create_swapchain;
-	c->base.base.create_passthrough = client_d3d12_compositor_passthrough_create;
-	c->base.base.create_passthrough_layer = client_d3d12_compositor_passthrough_layer_create;
-	c->base.base.destroy_passthrough = client_d3d12_compositor_passthrough_destroy;
-	c->base.base.begin_session = client_d3d12_compositor_begin_session;
-	c->base.base.end_session = client_d3d12_compositor_end_session;
-	c->base.base.wait_frame = client_d3d12_compositor_wait_frame;
-	c->base.base.begin_frame = client_d3d12_compositor_begin_frame;
-	c->base.base.discard_frame = client_d3d12_compositor_discard_frame;
-	c->base.base.layer_begin = client_d3d12_compositor_layer_begin;
-	c->base.base.layer_projection = client_d3d12_compositor_layer_projection;
-	c->base.base.layer_projection_depth = client_d3d12_compositor_layer_projection_depth;
-	c->base.base.layer_quad = client_d3d12_compositor_layer_quad;
-	c->base.base.layer_cube = client_d3d12_compositor_layer_cube;
-	c->base.base.layer_cylinder = client_d3d12_compositor_layer_cylinder;
-	c->base.base.layer_equirect1 = client_d3d12_compositor_layer_equirect1;
-	c->base.base.layer_equirect2 = client_d3d12_compositor_layer_equirect2;
-	c->base.base.layer_passthrough = client_d3d12_compositor_layer_passthrough;
-	c->base.base.layer_commit = client_d3d12_compositor_layer_commit;
-	c->base.base.destroy = client_d3d12_compositor_destroy;
+	c->base.get_swapchain_create_properties = client_d3d12_compositor_get_swapchain_create_properties;
+	c->base.create_swapchain = client_d3d12_create_swapchain;
+	c->base.create_passthrough = client_d3d12_compositor_passthrough_create;
+	c->base.create_passthrough_layer = client_d3d12_compositor_passthrough_layer_create;
+	c->base.destroy_passthrough = client_d3d12_compositor_passthrough_destroy;
+	c->base.begin_session = client_d3d12_compositor_begin_session;
+	c->base.end_session = client_d3d12_compositor_end_session;
+	c->base.wait_frame = client_d3d12_compositor_wait_frame;
+	c->base.begin_frame = client_d3d12_compositor_begin_frame;
+	c->base.discard_frame = client_d3d12_compositor_discard_frame;
+	c->base.layer_begin = client_d3d12_compositor_layer_begin;
+	c->base.layer_projection = client_d3d12_compositor_layer_projection;
+	c->base.layer_projection_depth = client_d3d12_compositor_layer_projection_depth;
+	c->base.layer_quad = client_d3d12_compositor_layer_quad;
+	c->base.layer_cube = client_d3d12_compositor_layer_cube;
+	c->base.layer_cylinder = client_d3d12_compositor_layer_cylinder;
+	c->base.layer_equirect1 = client_d3d12_compositor_layer_equirect1;
+	c->base.layer_equirect2 = client_d3d12_compositor_layer_equirect2;
+	c->base.layer_passthrough = client_d3d12_compositor_layer_passthrough;
+	c->base.layer_commit = client_d3d12_compositor_layer_commit;
+	c->base.destroy = client_d3d12_compositor_destroy;
 
 
 	// Passthrough our formats from the native compositor to the client.
@@ -1168,9 +1181,9 @@ try {
 		if (typeless == f) {
 			continue;
 		}
-		c->base.base.info.formats[count++] = f;
+		c->base.info.formats[count++] = f;
 	}
-	c->base.base.info.format_count = count;
+	c->base.info.format_count = count;
 
 	return &(c.release()->base);
 } catch (wil::ResultException const &e) {

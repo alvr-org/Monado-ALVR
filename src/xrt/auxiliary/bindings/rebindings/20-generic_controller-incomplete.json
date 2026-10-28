@@ -1,0 +1,86 @@
+{
+	"generic_to_hydra": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/mndx/hydra",
+		"target_device": "XRT_DEVICE_HYDRA",
+		"helpers": [
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/primary": "/user/hand/left/input/1",
+			"/user/hand/left/input/primary/click": "/user/hand/left/input/1/click",
+			"/user/hand/left/input/secondary": "/user/hand/left/input/2",
+			"/user/hand/left/input/secondary/click": "/user/hand/left/input/2/click",
+			"/user/hand/left/input/squeeze": false,
+			"/user/hand/left/input/squeeze/value": false,
+			"/user/hand/left/output/haptic": false,
+			"/user/hand/right/input/primary": "/user/hand/right/input/1",
+			"/user/hand/right/input/primary/click": "/user/hand/right/input/1/click",
+			"/user/hand/right/input/secondary": "/user/hand/right/input/2",
+			"/user/hand/right/input/secondary/click": "/user/hand/right/input/2/click",
+			"/user/hand/right/input/squeeze": false,
+			"/user/hand/right/input/squeeze/value": false,
+			"/user/hand/right/output/haptic": false
+		}
+	},
+	"generic_controller_to_hand_interaction_ext": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/ext/hand_interaction_ext",
+		"helpers": [
+			"/helper/controller/no/output",
+			"/helper/controller/no/thumbstick",
+			"/helper/controller/identity/poses"
+		],
+		"bindings": {
+			"/user/hand/left/input/primary": false,
+			"/user/hand/left/input/primary/click": false,
+			"/user/hand/left/input/secondary": false,
+			"/user/hand/left/input/secondary/click": false,
+			"/user/hand/left/input/squeeze": "/user/hand/left/input/grasp_ext",
+			"/user/hand/left/input/squeeze/value": "/user/hand/left/input/grasp_ext/value",
+			"/user/hand/left/input/trigger": "/user/hand/left/input/pinch_ext/value",
+			"/user/hand/left/input/trigger/value": "/user/hand/left/input/pinch_ext/value",
+			"/user/hand/right/input/primary": false,
+			"/user/hand/right/input/primary/click": false,
+			"/user/hand/right/input/secondary": false,
+			"/user/hand/right/input/secondary/click": false,
+			"/user/hand/right/input/squeeze": "/user/hand/right/input/grasp_ext",
+			"/user/hand/right/input/squeeze/value": "/user/hand/right/input/grasp_ext/value",
+			"/user/hand/right/input/trigger": "/user/hand/right/input/pinch_ext/value",
+			"/user/hand/right/input/trigger/value": "/user/hand/right/input/pinch_ext/value"
+		}
+	},
+	"generic_controller_to_mx_ink_stylus_logitech": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/logitech/mx_ink_stylus_logitech",
+		"helpers": [
+			"/helper/controller/no/thumbstick",
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses"
+		],
+		"bindings": {
+			"/user/hand/left/input/palm_ext": "/user/hand/left/input/grip_surface",
+			"/user/hand/left/input/palm_ext/pose": "/user/hand/left/input/grip_surface/pose",
+			"/user/hand/left/input/primary": "/user/hand/left/input/cluster_front_logitech",
+			"/user/hand/left/input/primary/click": "/user/hand/left/input/cluster_front_logitech/click",
+			"/user/hand/left/input/secondary": false,
+			"/user/hand/left/input/secondary/click": false,
+			"/user/hand/left/input/squeeze": "/user/hand/left/input/cluster_middle_logitech/force",
+			"/user/hand/left/input/squeeze/value": "/user/hand/left/input/cluster_middle_logitech/force",
+			"/user/hand/left/input/trigger": "/user/hand/left/input/tip_logitech/force",
+			"/user/hand/left/input/trigger/value": "/user/hand/left/input/tip_logitech/force",
+			"/user/hand/right/input/palm_ext": "/user/hand/right/input/grip_surface",
+			"/user/hand/right/input/palm_ext/pose": "/user/hand/right/input/grip_surface/pose",
+			"/user/hand/right/input/primary": "/user/hand/right/input/cluster_front_logitech",
+			"/user/hand/right/input/primary/click": "/user/hand/right/input/cluster_front_logitech/click",
+			"/user/hand/right/input/secondary": false,
+			"/user/hand/right/input/secondary/click": false,
+			"/user/hand/right/input/squeeze": "/user/hand/right/input/cluster_middle_logitech/force",
+			"/user/hand/right/input/squeeze/value": "/user/hand/right/input/cluster_middle_logitech/force",
+			"/user/hand/right/input/trigger": "/user/hand/right/input/tip_logitech/force",
+			"/user/hand/right/input/trigger/value": "/user/hand/right/input/tip_logitech/force"
+		}
+	}
+}

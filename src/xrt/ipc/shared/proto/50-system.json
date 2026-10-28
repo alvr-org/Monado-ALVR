@@ -1,0 +1,116 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"system_get_properties": {
+		"out": [
+			{"name": "properties", "type": "struct xrt_system_properties"}
+		]
+	},
+
+	"system_get_client_info": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "ias", "type": "struct ipc_app_state"}
+		]
+	},
+
+	"system_get_clients": {
+		"out": [
+			{"name": "clients", "type": "struct ipc_client_list"}
+		]
+	},
+
+	"system_set_primary_client": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+
+	"system_set_focused_client": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+
+	"system_toggle_io_client": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+
+	"system_set_client_io_blocks": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "blocks", "type": "struct ipc_client_io_blocks"}
+		]
+	},
+	
+	"system_get_client_session_running_state": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "running_state", "type": "struct xrt_compositor_session_running_state"}
+		]
+	},
+
+	"system_get_client_view_config": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "view_type", "type": "enum xrt_view_type"}
+		],
+		"out": [
+			{"name": "default_view_config", "type": "struct xrt_view_config"},
+			{"name": "recommended_view_config", "type": "struct xrt_recommended_view_config"}
+		]
+	},
+
+	"system_set_client_recommended_view_config": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "view_type", "type": "enum xrt_view_type"},
+			{"name": "recommended_view_config", "type": "struct xrt_recommended_view_config"}
+		]
+	},
+
+	"system_devices_get_list": {
+		"out": [
+			{"name": "device_list", "type": "struct ipc_device_list"}
+		]
+	},
+
+	"system_devices_get_roles": {
+		"out": [
+			{"name": "system_roles", "type": "struct xrt_system_roles"}
+		]
+	},
+
+	"system_devices_begin_feature": {
+		"in": [
+			{"name": "type", "type": "enum xrt_device_feature_type"}
+		]
+	},
+
+	"system_devices_end_feature": {
+		"in": [
+			{"name": "type", "type": "enum xrt_device_feature_type"}
+		]
+	},
+
+	"system_compositor_get_info": {
+		"out": [
+			{"name": "info", "type": "struct xrt_system_compositor_info"}
+		]
+	},
+
+	"system_compositor_get_view_config": {
+		"in": [
+			{"name": "view_type", "type": "enum xrt_view_type"}
+		],
+		"out": [
+			{"name": "view_config", "type": "struct xrt_view_config"}
+		]
+	}
+}

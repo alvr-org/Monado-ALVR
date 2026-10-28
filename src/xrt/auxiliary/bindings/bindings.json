@@ -317,6 +317,98 @@
 			}
 		},
 
+		"/interaction_profiles/khr/generic_controller": {
+			"title": "Khronos Generic Controller",
+			"extension": "KHR_generic_controller",
+			"type": "tracked_controller",
+			"steamvr_controllertype": "khr_generic_controller",
+			"monado_device": "XRT_DEVICE_GENERIC_CONTROLLER",
+			"extended_by": ["ext/palm_pose", "ext/hand_interaction_poses"],
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/primary": {
+					"type": "button",
+					"localized_name": "Primary",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_GENERIC_PRIMARY_CLICK"
+					}
+				},
+				"/input/secondary": {
+					"type": "button",
+					"localized_name": "Secondary",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_GENERIC_SECONDARY_CLICK"
+					}
+				},
+				"/input/thumbstick": {
+					"type": "joystick",
+					"localized_name": "Thumbstick",
+					"components": ["click", "position"],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"click": "XRT_INPUT_GENERIC_THUMBSTICK_CLICK",
+						"position": "XRT_INPUT_GENERIC_THUMBSTICK"
+					}
+				},
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": ["value"],
+					"monado_bindings": {
+						"value": "XRT_INPUT_GENERIC_SQUEEZE_VALUE"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": ["value"],
+					"monado_bindings": {
+						"value": "XRT_INPUT_GENERIC_TRIGGER_VALUE"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_GENERIC_GRIP_POSE"
+					}
+				},
+				"/input/grip_surface": {
+					"type": "pose",
+					"localized_name": "Grip Surface",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_GENERIC_GRIP_SURFACE_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_GENERIC_AIM_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": ["haptic"],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_GENERIC_VIBRATION"
+					}
+				}
+			}
+		},
+
 		"/interaction_profiles/google/daydream_controller": {
 			"title": "Google Daydream Controller",
 			"type": "tracked_controller",
@@ -461,7 +553,6 @@
 			"type": "tracked_hmd",
 			"steamvr_controllertype": "vive_pro",
 			"monado_device": "XRT_DEVICE_VIVE_PRO",
-			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/head"
 			],
@@ -471,7 +562,7 @@
 					"localized_name": "System",
 					"components": ["click"],
 					"monado_bindings": {
-						"click": "XRT_INPUT_VIVEPRO_SYSTEM_CLICK"
+						"click": "XRT_INPUT_VIVE_PRO_SYSTEM_CLICK"
 					}
 				},
 				"/input/volume_up": {
@@ -479,7 +570,7 @@
 					"localized_name": "Volume Up",
 					"components": ["click"],
 					"monado_bindings": {
-						"click": "XRT_INPUT_VIVEPRO_VOLUP_CLICK"
+						"click": "XRT_INPUT_VIVE_PRO_VOLUP_CLICK"
 					}
 				},
 				"/input/volume_down": {
@@ -487,7 +578,7 @@
 					"localized_name": "Volume Down",
 					"components": ["click"],
 					"monado_bindings": {
-						"click": "XRT_INPUT_VIVEPRO_VOLDN_CLICK"
+						"click": "XRT_INPUT_VIVE_PRO_VOLDN_CLICK"
 					}
 				},
 				"/input/mute_mic": {
@@ -495,7 +586,7 @@
 					"localized_name": "Mute Microphone",
 					"components": ["click"],
 					"monado_bindings": {
-						"click": "XRT_INPUT_VIVEPRO_MUTE_MIC_CLICK"
+						"click": "XRT_INPUT_VIVE_PRO_MUTE_MIC_CLICK"
 					}
 				}
 			}
@@ -600,7 +691,7 @@
 			"type": "untracked_controller",
 			"steamvr_controllertype": "gamepad",
 			"monado_device": "XRT_DEVICE_XBOX_CONTROLLER",
-			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"extended_by": [],
 			"subaction_paths": [
 				"/user/gamepad"
 			],
@@ -1101,7 +1192,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
+						"proximity": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -1243,7 +1334,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
+						"proximity": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -1393,7 +1484,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
+						"proximity": "XRT_INPUT_TOUCH_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -1758,6 +1849,95 @@
 			}
 		},
 
+		"/interaction_profiles/logitech/mx_ink_stylus_logitech" : {
+			"title": "Logitech MX Ink Stylus",
+			"type": "tracked_controller",
+			"monado_device": "XRT_DEVICE_LOGITECH_MX_INK_CONTROLLER",
+			"extension": "LOGITECH_mx_ink_stylus_interaction",
+			"extended_by": ["grip_surface", "ext/hand_interaction_poses"],
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/system": {
+					"type": "button",
+					"localized_name": "System",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MX_INK_SYSTEM_CLICK"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_MX_INK_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_MX_INK_AIM_POSE"
+					}
+				},
+				"/input/cluster_front_logitech": {
+					"type": "button",
+					"localized_name": "Front",
+					"components": ["click", "double_tap_logitech"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MX_INK_FRONT_CLICK",
+						"double_tap_logitech": "XRT_INPUT_MX_INK_FRONT_DOUBLE_TAP"
+					}
+				},
+				"/input/cluster_middle_logitech": {
+					"type": "trigger",
+					"localized_name": "Middle",
+					"components": ["force"],
+					"monado_bindings": {
+						"force": "XRT_INPUT_MX_INK_MIDDLE_VALUE"
+					}
+				},
+				"/input/cluster_back_logitech": {
+					"type": "button",
+					"localized_name": "Back",
+					"components": ["click", "double_tap_logitech"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MX_INK_BACK_CLICK",
+						"double_tap_logitech": "XRT_INPUT_MX_INK_BACK_DOUBLE_TAP"
+					}
+				},
+				"/input/dock_logitech": {
+					"type": "button",
+					"localized_name": "Dock",
+					"components": ["docked_logitech"],
+					"monado_bindings": {
+						"docked_logitech": "XRT_INPUT_MX_INK_DOCKED"
+					}
+				},
+				"/input/tip_logitech": {
+					"type": "trigger",
+					"localized_name": "Tip",
+					"components": ["force", "pose"],
+					"monado_bindings": {
+						"force": "XRT_INPUT_MX_INK_TIP_FORCE",
+						"pose": "XRT_INPUT_MX_INK_TIP_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": ["haptic"],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_MX_INK_HAPTIC"
+					}
+				}
+			}
+		},
+
 		"/interaction_profiles/ml/ml2_controller": {
 			"title": "Magic Leap 2 Controller",
 			"type": "tracked_controller",
@@ -2098,9 +2278,142 @@
 				"/input/grip": {
 					"type": "pose",
 					"localized_name": "Grip",
+					"components": [
+						"pose"
+					],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_HYDRA_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": [
+						"pose"
+					],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_HYDRA_AIM_POSE"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/mndx/flipvr": {
+			"title": "ShiftAll FlipVR Controller",
+			"type": "tracked_controller",
+			"steamvr_controllertype": "flipvr_controller_vc1b",
+			"monado_device": "XRT_DEVICE_FLIPVR",
+			"extension": "MNDX_flipvr",
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/joystick": {
+					"type": "joystick",
+					"steamvr_path": "/input/joystick",
+					"localized_name": "Thumbstick",
+					"components": ["click", "touch", "position"],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_THUMBSTICK_CLICK",
+						"touch": "XRT_INPUT_FLIPVR_THUMBSTICK_TOUCH",
+						"position": "XRT_INPUT_FLIPVR_THUMBSTICK"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": ["click", "touch", "value"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_TRIGGER_CLICK",
+						"touch": "XRT_INPUT_FLIPVR_TRIGGER_TOUCH",
+						"value": "XRT_INPUT_FLIPVR_TRIGGER_VALUE"
+					}
+				},
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": ["value","click"],
+					"monado_bindings": {
+						"value": "XRT_INPUT_FLIPVR_SQUEEZE_VALUE",
+						"click": "XRT_INPUT_FLIPVR_SQUEEZE_CLICK"
+					}
+				},
+				"/input/a": {
+					"type": "button",
+					"localized_name": "A",
+					"components": ["click", "touch"],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_A_CLICK",
+						"touch": "XRT_INPUT_FLIPVR_A_TOUCH"
+					}
+				},
+				"/input/b": {
+					"type": "button",
+					"localized_name": "B",
+					"components": ["click", "touch"],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_B_CLICK",
+						"touch": "XRT_INPUT_FLIPVR_B_TOUCH"
+					}
+				},
+				"/input/x": {
+					"type": "button",
+					"localized_name": "X",
+					"components": ["click", "touch"],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_X_CLICK",
+						"touch": "XRT_INPUT_FLIPVR_X_TOUCH"
+					}
+				},
+				"/input/y": {
+					"type": "button",
+					"localized_name": "Y",
+					"components": ["click", "touch"],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_Y_CLICK",
+						"touch": "XRT_INPUT_FLIPVR_Y_TOUCH"
+					}
+				},
+				"/input/system": {
+					"type": "button",
+					"localized_name": "System",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_FLIPVR_SYSTEM_CLICK"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
 					"components": ["pose"],
 					"monado_bindings": {
-						"pose": "XRT_INPUT_HYDRA_POSE"
+						"pose": "XRT_INPUT_FLIPVR_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_FLIPVR_AIM_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": ["haptic"],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_FLIPVR_HAPTIC"
 					}
 				}
 			}
@@ -2130,7 +2443,6 @@
 			"type": "tracked_controller",
 			"monado_device": "XRT_DEVICE_VIVE_TRACKER",
 			"extension": "HTCX_vive_tracker_interaction",
-			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
 			"subaction_paths": [
 				"/user/hand/left",
 				"/user/hand/right"
@@ -3029,9 +3341,9 @@
 					"monado_bindings": {
 						"touch": "XRT_INPUT_TOUCH_PRO_TRIGGER_TOUCH",
 						"value": "XRT_INPUT_TOUCH_PRO_TRIGGER_VALUE",
-						"curl": "XRT_INPUT_TOUCH_PRO_TRIGGER_CURL",
-						"slide": "XRT_INPUT_TOUCH_PRO_TRIGGER_SLIDE",
-						"proximity": "XRT_INPUT_TOUCH_PRO_TRIGGER_PROXIMITY"
+						"curl_fb": "XRT_INPUT_TOUCH_PRO_TRIGGER_CURL",
+						"slide_fb": "XRT_INPUT_TOUCH_PRO_TRIGGER_SLIDE",
+						"proximity_fb": "XRT_INPUT_TOUCH_PRO_TRIGGER_PROXIMITY"
 					}
 				},
 				"/input/thumbstick": {
@@ -3070,7 +3382,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity_fb"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_PRO_THUMB_PROXIMITY"
+						"proximity_fb": "XRT_INPUT_TOUCH_PRO_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -3206,8 +3518,6 @@
 					"monado_bindings": {
 						"touch": "XRT_INPUT_TOUCH_PRO_TRIGGER_TOUCH",
 						"value": "XRT_INPUT_TOUCH_PRO_TRIGGER_VALUE",
-						"curl": "XRT_INPUT_TOUCH_PRO_TRIGGER_CURL",
-						"slide": "XRT_INPUT_TOUCH_PRO_TRIGGER_SLIDE",
 						"proximity": "XRT_INPUT_TOUCH_PRO_TRIGGER_PROXIMITY"
 					}
 				},
@@ -3264,7 +3574,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_PRO_THUMB_PROXIMITY"
+						"proximity": "XRT_INPUT_TOUCH_PRO_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -3310,7 +3620,7 @@
 			}
 		},
 
-		"/interaction_profiles/facebook/touch_controller_plus": {
+		"/interaction_profiles/meta/touch_controller_plus": {
 			"title": "Meta Quest Touch Plus Controller",
 			"type": "tracked_controller",
 			"extension": "META_touch_controller_plus",
@@ -3396,9 +3706,9 @@
 						"touch": "XRT_INPUT_TOUCH_PLUS_TRIGGER_TOUCH",
 						"value": "XRT_INPUT_TOUCH_PLUS_TRIGGER_VALUE",
 						"force": "XRT_INPUT_TOUCH_PLUS_TRIGGER_FORCE",
-						"curl": "XRT_INPUT_TOUCH_PLUS_TRIGGER_CURL",
-						"slide": "XRT_INPUT_TOUCH_PLUS_TRIGGER_SLIDE",
-						"proximity": "XRT_INPUT_TOUCH_PLUS_TRIGGER_PROXIMITY"
+						"curl_meta": "XRT_INPUT_TOUCH_PLUS_TRIGGER_CURL",
+						"slide_meta": "XRT_INPUT_TOUCH_PLUS_TRIGGER_SLIDE",
+						"proximity_meta": "XRT_INPUT_TOUCH_PLUS_TRIGGER_PROXIMITY"
 					}
 				},
 				"/input/thumbstick": {
@@ -3428,7 +3738,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity_meta"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_PLUS_THUMB_PROXIMITY"
+						"proximity_meta": "XRT_INPUT_TOUCH_PLUS_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -3549,8 +3859,6 @@
 						"touch": "XRT_INPUT_TOUCH_PLUS_TRIGGER_TOUCH",
 						"value": "XRT_INPUT_TOUCH_PLUS_TRIGGER_VALUE",
 						"force": "XRT_INPUT_TOUCH_PLUS_TRIGGER_FORCE",
-						"curl": "XRT_INPUT_TOUCH_PLUS_TRIGGER_CURL",
-						"slide": "XRT_INPUT_TOUCH_PLUS_TRIGGER_SLIDE",
 						"proximity": "XRT_INPUT_TOUCH_PLUS_TRIGGER_PROXIMITY"
 					}
 				},
@@ -3597,7 +3905,7 @@
 					"localized_name": "Thumb",
 					"components": ["proximity"],
 					"monado_bindings": {
-						"force": "XRT_INPUT_TOUCH_PLUS_THUMB_PROXIMITY"
+						"proximity": "XRT_INPUT_TOUCH_PLUS_THUMB_PROXIMITY"
 					}
 				},
 				"/input/grip": {
@@ -3625,9 +3933,508 @@
 					}
 				}
 			}
+		},
+
+		"/interaction_profiles/mndx/oculus_remote": {
+			"title": "Oculus Rift Remote",
+			"type": "untracked_controller",
+			"steamvr_controllertype": "gamepad",
+			"extension": "MNDX_oculus_remote",
+			"monado_device": "XRT_DEVICE_RIFT_REMOTE",
+			"extended_by": [],
+			"subaction_paths": [
+				"/user/gamepad"
+			],
+			"subpaths": {
+				"/input/select": {
+					"type": "button",
+					"localized_name": "Select",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_SELECT_CLICK"
+					}
+				},
+				"/input/back": {
+					"type": "button",
+					"localized_name": "Back",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_BACK_CLICK"
+					}
+				},
+				"/input/volume_up": {
+					"type": "button",
+					"localized_name": "Volume up",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_VOLUME_UP_CLICK"
+					}
+				},
+				"/input/volume_down": {
+					"type": "button",
+					"localized_name": "Volume down",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_VOLUME_DOWN_CLICK"
+					}
+				},
+				"/input/system": {
+					"type": "button",
+					"localized_name": "Oculus",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_OCULUS_CLICK"
+					}
+				},
+				"/input/dpad_down": {
+					"type": "button",
+					"localized_name": "Navigation down",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_DPAD_DOWN_CLICK"
+					}
+				},
+				"/input/dpad_right": {
+					"type": "button",
+					"localized_name": "Navigation right",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_DPAD_RIGHT_CLICK"
+					}
+				},
+				"/input/dpad_up": {
+					"type": "button",
+					"localized_name": "Navigation up",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_DPAD_UP_CLICK"
+					}
+				},
+				"/input/dpad_left": {
+					"type": "button",
+					"localized_name": "Navigation left",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_RIFT_REMOTE_DPAD_LEFT_CLICK"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/mndx/blubur_s1_mndx": {
+			"title": "Blubur S1",
+			"type": "tracked_hmd",
+			"monado_device": "XRT_DEVICE_BLUBUR_S1",
+			"extension": "MNDX_blubur_s1",
+			"extended_by": [],
+			"subaction_paths": [
+				"/user/head"
+			],
+			"subpaths": {
+				"/input/menu": {
+					"type": "button",
+					"localized_name": "Menu",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_BLUBUR_S1_MENU_CLICK"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/mndx/psvr2_mndx": {
+			"title": "PlayStation VR2",
+			"type": "tracked_hmd",
+			"monado_device": "XRT_DEVICE_PSVR2",
+			"extension": "MNDX_psvr2_interaction",
+			"extended_by": [],
+			"subaction_paths": [
+				"/user/head"
+			],
+			"subpaths": {
+				"/input/system": {
+					"type": "button",
+					"localized_name": "Function",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSVR2_SYSTEM_CLICK"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": [
+						"haptic"
+					],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_PSVR2_HAPTIC"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/mnd/contactglove2_mnd": {
+			"title": "ContactGlove2",
+			"type": "tracked_controller",
+			"monado_device": "XRT_DEVICE_CONTACTGLOVE2",
+			"extension": "MND_contactglove2_interaction",
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": ["value"],
+					"monado_bindings": {
+						"value": "XRT_INPUT_MAGNETRA2_SQUEEZE_VALUE"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_MAGNETRA2_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_MAGNETRA2_AIM_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": [
+						"haptic"
+					],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_CONTACTGLOVE2_HAPTIC"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/mnd/contactglove2_with_magnetra2_mnd": {
+			"title": "ContactGlove2 + Magnetra2",
+			"type": "tracked_controller",
+			"monado_device": "XRT_DEVICE_CONTACTGLOVE2_WITH_MAGNETRA2",
+			"extension": "MND_contactglove2_interaction",
+			"extended_by": ["ext/palm_pose", "grip_surface", "ext/hand_interaction_poses"],
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/a": {
+					"type": "button",
+					"localized_name": "A",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_A_CLICK"
+					}
+				},
+				"/input/b": {
+					"type": "button",
+					"localized_name": "B",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_B_CLICK"
+					}
+				},
+				"/input/x": {
+					"type": "button",
+					"localized_name": "X",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_X_CLICK"
+					}
+				},
+				"/input/y": {
+					"type": "button",
+					"localized_name": "Y",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_Y_CLICK"
+					}
+				},
+				"/input/system": {
+					"type": "button",
+					"localized_name": "System",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_SYSTEM_CLICK"
+					}
+				},
+				"/input/pairing_mnd": {
+					"type": "button",
+					"localized_name": "Pairing",
+					"components": ["click"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_PAIRING_CLICK"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": ["click", "value"],
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_TRIGGER_CLICK",
+						"value": "XRT_INPUT_MAGNETRA2_TRIGGER_VALUE"
+					}
+				},
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": ["value"],
+					"monado_bindings": {
+						"value": "XRT_INPUT_MAGNETRA2_SQUEEZE_VALUE"
+					}
+				},
+				"/input/thumbstick": {
+					"type": "joystick",
+					"localized_name": "Thumbstick",
+					"components": ["click", "position"],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"click": "XRT_INPUT_MAGNETRA2_THUMBSTICK_CLICK",
+						"position": "XRT_INPUT_MAGNETRA2_THUMBSTICK"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_MAGNETRA2_GRIP_POSE"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": ["pose"],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_MAGNETRA2_AIM_POSE"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": [
+						"haptic"
+					],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_CONTACTGLOVE2_HAPTIC"
+					}
+				}
+			}
+		},
+
+		"/interaction_profiles/mndx/pssense_controller_mndx": {
+			"title": "PS VR2 Sense Controller",
+			"type": "tracked_controller",
+			"steamvr_controllertype": "oculus_touch",
+			"extension": "MNDX_psvr2_interaction",
+			"monado_device": "XRT_DEVICE_PSSENSE",
+			"extended_by": [
+				"ext/palm_pose",
+				"grip_surface",
+				"ext/hand_interaction_poses"
+			],
+			"subaction_paths": [
+				"/user/hand/left",
+				"/user/hand/right"
+			],
+			"subpaths": {
+				"/input/system": {
+					"type": "button",
+					"localized_name": "System",
+					"components": [
+						"click"
+					],
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_PS_CLICK"
+					}
+				},
+				"/input/share_mndx": {
+					"type": "button",
+					"localized_name": "Share",
+					"components": [
+						"click"
+					],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_SHARE_CLICK"
+					}
+				},
+				"/input/options_mndx": {
+					"type": "button",
+					"localized_name": "Options",
+					"components": [
+						"click"
+					],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_OPTIONS_CLICK"
+					}
+				},
+				"/input/aim": {
+					"type": "pose",
+					"localized_name": "Aim",
+					"components": [
+						"pose"
+					],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PSSENSE_AIM_POSE"
+					}
+				},
+				"/input/grip": {
+					"type": "pose",
+					"localized_name": "Grip",
+					"components": [
+						"pose"
+					],
+					"monado_bindings": {
+						"pose": "XRT_INPUT_PSSENSE_GRIP_POSE"
+					}
+				},
+				"/input/trigger": {
+					"type": "trigger",
+					"localized_name": "Trigger",
+					"components": [
+						"proximity",
+						"touch",
+						"value"
+					],
+					"monado_bindings": {
+						"proximity": "XRT_INPUT_PSSENSE_TRIGGER_PROXIMITY_FLOAT",
+						"touch": "XRT_INPUT_PSSENSE_TRIGGER_TOUCH",
+						"value": "XRT_INPUT_PSSENSE_TRIGGER_VALUE"
+					}
+				},
+				"/input/thumbstick": {
+					"type": "joystick",
+					"localized_name": "Thumbstick",
+					"components": [
+						"position",
+						"touch",
+						"click"
+					],
+					"dpad_emulation": {
+						"position": "position",
+						"center": false
+					},
+					"monado_bindings": {
+						"position": "XRT_INPUT_PSSENSE_THUMBSTICK",
+						"touch": "XRT_INPUT_PSSENSE_THUMBSTICK_TOUCH",
+						"click": "XRT_INPUT_PSSENSE_THUMBSTICK_CLICK"
+					}
+				},
+				"/input/squeeze": {
+					"type": "trigger",
+					"localized_name": "Squeeze",
+					"components": [
+						"proximity",
+						"click",
+						"touch"
+					],
+					"monado_bindings": {
+						"proximity": "XRT_INPUT_PSSENSE_SQUEEZE_PROXIMITY_FLOAT",
+						"click": "XRT_INPUT_PSSENSE_SQUEEZE_CLICK",
+						"touch": "XRT_INPUT_PSSENSE_SQUEEZE_TOUCH"
+					}
+				},
+				"/input/cross_mndx": {
+					"type": "button",
+					"localized_name": "Cross",
+					"components": [
+						"click",
+						"touch"
+					],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_CROSS_CLICK",
+						"touch": "XRT_INPUT_PSSENSE_CROSS_TOUCH"
+					}
+				},
+				"/input/circle_mndx": {
+					"type": "button",
+					"localized_name": "Circle",
+					"components": [
+						"click",
+						"touch"
+					],
+					"side": "right",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_CIRCLE_CLICK",
+						"touch": "XRT_INPUT_PSSENSE_CIRCLE_TOUCH"
+					}
+				},
+				"/input/square_mndx": {
+					"type": "button",
+					"localized_name": "Square",
+					"components": [
+						"click",
+						"touch"
+					],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_SQUARE_CLICK",
+						"touch": "XRT_INPUT_PSSENSE_SQUARE_TOUCH"
+					}
+				},
+				"/input/triangle_mndx": {
+					"type": "button",
+					"localized_name": "Triangle",
+					"components": [
+						"click",
+						"touch"
+					],
+					"side": "left",
+					"monado_bindings": {
+						"click": "XRT_INPUT_PSSENSE_TRIANGLE_CLICK",
+						"touch": "XRT_INPUT_PSSENSE_TRIANGLE_TOUCH"
+					}
+				},
+				"/output/haptic": {
+					"type": "vibration",
+					"localized_name": "Haptic",
+					"components": [
+						"haptic"
+					],
+					"monado_bindings": {
+						"haptic": "XRT_OUTPUT_NAME_PSSENSE_VIBRATION"
+					}
+				}
+			}
 		}
-
-
 
 	}
 }

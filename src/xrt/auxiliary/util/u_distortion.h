@@ -24,6 +24,18 @@ struct xrt_hmd_parts;
  * @ingroup aux_util
  */
 
+enum u_cardboard_vertical_alignment
+{
+	//! device rests against a fixed bottom tray
+	U_CARDBOARD_VERTICAL_ALIGNMENT_BOTTOM = 0,
+
+	//! device screen assumed to be centered w.r.t. lenses
+	U_CARDBOARD_VERTICAL_ALIGNMENT_CENTER = 1,
+
+	//! device rests against a fixed top tray
+	U_CARDBOARD_VERTICAL_ALIGNMENT_TOP = 2,
+};
+
 /*!
  * These are the values that you need to supply to the distortion code to setup
  * a @ref u_cardboard_distortion properly.
@@ -43,17 +55,22 @@ struct u_cardboard_distortion_arguments
 	//! Distances between the lenses in meters.
 	float inter_lens_distance_meters;
 
-	//! Where on the y axis the center of the lens is on the screen.
-	float lens_y_center_on_screen_meters;
-
 	/*!
 	 * The distance to the lens from the screen, used to calculate calculate
 	 * tanangle of various distances on the screen.
 	 */
 	float screen_to_lens_distance_meters;
 
+	/*!
+	 * The distance from the tray (the bottom of the screen) to the lens center on the Y axis.
+	 */
+	float tray_to_lens_distance_meters;
+
 	//! Fov values that the cardboard configuration has given us.
 	struct xrt_fov fov;
+
+	//! The vertical screen alignment
+	enum u_cardboard_vertical_alignment vertical_alignment;
 };
 
 /*!

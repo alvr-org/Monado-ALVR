@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,8 +13,6 @@
 
 #include "util/u_config_json.h"
 #include "util/u_debug.h"
-#include "util/u_system_helpers.h"
-
 
 #include "opengloves_interface.h"
 #include "opengloves_device.h"

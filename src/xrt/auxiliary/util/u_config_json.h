@@ -95,12 +95,30 @@ u_config_json_get_tracking_overrides(struct u_config_json *json,
                                      size_t *out_override_count);
 
 /*!
+ * Settings for the remote driver, see @ref u_config_json_get_remote_settings.
+ *
+ * @ingroup aux_util
+ */
+struct u_config_remote_settings
+{
+	int port;
+	uint32_t view_count;
+	uint32_t w_pixels;
+	uint32_t h_pixels;
+	float w_meters;
+	float h_meters;
+};
+
+/*!
  * Extract remote settings from the JSON.
+ *
+ * @p out_settings must be pre-filled with defaults: optional fields that are
+ * missing or invalid keep their value, and nothing is written on failure.
  *
  * @ingroup aux_util
  */
 bool
-u_config_json_get_remote_settings(struct u_config_json *json, int *out_port, uint32_t *out_view_count);
+u_config_json_get_remote_settings(struct u_config_json *json, struct u_config_remote_settings *out_settings);
 
 
 enum u_gui_state_scene

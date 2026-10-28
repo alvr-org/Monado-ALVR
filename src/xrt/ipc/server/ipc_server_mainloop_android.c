@@ -44,7 +44,7 @@ static int
 init_pipe(struct ipc_server_mainloop *ml)
 {
 	int pipefd[2];
-	int ret = pipe(pipefd);
+	int ret = pipe2(pipefd, O_CLOEXEC);
 	if (ret < 0) {
 		U_LOG_E("pipe2() failed '%i'", ret);
 		return ret;
@@ -139,7 +139,7 @@ ipc_server_mainloop_poll(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 }
 
 int
-ipc_server_mainloop_init(struct ipc_server_mainloop *ml)
+ipc_server_mainloop_init(struct ipc_server_mainloop *ml, bool no_stdin)
 {
 	int ret = init_pipe(ml);
 	if (ret < 0) {

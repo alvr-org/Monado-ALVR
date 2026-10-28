@@ -1,5 +1,6 @@
 // Copyright 2024, Collabora, Ltd.
 // Copyright 2024, QUALCOMM CORPORATION.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -18,7 +19,7 @@
 
 #include <stdbool.h>
 
-#if defined(XRT_OS_LINUX) || defined(XRT_OS_WINDOWS)
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_WINDOWS) || defined(XRT_OS_OSX)
 #include <pthread.h>
 #include <assert.h>
 #else

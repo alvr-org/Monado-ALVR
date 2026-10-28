@@ -50,7 +50,7 @@
  */
 struct prober_hidraw
 {
-	ssize_t interface;
+	ssize_t hid_iface;
 	const char *path;
 };
 
@@ -91,6 +91,11 @@ struct prober_device
 		libusb_device *dev;
 #endif
 	} usb;
+
+	struct
+	{
+		const char *path;
+	} serial;
 
 	struct
 	{

@@ -1,4 +1,5 @@
 // Copyright 2021, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,6 +12,7 @@
 #include "util/u_misc.h"
 #include "util/u_format.h"
 #include "util/u_logging.h"
+#include "util/u_pretty_print.h"
 
 #include "util/u_config_json.h"
 
@@ -23,7 +25,6 @@
 #include "gui_common.h"
 #include "gui_imgui.h"
 
-#include "bindings/b_generated_bindings.h"
 
 struct gui_tracking_overrides
 {
@@ -118,16 +119,16 @@ get_indices(struct gui_program *p,
 	bool has_tracker = false;
 
 	for (int i = 0; i < XRT_SYSTEM_MAX_DEVICES; i++) {
-		if (!p->xsysd->xdevs[i]) {
+		if (!p->xsysd->static_xdevs[i]) {
 			continue;
 		}
 
-		if (strcmp(p->xsysd->xdevs[i]->serial, override->target_device_serial) == 0) {
+		if (strcmp(p->xsysd->static_xdevs[i]->serial, override->target_device_serial) == 0) {
 			has_target = true;
 			*out_target = i;
 		}
 
-		if (strcmp(p->xsysd->xdevs[i]->serial, override->tracker_device_serial) == 0) {
+		if (strcmp(p->xsysd->static_xdevs[i]->serial, override->tracker_device_serial) == 0) {
 			has_tracker = true;
 			*out_tracker = i;
 		}
@@ -144,12 +145,12 @@ gui_add_override(struct gui_program *p, struct gui_tracking_overrides *ts)
 {
 	igBegin("Target Device", NULL, 0);
 	for (int i = 0; i < 8; i++) {
-		if (!p->xsysd->xdevs[i]) {
+		if (!p->xsysd->static_xdevs[i]) {
 			continue;
 		}
 
 		char buf[NAME_LENGTH];
-		make_name(p->xsysd->xdevs[i], buf);
+		make_name(p->xsysd->static_xdevs[i], buf);
 
 		bool selected = ts->add_target == i;
 		if (igCheckbox(buf, &selected)) {
@@ -160,12 +161,12 @@ gui_add_override(struct gui_program *p, struct gui_tracking_overrides *ts)
 
 	igBegin("Tracker Device", NULL, 0);
 	for (int i = 0; i < 8; i++) {
-		if (!p->xsysd->xdevs[i]) {
+		if (!p->xsysd->static_xdevs[i]) {
 			continue;
 		}
 
 		char buf[NAME_LENGTH];
-		make_name(p->xsysd->xdevs[i], buf);
+		make_name(p->xsysd->static_xdevs[i], buf);
 
 		bool selected = ts->add_tracker == i;
 		if (igCheckbox(buf, &selected)) {
@@ -176,13 +177,13 @@ gui_add_override(struct gui_program *p, struct gui_tracking_overrides *ts)
 
 	if (ts->add_target >= 0 && ts->add_tracker >= 0 && ts->add_target != ts->add_tracker) {
 		struct xrt_tracking_override *o = &ts->overrides[ts->num_overrides];
-		strncpy(o->target_device_serial, p->xsysd->xdevs[ts->add_target]->serial, XRT_DEVICE_NAME_LEN);
-		strncpy(o->tracker_device_serial, p->xsysd->xdevs[ts->add_tracker]->serial, XRT_DEVICE_NAME_LEN);
+		strncpy(o->target_device_serial, p->xsysd->static_xdevs[ts->add_target]->serial, XRT_DEVICE_NAME_LEN);
+		strncpy(o->tracker_device_serial, p->xsysd->static_xdevs[ts->add_tracker]->serial, XRT_DEVICE_NAME_LEN);
 		o->offset = identity;
 
 		// set input_name to the first pose in the inputs
-		for (uint32_t i = 0; i < p->xsysd->xdevs[ts->add_tracker]->input_count; i++) {
-			enum xrt_input_name input_name = p->xsysd->xdevs[ts->add_tracker]->inputs[i].name;
+		for (uint32_t i = 0; i < p->xsysd->static_xdevs[ts->add_tracker]->input_count; i++) {
+			enum xrt_input_name input_name = p->xsysd->static_xdevs[ts->add_tracker]->inputs[i].name;
 			if (XRT_GET_INPUT_TYPE(input_name) != XRT_INPUT_TYPE_POSE) {
 				continue;
 			}
@@ -219,8 +220,8 @@ scene_render(struct gui_scene *scene, struct gui_program *p)
 		int target = -1;
 		int tracker = -1;
 		if (get_indices(p, ts, o, &target, &tracker)) {
-			igText("Editing %s [%s] <- %s [%s]", p->xsysd->xdevs[target]->str, o->target_device_serial,
-			       p->xsysd->xdevs[tracker]->str, o->tracker_device_serial);
+			igText("Editing %s [%s] <- %s [%s]", p->xsysd->static_xdevs[target]->str,
+			       o->target_device_serial, p->xsysd->static_xdevs[tracker]->str, o->tracker_device_serial);
 		} else {
 			igText("Editing unconnected %s <- %s", o->target_device_serial, o->tracker_device_serial);
 		}
@@ -237,13 +238,13 @@ scene_render(struct gui_scene *scene, struct gui_program *p)
 
 		if (tracker >= 0) {
 			igText("Tracker Input Pose Name");
-			for (uint32_t i = 0; i < p->xsysd->xdevs[tracker]->input_count; i++) {
-				enum xrt_input_name input_name = p->xsysd->xdevs[tracker]->inputs[i].name;
+			for (uint32_t i = 0; i < p->xsysd->static_xdevs[tracker]->input_count; i++) {
+				enum xrt_input_name input_name = p->xsysd->static_xdevs[tracker]->inputs[i].name;
 				if (XRT_GET_INPUT_TYPE(input_name) != XRT_INPUT_TYPE_POSE) {
 					continue;
 				}
 
-				const char *name_str = xrt_input_name_string(input_name);
+				const char *name_str = u_str_xrt_input_name(input_name);
 				bool selected = o->input_name == input_name;
 				if (igCheckbox(name_str, &selected)) {
 					o->input_name = input_name;

@@ -7,21 +7,32 @@
  * @ingroup drv_steamvr_lh
  */
 
+#include <openvr_driver.h>
 #include <optional>
 #include <cstring>
+#include <map>
+#include <string_view>
 
 #include "settings.hpp"
+#include "context.hpp"
 #include "util/u_json.hpp"
 
+using namespace std::string_view_literals;
+
+// Default to 100% brightness.
 DEBUG_GET_ONCE_FLOAT_OPTION(lh_default_brightness, "LH_DEFAULT_BRIGHTNESS", 1.0)
+DEBUG_GET_ONCE_BOOL_OPTION(lh_standby_on_exit, "LH_STANDBY_ON_EXIT", false)
 
 using xrt::auxiliary::util::json::JSONNode;
 
-Settings::Settings(const std::string &steam_install, const std::string &steamvr_install)
+Settings::Settings(const std::string &steam_install, const std::string &steamvr_install, Context *context)
     : steamvr_settings(JSONNode::loadFromFile(steam_install + "/config/steamvr.vrsettings")),
       driver_defaults(
-          JSONNode::loadFromFile(steamvr_install + "/drivers/lighthouse/resources/settings/default.vrsettings"))
-{}
+          JSONNode::loadFromFile(steamvr_install + "/drivers/lighthouse/resources/settings/default.vrsettings")),
+      context{context}
+{
+	analog_gain = debug_get_float_option_lh_default_brightness();
+}
 
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
 const char *
@@ -40,7 +51,12 @@ Settings::SetInt32(const char *pchSection, const char *pchSettingsKey, int32_t n
 
 void
 Settings::SetFloat(const char *pchSection, const char *pchSettingsKey, float flValue, vr::EVRSettingsError *peError)
-{}
+{
+	if (pchSection == std::string_view{vr::k_pch_SteamVR_Section} && pchSettingsKey == "analogGain"sv) {
+		analog_gain = flValue;
+		context->add_vendor_event(vr::VREvent_SteamVRSectionSettingChanged);
+	}
+}
 
 void
 Settings::SetString(const char *pchSection,
@@ -52,6 +68,9 @@ Settings::SetString(const char *pchSection,
 bool
 Settings::GetBool(const char *pchSection, const char *pchSettingsKey, vr::EVRSettingsError *peError)
 {
+	if (pchSection == std::string_view{vr::k_pch_Power_Section} && pchSettingsKey == "powerOffOnExit"sv)
+		return debug_get_bool_option_lh_standby_on_exit();
+
 	return false;
 }
 
@@ -64,10 +83,9 @@ Settings::GetInt32(const char *pchSection, const char *pchSettingsKey, vr::EVRSe
 float
 Settings::GetFloat(const char *pchSection, const char *pchSettingsKey, vr::EVRSettingsError *peError)
 {
-	if (!strcmp(pchSection, "steamvr")) {
+	if (!strcmp(pchSection, vr::k_pch_SteamVR_Section)) {
 		if (!strcmp(pchSettingsKey, "analogGain")) {
-			// Return 100% brightness.
-			return debug_get_float_option_lh_default_brightness();
+			return analog_gain;
 		}
 		if (!strcmp(pchSettingsKey, "ipd")) {
 			// Inform the SteamVR driver we have 0 ipd (in case) it factors this into the eye matrix.

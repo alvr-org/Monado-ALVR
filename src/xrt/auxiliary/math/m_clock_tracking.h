@@ -10,12 +10,56 @@
 
 #pragma once
 
-#include "xrt/xrt_defines.h"
 #include "util/u_time.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*!
+ * Storage for a 32-bit unsigned -> 64-bit signed clock extension.
+ */
+struct m_clock_bit_extender
+{
+	//! The last 32-bit unsigned value.
+	uint32_t last;
+	//! The current 64-bit signed clock value.
+	timepoint_ns clock;
+};
+
+/*!
+ * Extends a 32-bit unsigned clock into a 64 bit signed clock. Tolerant to slight backwards jitters.
+ *
+ * @param extender    The storage for this extender.
+ * @param update      The new clock sample to update with.
+ * @param ns_per_unit The amount of nanoseconds per unit of clock.
+ * @return The clock delta, in nanoseconds.
+ */
+static inline time_duration_ns
+m_clock_bit_extender_update(struct m_clock_bit_extender *extender, uint32_t update, int64_t ns_per_unit)
+{
+	time_duration_ns delta = (int32_t)(update - extender->last) * ns_per_unit;
+	extender->clock += delta;
+	extender->last = update;
+	return delta;
+}
+
+/*!
+ * Extends a 32-bit unsigned clock sample onto the extender's 64-bit clock, without updating the extender.
+ *
+ * Useful for occasional samples of the same clock from another source, which should not move the extender.
+ *
+ * @param extender    The storage for this extender.
+ * @param sample      The clock sample to extend.
+ * @param ns_per_unit The amount of nanoseconds per unit of clock.
+ * @return The extended clock value, in nanoseconds.
+ */
+static inline timepoint_ns
+m_clock_bit_extender_peek(const struct m_clock_bit_extender *extender, uint32_t sample, int64_t ns_per_unit)
+{
+	return extender->clock + (int32_t)(sample - extender->last) * ns_per_unit;
+}
 
 /*!
  * Helper to estimate the offset between two clocks using exponential smoothing.
@@ -97,6 +141,8 @@ bool
 m_clock_windowed_skew_tracker_to_remote(struct m_clock_windowed_skew_tracker *t,
                                         const timepoint_ns local_ts,
                                         timepoint_ns *remote_ts);
+bool
+m_clock_windowed_skew_tracker_get_skew(struct m_clock_windowed_skew_tracker *t, time_duration_ns *skew_ns);
 
 #ifdef __cplusplus
 }

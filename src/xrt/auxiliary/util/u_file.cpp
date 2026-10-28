@@ -1,4 +1,5 @@
 // Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,6 +15,7 @@
 
 #ifndef XRT_OS_LINUX
 
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +29,34 @@ namespace fs = std::filesystem;
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #endif
+
+
+/*
+ *
+ * Helpers
+ *
+ */
+
+#ifdef XRT_OS_OSX
+static inline errno_t
+fopen_s(FILE **f, const char *name, const char *mode)
+{
+	FILE *file = nullptr;
+	errno_t ret = 0;
+
+	assert(f);
+
+	file = fopen(name, mode);
+
+	if (file == nullptr) {
+		ret = errno;
+	}
+
+	*f = file;
+
+	return ret;
+}
+#endif // XRT_OS_OSX
 
 static inline fs::path
 get_config_path()
@@ -55,7 +85,14 @@ get_config_path()
 #endif
 }
 
-ssize_t
+
+/*
+ *
+ * 'Exported' functions.
+ *
+ */
+
+int
 u_file_get_config_dir(char *out_path, size_t out_path_size)
 {
 	auto config_path = get_config_path();
@@ -66,7 +103,7 @@ u_file_get_config_dir(char *out_path, size_t out_path_size)
 	return snprintf(out_path, out_path_size, "%s", config_path_string.c_str());
 }
 
-ssize_t
+int
 u_file_get_path_in_config_dir(const char *filename, char *out_path, size_t out_path_size)
 {
 	auto config_path = get_config_path();
@@ -105,4 +142,4 @@ u_file_open_file_in_config_dir(const char *filename, const char *mode)
 	return nullptr;
 }
 
-#endif // XRT_OS_LINUX
+#endif // !XRT_OS_LINUX

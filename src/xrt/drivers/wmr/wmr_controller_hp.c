@@ -59,33 +59,6 @@ enum wmr_controller_hp_input_index
 #define SET_INPUT(wcb, INDEX, NAME)                                                                                    \
 	(wcb->base.inputs[WMR_CONTROLLER_INDEX_##INDEX].name = XRT_INPUT_G2_CONTROLLER_##NAME)
 
-/*
- *
- * Bindings
- *
- */
-
-static struct xrt_binding_input_pair simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_G2_CONTROLLER_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_G2_CONTROLLER_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_G2_CONTROLLER_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_G2_CONTROLLER_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair simple_outputs[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_G2_CONTROLLER_HAPTIC},
-};
-
-static struct xrt_binding_profile binding_profiles[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs,
-        .input_count = ARRAY_SIZE(simple_inputs),
-        .outputs = simple_outputs,
-        .output_count = ARRAY_SIZE(simple_outputs),
-    },
-};
-
 /* OG WMR Controller inputs struct */
 struct wmr_controller_hp_input
 {
@@ -267,12 +240,8 @@ handle_input_packet(struct wmr_controller_base *wcb, uint64_t time_ns, uint8_t *
 
 	bool b = wmr_controller_hp_packet_parse(ctrl, buffer, buf_size);
 	if (b) {
-		m_imu_3dof_update(&wcb->fusion,
-		                  ctrl->last_inputs.imu.timestamp_ticks * WMR_MOTION_CONTROLLER_NS_PER_TICK,
-		                  &ctrl->last_inputs.imu.acc, &ctrl->last_inputs.imu.gyro);
-
-		wcb->last_imu_timestamp_ns = time_ns;
-		wcb->last_angular_velocity = ctrl->last_inputs.imu.gyro;
+		wmr_controller_base_handle_imu_sample(wcb, time_ns, ctrl->last_inputs.imu.timestamp_ticks,
+		                                      &ctrl->last_inputs.imu.acc, &ctrl->last_inputs.imu.gyro);
 	}
 
 	return b;
@@ -307,15 +276,6 @@ wmr_controller_hp_update_inputs(struct xrt_device *xdev)
 }
 
 static void
-wmr_controller_hp_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	DRV_TRACE_MARKER();
-
-	// struct wmr_controller_base *d = wmr_controller_base(xdev);
-	// Todo: implement
-}
-
-static void
 wmr_controller_hp_destroy(struct xrt_device *xdev)
 {
 	struct wmr_controller_base *wcb = (struct wmr_controller_base *)(xdev);
@@ -327,7 +287,8 @@ wmr_controller_hp_destroy(struct xrt_device *xdev)
 struct wmr_controller_base *
 wmr_controller_hp_create(struct wmr_controller_connection *conn,
                          enum xrt_device_type controller_type,
-                         enum u_logging_level log_level)
+                         enum u_logging_level log_level,
+                         struct xrt_fs *src)
 {
 	DRV_TRACE_MARKER();
 
@@ -336,13 +297,15 @@ wmr_controller_hp_create(struct wmr_controller_connection *conn,
 	    U_DEVICE_ALLOCATE(struct wmr_controller_hp, flags, WMR_CONTROLLER_INDEX_COUNT, 1);
 	struct wmr_controller_base *wcb = (struct wmr_controller_base *)(ctrl);
 
-	if (!wmr_controller_base_init(wcb, conn, controller_type, log_level)) {
+	if (!wmr_controller_base_init(wcb, conn, controller_type, log_level, wmr_controller_hp_destroy, src)) {
 		wmr_controller_hp_destroy(&wcb->base);
 		return NULL;
 	}
 
 	wcb->handle_input_packet = handle_input_packet;
 
+	// Only set those we want to overwrite.
+	wcb->base.update_inputs = wmr_controller_hp_update_inputs;
 	wcb->base.name = XRT_DEVICE_HP_REVERB_G2_CONTROLLER;
 
 	if (controller_type == XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER) {
@@ -350,10 +313,6 @@ wmr_controller_hp_create(struct wmr_controller_connection *conn,
 	} else {
 		snprintf(wcb->base.str, ARRAY_SIZE(wcb->base.str), "HP Reverb G2 Right Controller");
 	}
-
-	wcb->base.destroy = wmr_controller_hp_destroy;
-	wcb->base.update_inputs = wmr_controller_hp_update_inputs;
-	wcb->base.set_output = wmr_controller_hp_set_output;
 
 	SET_INPUT(wcb, MENU_CLICK, MENU_CLICK);
 	SET_INPUT(wcb, HOME_CLICK, HOME_CLICK);
@@ -379,9 +338,6 @@ wmr_controller_hp_create(struct wmr_controller_connection *conn,
 	ctrl->last_inputs.imu.timestamp_ticks = 0;
 
 	wcb->base.outputs[0].name = XRT_OUTPUT_NAME_WMR_HAPTIC;
-
-	wcb->base.binding_profiles = binding_profiles;
-	wcb->base.binding_profile_count = ARRAY_SIZE(binding_profiles);
 
 	u_var_add_bool(wcb, &ctrl->last_inputs.menu, "input.menu");
 	u_var_add_bool(wcb, &ctrl->last_inputs.home, "input.home");

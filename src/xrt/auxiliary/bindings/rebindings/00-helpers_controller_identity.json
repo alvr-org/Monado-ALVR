@@ -1,0 +1,150 @@
+{
+	"/helper/controller/identity/menu": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/right/input/menu": true,
+			"/user/hand/right/input/menu/click": true
+		}
+	},
+	"/helper/controller/identity/output": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/output/haptic": true,
+			"/user/hand/right/output/haptic": true
+		}
+	},
+	"/helper/controller/identity/poses": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/aim": true,
+			"/user/hand/left/input/aim/pose": true,
+			"/user/hand/left/input/grip": true,
+			"/user/hand/left/input/grip/pose": true,
+			"/user/hand/left/input/grip_surface": true,
+			"/user/hand/left/input/grip_surface/pose": true,
+			"/user/hand/left/input/palm_ext": true,
+			"/user/hand/left/input/palm_ext/pose": true,
+			"/user/hand/left/input/pinch_ext": true,
+			"/user/hand/left/input/pinch_ext/pose": true,
+			"/user/hand/left/input/poke_ext": true,
+			"/user/hand/left/input/poke_ext/pose": true,
+			"/user/hand/right/input/aim": true,
+			"/user/hand/right/input/aim/pose": true,
+			"/user/hand/right/input/grip": true,
+			"/user/hand/right/input/grip/pose": true,
+			"/user/hand/right/input/grip_surface": true,
+			"/user/hand/right/input/grip_surface/pose": true,
+			"/user/hand/right/input/palm_ext": true,
+			"/user/hand/right/input/palm_ext/pose": true,
+			"/user/hand/right/input/pinch_ext": true,
+			"/user/hand/right/input/pinch_ext/pose": true,
+			"/user/hand/right/input/poke_ext": true,
+			"/user/hand/right/input/poke_ext/pose": true
+		}
+	},
+	"/helper/controller/identity/squeeze": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/squeeze": true,
+			"/user/hand/left/input/squeeze/value": true,
+			"/user/hand/right/input/squeeze": true,
+			"/user/hand/right/input/squeeze/value": true
+		}
+	},
+	"/helper/controller/identity/system": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/system": true,
+			"/user/hand/left/input/system/click": true,
+			"/user/hand/right/input/system": true,
+			"/user/hand/right/input/system/click": true
+		}
+	},
+	"/helper/controller/identity/thumbstick": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumbstick": true,
+			"/user/hand/left/input/thumbstick/click": true,
+			"/user/hand/left/input/thumbstick/dpad_down": true,
+			"/user/hand/left/input/thumbstick/dpad_left": true,
+			"/user/hand/left/input/thumbstick/dpad_right": true,
+			"/user/hand/left/input/thumbstick/dpad_up": true,
+			"/user/hand/left/input/thumbstick/x": true,
+			"/user/hand/left/input/thumbstick/xy": true,
+			"/user/hand/left/input/thumbstick/y": true,
+			"/user/hand/right/input/thumbstick": true,
+			"/user/hand/right/input/thumbstick/click": true,
+			"/user/hand/right/input/thumbstick/dpad_down": true,
+			"/user/hand/right/input/thumbstick/dpad_left": true,
+			"/user/hand/right/input/thumbstick/dpad_right": true,
+			"/user/hand/right/input/thumbstick/dpad_up": true,
+			"/user/hand/right/input/thumbstick/x": true,
+			"/user/hand/right/input/thumbstick/xy": true,
+			"/user/hand/right/input/thumbstick/y": true
+		}
+	},
+	"/helper/controller/identity/trackpad": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/trackpad": true,
+			"/user/hand/left/input/trackpad/click": true,
+			"/user/hand/left/input/trackpad/dpad_center": true,
+			"/user/hand/left/input/trackpad/dpad_down": true,
+			"/user/hand/left/input/trackpad/dpad_left": true,
+			"/user/hand/left/input/trackpad/dpad_right": true,
+			"/user/hand/left/input/trackpad/dpad_up": true,
+			"/user/hand/left/input/trackpad/touch": true,
+			"/user/hand/left/input/trackpad/x": true,
+			"/user/hand/left/input/trackpad/xy": true,
+			"/user/hand/left/input/trackpad/y": true,
+			"/user/hand/right/input/trackpad": true,
+			"/user/hand/right/input/trackpad/click": true,
+			"/user/hand/right/input/trackpad/dpad_center": true,
+			"/user/hand/right/input/trackpad/dpad_down": true,
+			"/user/hand/right/input/trackpad/dpad_left": true,
+			"/user/hand/right/input/trackpad/dpad_right": true,
+			"/user/hand/right/input/trackpad/dpad_up": true,
+			"/user/hand/right/input/trackpad/touch": true,
+			"/user/hand/right/input/trackpad/x": true,
+			"/user/hand/right/input/trackpad/xy": true,
+			"/user/hand/right/input/trackpad/y": true
+		}
+	},
+	"/helper/controller/identity/trigger": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/trigger": true,
+			"/user/hand/left/input/trigger/value": true,
+			"/user/hand/right/input/trigger": true,
+			"/user/hand/right/input/trigger/value": true
+		}
+	},
+	"/helper/controller/identity/abxy": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/x": true,
+			"/user/hand/left/input/x/click": true,
+			"/user/hand/left/input/x/touch": true,
+			"/user/hand/left/input/y": true,
+			"/user/hand/left/input/y/click": true,
+			"/user/hand/left/input/y/touch": true,
+			"/user/hand/right/input/a": true,
+			"/user/hand/right/input/a/click": true,
+			"/user/hand/right/input/a/touch": true,
+			"/user/hand/right/input/b": true,
+			"/user/hand/right/input/b/click": true,
+			"/user/hand/right/input/b/touch": true
+		}
+	},
+	"/helper/controller/identity/menu_and_system": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/right/input/system": true,
+			"/user/hand/right/input/system/click": true
+		}
+	}
+}

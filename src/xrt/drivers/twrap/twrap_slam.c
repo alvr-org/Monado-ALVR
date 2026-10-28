@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Tiny xrt_device exposing SLAM capabilities.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_twrap
  */
 
@@ -136,18 +136,6 @@ twrap_slam_get_tracked_pose(struct xrt_device *xdev,
 }
 
 static void
-twrap_slam_get_view_poses(struct xrt_device *xdev,
-                          const struct xrt_vec3 *default_eye_relation,
-                          int64_t at_timestamp_ns,
-                          uint32_t view_count,
-                          struct xrt_space_relation *out_head_relation,
-                          struct xrt_fov *out_fovs,
-                          struct xrt_pose *out_poses)
-{
-	assert(false);
-}
-
-static void
 twrap_slam_destroy(struct xrt_device *xdev)
 {
 	struct slam_device *dx = slam_device(xdev);
@@ -171,15 +159,12 @@ twrap_slam_create_device(struct xrt_frame_context *xfctx,
 
 
 
-	dx->base.update_inputs = u_device_noop_update_inputs;
-	dx->base.get_tracked_pose = twrap_slam_get_tracked_pose;
-	dx->base.get_view_poses = twrap_slam_get_view_poses;
-	dx->base.destroy = twrap_slam_destroy;
+	u_device_populate_function_pointers(&dx->base, twrap_slam_get_tracked_pose, twrap_slam_destroy);
 	dx->base.name = name;
 	dx->base.tracking_origin->type = XRT_TRACKING_TYPE_OTHER;
 	dx->base.inputs[0].name = XRT_INPUT_GENERIC_TRACKER_POSE;
-	dx->base.orientation_tracking_supported = true;
-	dx->base.position_tracking_supported = true;
+	dx->base.supported.orientation_tracking = true;
+	dx->base.supported.position_tracking = true;
 	dx->base.device_type = XRT_DEVICE_TYPE_GENERIC_TRACKER;
 
 
@@ -220,14 +205,14 @@ twrap_slam_create_device(struct xrt_frame_context *xfctx,
 	// Create a split sink at out_sink that pushes to the SLAM IMU sink as well as the 3dof IMU sink, then replace
 	// out_sinks's imu sink with the split sink.
 
-	struct xrt_imu_sink *sink_slam = (*out_sinks)->imu;
+	struct xrt_imu_sink *sink_slam = (*out_sinks)->imus[0];
 
 	struct xrt_imu_sink *tmp = NULL;
 
 	u_imu_sink_split_create(xfctx, &dx->dof3->sink, sink_slam, &tmp);
 	u_imu_sink_force_monotonic_create(xfctx, tmp, &tmp);
 
-	(*out_sinks)->imu = tmp;
+	(*out_sinks)->imus[0] = tmp;
 
 	int start_status = t_slam_start(dx->slam);
 

@@ -33,7 +33,7 @@ extern "C" {
  * @ingroup xrt_iface
  * @public @memberof xrt_compositor_native
  */
-struct xrt_compositor_d3d12 *
+struct xrt_compositor *
 xrt_gfx_d3d12_provider_create(struct xrt_compositor_native *xcn, ID3D12Device *device, ID3D12CommandQueue *queue);
 
 #endif // XRT_OS_WINDOWS || XRT_DOXYGEN

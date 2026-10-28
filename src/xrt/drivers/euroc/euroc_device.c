@@ -206,13 +206,9 @@ euroc_device_create(struct xrt_prober *xp)
 		xd->inputs[0].name = XRT_INPUT_SIMPLE_GRIP_POSE;
 	}
 
-	xd->update_inputs = u_device_noop_update_inputs;
-	xd->get_tracked_pose = euroc_device_get_tracked_pose;
-	xd->destroy = euroc_device_destroy;
+	u_device_populate_function_pointers(xd, euroc_device_get_tracked_pose, euroc_device_destroy);
 	if (is_hmd) {
 		xd->get_view_poses = u_device_get_view_poses;
-	} else {
-		xd->get_view_poses = u_device_ni_get_view_poses;
 	}
 
 	u_var_add_root(ed, dev_name, false);

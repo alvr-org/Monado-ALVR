@@ -1,9 +1,9 @@
 # Copyright 2019-2022, Mesa contributors
-# Copyright 2022, Collabora, Ltd.
+# Copyright 2022-2025, Collabora, Ltd.
 # SPDX-License-Identifier: MIT
 # Based on https://gitlab.freedesktop.org/mesa/mesa/-/blob/8396df5ad90aeb6ab2267811aba2187954562f81/.gitlab-ci/windows/mesa_deps_build.ps1
 
-$VulkanRTVersion = "1.3.283.0"
+$VulkanRTVersion = "1.4.328.1"
 
 # Download new TLS certs from Windows Update
 Get-Date
@@ -28,7 +28,7 @@ Remove-Item "C:\vcredist_x64.exe" -Force
 Get-Date
 Write-Host "Installing Vulkan runtime components"
 $VulkanInstaller = "C:\VulkanRTInstaller.exe"
-Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$VulkanRTVersion/windows/VulkanRT-$VulkanRTVersion-Installer.exe" -OutFile "$VulkanInstaller"
+Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$VulkanRTVersion/windows/VulkanRT-X64-$VulkanRTVersion-Installer.exe" -OutFile "$VulkanInstaller"
 Start-Process -NoNewWindow -Wait "$VulkanInstaller" -ArgumentList "/S"
 if (!$?) {
     Write-Host "Failed to install Vulkan runtime components"

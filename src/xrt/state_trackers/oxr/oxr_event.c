@@ -135,6 +135,24 @@ is_session_link_to_event(struct oxr_event *event, XrSession session)
 		XrEventDataReferenceSpaceChangePending *pending = (XrEventDataReferenceSpaceChangePending *)type;
 		return pending->session == session;
 	}
+#ifdef OXR_HAVE_KHR_visibility_mask
+	case XR_TYPE_EVENT_DATA_VISIBILITY_MASK_CHANGED_KHR: {
+		XrEventDataVisibilityMaskChangedKHR *changed = (XrEventDataVisibilityMaskChangedKHR *)type;
+		return changed->session == session;
+	}
+#endif // OXR_HAVE_KHR_visibility_mask
+#ifdef OXR_HAVE_EXT_user_presence
+	case XR_TYPE_EVENT_DATA_USER_PRESENCE_CHANGED_EXT: {
+		XrEventDataUserPresenceChangedEXT *changed = (XrEventDataUserPresenceChangedEXT *)type;
+		return changed->session == session;
+	}
+#endif // OXR_HAVE_EXT_user_presence
+#ifdef OXR_HAVE_ML_localization_map
+	case XR_TYPE_EVENT_DATA_LOCALIZATION_CHANGED_ML: {
+		XrEventDataLocalizationChangedML *changed = (XrEventDataLocalizationChangedML *)type;
+		return changed->session == session;
+	}
+#endif // OXR_HAVE_ML_localization_map
 	default: return false;
 	}
 }
@@ -270,12 +288,12 @@ oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *lo
 
 #ifdef OXR_HAVE_EXT_performance_settings
 XrResult
-oxr_event_push_XrEventDataPerfSettingsEXTX(struct oxr_logger *log,
-                                           struct oxr_session *sess,
-                                           enum xrt_perf_domain domain,
-                                           enum xrt_perf_sub_domain subDomain,
-                                           enum xrt_perf_notify_level fromLevel,
-                                           enum xrt_perf_notify_level toLevel)
+oxr_event_push_XrEventDataPerfSettingsEXT(struct oxr_logger *log,
+                                          struct oxr_session *sess,
+                                          enum xrt_perf_domain domain,
+                                          enum xrt_perf_sub_domain subDomain,
+                                          enum xrt_perf_notify_level fromLevel,
+                                          enum xrt_perf_notify_level toLevel)
 {
 	struct oxr_instance *inst = sess->sys->inst;
 	XrEventDataPerfSettingsEXT *changed;
@@ -295,6 +313,29 @@ oxr_event_push_XrEventDataPerfSettingsEXTX(struct oxr_logger *log,
 	return XR_SUCCESS;
 }
 #endif // OXR_HAVE_EXT_performance_settings
+
+#ifdef OXR_HAVE_EXT_view_configuration_views_change
+XrResult
+oxr_event_push_XrEventDataViewConfigurationViewsChangedEXT(struct oxr_logger *log,
+                                                           struct oxr_system *system,
+                                                           enum xrt_view_type viewConfigurationType)
+{
+	struct oxr_instance *inst = system->inst;
+	XrEventDataViewConfigurationViewsChangedEXT *changed;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_VIEW_CONFIGURATION_VIEWS_CHANGED_EXT;
+	changed->systemId = system->systemId;
+	changed->viewConfigurationType = xrt_view_type_to_xr(viewConfigurationType);
+	event->result = XR_SUCCESS;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_EXT_view_configuration_views_change
 
 #ifdef OXR_HAVE_FB_passthrough
 XrResult
@@ -343,6 +384,27 @@ oxr_event_push_XrEventDataVisibilityMaskChangedKHR(struct oxr_logger *log,
 }
 #endif // OXR_HAVE_KHR_visibility_mask
 
+#ifdef OXR_HAVE_EXT_user_presence
+XrResult
+oxr_event_push_XrEventDataUserPresenceChangedEXT(struct oxr_logger *log, struct oxr_session *sess, bool isUserPresent)
+{
+	struct oxr_instance *inst = sess->sys->inst;
+	XrEventDataUserPresenceChangedEXT *changed;
+	struct oxr_event *event = NULL;
+
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_USER_PRESENCE_CHANGED_EXT;
+	changed->session = oxr_session_to_openxr(sess);
+	changed->isUserPresent = isUserPresent;
+	event->result = XR_SUCCESS;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+
+	return XR_SUCCESS;
+}
+#endif // OXR_HAVE_EXT_user_presence
+
 XrResult
 oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess)
 {
@@ -351,22 +413,32 @@ oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess
 
 	lock(inst);
 
+	struct oxr_event *prev = NULL;
 	struct oxr_event *e = inst->event.next;
 	while (e != NULL) {
 		struct oxr_event *cur = e;
 		e = e->next;
 
 		if (!is_session_link_to_event(cur, session)) {
+			prev = cur;
 			continue;
+		}
+
+		// Unlink cur, keeping the predecessor's next pointer valid.
+		if (prev != NULL) {
+			prev->next = cur->next;
 		}
 
 		if (cur == inst->event.next) {
 			inst->event.next = cur->next;
 		}
 
+		// The new tail is the last retained node (prev), or NULL if
+		// nothing was kept before cur.
 		if (cur == inst->event.last) {
-			inst->event.last = NULL;
+			inst->event.last = prev;
 		}
+
 		free(cur);
 	}
 
@@ -378,16 +450,26 @@ oxr_event_remove_session_events(struct oxr_logger *log, struct oxr_session *sess
 XrResult
 oxr_poll_event(struct oxr_logger *log, struct oxr_instance *inst, XrEventDataBuffer *eventData)
 {
-	struct oxr_session *sess = inst->sessions;
 	XrResult ret;
 
-	while (sess) {
-		ret = oxr_session_poll(log, sess);
-		if (ret != XR_SUCCESS) {
-			return ret;
-		}
+	// Sessions can be created and destroyed on other threads while we poll.
+	os_mutex_lock(&inst->sessions_mutex);
 
+	// The system is lazily created by xrGetSystem, which may be running on another thread.
+	os_mutex_lock(&inst->system_init_lock);
+	ret = oxr_system_poll(log, &inst->system);
+	os_mutex_unlock(&inst->system_init_lock);
+
+	struct oxr_session *sess = inst->sessions_locked;
+	while (ret == XR_SUCCESS && sess) {
+		ret = oxr_session_poll(log, sess);
 		sess = sess->next;
+	}
+
+	os_mutex_unlock(&inst->sessions_mutex);
+
+	if (ret != XR_SUCCESS) {
+		return ret;
 	}
 
 	lock(inst);

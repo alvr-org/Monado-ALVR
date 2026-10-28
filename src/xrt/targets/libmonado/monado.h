@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -25,7 +26,7 @@ extern "C" {
 //! Major version of the API.
 #define MND_API_VERSION_MAJOR 1
 //! Minor version of the API.
-#define MND_API_VERSION_MINOR 4
+#define MND_API_VERSION_MINOR 8
 //! Patch version of the API.
 #define MND_API_VERSION_PATCH 0
 
@@ -46,6 +47,8 @@ typedef enum mnd_result
 	MND_ERROR_INVALID_PROPERTY = -6,
 	//! Supported in version 1.3 and above.
 	MND_ERROR_INVALID_OPERATION = -7,
+	//! Supported in version 1.5 and above.
+	MND_ERROR_UNSUPPORTED_OPERATION = -8,
 } mnd_result_t;
 
 /*!
@@ -58,26 +61,47 @@ typedef enum mnd_client_flags
 	MND_CLIENT_SESSION_VISIBLE = (1u << 2u),
 	MND_CLIENT_SESSION_FOCUSED = (1u << 3u),
 	MND_CLIENT_SESSION_OVERLAY = (1u << 4u),
+	//! @deprecated Deprecated in version 1.6.
 	MND_CLIENT_IO_ACTIVE = (1u << 5u),
+	//! Supported in version 1.6 and above.
+	MND_CLIENT_POSES_BLOCKED = (1u << 6u),
+	//! Supported in version 1.6 and above.
+	MND_CLIENT_HT_BLOCKED = (1u << 7u),
+	//! Supported in version 1.6 and above.
+	MND_CLIENT_INPUTS_BLOCKED = (1u << 8u),
+	//! Supported in version 1.6 and above.
+	MND_CLIENT_OUTPUTS_BLOCKED = (1u << 9u),
 } mnd_client_flags_t;
 
 /*!
- * A property to get from a thing (currently only devices).
+ * A property to get from an object.
  *
  * Supported in version 1.2 and above.
  */
 typedef enum mnd_property
 {
-	//! Supported in version 1.2 and above.
+	// Devices
+
+	//! Supported in version 1.2 and above. Supported by devices.
 	MND_PROPERTY_NAME_STRING = 0,
-	//! Supported in version 1.2 and above.
+
+	//! Supported in version 1.2 and above. Supported by devices.
 	MND_PROPERTY_SERIAL_STRING = 1,
-	//! Supported in version 1.4.0 and above.
+
+	//! Supported in version 1.4.0 and above. Supported by devices.
 	MND_PROPERTY_TRACKING_ORIGIN_U32 = 2,
-	//! Supported in version 1.4.0 and above.
+
+	//! Supported in version 1.4.0 and above. Supported by devices.
 	MND_PROPERTY_SUPPORTS_POSITION_BOOL = 3,
-	//! Supported in version 1.4.0 and above.
+
+	//! Supported in version 1.4.0 and above. Supported by devices.
 	MND_PROPERTY_SUPPORTS_ORIENTATION_BOOL = 4,
+
+	//! Supported in version 1.5.0 and above. Supported by devices.
+	MND_PROPERTY_SUPPORTS_BRIGHTNESS_BOOL = 5,
+
+	//! Supported in version 1.8.0 and above. Supported by clients.
+	MND_PROPERTY_SUPPORTS_VIEW_CONFIGURATION_CHANGE_BOOL = 100,
 } mnd_property_t;
 
 /*!
@@ -100,6 +124,28 @@ typedef struct mnd_pose
 	} position;
 } mnd_pose_t;
 
+
+/*!
+ * A 3 element colour with floating point channels.
+ */
+struct mnd_colour
+{
+	float r;
+	float g;
+	float b;
+};
+
+/*!
+ * A 3 element HSV colour with floating point channels.
+ * All values are in [0, 1] range, with hue wrapping at 1.
+ */
+struct mnd_colour_hsv
+{
+	float h;
+	float s;
+	float v;
+};
+
 /*!
  * Types of reference space.
  */
@@ -111,6 +157,77 @@ typedef enum mnd_reference_space_type
 	MND_SPACE_REFERENCE_TYPE_STAGE,
 	MND_SPACE_REFERENCE_TYPE_UNBOUNDED,
 } mnd_reference_space_type_t;
+
+/*!
+ * Bitflags for IO blocking.
+ *
+ * Bitflags are only to be used here, this should not be used as a template
+ * for future libmonado interfaces.
+ *
+ * Supported in version 1.6.0 and above.
+ */
+typedef enum mnd_io_block_flags
+{
+	MND_IO_BLOCK_POSES = (1u << 0u),
+	MND_IO_BLOCK_HT = (1u << 1u),
+	MND_IO_BLOCK_INPUTS = (1u << 2u),
+	MND_IO_BLOCK_OUTPUTS = (1u << 3u),
+} mnd_io_block_flags_t;
+
+/*!
+ * Types of view configurations.
+ *
+ * Supported in version 1.8.0 and above.
+ */
+typedef enum mnd_view_type
+{
+	//! Invalid view type, no data is here.
+	MND_VIEW_TYPE_INVALID = 0,
+	//! Mono view type, with a single view.
+	MND_VIEW_TYPE_MONO = 1,
+	//! Stereo view type, with two views.
+	MND_VIEW_TYPE_STEREO = 2,
+	//! Quad view type, with two outer views, and two inset views.
+	MND_VIEW_TYPE_QUAD = 3,
+} mnd_view_type_t;
+
+#define MND_MAX_VIEWS 4
+
+/*!
+ * The state of a client's session.
+ *
+ * Supported in version 1.8.0 and above.
+ */
+typedef struct mnd_session_state
+{
+	//! Whether the session is currently running/has been begun.
+	bool running;
+	//! The active view type of the running session.
+	mnd_view_type_t active_view_type;
+} mnd_session_state_t;
+
+/*!
+ * A view configuration, describing the resolution and sample count of a single view.
+ *
+ * Supported in version 1.8.0 and above.
+ */
+typedef struct mnd_view_config_view
+{
+	uint32_t width_pixels;
+	uint32_t height_pixels;
+	uint32_t sample_count;
+} mnd_view_config_view_t;
+
+/*!
+ * A view configuration, describing the resolution and sample count of multiple views.
+ *
+ * Supported in version 1.8.0 and above.
+ */
+typedef struct mnd_recommended_view_config
+{
+	bool valid;
+	mnd_view_config_view_t view_configs[MND_MAX_VIEWS];
+} mnd_recommended_view_config_t;
 
 /*
  *
@@ -245,6 +362,8 @@ mnd_root_set_client_focused(mnd_root_t *root, uint32_t client_id);
 /*!
  * Toggle io activity for the client at the given index.
  *
+ * @deprecated Deprecated in version 1.6.
+ *
  * @param root      The libmonado state.
  * @param client_id ID of the client to toggle IO for.
  *
@@ -254,6 +373,98 @@ mnd_root_set_client_focused(mnd_root_t *root, uint32_t client_id);
  */
 mnd_result_t
 mnd_root_toggle_client_io_active(mnd_root_t *root, uint32_t client_id);
+
+/*!
+ * Block certain types of IO for the client at the given index.
+ *
+ * Supported in version 1.6 and above.
+ *
+ * @param root        The libmonado state.
+ * @param client_id   ID of the client to block IO for.
+ * @param block_flags Which types of IO to block.
+ */
+mnd_result_t
+mnd_root_set_client_io_blocks(mnd_root_t *root, uint32_t client_id, mnd_io_block_flags_t block_flags);
+
+/*!
+ * Get the session state for the client at the given index.
+ *
+ * Supported in version 1.8 and above.
+ *
+ * @param root                   The libmonado state.
+ * @param client_id              ID of client to retrieve active view type from.
+ * @param[out] out_session_state Pointer to populate with the session state.
+ *
+ * @pre Called @ref mnd_root_update_client_list at least once
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_client_session_running_state(mnd_root_t *root, uint32_t client_id, mnd_session_state_t *out_session_state);
+
+/*!
+ * Get the view configurations of the client's first system. Returns the default and the recommended view configuration,
+ * if available.
+ *
+ * Supported in version 1.8 and above.
+ *
+ * @param root                             The libmonado state.
+ * @param client_id                        ID of the client to get the view configuration for.
+ * @param view_type                        The type of view configuration to retrieve.
+ * @param[out] out_default_view_config     Pointer to populate with the default view configuration. Must point to at
+ *                                         least the number of views as is contained within the passed view type.
+ * @param[out] recommendation_present      Pointer to populate with whether a recommended view configuration is present.
+ * @param[out] out_recommended_view_config Pointer to populate with the recommended view configuration.
+ *                                         Must point to at least the number of views as is contained within the
+ *                                         passed view type.
+ *
+ * @pre Called @ref mnd_root_update_client_list at least once
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_client_system_view_config(mnd_root_t *root,
+                                       uint32_t client_id,
+                                       mnd_view_type_t view_type,
+                                       mnd_view_config_view_t *out_default_view_config,
+                                       mnd_recommended_view_config_t *out_recommended_view_config);
+
+/*!
+ * Set the recommended view configuration for a client's first system.
+ *
+ * Supported in version 1.8 and above.
+ *
+ * @param root                    The libmonado state.
+ * @param client_id               ID of the client to set the recommended view configuration for.
+ * @param view_type               The type of view configuration to set.
+ * @param recommended_view_config The view configuration to set as recommended. Must point to at least the number of
+ *                                views as is contained within the passed view type.
+ *
+ * @pre Called @ref mnd_root_update_client_list at least once
+ *
+ * @return MND_SUCCESS on success, MND_ERROR_UNSUPPORTED_OPERATION if the client doesn't support changing the
+ *         recommended view configuration
+ */
+mnd_result_t
+mnd_root_set_client_recommended_view_config(mnd_root_t *root,
+                                            uint32_t client_id,
+                                            mnd_view_type_t view_type,
+                                            const mnd_recommended_view_config_t *recommended_view_config);
+
+/*!
+ * Get boolean property for the client at the given index.
+ *
+ * Supported in version 1.8.0 and above.
+ *
+ * @param root          The libmonado state.
+ * @param client_index  Index of client to retrieve property from.
+ * @param prop          A boolean property enum.
+ * @param[out] out_bool Pointer to populate with the boolean.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_client_property_bool(mnd_root_t *root, uint32_t client_id, mnd_property_t prop, bool *out_bool);
 
 /*!
  * Get the number of devices
@@ -359,10 +570,22 @@ mnd_root_get_device_info(mnd_root_t *root, uint32_t device_index, uint32_t *out_
 /*!
  * Get the device index associated for a given role name.
  *
+ *
  * @param root           The libmonado state.
- * @param role_name      Name of the role, one-of: "head", "left", "right",
- *                       "gamepad", "eyes", "hand-tracking-left", and,
- *                       "hand-tracking-right":
+ * @param role_name      Name of the role. Possible values are:
+ *                       - "head"
+ *                       - "left"
+ *                       - "right"
+ *                       - "gamepad"
+ *                       - "eyes"
+ *                       - "hand-tracking-unobstructed-[left|right]"
+ *                       - "hand-tracking-conforming-[left|right]"
+ *
+ *                       **DEPRECATED**: The role names "hand-tracking-[left|right]"
+ *                       are deprecated as of v1.5. They now map to
+ *                       "hand-tracking-unobstructed-[left|right]" and are
+ *                       scheduled for removal in v2.0.
+ *
  * @param[out] out_index Pointer to value to populate with the device index
  *                       associated with given role name, -1 if not role is set.
  *
@@ -390,7 +613,7 @@ mnd_root_recenter_local_spaces(mnd_root_t *root);
  *
  * @param root The libmonado state.
  * @param type The reference space.
- * @param offset A pointer to where the offset should be written.
+ * @param[out] out_offset A pointer to where the offset should be written.
  *
  * @return MND_SUCCESS on success
  */
@@ -417,13 +640,13 @@ mnd_root_set_reference_space_offset(mnd_root_t *root, mnd_reference_space_type_t
  * Supported in version 1.3 and above.
  *
  * @param root The libmonado state.
- * @param origin_id The ID of the tracking origin.
- * @param offset A pointer to where the offset should be written.
+ * @param origin_index The index of the tracking origin into the internal list.
+ * @param[out] out_offset A pointer to where the offset should be written.
  *
  * @return MND_SUCCESS on success
  */
 mnd_result_t
-mnd_root_get_tracking_origin_offset(mnd_root_t *root, uint32_t origin_id, mnd_pose_t *out_offset);
+mnd_root_get_tracking_origin_offset(mnd_root_t *root, uint32_t origin_index, mnd_pose_t *out_offset);
 
 /*!
  * Apply an offset to the specified tracking origin.
@@ -431,13 +654,13 @@ mnd_root_get_tracking_origin_offset(mnd_root_t *root, uint32_t origin_id, mnd_po
  * Supported in version 1.3 and above.
  *
  * @param root The libmonado state.
- * @param origin_id The ID of the tracking origin.
+ * @param origin_index The index of the tracking origin into the internal list.
  * @param offset A pointer to valid xrt_pose.
  *
  * @return MND_SUCCESS on success
  */
 mnd_result_t
-mnd_root_set_tracking_origin_offset(mnd_root_t *root, uint32_t origin_id, const mnd_pose_t *offset);
+mnd_root_set_tracking_origin_offset(mnd_root_t *root, uint32_t origin_index, const mnd_pose_t *offset);
 
 /*!
  * Retrieve the number of tracking origins available.
@@ -458,13 +681,13 @@ mnd_root_get_tracking_origin_count(mnd_root_t *root, uint32_t *out_track_count);
  * Supported in version 1.3 and above.
  *
  * @param root The libmonado state.
- * @param origin_id The ID of a tracking origin.
+ * @param origin_index The index of the tracking origin into the internal list.
  * @param out_string The pointer to write the name's pointer to.
  *
  * @return MND_SUCCESS on success
  */
 mnd_result_t
-mnd_root_get_tracking_origin_name(mnd_root_t *root, uint32_t origin_id, const char **out_string);
+mnd_root_get_tracking_origin_name(mnd_root_t *root, uint32_t origin_index, const char **out_string);
 
 /*!
  * Get battery status of a device.
@@ -480,6 +703,53 @@ mnd_root_get_tracking_origin_name(mnd_root_t *root, uint32_t origin_id, const ch
 mnd_result_t
 mnd_root_get_device_battery_status(
     mnd_root_t *root, uint32_t device_index, bool *out_present, bool *out_charging, float *out_charge);
+
+/*!
+ * Get current brightness of a display device.
+ *
+ * @param root                 The libmonado state.
+ * @param device_index         Index of device to retrieve brightness from.
+ * @param[out] out_brightness  Pointer to value to populate with the current device brightness, where 0 is 0%, and 1 is
+ * 100%.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_get_device_brightness(mnd_root_t *root, uint32_t device_index, float *out_brightness);
+
+/*!
+ * @brief Set the display brightness.
+ *
+ * @param root                 The libmonado state.
+ * @param device_index         Index of device to retrieve battery info from.
+ * @param[in] brightness       Desired display brightness, usually between 0 and 1. Some devices may
+ *                             allow exceeding 1 if the supported range exceeds 100%, but it will be clamped to
+ *                             the supported range.
+ * @param[in] relative         Whether to add \a brightness to the current brightness, instead of overwriting
+ *                             the current brightness.
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_set_device_brightness(mnd_root_t *root, uint32_t device_index, float brightness, bool relative);
+
+/*!
+ * Set the chroma key parameters to be applied to the base application (if there is any).
+ *
+ * HSV values are in [0, 1] range. Hue wrapping is supported (min > max spans across 0).
+ * Set curve to 0 to disable chroma keying.
+ *
+ * @param root    The libmonado state.
+ * @param hsv_min Minimum HSV bounds (hue, saturation, value).
+ * @param hsv_max Maximum HSV bounds (hue, saturation, value).
+ * @param curve   Power curve for alpha falloff (1.0 = linear, <1 = softer, >1 = harder, 0 = disabled).
+ * @param despill Despill strength (0.0 = none, 1.0 = full desaturation near key color).
+ *
+ * @return MND_SUCCESS on success
+ */
+mnd_result_t
+mnd_root_set_chroma_key_params(
+    mnd_root_t *root, struct mnd_colour_hsv hsv_min, struct mnd_colour_hsv hsv_max, float curve, float despill);
 
 #ifdef __cplusplus
 }

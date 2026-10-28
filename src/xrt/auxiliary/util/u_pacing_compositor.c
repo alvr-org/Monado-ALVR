@@ -32,6 +32,10 @@ DEBUG_GET_ONCE_LOG_OPTION(log_level, "U_PACING_COMPOSITOR_LOG", U_LOGGING_WARN)
 
 #define PRESENT_SLOP_NS (U_TIME_HALF_MS_IN_NS)
 
+DEBUG_GET_ONCE_FLOAT_OPTION(present_to_display_offset_ms, "U_PACING_COMP_PRESENT_TO_DISPLAY_OFFSET_MS", 4.0f)
+DEBUG_GET_ONCE_FLOAT_OPTION(margin_ms, "U_PACING_COMP_MARGIN_MS", 1.0f)
+DEBUG_GET_ONCE_NUM_OPTION(comp_time_max_fraction_percent, "U_PACING_COMP_TIME_MAX_FRACTION_PERCENT", 30)
+
 
 /*
  *
@@ -111,7 +115,7 @@ struct pacing_compositor
 	/*!
 	 * Used to generate frame IDs.
 	 */
-	int64_t next_frame_id;
+	int64_t current_frame_id;
 
 	/*!
 	 * The maximum amount we give to the compositor.
@@ -221,7 +225,7 @@ get_frame(struct pacing_compositor *pc, int64_t frame_id)
 static struct frame *
 create_frame(struct pacing_compositor *pc, enum frame_state state)
 {
-	int64_t frame_id = pc->next_frame_id++;
+	int64_t frame_id = ++pc->current_frame_id;
 	struct frame *f = get_frame(pc, frame_id);
 
 	f->frame_id = frame_id;
@@ -238,12 +242,17 @@ create_frame(struct pacing_compositor *pc, enum frame_state state)
 static struct frame *
 get_latest_frame_with_state_at_least(struct pacing_compositor *pc, enum frame_state state)
 {
-	int64_t start_from = pc->next_frame_id;
-	int64_t count = 1;
+	int64_t latest_frame_id = pc->current_frame_id;
 
-	while (start_from >= count && count < NUM_FRAMES) {
-		int64_t frame_id = start_from - count;
-		count++;
+	// Walk backwards from the most recently created frame.
+	for (int64_t i = 0; i < NUM_FRAMES; i++) {
+		int64_t frame_id = latest_frame_id - i;
+
+		// Zero is never a valid frame ID.
+		if (frame_id <= 0) {
+			break;
+		}
+
 		struct frame *f = get_frame(pc, frame_id);
 		if (f->state >= state && f->frame_id == frame_id) {
 			return f;
@@ -333,10 +342,6 @@ predict_next_frame(struct pacing_compositor *pc, int64_t now_ns)
 			    "\n"
 			    "\tadjusted_last_present_time_ns: %" PRIu64,
 			    diff_id, adjusted_last_present_time_ns);
-		}
-
-		if (diff_id > 1) {
-			diff_id = 1;
 		}
 
 		f = walk_forward_through_frames(pc, adjusted_last_present_time_ns, now_ns);
@@ -737,17 +742,29 @@ pc_destroy(struct u_pacing_compositor *upc)
 	free(pc);
 }
 
-const struct u_pc_display_timing_config U_PC_DISPLAY_TIMING_CONFIG_DEFAULT = {
-    // An arbitrary guess.
-    .present_to_display_offset_ns = U_TIME_1MS_IN_NS * 4,
-    .margin_ns = U_TIME_1MS_IN_NS,
-    // Start by assuming the compositor takes 10% of the frame.
-    .comp_time_fraction = 10,
-    // Don't allow the compositor to take more than 30% of the frame.
-    .comp_time_max_fraction = 30,
-    .adjust_missed_fraction = 4,
-    .adjust_non_miss_fraction = 2,
-};
+struct u_pc_display_timing_config
+u_pc_display_timing_get_default_config(void)
+{
+	float present_to_display_offset_ms = debug_get_float_option_present_to_display_offset_ms();
+	int64_t present_to_display_offset_ns = time_ms_f_to_ns(present_to_display_offset_ms);
+
+	float margin_ms = debug_get_float_option_margin_ms();
+	int64_t margin_ns = time_ms_f_to_ns(margin_ms);
+
+	int32_t comp_time_max_fraction_percent = debug_get_num_option_comp_time_max_fraction_percent();
+
+	return XRT_C11_COMPOUND(struct u_pc_display_timing_config){
+	    // An arbitrary guess.
+	    .present_to_display_offset_ns = present_to_display_offset_ns,
+	    .margin_ns = margin_ns,
+	    // Start by assuming the compositor takes 10% of the frame.
+	    .comp_time_fraction = 10,
+	    // Don't allow the compositor to take more than 30% of the frame.
+	    .comp_time_max_fraction = comp_time_max_fraction_percent,
+	    .adjust_missed_fraction = 4,
+	    .adjust_non_miss_fraction = 2,
+	};
+}
 
 xrt_result_t
 u_pc_display_timing_create(int64_t estimated_frame_period_ns,

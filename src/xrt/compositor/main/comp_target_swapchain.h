@@ -75,6 +75,12 @@ struct comp_target_swapchain
 #ifdef VK_EXT_display_surface_counter
 		VkSurfaceCounterFlagsEXT surface_counter_flags;
 #endif
+
+		//! Whether VK_KHR_present_id2 is supported for the surface.
+		bool present_id2_supported;
+
+		//! Whether VK_KHR_present_wait2 is supported for the surface.
+		bool present_wait2_supported;
 	} surface;
 
 	struct
@@ -92,7 +98,7 @@ struct comp_target_swapchain
 	struct
 	{
 		//! Must only be accessed from main compositor thread.
-		bool has_started;
+		bool thread_running;
 
 		//! Protected by event_thread lock.
 		bool should_wait;
@@ -102,6 +108,9 @@ struct comp_target_swapchain
 
 		//! Thread waiting on vblank_event_fence (first pixel out).
 		struct os_thread_helper event_thread;
+
+		//! Skipping the event on the first vblank avoids a spurious VK_ERROR_OUT_OF_HOST_MEMORY error.
+		bool event_active;
 	} vblank;
 
 	/*!
@@ -109,6 +118,16 @@ struct comp_target_swapchain
 	 * VkSWapchain, this keeps track if we have done it.
 	 */
 	bool has_logged_info;
+
+#ifdef VK_KHR_shared_presentable_image
+	/*!
+	 * Only relevant when using present modes from VK_KHR_shared_presentable_image,
+	 *
+	 * Shared presentable images for front buffer rendering we only acquire the image once,
+	 * and then reuse it. This will be set the first time we acquire an image.
+	 */
+	bool shared_present_acquired;
+#endif
 };
 
 

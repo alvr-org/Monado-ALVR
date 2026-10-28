@@ -1,10 +1,10 @@
-// Copyright 2022, Collabora, Ltd.
+// Copyright 2022-2026, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief Pool to read back VkImages from the gpu
  *
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_vk
  */
@@ -37,12 +37,12 @@ vk_xf_readback_release(struct xrt_frame *xf)
 }
 
 // Creates a new frame, if there's room for one.
-static void
+static bool
 vk_xf_readback_pool_try_create_new_frame(struct vk_bundle *vk, struct vk_image_readback_to_xf_pool *pool)
 {
 	// We ran out of frames.
 	if (pool->num_images == READBACK_POOL_NUM_FRAMES) {
-		return;
+		return false;
 	}
 	VkImage image = VK_NULL_HANDLE;
 	VkDeviceMemory memory = VK_NULL_HANDLE;
@@ -69,10 +69,10 @@ vk_xf_readback_pool_try_create_new_frame(struct vk_bundle *vk, struct vk_image_r
 	    &memory,                             //
 	    &image);                             //
 
+	VK_CHK_WITH_RET(res, "vk_create_image_advanced", false);
+
 	VK_NAME_DEVICE_MEMORY(vk, memory, "vk_image_readback_to_xf_pool device memory");
 	VK_NAME_IMAGE(vk, image, "vk_image_readback_to_xf_pool image");
-
-	(void)res;
 
 	// Get layout of the image (including row pitch)
 	const VkImageSubresource first_color_level_subresource = {
@@ -101,7 +101,13 @@ vk_xf_readback_pool_try_create_new_frame(struct vk_bundle *vk, struct vk_image_r
 	    VK_WHOLE_SIZE,     // size
 	    0,                 // flags
 	    (void **)&data);   // ppData
-
+	VK_CHK_ONLY_PRINT(res, "vkMapMemory");
+	if (res != VK_SUCCESS) {
+		vk->vkUnmapMemory(vk->device, memory);
+		vk->vkFreeMemory(vk->device, memory, NULL);
+		vk->vkDestroyImage(vk->device, image, NULL);
+		return false;
+	}
 
 
 	int i = pool->num_images++;
@@ -120,6 +126,8 @@ vk_xf_readback_pool_try_create_new_frame(struct vk_bundle *vk, struct vk_image_r
 	im->base_frame.height = extent.height;
 	im->base_frame.size = stride * extent.height;
 	im->base_frame.format = pool->xrt_format;
+
+	return true;
 }
 
 /*
@@ -162,7 +170,11 @@ vk_image_readback_to_xf_pool_get_unused_frame(struct vk_bundle *vk,
 		return true;
 	}
 
-	vk_xf_readback_pool_try_create_new_frame(vk, pool);
+	if (!vk_xf_readback_pool_try_create_new_frame(vk, pool)) {
+		U_LOG_W("Failed to create new frame");
+		os_mutex_unlock(&pool->mutex);
+		return false;
+	}
 
 	bool found = find_created_not_used_wrap_locked(pool, out);
 

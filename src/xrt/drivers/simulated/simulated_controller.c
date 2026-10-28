@@ -166,35 +166,6 @@ simulated_device_get_tracked_pose(struct xrt_device *xdev,
 	return XRT_SUCCESS;
 }
 
-static void
-simulated_device_get_hand_tracking(struct xrt_device *xdev,
-                                   enum xrt_input_name name,
-                                   int64_t requested_timestamp_ns,
-                                   struct xrt_hand_joint_set *out_value,
-                                   int64_t *out_timestamp_ns)
-{
-	assert(false);
-}
-
-static void
-simulated_device_get_view_poses(struct xrt_device *xdev,
-                                const struct xrt_vec3 *default_eye_relation,
-                                int64_t at_timestamp_ns,
-                                uint32_t view_count,
-                                struct xrt_space_relation *out_head_relation,
-                                struct xrt_fov *out_fovs,
-                                struct xrt_pose *out_poses)
-{
-	assert(false);
-}
-
-static void
-simulated_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	struct simulated_device *sd = simulated_device(xdev);
-	(void)sd;
-}
-
 
 /*
  *
@@ -233,28 +204,6 @@ static enum xrt_output_name wmr_outputs_array[] = {
     XRT_OUTPUT_NAME_WMR_HAPTIC,
 };
 
-static struct xrt_binding_input_pair wmr_to_simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_WMR_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_WMR_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_WMR_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_WMR_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair wmr_to_simple_outputs[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_INDEX_HAPTIC},
-};
-
-static struct xrt_binding_profile wmr_binding_profiles[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = wmr_to_simple_inputs,
-        .input_count = ARRAY_SIZE(wmr_to_simple_inputs),
-        .outputs = wmr_to_simple_outputs,
-        .output_count = ARRAY_SIZE(wmr_to_simple_outputs),
-    },
-};
-
-
 /*
  * ML2 Controller.
  */
@@ -271,53 +220,6 @@ static enum xrt_input_name ml2_inputs_array[] = {
 static enum xrt_output_name ml2_outputs_array[] = {
     XRT_OUTPUT_NAME_ML2_CONTROLLER_VIBRATION,
 };
-
-static struct xrt_binding_input_pair ml2_to_simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_ML2_CONTROLLER_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_ML2_CONTROLLER_MENU_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_ML2_CONTROLLER_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_ML2_CONTROLLER_AIM_POSE},
-};
-
-static struct xrt_binding_output_pair ml2_to_simple_outputs[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_INDEX_HAPTIC},
-};
-
-static struct xrt_binding_input_pair ml2_to_vive_wand_inputs[9] = {
-    {XRT_INPUT_VIVE_GRIP_POSE, XRT_INPUT_ML2_CONTROLLER_GRIP_POSE},
-    {XRT_INPUT_VIVE_AIM_POSE, XRT_INPUT_ML2_CONTROLLER_AIM_POSE},
-    {XRT_INPUT_VIVE_TRIGGER_CLICK, XRT_INPUT_ML2_CONTROLLER_TRIGGER_CLICK},
-    {XRT_INPUT_VIVE_TRIGGER_VALUE, XRT_INPUT_ML2_CONTROLLER_TRIGGER_VALUE},
-    {XRT_INPUT_VIVE_SQUEEZE_CLICK, XRT_INPUT_ML2_CONTROLLER_SHOULDER_CLICK},
-    // {XRT_INPUT_VIVE_SYSTEM_CLICK, NONE},
-    {XRT_INPUT_VIVE_MENU_CLICK, XRT_INPUT_ML2_CONTROLLER_MENU_CLICK},
-    {XRT_INPUT_VIVE_TRACKPAD, XRT_INPUT_ML2_CONTROLLER_TRACKPAD},
-    //  {NONE, XRT_INPUT_ML2_CONTROLLER_TRACKPAD_FORCE},
-    {XRT_INPUT_VIVE_TRACKPAD_TOUCH, XRT_INPUT_ML2_CONTROLLER_TRACKPAD_TOUCH},
-    {XRT_INPUT_VIVE_TRACKPAD_CLICK, XRT_INPUT_ML2_CONTROLLER_TRACKPAD_CLICK},
-};
-
-static struct xrt_binding_output_pair ml2_to_vive_wand_outputs[1] = {
-    {XRT_OUTPUT_NAME_VIVE_HAPTIC, XRT_OUTPUT_NAME_ML2_CONTROLLER_VIBRATION},
-};
-
-static struct xrt_binding_profile ml2_binding_profiles[2] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = ml2_to_simple_inputs,
-        .input_count = ARRAY_SIZE(ml2_to_simple_inputs),
-        .outputs = ml2_to_simple_outputs,
-        .output_count = ARRAY_SIZE(ml2_to_simple_outputs),
-    },
-    {
-        .name = XRT_DEVICE_VIVE_WAND,
-        .inputs = ml2_to_vive_wand_inputs,
-        .input_count = ARRAY_SIZE(ml2_to_vive_wand_inputs),
-        .outputs = ml2_to_vive_wand_outputs,
-        .output_count = ARRAY_SIZE(ml2_to_vive_wand_outputs),
-    },
-};
-
 
 /*
  *
@@ -338,8 +240,6 @@ simulated_create_controller(enum xrt_device_name name,
 	uint32_t input_count = 0;
 	enum xrt_output_name *outputs = NULL;
 	uint32_t output_count = 0;
-	struct xrt_binding_profile *binding_profiles = NULL;
-	uint32_t binding_profile_count = 0;
 
 	switch (name) {
 	case XRT_DEVICE_SIMPLE_CONTROLLER:
@@ -356,8 +256,6 @@ simulated_create_controller(enum xrt_device_name name,
 		output_count = ARRAY_SIZE(wmr_outputs_array);
 		inputs = wmr_inputs_array;
 		outputs = wmr_outputs_array;
-		binding_profiles = wmr_binding_profiles;
-		binding_profile_count = ARRAY_SIZE(wmr_binding_profiles);
 		handedness = device_type_to_printable_handedness(type);
 		break;
 	case XRT_DEVICE_ML2_CONTROLLER:
@@ -366,8 +264,6 @@ simulated_create_controller(enum xrt_device_name name,
 		output_count = ARRAY_SIZE(ml2_outputs_array);
 		inputs = ml2_inputs_array;
 		outputs = ml2_outputs_array;
-		binding_profiles = ml2_binding_profiles;
-		binding_profile_count = ARRAY_SIZE(ml2_binding_profiles);
 
 		assert(type == XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER);
 		break;
@@ -376,20 +272,14 @@ simulated_create_controller(enum xrt_device_name name,
 
 	// Allocate.
 	struct simulated_device *sd = U_DEVICE_ALLOCATE(struct simulated_device, flags, input_count, output_count);
+	u_device_populate_function_pointers(&sd->base, simulated_device_get_tracked_pose, simulated_device_destroy);
 	sd->base.update_inputs = simulated_device_update_inputs;
-	sd->base.get_tracked_pose = simulated_device_get_tracked_pose;
-	sd->base.get_hand_tracking = simulated_device_get_hand_tracking;
-	sd->base.get_view_poses = simulated_device_get_view_poses;
-	sd->base.set_output = simulated_device_set_output;
-	sd->base.destroy = simulated_device_destroy;
 	sd->base.tracking_origin = origin;
-	sd->base.orientation_tracking_supported = true;
-	sd->base.position_tracking_supported = true;
-	sd->base.hand_tracking_supported = false;
+	sd->base.supported.orientation_tracking = true;
+	sd->base.supported.position_tracking = true;
+	sd->base.supported.hand_tracking = false;
 	sd->base.name = name;
 	sd->base.device_type = type;
-	sd->base.binding_profiles = binding_profiles;
-	sd->base.binding_profile_count = binding_profile_count;
 
 	snprintf(sd->base.str, sizeof(sd->base.str), "%s%s Controller (Simulated)", name_str, handedness);
 	snprintf(sd->base.serial, sizeof(sd->base.str), "%s%s Controller (Simulated)", name_str, handedness);

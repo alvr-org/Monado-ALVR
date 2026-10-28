@@ -1,0 +1,40 @@
+{
+	"vive_tracker_htcx_to_touch_controller_rift_cv1": {
+		"source_profile": "/interaction_profiles/htc/vive_tracker_htcx",
+		"target_profile": "/interaction_profiles/meta/touch_controller_rift_cv1",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/grip": true,
+			"/user/hand/left/input/grip/pose": true,
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/left/input/squeeze": true,
+			"/user/hand/left/input/squeeze/click": "/user/hand/left/input/squeeze/value",
+			"/user/hand/left/input/system": false,
+			"/user/hand/left/input/system/click": false,
+			"/user/hand/left/input/trackpad": "/user/hand/left/input/thumbstick",
+			"/user/hand/left/input/trackpad/click": "/user/hand/left/input/thumbstick/click",
+			"/user/hand/left/input/trackpad/touch": "/user/hand/left/input/thumbstick/touch",
+			"/user/hand/left/input/trackpad/x": "/user/hand/left/input/thumbstick/x",
+			"/user/hand/left/input/trackpad/xy": "/user/hand/left/input/thumbstick/xy",
+			"/user/hand/left/input/trackpad/y": "/user/hand/left/input/thumbstick/y",
+			"/user/hand/right/input/grip": true,
+			"/user/hand/right/input/grip/pose": true,
+			"/user/hand/right/input/menu": "/user/hand/right/input/system",
+			"/user/hand/right/input/menu/click": "/user/hand/right/input/system/click",
+			"/user/hand/right/input/squeeze": true,
+			"/user/hand/right/input/squeeze/click": "/user/hand/right/input/squeeze/value",
+			"/user/hand/right/input/system": false,
+			"/user/hand/right/input/system/click": false,
+			"/user/hand/right/input/trackpad": "/user/hand/right/input/thumbstick",
+			"/user/hand/right/input/trackpad/click": "/user/hand/right/input/thumbstick/click",
+			"/user/hand/right/input/trackpad/touch": "/user/hand/right/input/thumbstick/touch",
+			"/user/hand/right/input/trackpad/x": "/user/hand/right/input/thumbstick/x",
+			"/user/hand/right/input/trackpad/xy": "/user/hand/right/input/thumbstick/xy",
+			"/user/hand/right/input/trackpad/y": "/user/hand/right/input/thumbstick/y"
+		}
+	}
+}

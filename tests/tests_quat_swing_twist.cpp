@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Test for the quaternion swing-twist composition.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  */
 #include "math/m_api.h"
 #include "xrt/xrt_defines.h"

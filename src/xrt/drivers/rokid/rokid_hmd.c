@@ -37,6 +37,7 @@
 
 #include <libusb.h>
 
+#include <stdint.h>
 
 /*
  *
@@ -274,13 +275,16 @@ rokid_fusion_add_vars(struct rokid_fusion *fusion, void *root)
 static void *
 rokid_usb_thread(void *ptr)
 {
-
-	U_TRACE_SET_THREAD_NAME("Rokid USB thread");
 	struct rokid_hmd *rokid = ptr;
+
+	const char *thread_name = "Rokid USB thread";
+
+	U_TRACE_SET_THREAD_NAME(thread_name);
+	os_thread_name_self(thread_name);
 
 #ifdef XRT_OS_LINUX
 	// Try to raise priority of this thread, so we don't miss packets under load
-	u_linux_try_to_set_realtime_priority_on_thread(U_LOGGING_INFO, "Rokid USB thread");
+	u_linux_try_to_set_realtime_priority_on_thread(U_LOGGING_INFO, thread_name);
 #endif
 
 	int last_libusb_result = LIBUSB_SUCCESS;
@@ -319,13 +323,13 @@ static int
 rokid_hmd_get_display_mode(struct rokid_hmd *rokid)
 {
 	uint8_t data[ROKID_USB_BUFFER_LEN] = {0};
-	int res = libusb_control_transfer(rokid->usb_dev,
-	                                  LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-	                                  0x81, // request type = get display mode,
-	                                  0,    // wValue
-	                                  0x1,  // wIndex
-	                                  data, // data is mandatory for some reason,
-	                                  sizeof(data), ROKID_USB_TRANSFER_TIMEOUT_MS);
+	int res = libusb_control_transfer(
+	    rokid->usb_dev, (uint8_t)LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+	    0x81, // request type = get display mode,
+	    0,    // wValue
+	    0x1,  // wIndex
+	    data, // data is mandatory for some reason,
+	    sizeof(data), ROKID_USB_TRANSFER_TIMEOUT_MS);
 	if (res < 0) {
 		ROKID_ERROR(rokid, "Failed to set glasses to SBS mode");
 		return -1;
@@ -337,13 +341,13 @@ static bool
 rokid_hmd_set_display_mode(struct rokid_hmd *rokid, uint16_t mode)
 {
 	uint8_t data[1] = {1};
-	int res = libusb_control_transfer(rokid->usb_dev,
-	                                  LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-	                                  0x1,  // request type = set display mode,
-	                                  mode, // display type
-	                                  0x1,  // wIndex is fixed
-	                                  data, // data is mandatory for some reason,
-	                                  sizeof(data), ROKID_USB_TRANSFER_TIMEOUT_MS);
+	int res = libusb_control_transfer(
+	    rokid->usb_dev, (uint8_t)LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+	    0x1,  // request type = set display mode,
+	    mode, // display type
+	    0x1,  // wIndex is fixed
+	    data, // data is mandatory for some reason,
+	    sizeof(data), ROKID_USB_TRANSFER_TIMEOUT_MS);
 	if (res < 0) {
 		ROKID_ERROR(rokid, "Failed to set glasses to SBS mode");
 		return false;
@@ -467,7 +471,6 @@ rokid_hmd_create(struct xrt_prober_device *prober_device)
 		ROKID_ERROR(rokid, "Failed to init USB thread");
 		goto cleanup;
 	}
-	os_thread_helper_name(&rokid->usb_thread, "Rokid USB thread");
 
 	// This also sets base.str used below.
 	if (!rokid_hmd_usb_init(rokid, prober_device)) {
@@ -490,8 +493,8 @@ rokid_hmd_create(struct xrt_prober_device *prober_device)
 	rokid->base.name = XRT_DEVICE_GENERIC_HMD;
 	rokid->base.device_type = XRT_DEVICE_TYPE_HMD;
 	rokid->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
-	rokid->base.orientation_tracking_supported = true;
-	rokid->base.position_tracking_supported = false;
+	rokid->base.supported.orientation_tracking = true;
+	rokid->base.supported.position_tracking = false;
 
 	// Set up display details
 	// refresh rate

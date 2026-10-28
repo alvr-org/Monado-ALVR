@@ -1,9 +1,10 @@
 // Copyright 2021, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Driver to emulate controllers from hand-tracking input
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Nick Klingensmith <programmerpichu@gmail.com>
  *
  * @ingroup drv_cemu
@@ -30,6 +31,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <cstdint>
 
 
 static const float cm2m = 0.01f;
@@ -42,11 +44,11 @@ DEBUG_GET_ONCE_LOG_OPTION(cemu_log, "CEMU_LOG", U_LOGGING_TRACE)
 #define CEMU_WARN(d, ...) U_LOG_XDEV_IFL_W(&d->base, d->sys->log_level, __VA_ARGS__)
 #define CEMU_ERROR(d, ...) U_LOG_XDEV_IFL_E(&d->base, d->sys->log_level, __VA_ARGS__)
 
-enum cemu_input_index
+enum cemu_input_index : std::uint8_t
 {
 	CEMU_INDEX_HAND_TRACKING,
-	CEMU_INDEX_SELECT,
-	CEMU_INDEX_MENU,
+	CEMU_INDEX_PINCH_BOOL,
+	CEMU_INDEX_PINCH_FLOAT,
 	CEMU_INDEX_GRIP,
 	CEMU_INDEX_AIM,
 	CEMU_NUM_INPUTS,
@@ -106,6 +108,44 @@ wct_to_quat(float waggle, float curl, float twist)
 	return out;
 }
 
+static inline bool
+find_best_ht_input_names(const struct xrt_device *ht_device, enum xrt_input_name ht_input_names[2])
+{
+	assert(ht_device && ht_device->inputs);
+
+	if (!ht_device->supported.hand_tracking)
+		return false;
+
+	constexpr const enum xrt_input_name XRT_NULL_INPUT_NAME = (enum xrt_input_name)0;
+
+	ht_input_names[0] = ht_input_names[1] = XRT_NULL_INPUT_NAME;
+
+	for (uint32_t i = 0; i < ht_device->input_count; ++i) {
+		if (ht_device->inputs[i].name == XRT_INPUT_HT_UNOBSTRUCTED_LEFT) {
+			ht_input_names[0] = XRT_INPUT_HT_UNOBSTRUCTED_LEFT;
+		}
+
+		if (ht_device->inputs[i].name == XRT_INPUT_HT_UNOBSTRUCTED_RIGHT) {
+			ht_input_names[1] = XRT_INPUT_HT_UNOBSTRUCTED_RIGHT;
+		}
+	}
+
+	for (uint32_t i = 0; i < ht_device->input_count; ++i) {
+		if (ht_input_names[0] == XRT_NULL_INPUT_NAME &&
+		    ht_device->inputs[i].name == XRT_INPUT_HT_CONFORMING_LEFT) {
+			ht_input_names[0] = XRT_INPUT_HT_CONFORMING_LEFT;
+		}
+
+		if (ht_input_names[1] == XRT_NULL_INPUT_NAME &&
+		    ht_device->inputs[i].name == XRT_INPUT_HT_CONFORMING_RIGHT) {
+			ht_input_names[1] = XRT_INPUT_HT_CONFORMING_RIGHT;
+		}
+	}
+
+	return ht_input_names[0] != XRT_NULL_INPUT_NAME && //
+	       ht_input_names[1] != XRT_NULL_INPUT_NAME;
+}
+
 static inline struct cemu_device *
 cemu_device(struct xrt_device *xdev)
 {
@@ -131,7 +171,7 @@ cemu_device_destroy(struct xrt_device *xdev)
 	}
 }
 
-static void
+static xrt_result_t
 cemu_device_get_hand_tracking(struct xrt_device *xdev,
                               enum xrt_input_name name,
                               int64_t requested_timestamp_ns,
@@ -144,13 +184,12 @@ cemu_device_get_hand_tracking(struct xrt_device *xdev,
 	struct cemu_system *system = dev->sys;
 
 	if (name != dev->ht_input_name) {
-		// I should be using xrt_input_name_string here - couldn't figure out how to link to it.
-		CEMU_ERROR(dev, "unexpected input name %d - expected %d", name, dev->ht_input_name);
-		return;
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&dev->base, system->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
-	xrt_device_get_hand_tracking(system->in_hand, dev->ht_input_name, requested_timestamp_ns, out_value,
-	                             out_timestamp_ns);
+	return xrt_device_get_hand_tracking(system->in_hand, dev->ht_input_name, requested_timestamp_ns, out_value,
+	                                    out_timestamp_ns);
 }
 
 static xrt_vec3
@@ -224,12 +263,11 @@ get_other_two(struct cemu_device *dev,
               xrt_pose *out_head,
               xrt_hand_joint_set *out_secondary)
 {
+	struct cemu_system *sys = dev->sys;
 	struct xrt_space_relation head_rel;
 	xrt_result_t xret =
-	    xrt_device_get_tracked_pose(dev->sys->in_head, XRT_INPUT_GENERIC_HEAD_POSE, head_timestamp_ns, &head_rel);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	    xrt_device_get_tracked_pose(sys->in_head, XRT_INPUT_GENERIC_HEAD_POSE, head_timestamp_ns, &head_rel);
+	U_LOG_CHK_AND_RET(sys->log_level, xret, "xrt_device_get_tracked_pose");
 
 	*out_head = head_rel.pose;
 	int other;
@@ -240,10 +278,8 @@ get_other_two(struct cemu_device *dev,
 	}
 
 	int64_t noop;
-	xrt_device_get_hand_tracking(dev->sys->in_hand, dev->sys->out_hand[other]->ht_input_name, hand_timestamp_ns,
-	                             out_secondary, &noop);
-
-	return xret;
+	return xrt_device_get_hand_tracking(sys->in_hand, sys->out_hand[other]->ht_input_name, hand_timestamp_ns,
+	                                    out_secondary, &noop);
 }
 
 // Mostly stolen from
@@ -255,6 +291,8 @@ do_aim_pose(struct cemu_device *dev,
             int64_t hand_timestamp_ns,
             struct xrt_space_relation *out_relation)
 {
+	struct cemu_system *sys = dev->sys;
+
 	struct xrt_vec3 vec3_up = {0, 1, 0};
 	struct xrt_pose head;
 	struct xrt_hand_joint_set joint_set_secondary;
@@ -262,12 +300,10 @@ do_aim_pose(struct cemu_device *dev,
 	// "Jakob way"
 	xrt_result_t xret = get_other_two(dev, hand_timestamp_ns, hand_timestamp_ns, &head, &joint_set_secondary);
 #else
-	// "Moses way"
+	// "Moshi way"
 	xrt_result_t xret = get_other_two(dev, head_timestamp_ns, hand_timestamp_ns, &head, &joint_set_secondary);
 #endif
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	U_LOG_CHK_AND_RET(sys->log_level, xret, "get_other_two");
 
 	// Average shoulder width for women:37cm, men:41cm, center of shoulder
 	// joint is around 4cm inwards
@@ -338,28 +374,28 @@ cemu_device_get_tracked_pose(struct xrt_device *xdev,
 	struct cemu_device *dev = cemu_device(xdev);
 	struct cemu_system *sys = dev->sys;
 
-	if (name != XRT_INPUT_SIMPLE_GRIP_POSE && name != XRT_INPUT_SIMPLE_AIM_POSE) {
+	if (name != XRT_INPUT_HAND_CTRL_EMU_AIM_POSE && name != XRT_INPUT_HAND_CTRL_EMU_GRIP_POSE) {
 		U_LOG_XDEV_UNSUPPORTED_INPUT(&dev->base, dev->sys->log_level, name);
 		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 	static int64_t hand_timestamp_ns;
 
 	struct xrt_hand_joint_set joint_set;
-	sys->in_hand->get_hand_tracking(sys->in_hand, dev->ht_input_name, at_timestamp_ns, &joint_set,
-	                                &hand_timestamp_ns);
+	xrt_result_t xret = xrt_device_get_hand_tracking(sys->in_hand, dev->ht_input_name, at_timestamp_ns, &joint_set,
+	                                                 &hand_timestamp_ns);
+	U_LOG_CHK_AND_RET(sys->log_level, xret, "xrt_device_get_hand_tracking");
 
 	if (joint_set.is_active == false) {
 		out_relation->relation_flags = XRT_SPACE_RELATION_BITMASK_NONE;
 		return XRT_SUCCESS;
 	}
 
-	xrt_result_t xret = XRT_SUCCESS;
 	switch (name) {
-	case XRT_INPUT_SIMPLE_GRIP_POSE: {
+	case XRT_INPUT_HAND_CTRL_EMU_GRIP_POSE: {
 		xret = do_grip_pose(&joint_set, out_relation, sys->grip_offset_from_palm, dev->hand_index);
 		break;
 	}
-	case XRT_INPUT_SIMPLE_AIM_POSE: {
+	case XRT_INPUT_HAND_CTRL_EMU_AIM_POSE: {
 		// Assume that now we're doing everything in the timestamp from the hand-tracker, so use
 		// hand_timestamp_ns. This will cause the controller to lag behind but otherwise be correct
 		xret = do_aim_pose(dev, &joint_set, at_timestamp_ns, hand_timestamp_ns, out_relation);
@@ -369,12 +405,6 @@ cemu_device_get_tracked_pose(struct xrt_device *xdev,
 	}
 
 	return xret;
-}
-
-static void
-cemu_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	// No-op, needed to avoid crash.
 }
 
 //! @todo This is flickery; investigate once we get better hand tracking
@@ -396,38 +426,54 @@ static xrt_result_t
 cemu_device_update_inputs(struct xrt_device *xdev)
 {
 	struct cemu_device *dev = cemu_device(xdev);
+	struct cemu_system *sys = dev->sys;
 
 	struct xrt_hand_joint_set joint_set;
 	int64_t noop;
 
-	xrt_device_get_hand_tracking(dev->sys->in_hand, dev->ht_input_name, os_monotonic_get_ns(), &joint_set, &noop);
+	xrt_result_t xret = xrt_device_get_hand_tracking(dev->sys->in_hand, dev->ht_input_name, os_monotonic_get_ns(),
+	                                                 &joint_set, &noop);
+	U_LOG_CHK_AND_RET(sys->log_level, xret, "xrt_device_get_hand_tracking");
 
 	if (!joint_set.is_active) {
-		xdev->inputs[CEMU_INDEX_SELECT].value.boolean = false;
-		xdev->inputs[CEMU_INDEX_MENU].value.boolean = false;
+		xdev->inputs[CEMU_INDEX_PINCH_BOOL].value.boolean = false;
+		xdev->inputs[CEMU_INDEX_PINCH_FLOAT].value.vec1.x = 0.f;
 		return XRT_SUCCESS;
 	}
 
 	decide(joint_set.values.hand_joint_set_default[XRT_HAND_JOINT_INDEX_TIP].relation.pose.position,
 	       joint_set.values.hand_joint_set_default[XRT_HAND_JOINT_THUMB_TIP].relation.pose.position,
-	       &xdev->inputs[CEMU_INDEX_SELECT].value.boolean);
+	       &xdev->inputs[CEMU_INDEX_PINCH_BOOL].value.boolean);
 
 	// For now, all other inputs are off - detecting any gestures more complicated than pinch is too unreliable for
 	// now.
-	xdev->inputs[CEMU_INDEX_MENU].value.boolean = false;
+	if (xdev->inputs[CEMU_INDEX_PINCH_BOOL].value.boolean) {
+		xdev->inputs[CEMU_INDEX_PINCH_FLOAT].value.vec1.x = 1.0f;
+	} else {
+		xdev->inputs[CEMU_INDEX_PINCH_FLOAT].value.vec1.x = 0.0f;
+	}
 
 	return XRT_SUCCESS;
 }
 
-
 extern "C" int
 cemu_devices_create(struct xrt_device *head, struct xrt_device *hands, struct xrt_device **out_xdevs)
 {
+	enum xrt_input_name ht_input_names[2];
+	if (!find_best_ht_input_names(hands, ht_input_names)) {
+		U_LOG_E("\"hands\" parameter is not a hand-tracking device or does have expected inputs.");
+		return 0;
+	}
+
 	enum u_device_alloc_flags flags = U_DEVICE_ALLOC_NO_FLAGS;
 
 	struct cemu_device *cemud[2];
 
 	struct cemu_system *system = U_TYPED_CALLOC(struct cemu_system);
+	if (system == NULL) {
+		return 0;
+	}
+
 	system->in_hand = hands;
 	system->in_head = head;
 
@@ -442,24 +488,20 @@ cemu_devices_create(struct xrt_device *head, struct xrt_device *hands, struct xr
 
 		cemud[i]->base.tracking_origin = hands->tracking_origin;
 
-		cemud[i]->base.name = XRT_DEVICE_SIMPLE_CONTROLLER;
-		cemud[i]->base.hand_tracking_supported = true;
-		cemud[i]->base.orientation_tracking_supported = true;
-		cemud[i]->base.position_tracking_supported = true;
+		cemud[i]->base.name = XRT_DEVICE_HAND_CTRL_EMU;
+		cemud[i]->base.supported.hand_tracking = true;
+		cemud[i]->base.supported.orientation_tracking = true;
+		cemud[i]->base.supported.position_tracking = true;
 
+		cemud[i]->base.inputs[CEMU_INDEX_HAND_TRACKING].name = ht_input_names[i];
+		cemud[i]->base.inputs[CEMU_INDEX_PINCH_BOOL].name = XRT_INPUT_HAND_CTRL_EMU_PINCH_BOOL;
+		cemud[i]->base.inputs[CEMU_INDEX_PINCH_FLOAT].name = XRT_INPUT_HAND_CTRL_EMU_PINCH_VALUE;
+		cemud[i]->base.inputs[CEMU_INDEX_GRIP].name = XRT_INPUT_HAND_CTRL_EMU_GRIP_POSE;
+		cemud[i]->base.inputs[CEMU_INDEX_AIM].name = XRT_INPUT_HAND_CTRL_EMU_AIM_POSE;
 
-		cemud[i]->base.inputs[CEMU_INDEX_HAND_TRACKING].name =
-		    i ? XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT : XRT_INPUT_GENERIC_HAND_TRACKING_LEFT;
-		cemud[i]->base.inputs[CEMU_INDEX_SELECT].name = XRT_INPUT_SIMPLE_SELECT_CLICK;
-		cemud[i]->base.inputs[CEMU_INDEX_MENU].name = XRT_INPUT_SIMPLE_MENU_CLICK;
-		cemud[i]->base.inputs[CEMU_INDEX_GRIP].name = XRT_INPUT_SIMPLE_GRIP_POSE;
-		cemud[i]->base.inputs[CEMU_INDEX_AIM].name = XRT_INPUT_SIMPLE_AIM_POSE;
-
+		u_device_populate_function_pointers(&cemud[i]->base, cemu_device_get_tracked_pose, cemu_device_destroy);
 		cemud[i]->base.update_inputs = cemu_device_update_inputs;
-		cemud[i]->base.get_tracked_pose = cemu_device_get_tracked_pose;
-		cemud[i]->base.set_output = cemu_device_set_output;
 		cemud[i]->base.get_hand_tracking = cemu_device_get_hand_tracking;
-		cemud[i]->base.destroy = cemu_device_destroy;
 
 		cemud[i]->base.device_type =
 		    i ? XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER : XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER;
@@ -475,9 +517,7 @@ cemu_devices_create(struct xrt_device *head, struct xrt_device *hands, struct xr
 			CEMU_WARN(cemud[i], "serial truncated: %s", cemud[i]->base.str);
 		}
 
-		cemud[i]->ht_input_name =
-		    i ? XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT : XRT_INPUT_GENERIC_HAND_TRACKING_LEFT;
-
+		cemud[i]->ht_input_name = ht_input_names[i];
 		cemud[i]->hand_index = i;
 		system->out_hand[i] = cemud[i];
 

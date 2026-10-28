@@ -1,0 +1,51 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"io_cache_create": {
+		"out": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+	"io_cache_get_info": {
+		"in": [ {"name": "id", "type": "uint32_t"} ],
+		"out": [ {"name": "info", "type": "struct xrt_io_cache_info"} ]
+	},
+	"io_cache_read": {
+		"varlen": true,
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "generation_id", "type": "uint64_t"},
+			{"name": "input_count", "type": "uint32_t"},
+			{"name": "output_count", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "stale", "type": "bool"}
+		]
+	},
+	"io_cache_create_space": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "device_id", "type": "struct xrt_device_id"},
+			{"name": "name", "type": "enum xrt_input_name"}
+		],
+		"out": [ {"name": "space_id", "type": "uint32_t"} ]
+	},
+	"io_cache_set_output": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "device_id", "type": "struct xrt_device_id"},
+			{"name": "name", "type": "enum xrt_output_name"},
+			{"name": "value", "type": "struct xrt_output_value"}
+		]
+	},
+	"io_cache_get_output_limits": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "device_id", "type": "struct xrt_device_id"}
+		],
+		"out": [ {"name": "limits", "type": "struct xrt_output_limits"} ]
+	},
+	"io_cache_destroy": {
+		"in": [ {"name": "id", "type": "uint32_t"} ]
+	}
+}

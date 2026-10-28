@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -7,12 +8,16 @@
  * @ingroup drv_remote
  */
 
-#include "r_internal.h"
-
 #include "util/u_var.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
-#include "util/u_space_overseer.h"
+#include "util/u_system_devices.h"
+
+#include "b_body_tracker.h"
+#include "b_hand_tracker.h"
+#include "b_io_cache.h"
+
+#include "r_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -120,7 +125,7 @@ socket_close(r_socket_t id)
 static inline r_socket_t
 socket_create(void)
 {
-	return socket(AF_INET, SOCK_STREAM, 0);
+	return socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
 }
 
 static inline int
@@ -248,7 +253,11 @@ do_accept(struct r_hub *r)
 	}
 
 	socklen_t addr_length = (socklen_t)sizeof(addr);
+#ifdef SOCK_CLOEXEC
+	ret = accept4(r->accept_fd, (struct sockaddr *)&addr, &addr_length, SOCK_CLOEXEC);
+#else
 	ret = accept(r->accept_fd, (struct sockaddr *)&addr, &addr_length);
+#endif
 	if (ret < 0) {
 		R_ERROR(r, "accept: " R_SOCKET_FMT, ret);
 		return ret;
@@ -372,8 +381,8 @@ r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
 	os_thread_helper_stop_and_wait(&r->oth);
 
 	// Destroy all of the devices now.
-	for (uint32_t i = 0; i < ARRAY_SIZE(r->base.xdevs); i++) {
-		xrt_device_destroy(&r->base.xdevs[i]);
+	for (uint32_t i = 0; i < ARRAY_SIZE(r->base.static_xdevs); i++) {
+		xrt_device_destroy(&r->base.static_xdevs[i]);
 	}
 
 	// Should be safe to destroy the sockets now.
@@ -405,17 +414,25 @@ r_hub_system_devices_destroy(struct xrt_system_devices *xsysd)
 xrt_result_t
 r_create_devices(uint16_t port,
                  uint32_t view_count,
-                 struct xrt_session_event_sink *broadcast,
-                 struct xrt_system_devices **out_xsysd,
-                 struct xrt_space_overseer **out_xso)
+                 uint32_t w_pixels,
+                 uint32_t h_pixels,
+                 float w_meters,
+                 float h_meters,
+                 struct xrt_system_devices **out_xsysd)
 {
-	struct r_hub *r = U_TYPED_CALLOC(struct r_hub);
 	int ret;
 
-	r->base.destroy = r_hub_system_devices_destroy;
-	r->base.get_roles = r_hub_system_devices_get_roles;
+	struct r_hub *r = U_TYPED_CALLOC(struct r_hub);
+
+	u_system_devices_populate_function_pointers(&r->base, r_hub_system_devices_get_roles,
+	                                            r_hub_system_devices_destroy);
+	r->base.create_body_tracker = b_body_tracker_create;
+	r->base.create_hand_tracker = b_hand_tracker_create;
+	r->base.create_io_cache = b_io_cache_create;
+
 	r->origin.type = XRT_TRACKING_TYPE_RGB;
 	r->origin.initial_offset = (struct xrt_pose)XRT_POSE_IDENTITY;
+	r->reset.header = R_HEADER_VALUE;
 	r->reset.head.center = (struct xrt_pose)XRT_POSE_IDENTITY;
 	r->reset.head.center.position.y = 1.6f;
 	r->reset.left.active = true;
@@ -438,6 +455,10 @@ r_create_devices(uint16_t port,
 	r->gui.right = true;
 	r->port = port;
 	r->view_count = view_count;
+	r->w_pixels = w_pixels;
+	r->h_pixels = h_pixels;
+	r->w_meters = w_meters;
+	r->h_meters = h_meters;
 	r->accept_fd = -1;
 	r->rc.fd = -1;
 
@@ -466,50 +487,15 @@ r_create_devices(uint16_t port,
 	struct xrt_device *left = r_device_create(r, true);
 	struct xrt_device *right = r_device_create(r, false);
 
-	r->base.xdevs[r->base.xdev_count++] = head;
-	r->left_index = (int32_t)r->base.xdev_count;
-	r->base.xdevs[r->base.xdev_count++] = left;
-	r->right_index = (int32_t)r->base.xdev_count;
-	r->base.xdevs[r->base.xdev_count++] = right;
+	r->base.static_xdevs[r->base.static_xdev_count++] = head;
+	r->left_index = (int32_t)r->base.static_xdev_count;
+	r->base.static_xdevs[r->base.static_xdev_count++] = left;
+	r->right_index = (int32_t)r->base.static_xdev_count;
+	r->base.static_xdevs[r->base.static_xdev_count++] = right;
 
 	r->base.static_roles.head = head;
-	r->base.static_roles.hand_tracking.left = left;
-	r->base.static_roles.hand_tracking.right = right;
-
-
-	/*
-	 * Space overseer.
-	 */
-
-	struct u_space_overseer *uso = u_space_overseer_create(broadcast);
-	struct xrt_space_overseer *xso = (struct xrt_space_overseer *)uso;
-	assert(uso != NULL);
-
-	struct xrt_space *root = xso->semantic.root; // Convenience
-	struct xrt_space *offset = NULL;
-	u_space_overseer_create_offset_space(uso, root, &r->origin.initial_offset, &offset);
-
-	for (uint32_t i = 0; i < r->base.xdev_count; i++) {
-		u_space_overseer_link_space_to_device(uso, offset, r->base.xdevs[i]);
-	}
-
-	// Unreference now
-	xrt_space_reference(&offset, NULL);
-
-	// Set root as stage space.
-	xrt_space_reference(&xso->semantic.stage, root);
-
-	// Local 1.6 meters up.
-	struct xrt_pose local_offset = {XRT_QUAT_IDENTITY, {0.0f, 1.6f, 0.0f}};
-	u_space_overseer_create_offset_space(uso, root, &local_offset, &xso->semantic.local);
-
-	// Local floor at the same place as local except at floor height.
-	struct xrt_pose local_floor_offset = local_offset;
-	local_floor_offset.position.y = 0.0f;
-	u_space_overseer_create_offset_space(uso, root, &local_floor_offset, &xso->semantic.local_floor);
-
-	// Make view space be the head pose.
-	u_space_overseer_create_pose_space(uso, head, XRT_INPUT_GENERIC_HEAD_POSE, &xso->semantic.view);
+	r->base.static_roles.hand_tracking.conforming.left = left;
+	r->base.static_roles.hand_tracking.conforming.right = right;
 
 
 	/*
@@ -531,7 +517,6 @@ r_create_devices(uint16_t port,
 	 */
 
 	*out_xsysd = &r->base;
-	*out_xso = xso;
 
 	return XRT_SUCCESS;
 }
@@ -649,6 +634,12 @@ r_remote_connection_read_one(struct r_remote_connection *rc, struct r_remote_dat
 		}
 	}
 
+	if (data->header != R_HEADER_VALUE) {
+		RC_ERROR(rc, "Protocol version mismatch (expected 0x%08" PRIx64 ", got 0x%08" PRIx64, R_HEADER_VALUE,
+		         data->header);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -657,6 +648,12 @@ r_remote_connection_write_one(struct r_remote_connection *rc, const struct r_rem
 {
 	const size_t size = sizeof(*data);
 	size_t current = 0;
+
+	if (data->header != R_HEADER_VALUE) {
+		RC_ERROR(rc, "Protocol version mismatch (expected 0x%08" PRIx64 ", got 0x%08" PRIx64, R_HEADER_VALUE,
+		         data->header);
+		return -1;
+	}
 
 	while (current < size) {
 		void *ptr = (uint8_t *)data + current;

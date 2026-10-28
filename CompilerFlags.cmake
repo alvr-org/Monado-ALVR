@@ -9,6 +9,7 @@ endif()
 add_library(xrt-optimized-math INTERFACE)
 
 if(MSVC)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /experimental:c11atomics")
 	target_compile_options(xrt-optimized-math INTERFACE $<IF:$<CONFIG:Debug>,/O2 /Ob2,/O2 /Ob3>)
 else()
 	set(CMAKE_C_FLAGS
@@ -30,11 +31,19 @@ else()
 	target_compile_options(xrt-optimized-math INTERFACE $<IF:$<CONFIG:Debug>,-O2,-O3>)
 endif()
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT APPLE)
 	# Even clang's gnu-style driver on windows doesn't accept this argument.
+	# Apple's compiler doesn't like it either.
 
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 	set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--no-undefined")
+endif()
+
+if(APPLE)
+	# Suppress warnings about duplicate libraries in the link line.
+	# This happens because CMake's transitive dependency handling can
+	# result in the same static library appearing multiple times.
+	add_link_options("-Wl,-no_warn_duplicate_libraries")
 endif()
 
 # Must call before adding targets that will use xrt-optimized-math

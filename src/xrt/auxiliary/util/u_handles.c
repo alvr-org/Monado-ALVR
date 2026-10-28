@@ -1,4 +1,5 @@
 // Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -10,6 +11,64 @@
  */
 
 #include "u_handles.h"
+#include "u_logging.h"
+
+
+/*
+ *
+ * Helpers
+ *
+ */
+
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD) || defined(XRT_GRAPHICS_SYNC_HANDLE_IS_FD)
+#include <errno.h>
+#include <string.h>
+
+static inline void
+log_errno(int fd, const char *file, int line, const char *func, const char *thing)
+{
+	if (u_log_get_global_level() > U_LOGGING_ERROR) {
+		return;
+	}
+
+	// Broken out for future improvements, like using strerrorname_np.
+	const char *error_message = strerror(errno);
+
+	u_log(                                 //
+	    file, line, func, U_LOGGING_ERROR, //
+	    "%s failed: %s (fd: %i) [%s:%d]",  //
+	    thing, error_message,              //
+	    fd, file, line);                   //
+}
+
+static inline int
+fd_close(int fd, const char *file, int line, const char *func)
+{
+	int ret = close(fd);
+	if (ret >= 0) {
+		return ret;
+	}
+
+	log_errno(fd, file, line, func, "close");
+
+	return -1;
+}
+
+static inline int
+fd_dup(int fd, const char *file, int line, const char *func)
+{
+	int ret = dup(fd);
+	if (ret >= 0) {
+		return ret;
+	}
+
+	log_errno(fd, file, line, func, "dup");
+
+	return -1;
+}
+
+#endif
+
 
 /*
  *
@@ -37,17 +96,9 @@ ref_graphics_handle(xrt_graphics_buffer_handle_t handle)
 #elif defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_FD)
 #include <unistd.h>
 
-static inline void
-release_graphics_handle(xrt_graphics_buffer_handle_t handle)
-{
-	close(handle);
-}
-
-static inline xrt_graphics_buffer_handle_t
-ref_graphics_handle(xrt_graphics_buffer_handle_t handle)
-{
-	return dup(handle);
-}
+// To get the right function name and location.
+#define release_graphics_handle(HANDLE) fd_close(HANDLE, __FILE__, __LINE__, __func__)
+#define ref_graphics_handle(HANDLE) fd_dup(HANDLE, __FILE__, __LINE__, __func__)
 
 #elif defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_WIN32_HANDLE)
 
@@ -105,17 +156,9 @@ u_graphics_buffer_unref(xrt_graphics_buffer_handle_t *handle_ptr)
 #if defined(XRT_GRAPHICS_SYNC_HANDLE_IS_FD)
 #include <unistd.h>
 
-static inline void
-release_sync_handle(xrt_graphics_sync_handle_t handle)
-{
-	close(handle);
-}
-
-static inline xrt_graphics_sync_handle_t
-ref_sync_handle(xrt_graphics_sync_handle_t handle)
-{
-	return dup(handle);
-}
+// To get the right function name and location.
+#define release_sync_handle(HANDLE) fd_close(HANDLE, __FILE__, __LINE__, __func__)
+#define ref_sync_handle(HANDLE) fd_dup(HANDLE, __FILE__, __LINE__, __func__)
 
 #elif defined(XRT_GRAPHICS_SYNC_HANDLE_IS_WIN32_HANDLE)
 

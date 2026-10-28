@@ -11,7 +11,7 @@
 #include "util/u_trace_marker.h"
 
 
-#ifdef XRT_FEATURE_SERVICE
+#ifdef XRT_FEATURE_IPC_CLIENT
 
 // Insert the on load constructor to setup trace marker.
 U_TRACE_TARGET_SETUP(U_TRACE_WHICH_OPENXR)

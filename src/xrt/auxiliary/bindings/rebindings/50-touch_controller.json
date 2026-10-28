@@ -1,0 +1,327 @@
+{
+	"touch_controller_to_mixed_reality_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/hp/mixed_reality_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/no_proximity",
+			"/helper/controller/touch/no_thumbrest",
+			"/helper/controller/touch/trigger_touch_to_value"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/left/input/thumbstick/touch": false,
+			"/user/hand/left/input/x": true,
+			"/user/hand/left/input/x/click": true,
+			"/user/hand/left/input/x/touch": "/user/hand/left/input/x/click",
+			"/user/hand/left/input/y": true,
+			"/user/hand/left/input/y/click": true,
+			"/user/hand/left/input/y/touch": "/user/hand/left/input/y/click",
+			"/user/hand/right/input/a": true,
+			"/user/hand/right/input/a/click": true,
+			"/user/hand/right/input/a/touch": "/user/hand/right/input/a/click",
+			"/user/hand/right/input/b": true,
+			"/user/hand/right/input/b/click": true,
+			"/user/hand/right/input/b/touch": "/user/hand/right/input/b/click",
+			"/user/hand/right/input/system": "/user/hand/right/input/menu",
+			"/user/hand/right/input/system/click": "/user/hand/right/input/menu/click",
+			"/user/hand/right/input/thumbstick/touch": false
+		}
+	},
+	"touch_controller_to_touch_controller_rift_cv1": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_rift_cv1",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": true,
+			"/user/hand/left/input/menu/click": true,
+			"/user/hand/left/input/thumb_fb/proximity_fb": false,
+			"/user/hand/left/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/left/input/thumbrest/touch": true,
+			"/user/hand/left/input/thumbstick/touch": true,
+			"/user/hand/left/input/trigger/proximity": true,
+			"/user/hand/left/input/trigger/proximity_fb": "/user/hand/left/input/trigger/proximity",
+			"/user/hand/left/input/trigger/touch": true,
+			"/user/hand/right/input/system": true,
+			"/user/hand/right/input/system/click": true,
+			"/user/hand/right/input/thumb_fb/proximity_fb": false,
+			"/user/hand/right/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/right/input/thumbrest/touch": true,
+			"/user/hand/right/input/thumbstick/touch": true,
+			"/user/hand/right/input/trigger/proximity": true,
+			"/user/hand/right/input/trigger/proximity_fb": "/user/hand/right/input/trigger/proximity",
+			"/user/hand/right/input/trigger/touch": true
+		}
+	},
+	"touch_controller_to_ball_on_a_stick_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/mndx/ball_on_a_stick_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/menu_to_system",
+			"/helper/controller/touch/no_proximity",
+			"/helper/controller/touch/no_thumbrest",
+			"/helper/controller/touch/trigger_touch_to_value"
+		],
+		"bindings": {
+			"/user/hand/left/input/squeeze": "/user/hand/left/input/start",
+			"/user/hand/left/input/squeeze/value": "/user/hand/left/input/start/click",
+			"/user/hand/left/input/thumbstick": false,
+			"/user/hand/left/input/thumbstick/click": false,
+			"/user/hand/left/input/thumbstick/dpad_down": false,
+			"/user/hand/left/input/thumbstick/dpad_left": false,
+			"/user/hand/left/input/thumbstick/dpad_right": false,
+			"/user/hand/left/input/thumbstick/dpad_up": false,
+			"/user/hand/left/input/thumbstick/touch": false,
+			"/user/hand/left/input/thumbstick/x": false,
+			"/user/hand/left/input/thumbstick/xy": false,
+			"/user/hand/left/input/thumbstick/y": false,
+			"/user/hand/left/input/x": "/user/hand/left/input/cross_mndx",
+			"/user/hand/left/input/x/click": "/user/hand/left/input/cross_mndx/click",
+			"/user/hand/left/input/x/touch": "/user/hand/left/input/cross_mndx/click",
+			"/user/hand/left/input/y": "/user/hand/left/input/square_mndx",
+			"/user/hand/left/input/y/click": "/user/hand/left/input/square_mndx/click",
+			"/user/hand/left/input/y/touch": "/user/hand/left/input/square_mndx/click",
+			"/user/hand/right/input/a": "/user/hand/right/input/circle_mndx",
+			"/user/hand/right/input/a/click": "/user/hand/right/input/circle_mndx/click",
+			"/user/hand/right/input/a/touch": "/user/hand/right/input/circle_mndx/click",
+			"/user/hand/right/input/b": "/user/hand/right/input/triangle_mndx",
+			"/user/hand/right/input/b/click": "/user/hand/right/input/triangle_mndx/click",
+			"/user/hand/right/input/b/touch": "/user/hand/right/input/triangle_mndx/click",
+			"/user/hand/right/input/squeeze": "/user/hand/right/input/start",
+			"/user/hand/right/input/squeeze/value": "/user/hand/right/input/start/click",
+			"/user/hand/right/input/thumbstick": false,
+			"/user/hand/right/input/thumbstick/click": false,
+			"/user/hand/right/input/thumbstick/dpad_down": false,
+			"/user/hand/right/input/thumbstick/dpad_left": false,
+			"/user/hand/right/input/thumbstick/dpad_right": false,
+			"/user/hand/right/input/thumbstick/dpad_up": false,
+			"/user/hand/right/input/thumbstick/touch": false,
+			"/user/hand/right/input/thumbstick/x": false,
+			"/user/hand/right/input/thumbstick/xy": false,
+			"/user/hand/right/input/thumbstick/y": false
+		}
+	},
+	"touch_controller_to_flipvr": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/mndx/flipvr",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/transform/thumbstick_to_joystick",
+			"/helper/controller/touch/menu_to_system",
+			"/helper/controller/touch/no_proximity",
+			"/helper/controller/touch/no_thumbrest"
+		],
+		"bindings": {
+			"/user/hand/left/input/thumbstick/touch": "/user/hand/left/input/joystick/touch",
+			"/user/hand/left/input/trigger/touch": true,
+			"/user/hand/right/input/thumbstick/touch": "/user/hand/right/input/joystick/touch",
+			"/user/hand/right/input/trigger/touch": true
+		}
+	},
+	"touch_controller_to_hydra": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/mndx/hydra",
+		"helpers": [
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/no_proximity",
+			"/helper/controller/touch/no_thumbrest",
+			"/helper/controller/touch/trigger_touch_to_value"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": false,
+			"/user/hand/left/input/menu/click": false,
+			"/user/hand/left/input/squeeze": "/user/hand/left/input/bumper",
+			"/user/hand/left/input/squeeze/value": "/user/hand/left/input/bumper/click",
+			"/user/hand/left/input/thumbstick/touch": false,
+			"/user/hand/left/input/x": "/user/hand/left/input/2",
+			"/user/hand/left/input/x/click": "/user/hand/left/input/2/click",
+			"/user/hand/left/input/x/touch": "/user/hand/left/input/2/click",
+			"/user/hand/left/input/y": "/user/hand/left/input/4",
+			"/user/hand/left/input/y/click": "/user/hand/left/input/4/click",
+			"/user/hand/left/input/y/touch": "/user/hand/left/input/4/click",
+			"/user/hand/left/output/haptic": false,
+			"/user/hand/right/input/a": "/user/hand/right/input/1",
+			"/user/hand/right/input/a/click": "/user/hand/right/input/1/click",
+			"/user/hand/right/input/a/touch": "/user/hand/right/input/1/click",
+			"/user/hand/right/input/b": "/user/hand/right/input/3",
+			"/user/hand/right/input/b/click": "/user/hand/right/input/3/click",
+			"/user/hand/right/input/b/touch": "/user/hand/right/input/3/click",
+			"/user/hand/right/input/squeeze": "/user/hand/right/input/bumper",
+			"/user/hand/right/input/squeeze/value": "/user/hand/right/input/bumper/click",
+			"/user/hand/right/input/system": false,
+			"/user/hand/right/input/system/click": false,
+			"/user/hand/right/input/thumbstick/touch": false,
+			"/user/hand/right/output/haptic": false
+		}
+	},
+	"touch_controller_to_pssense_controller_mndx": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/mndx/pssense_controller_mndx",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/transform/squeeze_click",
+			"/helper/controller/touch/menu_to_system",
+			"/helper/controller/touch/no_thumbrest",
+			"/helper/controller/touch/stick_and_trigger_touch"
+		],
+		"bindings": {
+			"/user/hand/left/input/thumb_fb/proximity_fb": false,
+			"/user/hand/left/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/left/input/trigger/proximity": true,
+			"/user/hand/left/input/trigger/proximity_fb": "/user/hand/left/input/trigger/proximity",
+			"/user/hand/left/input/x": "/user/hand/left/input/square_mndx",
+			"/user/hand/left/input/x/click": "/user/hand/left/input/square_mndx/click",
+			"/user/hand/left/input/x/touch": "/user/hand/left/input/square_mndx/touch",
+			"/user/hand/left/input/y": "/user/hand/left/input/triangle_mndx",
+			"/user/hand/left/input/y/click": "/user/hand/left/input/triangle_mndx/click",
+			"/user/hand/left/input/y/touch": "/user/hand/left/input/triangle_mndx/touch",
+			"/user/hand/right/input/a": "/user/hand/right/input/cross_mndx",
+			"/user/hand/right/input/a/click": "/user/hand/right/input/cross_mndx/click",
+			"/user/hand/right/input/a/touch": "/user/hand/right/input/cross_mndx/touch",
+			"/user/hand/right/input/b": "/user/hand/right/input/circle_mndx",
+			"/user/hand/right/input/b/click": "/user/hand/right/input/circle_mndx/click",
+			"/user/hand/right/input/b/touch": "/user/hand/right/input/circle_mndx/touch",
+			"/user/hand/right/input/thumb_fb/proximity_fb": false,
+			"/user/hand/right/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/right/input/trigger/proximity": true,
+			"/user/hand/right/input/trigger/proximity_fb": "/user/hand/right/input/trigger/proximity"
+		}
+	},
+	"touch_controller_to_touch_plus_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/meta/touch_plus_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/menu_and_system",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/proximity_fb_to_proximity",
+			"/helper/controller/touch/stick_and_trigger_touch"
+		]
+	},
+	"touch_controller_to_touch_pro_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/meta/touch_pro_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/menu_and_system",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/proximity_fb_to_proximity",
+			"/helper/controller/touch/stick_and_trigger_touch"
+		]
+	},
+	"touch_controller_to_touch_controller_quest_1_rift_s": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_quest_1_rift_s",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/menu_and_system",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/proximity_without_fb",
+			"/helper/controller/touch/no_thumbrest",
+			"/helper/controller/touch/stick_and_trigger_touch"
+		]
+	},
+	"touch_controller_to_touch_controller_quest_2": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_quest_2",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/menu_and_system",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/proximity_without_fb",
+			"/helper/controller/touch/stick_and_trigger_touch"
+		]
+	},
+	"touch_controller_to_pico4_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/bytedance/pico4_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/abxy",
+			"/helper/controller/identity/menu_and_system",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/touch/no_proximity",
+			"/helper/controller/touch/no_thumbrest",
+			"/helper/controller/touch/stick_and_trigger_touch"
+		]
+	},
+	"touch_controller_to_generic_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/khr/generic_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/transform/grip_surface_to_palm",
+			"/helper/controller/touch/no_proximity",
+			"/helper/controller/touch/no_thumbrest"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": false,
+			"/user/hand/left/input/menu/click": false,
+			"/user/hand/left/input/thumbstick/touch": false,
+			"/user/hand/left/input/trigger/touch": false,
+			"/user/hand/left/input/x": "/user/hand/left/input/primary",
+			"/user/hand/left/input/x/click": "/user/hand/left/input/primary/click",
+			"/user/hand/left/input/x/touch": false,
+			"/user/hand/left/input/y": "/user/hand/left/input/secondary",
+			"/user/hand/left/input/y/click": "/user/hand/left/input/secondary/click",
+			"/user/hand/left/input/y/touch": false,
+			"/user/hand/right/input/a": "/user/hand/right/input/primary",
+			"/user/hand/right/input/a/click": "/user/hand/right/input/primary/click",
+			"/user/hand/right/input/a/touch": false,
+			"/user/hand/right/input/b": "/user/hand/right/input/secondary",
+			"/user/hand/right/input/b/click": "/user/hand/right/input/secondary/click",
+			"/user/hand/right/input/b/touch": false,
+			"/user/hand/right/input/system": false,
+			"/user/hand/right/input/system/click": false,
+			"/user/hand/right/input/thumbstick/touch": false,
+			"/user/hand/right/input/trigger/touch": false
+		}
+	}
+}

@@ -53,6 +53,13 @@ bool
 m_ff_vec3_f32_get(struct m_ff_vec3_f32 *ff, size_t num, struct xrt_vec3 *out_sample, uint64_t *out_timestamp_ns);
 
 /*!
+ * Return the timestamp of the sample at the index, zero means the last sample push, one second
+ * last and so on.
+ */
+bool
+m_ff_vec3_f32_get_timestamp(struct m_ff_vec3_f32 *ff, size_t num, uint64_t *out_timestamp_ns);
+
+/*!
  * Averages all samples in the fifo between the two timepoints, returns number
  * of samples sampled, if no samples was found between the timpoints returns 0
  * and sets @p out_average to all zeros.

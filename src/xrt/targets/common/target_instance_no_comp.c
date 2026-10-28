@@ -1,4 +1,5 @@
 // Copyright 2020-2024, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,9 +12,10 @@
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_config_os.h"
 
-#include "util/u_system.h"
 #include "util/u_trace_marker.h"
 #include "util/u_system_helpers.h"
+
+#include "b_system.h"
 
 #include "target_instance_parts.h"
 
@@ -32,7 +34,7 @@ t_instance_create_system(struct xrt_instance *xinst,
 {
 	XRT_TRACE_MARKER();
 
-	struct u_system *usys = NULL;
+	struct b_system *bsys = NULL;
 	struct xrt_system_devices *xsysd = NULL;
 	struct xrt_space_overseer *xso = NULL;
 	xrt_result_t xret = XRT_SUCCESS;
@@ -48,21 +50,21 @@ t_instance_create_system(struct xrt_instance *xinst,
 		return XRT_ERROR_ALLOCATION;
 	}
 
-	usys = u_system_create();
-	assert(usys != NULL); // Should never fail.
+	bsys = b_system_create();
+	assert(bsys != NULL); // Should never fail.
 
 	xret = u_system_devices_create_from_prober( //
 	    xinst,                                  //
-	    &usys->broadcast,                       //
+	    &bsys->broadcast,                       //
 	    &xsysd,                                 //
 	    &xso);                                  //
 	if (xret != XRT_SUCCESS) {
-		u_system_destroy(&usys);
+		b_system_destroy(&bsys);
 		return xret;
 	}
 
-	u_system_fill_properties(usys, xsysd->static_roles.head->str);
-	*out_xsys = &usys->base;
+	b_system_fill_properties(bsys, xsysd->static_roles.head->str);
+	*out_xsys = &bsys->base;
 	*out_xsysd = xsysd;
 	*out_xso = xso;
 

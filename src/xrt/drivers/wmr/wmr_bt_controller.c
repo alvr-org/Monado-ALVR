@@ -182,7 +182,8 @@ wmr_bt_controller_create(struct os_hid_device *controller_hid,
 	}
 
 	// Takes ownership of the connection
-	struct wmr_controller_base *wcb = wmr_controller_create(&conn->base, controller_type, vid, pid, log_level);
+	struct wmr_controller_base *wcb =
+	    wmr_controller_create(&conn->base, controller_type, vid, pid, log_level, NULL);
 	if (wcb == NULL) {
 		WMR_ERROR(conn, "WMR Controller (Bluetooth): Failed to create controller");
 		return NULL;

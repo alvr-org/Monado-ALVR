@@ -1,5 +1,6 @@
 // Copyright 2022, Simon Zeni <simon@bl4ckb0ne.ca>
-// Copyright 2022-2023, Collabora, Ltd.
+// Copyright 2022-2026, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -13,6 +14,7 @@
 #include "main/comp_window_peek.h"
 
 #include "util/u_debug.h"
+#include "util/u_extension_list.h"
 
 #ifdef XRT_HAVE_SDL2
 #include <SDL2/SDL.h>
@@ -36,6 +38,7 @@ struct comp_window_peek
 	uint32_t width, height;
 	bool running;
 	bool hidden;
+	bool shared_present_semaphore_wait_once;
 
 	struct vk_cmd_pool pool;
 	VkCommandBuffer cmd;
@@ -53,6 +56,8 @@ get_vk(struct comp_window_peek *w)
 static inline void
 create_images(struct comp_window_peek *w)
 {
+	struct vk_bundle *vk = get_vk(w);
+
 	struct comp_target_create_images_info info = {
 	    .extent = {w->width, w->height},
 	    .color_space = w->c->settings.color_space,
@@ -65,7 +70,7 @@ create_images(struct comp_window_peek *w)
 		info.formats[info.format_count++] = w->c->settings.formats[i];
 	}
 
-	comp_target_create_images(&w->base.base, &info);
+	comp_target_create_images(&w->base.base, &info, vk->main_queue);
 }
 
 static void *
@@ -185,10 +190,14 @@ comp_window_peek_create(struct comp_compositor *c)
 	 * SDL
 	 */
 
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-		COMP_ERROR(c, "Failed to init SDL2");
-		goto err_pool;
+	// Only initialize SDL if it hasn't been initialized yet
+	if (SDL_WasInit(SDL_INIT_VIDEO) == 0) {
+		if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+			COMP_ERROR(c, "Failed to init SDL2");
+			goto err_pool;
+		}
 	}
+
 
 	int x = SDL_WINDOWPOS_UNDEFINED;
 	int y = SDL_WINDOWPOS_UNDEFINED;
@@ -261,9 +270,9 @@ comp_window_peek_destroy(struct comp_window_peek **w_ptr)
 
 	struct vk_bundle *vk = get_vk(w);
 
-	os_mutex_lock(&vk->queue_mutex);
+	vk_queue_lock(vk->main_queue);
 	vk->vkDeviceWaitIdle(vk->device);
-	os_mutex_unlock(&vk->queue_mutex);
+	vk_queue_unlock(vk->main_queue);
 
 	vk_cmd_pool_lock(&w->pool);
 	vk->vkFreeCommandBuffers(vk->device, w->pool.pool, 1, &w->cmd);
@@ -313,6 +322,11 @@ comp_window_peek_blit(struct comp_window_peek *w, VkImage src, int32_t width, in
 	vk_cmd_pool_lock(&w->pool);
 
 	ret = vk->vkBeginCommandBuffer(w->cmd, &begin_info);
+	if (ret != VK_SUCCESS) {
+		vk_cmd_pool_unlock(&w->pool);
+		VK_ERROR(vk, "Error: Could not begin command buffer.\n");
+		return;
+	}
 
 	VkImageSubresourceRange range = {
 	    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -388,7 +402,7 @@ comp_window_peek_blit(struct comp_window_peek *w, VkImage src, int32_t width, in
 	    VK_ACCESS_TRANSFER_WRITE_BIT,         // srcAccessMask
 	    0,                                    // dstAccessMask
 	    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // oldImageLayout
-	    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,      // newImageLayout
+	    w->base.base.final_layout,            // newImageLayout
 	    VK_PIPELINE_STAGE_TRANSFER_BIT,       // srcStageMask
 	    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // dstStageMask
 	    range);                               // subresourceRange
@@ -428,8 +442,18 @@ comp_window_peek_blit(struct comp_window_peek *w, VkImage src, int32_t width, in
 	    .pSignalSemaphores = &w->base.base.semaphores.render_complete,
 	};
 
+	if (comp_target_is_shared_presentable_image(w->c->target)) {
+		if (w->shared_present_semaphore_wait_once) {
+			submit.pWaitSemaphores = NULL;
+			submit.pWaitDstStageMask = NULL;
+			submit.waitSemaphoreCount = 0;
+		} else {
+			w->shared_present_semaphore_wait_once = true;
+		}
+	}
+
 	// Done writing commands, submit to queue.
-	ret = vk_cmd_submit_locked(vk, 1, &submit, VK_NULL_HANDLE);
+	ret = vk_cmd_submit_locked(vk, vk->main_queue, 1, &submit, VK_NULL_HANDLE);
 
 	// Done submitting commands, unlock pool.
 	vk_cmd_pool_unlock(&w->pool);
@@ -451,9 +475,9 @@ comp_window_peek_blit(struct comp_window_peek *w, VkImage src, int32_t width, in
 	    .pResults = NULL,
 	};
 
-	os_mutex_lock(&vk->queue_mutex);
-	ret = vk->vkQueuePresentKHR(vk->queue, &present);
-	os_mutex_unlock(&vk->queue_mutex);
+	vk_queue_lock(vk->main_queue);
+	ret = vk->vkQueuePresentKHR(vk->main_queue->queue, &present);
+	vk_queue_unlock(vk->main_queue);
 
 	if (ret != VK_SUCCESS) {
 		VK_ERROR(vk, "Error: could not present to queue.\n");
@@ -465,4 +489,78 @@ enum comp_window_peek_eye
 comp_window_peek_get_eye(struct comp_window_peek *w)
 {
 	return w->eye;
+}
+
+bool
+comp_window_peek_get_vk_instance_exts(struct u_extension_list_builder *out_required_builder)
+{
+	if (out_required_builder == NULL) {
+		U_LOG_E("comp_window_peek: out_required_builder is null.");
+		return false;
+	}
+
+	// Only initialize SDL if it hasn't been initialized yet
+	if (SDL_WasInit(SDL_INIT_VIDEO) == 0) {
+		if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+			U_LOG_E("comp_window_peek: Failed to init SDL2");
+			return false;
+		}
+	}
+
+	/*!
+	 * NOTE: The SDL2 function SDL_Vulkan_GetInstanceExtensions requires an SDL_Window
+	 *       but the compositor needs to know which vk (instance) extensions are required
+	 *       much earlier than when comp_window_peek is created.
+	 *
+	 *       API docs for SDL_Vulkan_GetInstanceExtensions states that in future versions
+	 *       this parameter will be removed so for now just create a temporary, tiny window.
+	 */
+
+	const char **instance_ext_names = NULL;
+	const int x = SDL_WINDOWPOS_UNDEFINED;
+	const int y = SDL_WINDOWPOS_UNDEFINED;
+	const int flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN;
+	SDL_Window *tmp_window = SDL_CreateWindow(__func__, x, y, 2, 2, flags);
+	if (tmp_window == NULL) {
+		U_LOG_E("comp_window_peek: Failed create temp SDL_Window for getting vk instance extensions.");
+		return false;
+	}
+
+	/*!
+	 * WARNING: The extension name strings will not be deeply copied, the docs for
+	 *          SDL_Vulkan_GetInstanceExtensions do not state the life time of these strings.
+	 *
+	 *          based on looking the current codebase these are copied from function-level static
+	 *          arrays containing string literals (expanded from vulkan header macros, e.g. VK_FOO_EXTENSION_NAME)
+	 * 			so we can assume it's safe to pass around but future versions this may change,
+	 *          they may get destroyed when deleting the SDL_Window (although check note comment above).
+	 */
+
+	uint32_t size = 0;
+	if (!SDL_Vulkan_GetInstanceExtensions(tmp_window, &size, NULL)) {
+		U_LOG_E("comp_window_peek: Failed Failed get vk instance extensions for SDL2.");
+		goto err_free;
+	}
+
+	if (size > 0) {
+		instance_ext_names = U_TYPED_ARRAY_CALLOC(const char *, size);
+		if (!SDL_Vulkan_GetInstanceExtensions(tmp_window, &size, instance_ext_names)) {
+			U_LOG_E("comp_window_peek: Failed Failed get vk instance extensions for SDL2.");
+			goto err_free;
+		}
+	}
+
+	for (uint32_t i = 0; i < size; ++i) {
+		if (u_extension_list_builder_append_unique(out_required_builder, instance_ext_names[i]) == 0) {
+			U_LOG_T("comp_window_peek: required instance extension: %s already exits, ignored.",
+			        instance_ext_names[i]);
+		} else {
+			U_LOG_T("comp_window_peek: added required instance extension: %s", instance_ext_names[i]);
+		}
+	}
+
+err_free:
+	free(instance_ext_names);
+	SDL_DestroyWindow(tmp_window);
+	return true;
 }

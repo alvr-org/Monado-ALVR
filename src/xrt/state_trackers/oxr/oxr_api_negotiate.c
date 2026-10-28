@@ -1,4 +1,5 @@
 // Copyright 2018-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -36,9 +37,12 @@ DEBUG_GET_ONCE_BOOL_OPTION(negotiate, "OXR_DEBUG_NEGOTIATE", false)
 
 
 #ifdef XRT_OS_WINDOWS
+//! @todo Remove these once clang format is updated
+//! @todo Check if this is actually needed? This was added one month before the libopenxr.def file?
+// clang-format off
 __declspec(dllexport) XRAPI_ATTR XrResult XRAPI_CALL
-    xrNegotiateLoaderRuntimeInterface(const XrNegotiateLoaderInfo *loaderInfo,
-                                      XrNegotiateRuntimeRequest *runtimeRequest);
+xrNegotiateLoaderRuntimeInterface(const XrNegotiateLoaderInfo *loaderInfo, XrNegotiateRuntimeRequest *runtimeRequest);
+// clang-format on
 #endif
 
 XRAPI_ATTR XrResult XRAPI_CALL
@@ -101,6 +105,28 @@ oxr_xrEnumerateApiLayerProperties(uint32_t propertyCapacityInput,
 	return XR_SUCCESS;
 }
 
+
+/*!
+ * @brief Helper define for generating that GetInstanceProcAddr function.
+ *
+ * Return the function if the extra condition is true.
+ */
+#define RETURN_IF_TRUE(funcName, extraCondition)                                                                       \
+	do {                                                                                                           \
+		if (extraCondition) {                                                                                  \
+			PFN_##funcName ret = &oxr_##funcName;                                                          \
+			*out_function = (PFN_xrVoidFunction)(ret);                                                     \
+			return XR_SUCCESS;                                                                             \
+		}                                                                                                      \
+	} while (false)
+
+/*!
+ * @brief Helper define for generating that GetInstanceProcAddr function.
+ *
+ * Return the function if the extension is enabled.
+ */
+#define RETURN_IF_EXT(funcName, short_ext_name) RETURN_IF_TRUE(funcName, inst->extensions.short_ext_name)
+
 /*!
  * @brief Helper define for generating that GetInstanceProcAddr function.
  *
@@ -124,11 +150,7 @@ oxr_xrEnumerateApiLayerProperties(uint32_t propertyCapacityInput,
 #define ENTRY_IF(funcName, extraCondition, message)                                                                    \
 	do {                                                                                                           \
 		if (strcmp(name, #funcName) == 0) {                                                                    \
-			if (extraCondition) {                                                                          \
-				PFN_##funcName ret = &oxr_##funcName;                                                  \
-				*out_function = (PFN_xrVoidFunction)(ret);                                             \
-				return XR_SUCCESS;                                                                     \
-			}                                                                                              \
+			RETURN_IF_TRUE(funcName, extraCondition);                                                      \
 			return XR_ERROR_FUNCTION_UNSUPPORTED;                                                          \
 		}                                                                                                      \
 	} while (false)
@@ -236,6 +258,10 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrSetAndroidApplicationThreadKHR, KHR_android_thread_settings);
 #endif // XR_HAVE_KHR_android_thread_settings
 
+#ifdef OXR_HAVE_EXT_enumerate_swapchain_formats2
+	ENTRY_IF_EXT(xrEnumerateSwapchainFormats2EXT, EXT_enumerate_swapchain_formats2);
+#endif // OXR_HAVE_EXT_enumerate_swapchain_formats2
+
 #ifdef OXR_HAVE_EXT_performance_settings
 	ENTRY_IF_EXT(xrPerfSettingsSetPerformanceLevelEXT, EXT_performance_settings);
 #endif // OXR_HAVE_EXT_performance_settings
@@ -260,6 +286,10 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrRequestDisplayRefreshRateFB, FB_display_refresh_rate);
 #endif
 
+#ifdef OXR_HAVE_FB_haptic_pcm
+	ENTRY_IF_EXT(xrGetDeviceSampleRateFB, FB_haptic_pcm);
+#endif
+
 #ifdef OXR_HAVE_FB_passthrough
 	ENTRY_IF_EXT(xrCreateGeometryInstanceFB, FB_passthrough);
 	ENTRY_IF_EXT(xrCreatePassthroughFB, FB_passthrough);
@@ -275,6 +305,15 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrPassthroughStartFB, FB_passthrough);
 #endif // OXR_HAVE_FB_passthrough
 
+#ifdef OXR_HAVE_EXT_plane_detection
+	ENTRY_IF_EXT(xrCreatePlaneDetectorEXT, EXT_plane_detection);
+	ENTRY_IF_EXT(xrDestroyPlaneDetectorEXT, EXT_plane_detection);
+	ENTRY_IF_EXT(xrBeginPlaneDetectionEXT, EXT_plane_detection);
+	ENTRY_IF_EXT(xrGetPlaneDetectionStateEXT, EXT_plane_detection);
+	ENTRY_IF_EXT(xrGetPlaneDetectionsEXT, EXT_plane_detection);
+	ENTRY_IF_EXT(xrGetPlanePolygonBufferEXT, EXT_plane_detection);
+#endif
+
 #ifdef OXR_HAVE_EXT_debug_utils
 	ENTRY_IF_EXT(xrSetDebugUtilsObjectNameEXT, EXT_debug_utils);
 	ENTRY_IF_EXT(xrCreateDebugUtilsMessengerEXT, EXT_debug_utils);
@@ -285,13 +324,43 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrSessionInsertDebugUtilsLabelEXT, EXT_debug_utils);
 #endif // OXR_HAVE_EXT_debug_utils
 
+	if (strcmp(name, "xrGetOpenGLGraphicsRequirementsKHR") == 0) {
+		bool enabled_extension = false;
 #ifdef OXR_HAVE_KHR_opengl_enable
-	ENTRY_IF_EXT(xrGetOpenGLGraphicsRequirementsKHR, KHR_opengl_enable);
-#endif // OXR_HAVE_KHR_opengl_enable
+		enabled_extension |= inst->extensions.KHR_opengl_enable;
+#endif
+#ifdef OXR_HAVE_MNDX_egl_enable
+		enabled_extension |= inst->extensions.MNDX_egl_enable;
+#endif
 
+#ifdef XR_USE_GRAPHICS_API_OPENGL
+		RETURN_IF_TRUE(xrGetOpenGLGraphicsRequirementsKHR, enabled_extension);
+#else
+		if (enabled_extension) {
+			oxr_warn(log, "Asked for xrGetOpenGLGraphicsRequirementsKHR but not compiled in.");
+		}
+#endif
+		return XR_ERROR_FUNCTION_UNSUPPORTED;
+	}
+
+	if (strcmp(name, "xrGetOpenGLESGraphicsRequirementsKHR") == 0) {
+		bool enabled_extension = false;
 #ifdef OXR_HAVE_KHR_opengl_es_enable
-	ENTRY_IF_EXT(xrGetOpenGLESGraphicsRequirementsKHR, KHR_opengl_es_enable);
-#endif // OXR_HAVE_KHR_opengl_es_enable
+		enabled_extension |= inst->extensions.KHR_opengl_es_enable;
+#endif
+#ifdef OXR_HAVE_MNDX_egl_enable
+		enabled_extension |= inst->extensions.MNDX_egl_enable;
+#endif
+
+#ifdef XR_USE_GRAPHICS_API_OPENGL_ES
+		RETURN_IF_TRUE(xrGetOpenGLESGraphicsRequirementsKHR, enabled_extension);
+#else
+		if (enabled_extension) {
+			oxr_warn(log, "Asked for xrGetOpenGLESGraphicsRequirementsKHR but not compiled in.");
+		}
+#endif
+		return XR_ERROR_FUNCTION_UNSUPPORTED;
+	}
 
 #ifdef OXR_HAVE_KHR_visibility_mask
 	ENTRY_IF_EXT(xrGetVisibilityMaskKHR, KHR_visibility_mask);
@@ -319,6 +388,10 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrGetD3D12GraphicsRequirementsKHR, KHR_D3D12_enable);
 #endif // OXR_HAVE_KHR_D3D12_enable
 
+#ifdef OXR_HAVE_MND_query_egl_device
+	ENTRY_IF_EXT(xrGetSystemEGLDeviceMND, MND_query_egl_device);
+#endif // OXR_HAVE_MND_query_egl_device
+
 #ifdef OXR_HAVE_HTC_facial_tracking
 	ENTRY_IF_EXT(xrCreateFacialTrackerHTC, HTC_facial_tracking);
 	ENTRY_IF_EXT(xrDestroyFacialTrackerHTC, HTC_facial_tracking);
@@ -330,6 +403,12 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrDestroyBodyTrackerFB, FB_body_tracking);
 	ENTRY_IF_EXT(xrGetBodySkeletonFB, FB_body_tracking);
 	ENTRY_IF_EXT(xrLocateBodyJointsFB, FB_body_tracking);
+#endif
+
+#ifdef OXR_HAVE_BD_body_tracking
+	ENTRY_IF_EXT(xrCreateBodyTrackerBD, BD_body_tracking);
+	ENTRY_IF_EXT(xrDestroyBodyTrackerBD, BD_body_tracking);
+	ENTRY_IF_EXT(xrLocateBodyJointsBD, BD_body_tracking);
 #endif
 
 #ifdef OXR_HAVE_FB_face_tracking2
@@ -346,6 +425,31 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrDestroyXDevListMNDX, MNDX_xdev_space);
 	ENTRY_IF_EXT(xrCreateXDevSpaceMNDX, MNDX_xdev_space);
 #endif // OXR_HAVE_MNDX_xdev_space
+
+#ifdef OXR_HAVE_META_body_tracking_calibration
+	ENTRY_IF_EXT(xrResetBodyTrackingCalibrationMETA, META_body_tracking_calibration);
+	ENTRY_IF_EXT(xrSuggestBodyTrackingCalibrationOverrideMETA, META_body_tracking_calibration);
+#endif // OXR_HAVE_META_body_tracking_calibration
+
+#ifdef OXR_HAVE_META_body_tracking_fidelity
+	ENTRY_IF_EXT(xrRequestBodyTrackingFidelityMETA, META_body_tracking_fidelity);
+#endif
+
+#ifdef OXR_HAVE_EXT_future
+	ENTRY_IF_EXT(xrPollFutureEXT, EXT_future);
+	ENTRY_IF_EXT(xrCancelFutureEXT, EXT_future);
+#endif // OXR_HAVE_EXT_future
+
+#ifdef OXR_HAVE_ANDROID_face_tracking
+	ENTRY_IF_EXT(xrCreateFaceTrackerANDROID, ANDROID_face_tracking);
+	ENTRY_IF_EXT(xrDestroyFaceTrackerANDROID, ANDROID_face_tracking);
+	ENTRY_IF_EXT(xrGetFaceCalibrationStateANDROID, ANDROID_face_tracking);
+	ENTRY_IF_EXT(xrGetFaceStateANDROID, ANDROID_face_tracking);
+#endif
+
+#ifdef OXR_HAVE_KHR_extended_struct_name_lengths
+	ENTRY_IF_EXT(xrStructureTypeToString2KHR, KHR_extended_struct_name_lengths);
+#endif // OXR_HAVE_KHR_extended_struct_name_lengths
 
 #ifdef OXR_HAVE_KHR_locate_spaces
 	ENTRY_IF_EXT(xrLocateSpacesKHR, KHR_locate_spaces);

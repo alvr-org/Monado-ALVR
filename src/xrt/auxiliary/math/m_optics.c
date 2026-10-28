@@ -11,6 +11,7 @@
 #include "math/m_api.h"
 #include "util/u_debug.h"
 
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <assert.h>
@@ -157,4 +158,120 @@ math_compute_fovs(double w_total,
 	fov->angle_up = (float)phi_2;
 
 	return true;
+}
+
+
+void
+math_compute_parallelized_fov(const struct xrt_fov *fov,
+                              const struct xrt_quat *canted_view_orientation,
+                              struct xrt_fov *out_parallelized_fov)
+{
+	/*
+	 * The FOV angles are defined by looking directly at the view, no matter
+	 * how the view is rotated.
+	 *
+	 * The FOV is defined by angles, therefore not bound to specific sizes.
+	 * For ease of calculations, we assume a triangle where the distance from
+	 * the "eye" to the view is 1 unit (e.g. meter). With the adjacent side
+	 * being 1 unit, the tangent tan(angle) = opposite / adjacent is simplified
+	 * to tan(angle) = opposite.
+	 *
+	 * So tan_? is the distance from the view axis and view intersection to the
+	 * respective edge of the FOV.
+	 */
+	double tan_l = tanf(fov->angle_left);
+	double tan_r = tanf(fov->angle_right);
+	double tan_u = tanf(fov->angle_up);
+	double tan_d = tanf(fov->angle_down);
+
+	/*
+	 * With tan_? being the distance to the FOV edge, define a frustum using
+	 * the 4 corners of the FOV.
+	 */
+	struct xrt_vec3 frustum_corners[4] = {
+	    {tan_l, tan_u, -1.0f}, // Top-Left
+	    {tan_r, tan_u, -1.0f}, // Top-Right
+	    {tan_r, tan_d, -1.0f}, // Bottom-Right
+	    {tan_l, tan_d, -1.0f}, // Bottom-Left
+	};
+
+	/*
+	 * Left and Down will grow towards negative, Right and Up will grow towards
+	 * positive.
+	 */
+	double new_tan_l = INFINITY;
+	double new_tan_r = -INFINITY;
+	double new_tan_u = -INFINITY;
+	double new_tan_d = INFINITY;
+
+	for (int i = 0; i < 4; i++) {
+		struct xrt_vec3 rotated_frustum_corner;
+
+		/*
+		 * Now that we have the FOV defined by corner points, which are also
+		 * vectors to the corner points, we need to actually calculate the FOV
+		 * for a canted view given a parallel view.
+		 *
+		 * Parallelized views can be imagined as two rectangles that ar
+		 * sitting parallel on a wall that is 1 unit away from each "eye".
+		 *
+		 * The application will render content into those two rectangles.
+		 * The compositor will later rotate the views direction away, such that
+		 * the rectangles will no longer be sitting next to each other on the
+		 * wall. However, the application will still have rendered for parallel
+		 * views in any case, because this entire exercise is to cater to
+		 * applications that can render only to parallel views.
+		 *
+		 * This means that we should tell the application to render to parallel
+		 * rectangles on the wall, but adjust these rectangles such that the
+		 * area covers the FOV *after* the view direction is oriented back to
+		 * the canted orientation.
+		 * We achieve this by rotating the corner vectors by the canting
+		 * orientation.
+		 */
+		math_quat_rotate_vec3(canted_view_orientation, &frustum_corners[i], &rotated_frustum_corner);
+
+		/*
+		 * Don't divide by zero in the unlikely case that a corner is rotated so
+		 * far, it is behind the "eye".
+		 */
+		double distance = -rotated_frustum_corner.z;
+		if (distance < DBL_EPSILON) {
+			distance = DBL_EPSILON;
+		}
+
+		/*
+		 * The corner vectors are now pointing in the right direction, but now
+		 * we want to go back to angles and need the triangle implied by the
+		 * view axis from the "eye" perpendicular to the view, the distance to
+		 * the edges on the view and from the edge to the "eye" to have a view
+		 * axis of unit length 1 again.
+		 *
+		 * Scaling this vector by -rotated_frustum_corner.z gives us
+		 * rotated_frustum_corner.z / -rotated_frustum_corner.z = -1 for the z
+		 * axis, which is the distance we want.
+		 * Scaling x and y by the same value does not change the direction of
+		 * the vector, preserving the angles.
+		 */
+		double projected_frustum_corner_x = rotated_frustum_corner.x / distance;
+		double projected_frustum_corner_y = rotated_frustum_corner.y / distance;
+
+		/*
+		 * Grow the respective edge of the frustum if applicable. Because we
+		 * scaled to a view axis length of 1 unit, the distance on the view to
+		 * the FOV edge / (view axis length = 1) is a tangent.
+		 */
+		new_tan_l = fmin(new_tan_l, projected_frustum_corner_x);
+		new_tan_r = fmax(new_tan_r, projected_frustum_corner_x);
+		new_tan_d = fmin(new_tan_d, projected_frustum_corner_y);
+		new_tan_u = fmax(new_tan_u, projected_frustum_corner_y);
+	}
+
+	// Convert the tangent we calculated back to an angle
+	*out_parallelized_fov = (struct xrt_fov){
+	    .angle_left = atan(new_tan_l),
+	    .angle_right = atan(new_tan_r),
+	    .angle_up = atan(new_tan_u),
+	    .angle_down = atan(new_tan_d),
+	};
 }

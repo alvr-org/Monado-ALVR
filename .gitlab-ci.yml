@@ -1,28 +1,34 @@
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileCopyrightText: 2018-2024 Collabora, Ltd. and the Monado contributors
+# SPDX-FileCopyrightText: 2018-2026 Collabora, Ltd. and the Monado contributors
 
 ###############################################
 # GENERATED - DO NOT EDIT
 # see .gitlab-ci/ci.template, etc instead
 ###############################################
 
-# workflow:
-#   rules:
-#     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-#     - if: $CI_PIPELINE_SOURCE == 'push'
+workflow:
+  rules:
+    # Switch between branch and merge request pipelines to avoid duplication
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
 
 variables:
   FDO_UPSTREAM_REPO: "monado/monado"
 
 include:
   - project: "freedesktop/ci-templates"
-    ref: 185ede0e9b9b1924b92306ab8b882a6294e92613
+    ref: 5cc6ded703fc990f9d055f0d948ffd4460a9ca40
     file:
       - "/templates/debian.yml"
       - "/templates/ubuntu.yml"
       - "/templates/arch.yml"
       - "/templates/alpine.yml"
-  # - local: .gitlab-ci/containers/ci-container-prep.yml
+  - project: 'freedesktop/ci-templates'
+    ref: 5cc6ded703fc990f9d055f0d948ffd4460a9ca40
+    file: '/templates/ci-fairy.yml'
+
 
   # This include is for compatibility with the fdo CI restrictions/checks
   # needed due to https://gitlab.freedesktop.org/freedesktop/freedesktop/-/issues/438
@@ -30,7 +36,9 @@ include:
 
 stages:
   - container_prep
+  - verify
   - build
+  - check
   - package
   - reprepro
   - pages
@@ -51,8 +59,8 @@ stages:
   inherit:
     default: false
   variables:
-    MONADO_WIN_BASE_TAG: "20240607.0"
-    MONADO_WIN_MAIN_TAG: "20240607.0"
+    MONADO_WIN_BASE_TAG: "20251201.0"
+    MONADO_WIN_MAIN_TAG: "20251201.0"
     MONADO_BASE_IMAGE_PATH: "win2022/vs2022_base"
     MONADO_MAIN_IMAGE_PATH: "win2022/vs2022"
 
@@ -122,50 +130,62 @@ win:container_prep:
 
 
 
+# Variables for build and usage of Debian trixie image
+.monado.variables.debian:trixie:
+  variables:
+    FDO_DISTRIBUTION_VERSION: "trixie"
+    FDO_DISTRIBUTION_TAG: "2026-09-15"
+
 # Variables for build and usage of Debian bookworm image
 .monado.variables.debian:bookworm:
   variables:
     FDO_DISTRIBUTION_VERSION: "bookworm"
-    FDO_DISTRIBUTION_TAG: "2024-08-16"
+    FDO_DISTRIBUTION_TAG: "2026-09-15"
 
-# Variables for build and usage of Debian bullseye image
-.monado.variables.debian:bullseye:
+# Variables for build and usage of Debian trixie-ndk image
+.monado.variables.debian:trixie-ndk:
   variables:
-    FDO_DISTRIBUTION_VERSION: "bullseye"
-    FDO_DISTRIBUTION_TAG: "2024-07-18"
-
-# Variables for build and usage of Debian bookworm-ndk image
-.monado.variables.debian:bookworm-ndk:
-  variables:
-    FDO_DISTRIBUTION_VERSION: "bookworm"
-    FDO_DISTRIBUTION_TAG: "2024-07-18"
+    FDO_DISTRIBUTION_VERSION: "trixie"
+    FDO_DISTRIBUTION_TAG: "2026-02-18"
     FDO_REPO_SUFFIX: ndk
 
 # Variables for build and usage of Ubuntu jammy image
 .monado.variables.ubuntu:jammy:
   variables:
     FDO_DISTRIBUTION_VERSION: "22.04"
-    FDO_DISTRIBUTION_TAG: "2024-07-18"
+    FDO_DISTRIBUTION_TAG: "2026-09-15"
 
 # Variables for build and usage of Ubuntu noble image
 .monado.variables.ubuntu:noble:
   variables:
     FDO_DISTRIBUTION_VERSION: "24.04"
-    FDO_DISTRIBUTION_TAG: "2024-07-18"
+    FDO_DISTRIBUTION_TAG: "2026-09-15"
 
 # Variables for build and usage of Arch image
 .monado.variables.arch:
   variables:
-    FDO_DISTRIBUTION_TAG: "2024-01-16"
+    FDO_DISTRIBUTION_TAG: "2026-09-15"
 
 # Variables for build and usage of Alpine image
 .monado.variables.alpine:
   variables:
-    FDO_DISTRIBUTION_TAG: "2024-01-16"
+    FDO_DISTRIBUTION_TAG: "2026-09-15"
 
 
 ###
 # Container prep jobs
+# Make Debian trixie image
+debian:trixie:container_prep:
+  stage: container_prep
+  extends:
+    - .container-rules
+    - .monado.variables.debian:trixie
+    - .fdo.container-build@debian # from ci-templates
+
+  variables:
+    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates clang clang-tidy cmake curl debhelper devscripts doxygen dput-ng gettext-base git glslang-tools graphviz libbluetooth-dev libbsd-dev libceres-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pipx pkg-config python3 python3-click python3-pip reprepro unzip wayland-protocols wget'
+    FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/i386_and_proclamation_container_prep.sh'
+
 # Make Debian bookworm image
 debian:bookworm:container_prep:
   stage: container_prep
@@ -175,31 +195,19 @@ debian:bookworm:container_prep:
     - .fdo.container-build@debian # from ci-templates
 
   variables:
-    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates clang-format cmake codespell curl debhelper devscripts doxygen dput-ng gettext-base git glslang-tools graphviz libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pipx pkg-config python3 python3-click python3-pip reprepro unzip wayland-protocols wget'
+    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates clang-format cmake codespell curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libceres-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pahole pandoc patch pkg-config python3 python3-pip unzip wayland-protocols wget'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/i386_and_proclamation_container_prep.sh'
 
-# Make Debian bullseye image
-debian:bullseye:container_prep:
+# Make Debian trixie-ndk image
+debian:trixie-ndk:container_prep:
   stage: container_prep
   extends:
     - .container-rules
-    - .monado.variables.debian:bullseye
+    - .monado.variables.debian:trixie-ndk
     - .fdo.container-build@debian # from ci-templates
 
   variables:
-    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
-    FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/bullseye_backports.sh'
-
-# Make Debian bookworm-ndk image
-debian:bookworm-ndk:container_prep:
-  stage: container_prep
-  extends:
-    - .container-rules
-    - .monado.variables.debian:bookworm-ndk
-    - .fdo.container-build@debian # from ci-templates
-
-  variables:
-    FDO_DISTRIBUTION_PACKAGES: 'ca-certificates cmake default-jdk-headless git glslang-tools libeigen3-dev meson ninja-build pkg-config python3 unzip wget'
+    FDO_DISTRIBUTION_PACKAGES: 'ca-certificates clang-tidy cmake default-jdk-headless git glslang-tools libeigen3-dev meson ninja-build pkg-config python3 unzip wget'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/android_container_prep.sh'
 
 # Make Ubuntu jammy image
@@ -211,7 +219,7 @@ ubuntu:jammy:container_prep:
     - .fdo.container-build@ubuntu # from ci-templates
 
   variables:
-    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
+    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libceres-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
 
 # Make Ubuntu noble image
 ubuntu:noble:container_prep:
@@ -222,7 +230,7 @@ ubuntu:noble:container_prep:
     - .fdo.container-build@ubuntu # from ci-templates
 
   variables:
-    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
+    FDO_DISTRIBUTION_PACKAGES: 'build-essential ca-certificates cmake curl debhelper devscripts dput-ng gettext-base git glslang-tools libbluetooth-dev libbsd-dev libceres-dev libcjson-dev libdbus-1-dev libdistro-info-perl libegl1-mesa-dev libeigen3-dev libgl1-mesa-dev libglvnd-dev libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev libhidapi-dev libopencv-dev libsdl2-dev libsystemd-dev libudev-dev libusb-1.0-0-dev libuvc-dev libv4l-dev libvulkan-dev libwayland-dev libx11-dev libx11-xcb-dev libxcb-randr0-dev libxrandr-dev libxxf86vm-dev ninja-build pandoc patch pkg-config python3 unzip wayland-protocols wget'
 
 # Make Arch image
 arch:container_prep:
@@ -233,7 +241,7 @@ arch:container_prep:
     - .fdo.container-build@arch # from ci-templates
 
   variables:
-    FDO_DISTRIBUTION_PACKAGES: 'base-devel bc bluez-libs boost check clang cmake diffutils doxygen eigen fmt gcc git glew glfw-x11 glslang glu graphviz gtest gtk3 hidapi libbsd libusb libxrandr mesa meson ninja opencv patch pipewire-jack pkgconfig python-attrs python-setuptools python3 qt6-base v4l-utils vulkan-headers vulkan-icd-loader wayland wget wireplumber'
+    FDO_DISTRIBUTION_PACKAGES: 'base-devel bluez-libs ceres-solver check cjson clang cmake diffutils doxygen eigen gcc git glfw-x11 glslang glu graphviz gtk3 hidapi libbsd libusb libxrandr mesa meson ninja onnxruntime-cpu opencv patch pipewire-jack pkgconfig python-attrs python-setuptools python3 qt6-base v4l-utils vulkan-headers vulkan-icd-loader wayland wget wireplumber'
     FDO_DISTRIBUTION_EXEC: 'env FDO_CI_CONCURRENT=${FDO_CI_CONCURRENT} bash .gitlab-ci/install-arch-additional-deps.sh'
 
 # Make Alpine image
@@ -251,28 +259,40 @@ alpine:container_prep:
 ###
 # Container usage base jobs
 
+# Base for using Debian trixie image
+.monado.image.debian:trixie:
+  extends:
+    - .monado.variables.debian:trixie
+    - .fdo.distribution-image@debian # from ci-templates
+    - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+
+
 # Base for using Debian bookworm image
 .monado.image.debian:bookworm:
   extends:
     - .monado.variables.debian:bookworm
     - .fdo.distribution-image@debian # from ci-templates
     - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 
-# Base for using Debian bullseye image
-.monado.image.debian:bullseye:
+# Base for using Debian trixie-ndk image
+.monado.image.debian:trixie-ndk:
   extends:
-    - .monado.variables.debian:bullseye
-    - .fdo.distribution-image@debian # from ci-templates
-    - .build-rules
-
-
-# Base for using Debian bookworm-ndk image
-.monado.image.debian:bookworm-ndk:
-  extends:
-    - .monado.variables.debian:bookworm-ndk
+    - .monado.variables.debian:trixie-ndk
     - .fdo.suffixed-image@debian # from ci-templates
     - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 
 # Base for using Ubuntu jammy image
@@ -281,6 +301,10 @@ alpine:container_prep:
     - .monado.variables.ubuntu:jammy
     - .fdo.distribution-image@ubuntu # from ci-templates
     - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 
 # Base for using Ubuntu noble image
@@ -289,6 +313,10 @@ alpine:container_prep:
     - .monado.variables.ubuntu:noble
     - .fdo.distribution-image@ubuntu # from ci-templates
     - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 
 # Base for using Arch image
@@ -297,6 +325,10 @@ alpine:container_prep:
     - .monado.variables.arch
     - .fdo.distribution-image@arch # from ci-templates
     - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 
 # Base for using Alpine image
@@ -305,6 +337,10 @@ alpine:container_prep:
     - .monado.variables.alpine
     - .fdo.distribution-image@alpine # from ci-templates
     - .build-rules
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 
 
@@ -313,7 +349,7 @@ format-and-spellcheck:
   extends:
     - .monado.image.debian:bookworm
 
-  stage: build
+  stage: verify
   script:
     - scripts/format-and-spellcheck.sh
   artifacts:
@@ -326,19 +362,36 @@ format-and-spellcheck:
 reuse:
   extends:
     - .build-rules
-  stage: build
+  stage: verify
   image:
     name: fsfe/reuse:latest
     entrypoint: [""]
   script:
     - reuse lint
 
+check-signoff:
+  extends:
+    - .fdo.ci-fairy
+  stage: verify
+  script:
+    - ci-fairy check-commits --signed-off-by --textwidth 0 --junit-xml=results.xml
+  variables:
+    GIT_DEPTH: 100
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+  artifacts:
+    reports:
+      junit: results.xml
 
-debian:cmake:
+
+
+debian:trixie:
   stage: build
   extends:
     - .monado.packaging.conditions
-    - .monado.image.debian:bookworm
+    - .monado.image.debian:trixie
 
   before_script:
     - pushd doc/changes
@@ -346,93 +399,127 @@ debian:cmake:
     - popd
 
   script:
-
     - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh -DBUILD_DOC=ON
+    - .gitlab-ci/ci-cmake-build.sh -DBUILD_DOC=ON -DCMAKE_BUILD_TYPE=Release
     - cd build && ctest --output-on-failure
-  artifacts:
-    paths:
-      - build/doc/html/
 
-debian:cmake-no-opencv:
+  artifacts:
+    untracked: true
+    paths:
+      - build
+
+debian:trixie:clang:
   stage: build
   extends:
-    - .monado.image.debian:bookworm
+    - .monado.image.debian:trixie
 
   script:
+    - .gitlab-ci/prebuild.sh
+    - .gitlab-ci/ci-cmake-build.sh -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++
+    - cd build && ctest --output-on-failure
 
+
+debian:trixie:opencv-off:
+  stage: build
+  extends:
+    - .monado.image.debian:trixie
+
+  script:
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh -DXRT_HAVE_OPENCV=OFF
     - cd build && ctest --output-on-failure
 
-debian:cmake-no-sdl2:
+
+debian:trixie:sdl2-off:
   stage: build
   extends:
-    - .monado.image.debian:bookworm
+    - .monado.image.debian:trixie
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh -DXRT_HAVE_SDL2=OFF
     - cd build && ctest --output-on-failure
 
-debian:cmake-no-service:
+
+debian:trixie:feature-service-off:
   stage: build
   extends:
-    - .monado.image.debian:bookworm
+    - .monado.image.debian:trixie
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh -DXRT_FEATURE_SERVICE=OFF
     - cd build && ctest --output-on-failure
 
-debian:cmake:32bit:
+
+debian:trixie:32bit:
+  stage: build
+  extends:
+    - .monado.image.debian:trixie
+
+  script:
+    - .gitlab-ci/prebuild.sh
+    - .gitlab-ci/ci-cmake-build.sh -DCMAKE_TOOLCHAIN_FILE=.gitlab-ci/i386.cmake -DXRT_HAVE_OPENCV=OFF
+    - cd build && ctest --output-on-failure
+
+
+debian:bookworm:
   stage: build
   extends:
     - .monado.image.debian:bookworm
 
   script:
-
     - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh -DCMAKE_TOOLCHAIN_FILE=.gitlab-ci/i386.cmake -DXRT_HAVE_OPENCV=OFF
+    - .gitlab-ci/ci-cmake-build.sh -DCMAKE_BUILD_TYPE=Debug
+    - mkdir -p "debian:bookworm"
+    - pahole --sizes --class_name file://build/ipc-structs.txt build/src/xrt/targets/openxr/libopenxr_monado.so > "debian:bookworm/ipc-sizes.txt"
     - cd build && ctest --output-on-failure
 
-debian:bullseye:cmake:
+  artifacts:
+    paths:
+      - debian:bookworm/ipc-sizes.txt
+
+debian:bookworm:32bit:
   stage: build
   extends:
-    - .monado.image.debian:bullseye
+    - .monado.image.debian:bookworm
 
   script:
-
     - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh
+    - .gitlab-ci/ci-cmake-build.sh -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=.gitlab-ci/i386.cmake
+    - mkdir -p "debian:bookworm:32bit"
+    - pahole --sizes --class_name file://build/ipc-structs.txt build/src/xrt/targets/openxr/libopenxr_monado.so > "debian:bookworm:32bit/ipc-sizes.txt"
     - cd build && ctest --output-on-failure
+
+  artifacts:
+    paths:
+      - debian:bookworm:32bit/ipc-sizes.txt
 
 ndk:armeabi-v7a:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
 
   script:
-
     - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=26 -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk/build/cmake/android.toolchain.cmake -DEigen3_DIR=/usr/lib/cmake/eigen3/ -DEIGEN3_INCLUDE_DIR=/usr/include/eigen3
+    - .gitlab-ci/ci-cmake-build.sh -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=26 -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk/build/cmake/android.toolchain.cmake -DEigen3_DIR=/usr/share/eigen3/cmake/
 
 ndk:arm64-v8a:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
 
   script:
-
     - .gitlab-ci/prebuild.sh
-    - .gitlab-ci/ci-cmake-build.sh -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=26 -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk/build/cmake/android.toolchain.cmake -DEigen3_DIR=/usr/lib/cmake/eigen3/ -DEIGEN3_INCLUDE_DIR=/usr/include/eigen3
+    - .gitlab-ci/ci-cmake-build.sh -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=26 -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk/build/cmake/android.toolchain.cmake -DEigen3_DIR=/usr/share/eigen3/cmake/
+  artifacts:
+    paths:
+      - build
 
 android:spotlessCheck:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
 
   before_script:
     # For caching gradle stuff
@@ -446,14 +533,13 @@ android:spotlessCheck:
       - .gradlehome/caches
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-gradle-build.sh spotlessCheck
 
 android:outOfProcessDebug:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
 
   before_script:
     # For caching gradle stuff
@@ -467,7 +553,6 @@ android:outOfProcessDebug:
       - .gradlehome/caches
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-gradle-build.sh assembleOutOfProcessDebug
   artifacts:
@@ -477,7 +562,7 @@ android:outOfProcessDebug:
 android:inProcessDebug:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
 
   before_script:
     # For caching gradle stuff
@@ -491,7 +576,6 @@ android:inProcessDebug:
       - .gradlehome/caches
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-gradle-build.sh assembleInProcessDebug
   artifacts:
@@ -501,7 +585,7 @@ android:inProcessDebug:
 android:outOfProcessRelease:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
     - .monado.packaging.conditions
 
   before_script:
@@ -516,7 +600,6 @@ android:outOfProcessRelease:
       - .gradlehome/caches
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - base64 --decode ${MONADO_ANDROID_KEYSTORE} > monado-release.jks
     - .gitlab-ci/ci-gradle-build.sh assembleOutOfProcessRelease
@@ -527,7 +610,7 @@ android:outOfProcessRelease:
 android:inProcessRelease:
   stage: build
   extends:
-    - .monado.image.debian:bookworm-ndk
+    - .monado.image.debian:trixie-ndk
     - .monado.packaging.conditions
 
   before_script:
@@ -542,7 +625,6 @@ android:inProcessRelease:
       - .gradlehome/caches
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - base64 --decode ${MONADO_ANDROID_KEYSTORE} > monado-release.jks
     - .gitlab-ci/ci-gradle-build.sh assembleInProcessRelease
@@ -550,60 +632,60 @@ android:inProcessRelease:
     paths:
       - src/xrt/targets/openxr_android/build/outputs/apk/inProcess
 
-ubuntu:jammy:cmake:
+ubuntu:jammy:
   stage: build
   extends:
     - .monado.image.ubuntu:jammy
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh
     - cd build && ctest --output-on-failure
 
-ubuntu:noble:cmake:
+
+ubuntu:noble:
   stage: build
   extends:
     - .monado.image.ubuntu:noble
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh
     - cd build && ctest --output-on-failure
 
-arch:cmake:
+
+arch:
   stage: build
   extends:
     - .monado.image.arch
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh
     - cd build && ctest --output-on-failure
 
-arch:cmake:clang:
+
+arch:clang:
   stage: build
   extends:
     - .monado.image.arch
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++
     - cd build && ctest --output-on-failure
 
-alpine:cmake:
+
+alpine:
   stage: build
   extends:
     - .monado.image.alpine
 
   script:
-
     - .gitlab-ci/prebuild.sh
     - .gitlab-ci/ci-cmake-build.sh
     - cd build && ctest --output-on-failure
+
 
 # Windows build
 windows:
@@ -619,18 +701,49 @@ windows:
       - build/Testing/Temporary
 
 
-
-debian:bookworm:package:
+# Check compatibility of IPC protocol between 32 and 64 bits
+ipc-32-64-compatibility:
+  stage: check
   extends:
-    - .monado.image.debian:bookworm
+    - .build-rules
+  dependencies: ["debian:bookworm", "debian:bookworm:32bit"]
+  needs: ["debian:bookworm", "debian:bookworm:32bit"]
+  script:
+    - diff -du "debian:bookworm/ipc-sizes.txt" "debian:bookworm:32bit/ipc-sizes.txt"
+    - cmp "debian:bookworm/ipc-sizes.txt" "debian:bookworm:32bit/ipc-sizes.txt"
+
+debian:trixie:clang-tidy:
+  extends:
+    - .build-rules
+    - .monado.image.debian:trixie
+  stage: check
+  needs:
+    - debian:trixie
+  script:
+    - run-clang-tidy -quiet -allow-no-checks -p build
+
+ndk:arm64-v8a:clang-tidy:
+  extends:
+    - .build-rules
+    - .monado.image.debian:trixie-ndk
+  stage: check
+  needs:
+    - ndk:arm64-v8a
+  script:
+    - run-clang-tidy -quiet -allow-no-checks -p build
+
+
+debian:trixie:package:
+  extends:
+    - .monado.image.debian:trixie
     - .monado.packaging.conditions
   variables:
     GIT_STRATEGY: clone
     DEBFULLNAME: "Monado CI"
     DEBEMAIL: "rylie.pavlik@collabora.com"
     DISTRO: debian
-    CODENAME: bookworm
-    DEB_VERSION_SUFFIX: bpo12
+    CODENAME: trixie
+    DEB_VERSION_SUFFIX: bpo13
   stage: package
   before_script:
     - git config --global user.name Monado CI
@@ -647,17 +760,17 @@ debian:bookworm:package:
       - "incoming/"
     expire_in: 2 days
 
-debian:bullseye:package:
+debian:bookworm:package:
   extends:
-    - .monado.image.debian:bullseye
+    - .monado.image.debian:bookworm
     - .monado.packaging.conditions
   variables:
     GIT_STRATEGY: clone
     DEBFULLNAME: "Monado CI"
     DEBEMAIL: "rylie.pavlik@collabora.com"
     DISTRO: debian
-    CODENAME: bullseye
-    DEB_VERSION_SUFFIX: bpo11
+    CODENAME: bookworm
+    DEB_VERSION_SUFFIX: bpo12
   stage: package
   before_script:
     - git config --global user.name Monado CI
@@ -731,12 +844,12 @@ ubuntu:noble:package:
 reprepro:package:
   stage: reprepro
   extends:
-    - .monado.image.debian:bookworm
+    - .monado.image.debian:trixie
 
     - .monado.packaging.conditions
   needs:
+    - debian:trixie:package
     - debian:bookworm:package
-    - debian:bullseye:package
     - ubuntu:jammy:package
     - ubuntu:noble:package
   script:
@@ -754,7 +867,7 @@ pages:
   extends:
     - .monado.packaging.conditions
   needs:
-    - debian:cmake
+    - debian:trixie
     - reprepro:package
   script:
     - mkdir -p public

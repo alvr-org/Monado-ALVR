@@ -27,7 +27,7 @@
 		bool p = predicate;                                                                                    \
 		if (!p) {                                                                                              \
 			U_LOG(U_LOGGING_ERROR, __VA_ARGS__);                                                           \
-			assert(false && "EUROC_ASSERT failed: " #predicate);                                           \
+			assert(p && "EUROC_ASSERT failed: " #predicate);                                               \
 			exit(EXIT_FAILURE);                                                                            \
 		}                                                                                                      \
 	} while (false);

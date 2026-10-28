@@ -151,8 +151,8 @@ vive_source_receive_imu_sample(struct xrt_imu_sink *sink, struct xrt_imu_sample 
 	struct xrt_vec3_f64 w = s->gyro_rad_secs;
 	VIVE_TRACE(vs, "imu t=%" PRId64 " a=(%f %f %f) w=(%f %f %f)", ts, a.x, a.y, a.z, w.x, w.y, w.z);
 
-	if (vs->out_sinks.imu) {
-		xrt_sink_push_imu(vs->out_sinks.imu, s);
+	if (vs->out_sinks.imus[0]) {
+		xrt_sink_push_imu(vs->out_sinks.imus[0], s);
 	}
 }
 
@@ -188,7 +188,8 @@ vive_source_create(struct xrt_frame_context *xfctx)
 	vs->imu_sink.push_imu = vive_source_receive_imu_sample;
 	vs->in_sinks.cam_count = 1;
 	vs->in_sinks.cams[0] = &vs->sbs_sink;
-	vs->in_sinks.imu = &vs->imu_sink;
+	vs->in_sinks.imu_count = 1;
+	vs->in_sinks.imus[0] = &vs->imu_sink;
 
 	vs->timestamps_have_been_zero_until_now = true;
 	vs->waiting_for_first_nonempty_frame = true;

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # Copyright 2020-2023, Collabora, Ltd.
+# Copyright 2025, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
 """Generate code from a JSON file describing the IPC protocol."""
 
 import argparse
+import os.path
+from string import Template
 
 from ipcproto.common import (Proto, write_decl, write_invocation,
                              write_result_handler, write_cpp_header_guard_start,
@@ -136,78 +139,65 @@ def generate_h(file, p):
 
     Defines command enum, utility functions, and command and reply structures.
     """
-    f = open(file, "w")
-    f.write(header.format(brief='Generated IPC protocol header', suffix=''))
-    f.write('''
-#pragma once
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    template_file = os.path.join(script_dir, 'ipc_protocol_generated.h.template')
 
-#include "xrt/xrt_compiler.h"
+    # Goes directly into the template file.
+    ipc_commands = '\n'.join([f'\t{call.id},' for call in p.calls])
 
-''')
+    # Goes directly into the template file.
+    ipc_cmd_cases = '\n'.join([f'\tcase {call.id}: return "{call.id}";' for call in p.calls])
 
-    write_cpp_header_guard_start(f)
-    f.write('''
-
-struct ipc_connection;
-''')
-
-    f.write('\ntypedef enum ipc_command')
-    f.write('\n{')
-    f.write('\n\tIPC_ERR = 0,')
-    for call in p.calls:
-        f.write("\n\t" + call.id + ",")
-    f.write("\n} ipc_command_t;\n")
-
-    f.write('''
-struct ipc_command_msg
-{
-\tenum ipc_command cmd;
-};
-
-struct ipc_result_reply
-{
-\txrt_result_t result;
-};
-
-''')
-
-    write_decl(f, return_type='static inline const char *',
-        function_name='ipc_cmd_to_str', args=['ipc_command_t id'])
-    f.write('\n{')
-    f.write('\n\tswitch (id) {')
-    f.write('\n\tcase IPC_ERR: return "IPC_ERR";')
-    for call in p.calls:
-        f.write('\n\tcase ' + call.id + ': return "' + call.id + '";')
-    f.write('\n\tdefault: return "IPC_UNKNOWN";')
-    f.write('\n\t}\n}\n')
-
-    f.write('#pragma pack (push, 1)')
-
+    # Build message and reply structs.
+    ipc_msg_structs_list = []
     for call in p.calls:
         # Should we emit a msg struct.
         if call.needs_msg_struct:
-            f.write('\nstruct ipc_' + call.name + '_msg\n')
-            f.write('{\n')
-            f.write('\tenum ipc_command cmd;\n')
+            struct_lines = [f'struct ipc_{call.name}_msg']
+            struct_lines.append('{')
+            struct_lines.append('\tenum ipc_command cmd;')
             for arg in call.in_args:
-                f.write('\t' + arg.get_struct_field() + ';\n')
+                struct_lines.append('\t' + arg.get_struct_field() + ';')
             if call.in_handles:
-                f.write('\t%s %s;\n' % (call.in_handles.count_arg_type,
-                                        call.in_handles.count_arg_name))
-            f.write('};\n')
+                struct_lines.append('\t%s %s;' % (call.in_handles.count_arg_type,
+                                                  call.in_handles.count_arg_name))
+            struct_lines.append('};')
+
+            # Each entry contains a struct complete struct declaration.
+            ipc_msg_structs_list.append('\n'.join(struct_lines))
+
         # Should we emit a reply struct.
         if call.out_args:
-            f.write('\nstruct ipc_' + call.name + '_reply\n')
-            f.write('{\n')
-            f.write('\txrt_result_t result;\n')
+            struct_lines = [f'struct ipc_{call.name}_reply']
+            struct_lines.append('{')
+            struct_lines.append('\txrt_result_t result;')
             for arg in call.out_args:
-                f.write('\t' + arg.get_struct_field() + ';\n')
-            f.write('};\n')
+                struct_lines.append('\t' + arg.get_struct_field() + ';')
+            struct_lines.append('};')
 
-    f.write('#pragma pack (pop)\n')
+            # Each entry contains a struct complete struct declaration.
+            ipc_msg_structs_list.append('\n'.join(struct_lines))
 
-    write_cpp_header_guard_end(f)
-    f.close()
+    # What finally goes into the template file.
+    # The struct declarations doesn't end on a newline,
+    # so insert two for each declaration.
+    ipc_msg_structs = '\n\n'.join(ipc_msg_structs_list)
+
+    # Read the template file.
+    with open(template_file, 'r') as f:
+        template = Template(f.read())
+
+    # Substitute values into the template.
+    filled = template.substitute(
+        ipc_commands=ipc_commands,
+        ipc_cmd_cases=ipc_cmd_cases,
+        ipc_msg_structs=ipc_msg_structs
+    )
+
+    # Write the generated header file.
+    with open(file, 'w') as f:
+        f.write(filled)
 
 
 def generate_client_c(file, p):
@@ -489,6 +479,23 @@ def generate_server_header(file, p):
     write_cpp_header_guard_end(f)
     f.close()
 
+def generate_struct_names(file, p):
+    """Generate list of structures names.
+
+    Lists the structures used in the IPC protocol, this can be
+    used for tools such as pahole.
+    """
+    f = open(file, "w")
+    f.write("ipc_shared_memory\n")
+    types = set()
+    for call in p.calls:
+        for i in call.in_args + call.out_args:
+            if i.is_aggregate:
+                types.add(i.typename.split(" ")[-1])
+    for t in sorted(types):
+        f.write(t)
+        f.write("\n")
+    f.close()
 
 def main():
     """Handle command line and generate a file."""
@@ -513,6 +520,8 @@ def main():
             generate_server_c(output, p)
         if output.endswith("ipc_server_generated.h"):
             generate_server_header(output, p)
+        if output.endswith("structs.txt") or output.endswith("ipc-structs.txt"):
+            generate_struct_names(output, p)
 
 
 if __name__ == "__main__":

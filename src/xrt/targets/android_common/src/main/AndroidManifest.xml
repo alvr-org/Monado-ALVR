@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!--
-        Copyright 2020, Collabora, Ltd.
+        Copyright 2020-2025, Collabora, Ltd.
         SPDX-License-Identifier: BSL-1.0
     -->
 
@@ -47,7 +47,8 @@
         android:theme="@style/AppTheme">
         <!-- Main "about" activity -->
         <activity android:name=".AboutActivity"
-            android:exported="true">
+            android:exported="true"
+            android:label="Monado">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

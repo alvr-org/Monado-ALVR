@@ -1,0 +1,66 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"swapchain_get_properties": {
+		"in": [
+			{"name": "info", "type": "struct xrt_swapchain_create_info"}
+		],
+		"out": [
+			{"name": "xsccp", "type": "struct xrt_swapchain_create_properties"}
+		]
+	},
+
+	"swapchain_create": {
+		"in": [
+			{"name": "info", "type": "struct xrt_swapchain_create_info"}
+		],
+		"out": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "image_count", "type": "uint32_t"},
+			{"name": "size", "type": "uint64_t"},
+			{"name": "use_dedicated_allocation", "type": "bool"}
+		],
+		"out_handles": {"type": "xrt_graphics_buffer_handle_t"}
+	},
+
+	"swapchain_import": {
+		"in": [
+			{"name": "info", "type": "struct xrt_swapchain_create_info"},
+			{"name": "args", "type": "struct ipc_arg_swapchain_from_native"}
+		],
+		"out": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"in_handles": {"type": "xrt_graphics_buffer_handle_t"}
+	},
+
+	"swapchain_wait_image": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "timeout_ns", "type": "int64_t"},
+			{"name": "index", "type": "uint32_t"}
+		]
+	},
+
+	"swapchain_acquire_image": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "index", "type": "uint32_t"}
+		]
+	},
+
+	"swapchain_release_image": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "index", "type": "uint32_t"}
+		]
+	},
+
+	"swapchain_destroy": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	}
+}

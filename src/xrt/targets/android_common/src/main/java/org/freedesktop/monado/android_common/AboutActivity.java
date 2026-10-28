@@ -1,23 +1,28 @@
-// Copyright 2020, Collabora, Ltd.
+// Copyright 2020-2025, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Simple main activity for Android.
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
+ * @author Simon Zeni <simon.zeni@collabora.com>
  */
 
 package org.freedesktop.monado.android_common;
 
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import dagger.hilt.android.AndroidEntryPoint;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.freedesktop.monado.auxiliary.NameAndLogoProvider;
 import org.freedesktop.monado.auxiliary.UiProvider;
@@ -30,6 +35,11 @@ public class AboutActivity extends AppCompatActivity {
     @Inject UiProvider uiProvider;
 
     @Inject NameAndLogoProvider nameAndLogoProvider;
+
+    /**
+     * @noinspection OptionalUsedAsFieldOrParameterType
+     */
+    @Inject Optional<AboutMenuProvider> aboutMenuProvider;
 
     private boolean isInProcessBuild() {
         try {
@@ -48,6 +58,8 @@ public class AboutActivity extends AppCompatActivity {
 
         // Default to dark mode universally?
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+
+        setSupportActionBar(findViewById(R.id.toolbar));
 
         // Make our Monado link clickable
         ((TextView) findViewById(R.id.textPowered))
@@ -88,5 +100,25 @@ public class AboutActivity extends AppCompatActivity {
         }
 
         fragmentTransaction.commit();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        aboutMenuProvider.ifPresent(
+                menuProvider -> menuProvider.onCreateOptionsMenu(getMenuInflater(), menu));
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        Optional<AboutMenuProvider> aboutMenu = aboutMenuProvider;
+        if (aboutMenu.isPresent()) {
+            if (aboutMenu.get().onOptionsItemSelected(this, item)) {
+                // handled
+                return true;
+            }
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 }

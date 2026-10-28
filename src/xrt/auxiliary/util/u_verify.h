@@ -1,10 +1,10 @@
 // Copyright 2021, Collabora, Ltd.
-// Copyright 2021, Moses Turner.
+// Copyright 2021, Moshi Turner.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Tiny file to verify things
- * @author Moses Turner <mosesturner@protonmail.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_util
  */

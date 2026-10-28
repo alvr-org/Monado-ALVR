@@ -29,6 +29,15 @@ u_visibility_mask_get_default(enum xrt_visibility_mask_type type,
                               const struct xrt_fov *fov,
                               struct xrt_visibility_mask **out_mask);
 
+/*!
+ * No-op visibility mask with zero vertices and indices. The caller must take
+ * care of de-allocating the mask once done with it.
+ *
+ * @ingroup aux_util
+ */
+void
+u_visibility_mask_get_noop(enum xrt_visibility_mask_type type, struct xrt_visibility_mask **out_mask);
+
 
 #ifdef __cplusplus
 }

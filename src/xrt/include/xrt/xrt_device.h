@@ -1,10 +1,11 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Header defining an xrt display or controller device.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <mosesturner@protonmail.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup xrt_iface
  */
@@ -12,6 +13,7 @@
 #pragma once
 
 #include "xrt/xrt_defines.h"
+#include "xrt/xrt_plane_detector.h"
 #include "xrt/xrt_visibility_mask.h"
 #include "xrt/xrt_limits.h"
 
@@ -23,6 +25,38 @@ struct xrt_tracking;
 
 #define XRT_DEVICE_NAME_LEN 256
 
+
+/*!
+ * A unique identifier for an @ref xrt_device instance.
+ *
+ * Each device is assigned a 64-bit ID when it is created in the Monado service
+ * process, or in the application process for in-process setups. For
+ * out-of-process clients the ID is synchronized over the IPC layer, so every
+ * client connected to the same service refers to a given device by the same
+ * value.
+ *
+ * The ID is intended for hash maps, caches, and similar lookups. Unlike a
+ * memory pointer it is never reused after the device is destroyed.
+ *
+ * A value of zero is invalid and means the device ID has not been assigned,
+ * matching the zero-initialized state of the struct.
+ *
+ * @ingroup xrt_iface
+ */
+struct xrt_device_id
+{
+	uint64_t val;
+};
+
+/*!
+ * Value of an @ref xrt_device_id that has not been assigned.
+ *
+ * @ingroup xrt_iface
+ * @relates xrt_device_id
+ */
+// clang-format off
+#define XRT_DEVICE_ID_INVALID XRT_C11_COMPOUND(struct xrt_device_id){0}
+// clang-format on
 
 /*!
  * A per-lens/display view information.
@@ -77,6 +111,47 @@ struct xrt_view
 	 * the vertex positions.
 	 */
 	struct xrt_matrix_2x2 rot;
+};
+
+/*!
+ * @brief Compositor information for a device.
+ */
+struct xrt_device_compositor_info
+{
+	/*!
+	 * @brief The type of panel refresh the screen uses.
+	 *
+	 * This affects how scanout poses are queried for rolling refresh
+	 * compensation: if the mode is @ref XRT_PANEL_REFRESH_TYPE_GLOBAL,
+	 * the start and end scanout world poses will be identical; otherwise,
+	 * separate start and end poses are queried using different predicted
+	 * timestamps derived from the other members of
+	 * @ref xrt_device_compositor_info.
+	 *
+	 * The transmission direction (if known) should be specified via
+	 * @ref scanout_direction. Some features may require this information
+	 * even for global-refresh panels, e.g. beam racing.
+	 */
+	enum xrt_panel_refresh_type panel_refresh_type;
+
+	//! The direction scanout on the display occurs.
+	enum xrt_scanout_direction scanout_direction;
+	/*!
+	 * The amount of time it takes to scanout the display in nanoseconds, from the start of the scanout, to the end
+	 * of the scanout.
+	 *
+	 * @note alignas for 32 bit client support, see @ref ipc-design
+	 */
+	XRT_ALIGNAS(8) int64_t scanout_time_ns;
+};
+
+/*!
+ * @brief Compositor mode information for a device.
+ */
+struct xrt_device_compositor_mode
+{
+	//! The amount of nanoseconds between frames.
+	int64_t frame_interval_ns;
 };
 
 /*!
@@ -162,7 +237,8 @@ struct xrt_input
 	//! Is this input active.
 	bool active;
 
-	int64_t timestamp;
+	//! alignas for 32 bit client support, see @ref ipc-design
+	XRT_ALIGNAS(8) int64_t timestamp;
 
 	enum xrt_input_name name;
 
@@ -181,45 +257,6 @@ struct xrt_output
 
 
 /*!
- * A binding pair, going @p from a binding point to a @p device input.
- *
- * @ingroup xrt_iface
- */
-struct xrt_binding_input_pair
-{
-	enum xrt_input_name from;   //!< From which name.
-	enum xrt_input_name device; //!< To input on the device.
-};
-
-/*!
- * A binding pair, going @p from a binding point to a @p device output.
- *
- * @ingroup xrt_iface
- */
-struct xrt_binding_output_pair
-{
-	enum xrt_output_name from;   //!< From which name.
-	enum xrt_output_name device; //!< To output on the device.
-};
-
-/*!
- * A binding profile, has lists of binding pairs to goes from device in @p name
- * to the device it hangs off on.
- *
- * @ingroup xrt_iface
- */
-struct xrt_binding_profile
-{
-	//! Device this binding emulates.
-	enum xrt_device_name name;
-
-	struct xrt_binding_input_pair *inputs;
-	size_t input_count;
-	struct xrt_binding_output_pair *outputs;
-	size_t output_count;
-};
-
-/*!
  * Higher level features for devices.
  */
 enum xrt_device_feature_type
@@ -227,7 +264,57 @@ enum xrt_device_feature_type
 	XRT_DEVICE_FEATURE_HAND_TRACKING_LEFT = 0,
 	XRT_DEVICE_FEATURE_HAND_TRACKING_RIGHT,
 	XRT_DEVICE_FEATURE_EYE_TRACKING,
+	XRT_DEVICE_FEATURE_FACE_TRACKING,
 	XRT_DEVICE_FEATURE_MAX_ENUM,
+};
+
+/*!
+ * Output limits of a particular device
+ */
+struct xrt_output_limits
+{
+	//! The sample rate of the device's haptic PCM support, 0 if haptic PCM is not supported.
+	float haptic_pcm_sample_rate;
+};
+
+/*!
+ * Static data of supported features of the @ref xrt_device this struct sits on.
+ *
+ * This struct needs to always be a piece of data as it sits inside of the
+ * shared memory area in the IPC layer, so no pointers please.
+ *
+ * @ingroup xrt_iface
+ */
+struct xrt_device_supported
+{
+	bool orientation_tracking;
+	bool position_tracking;
+	bool hand_tracking;
+	bool eye_gaze;
+	bool presence;
+	bool force_feedback;
+	bool ref_space_usage;
+	bool form_factor_check;
+	bool stage;
+	bool face_tracking;
+	bool face_tracking_calibration_state;
+	bool body_tracking;
+	bool body_tracking_calibration;
+	bool body_tracking_fidelity;
+	bool battery_status;
+	bool brightness_control;
+	bool compositor_info;
+	bool notify_chirality;
+
+	bool planes;
+	enum xrt_plane_detection_capability_flags_ext plane_capability_flags;
+
+	/*!
+	 * The device itself only has 2 views but is aware of quad views, has
+	 * better knowledge of which fovs to use for quad views to stereo views
+	 * emulation. So it supports retrieving quad views from get_views.
+	 */
+	bool get_views_quad;
 };
 
 /*!
@@ -239,6 +326,9 @@ enum xrt_device_feature_type
  */
 struct xrt_device
 {
+	//! Instance identifier, see @ref xrt_device_id.
+	struct xrt_device_id id;
+
 	//! Enum identifier of the device.
 	enum xrt_device_name name;
 	enum xrt_device_type device_type;
@@ -255,11 +345,6 @@ struct xrt_device
 	//! Always set, pointing to the tracking system for this device.
 	struct xrt_tracking_origin *tracking_origin;
 
-	//! Number of bindings in xrt_device::binding_profiles
-	size_t binding_profile_count;
-	// Array of alternative binding profiles.
-	struct xrt_binding_profile *binding_profiles;
-
 	//! Number of inputs.
 	size_t input_count;
 	//! Array of input structs.
@@ -270,17 +355,9 @@ struct xrt_device
 	//! Array of output structs.
 	struct xrt_output *outputs;
 
-	bool orientation_tracking_supported;
-	bool position_tracking_supported;
-	bool hand_tracking_supported;
-	bool eye_gaze_supported;
-	bool force_feedback_supported;
-	bool ref_space_usage_supported;
-	bool form_factor_check_supported;
-	bool stage_supported;
-	bool face_tracking_supported;
-	bool body_tracking_supported;
-	bool battery_status_supported;
+	//! What features/functions/things does this device supports?
+	struct xrt_device_supported supported;
+
 
 	/*
 	 *
@@ -347,11 +424,11 @@ struct xrt_device
 	 *
 	 * @see xrt_input_name
 	 */
-	void (*get_hand_tracking)(struct xrt_device *xdev,
-	                          enum xrt_input_name name,
-	                          int64_t desired_timestamp_ns,
-	                          struct xrt_hand_joint_set *out_value,
-	                          int64_t *out_timestamp_ns);
+	xrt_result_t (*get_hand_tracking)(struct xrt_device *xdev,
+	                                  enum xrt_input_name name,
+	                                  int64_t desired_timestamp_ns,
+	                                  struct xrt_hand_joint_set *out_value,
+	                                  int64_t *out_timestamp_ns);
 
 	/*!
 	 * @brief Get the requested blend shape properties & weights for a face tracker
@@ -369,6 +446,16 @@ struct xrt_device
 	                                  enum xrt_input_name facial_expression_type,
 	                                  int64_t at_timestamp_ns,
 	                                  struct xrt_facial_expression_set *out_value);
+
+	/*!
+	 * @brief Gets the face tracking calibration state
+	 *
+	 * @param[in] xdev                    The device.
+	 * @param[in] out_face_is_calibrated  Is face tracking calibrated?
+	 *
+	 * @see xrt_input_name
+	 */
+	xrt_result_t (*get_face_calibration_state_android)(struct xrt_device *xdev, bool *out_face_is_calibrated);
 
 	/*!
 	 * @brief Get the body skeleton in T-pose, used to query the skeleton hierarchy, scale, proportions etc
@@ -402,6 +489,33 @@ struct xrt_device
 	                                struct xrt_body_joint_set *out_value);
 
 	/*!
+	 * @brief XR_META_body_tracking_calibration - body tracking extension to reset the body tracking calibration
+	 *
+	 * @param[in] xdev              The body tracking device.
+	 */
+	xrt_result_t (*reset_body_tracking_calibration_meta)(struct xrt_device *xdev);
+
+	/*!
+	 * @brief XR_META_body_tracking_calibration - body tracking extension to suggest a body tracking calibration
+	 * override
+	 *
+	 * @param[in] xdev              The body tracking device.
+	 * @param[in] new_body_height   The suggested new body height to override.
+	 */
+	xrt_result_t (*set_body_tracking_calibration_override_meta)(struct xrt_device *xdev, float new_body_height);
+
+	/*!
+	 * @brief XR_META_body_tracking_fidelity - body tracking extension for request changing the tracking fidelity
+	 *
+	 * @param[in] xdev              The body tracking device.
+	 * @param[in] new_fidelity      The new tracking fidelity mode.
+	 *
+	 * @see xrt_body_tracking_fidelity_meta
+	 */
+	xrt_result_t (*set_body_tracking_fidelity_meta)(struct xrt_device *xdev,
+	                                                enum xrt_body_tracking_fidelity_meta new_fidelity);
+
+	/*!
 	 * Set a output value.
 	 *
 	 * @param[in] xdev           The device.
@@ -409,7 +523,64 @@ struct xrt_device
 	 * @param[in] value          The value to set the output to.
 	 * @see xrt_output_name
 	 */
-	void (*set_output)(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value);
+	xrt_result_t (*set_output)(struct xrt_device *xdev,
+	                           enum xrt_output_name name,
+	                           const struct xrt_output_value *value);
+
+	/*!
+	 * Gets limits of this devices outputs.
+	 *
+	 * @param[in] xdev           The device.
+	 * @param[out] limits        The returned limits.
+	 */
+	xrt_result_t (*get_output_limits)(struct xrt_device *xdev, struct xrt_output_limits *limits);
+
+	/*!
+	 * Begin a plane detection request
+	 *
+	 * @param[in] xdev               The device.
+	 * @param[in] begin_info         The query specifying what type of planes are requested.
+	 * @param[in] plane_detection_id  The id for a previous plane detection request to be replaced or 0.
+	 * @param[out] out_plane_detection_id  The id of the new plane detection request generated by the xdev.
+	 * @return generally XRT_SUCCESS, except for internal runtime failures.
+	 */
+	xrt_result_t (*begin_plane_detection_ext)(struct xrt_device *xdev,
+	                                          const struct xrt_plane_detector_begin_info_ext *begin_info,
+	                                          uint64_t plane_detection_id,
+	                                          uint64_t *out_plane_detection_id);
+
+	/*!
+	 * Destroy internal resources associated with plane_detector_id.
+	 *
+	 * @param[in] xdev               The device.
+	 * @param[in] plane_detection_id  An id generated by the xdev.
+	 * @return generally XRT_SUCCESS, except for internal runtime failures.
+	 */
+	xrt_result_t (*destroy_plane_detection_ext)(struct xrt_device *xdev, uint64_t plane_detection_id);
+
+	/*!
+	 * Get the state of a plane detection request.
+	 *
+	 * @param[in] xdev               The device.
+	 * @param[in] plane_detector_id  An id generated by the xdev.
+	 * @param[out] out_state         The state of the plane detection.
+	 * @return generally XRT_SUCCESS, except for internal runtime failures.
+	 */
+	xrt_result_t (*get_plane_detection_state_ext)(struct xrt_device *xdev,
+	                                              uint64_t plane_detection_id,
+	                                              enum xrt_plane_detector_state_ext *out_state);
+
+	/*!
+	 * Get results of a plane detection request.
+	 *
+	 * @param[in] xdev               The device.
+	 * @param[in] plane_detector_id  An id generated by the xdev.
+	 * @param[out] detections        The detected planes, if any.
+	 * @return generally XRT_SUCCESS, except for internal runtime failures.
+	 */
+	xrt_result_t (*get_plane_detections_ext)(struct xrt_device *xdev,
+	                                         uint64_t plane_detection_id,
+	                                         struct xrt_plane_detections_ext *out_detections);
 
 	/*!
 	 * @brief Get the per-view pose in relation to the view space.
@@ -434,6 +605,7 @@ struct xrt_device
 	 *                         input.
 	 * @param[in] at_timestamp_ns This is when the caller wants the poses and FOVs to be from.
 	 * @param[in] view_count   Number of views.
+	 * @param[in] view_type    Type of view configuration (mono or stereo).
 	 * @param[out] out_head_relation
 	 *                         The head pose in the device tracking space.
 	 *                         Combine with @p out_poses to get the views in
@@ -448,13 +620,14 @@ struct xrt_device
 	 *                         (Caution: Even if you have eye tracking, you
 	 *                         won't use eye orientation here!)
 	 */
-	void (*get_view_poses)(struct xrt_device *xdev,
-	                       const struct xrt_vec3 *default_eye_relation,
-	                       int64_t at_timestamp_ns,
-	                       uint32_t view_count,
-	                       struct xrt_space_relation *out_head_relation,
-	                       struct xrt_fov *out_fovs,
-	                       struct xrt_pose *out_poses);
+	xrt_result_t (*get_view_poses)(struct xrt_device *xdev,
+	                               const struct xrt_vec3 *default_eye_relation,
+	                               int64_t at_timestamp_ns,
+	                               enum xrt_view_type view_type,
+	                               uint32_t view_count,
+	                               struct xrt_space_relation *out_head_relation,
+	                               struct xrt_fov *out_fovs,
+	                               struct xrt_pose *out_poses);
 
 	/**
 	 * Compute the distortion at a single point.
@@ -470,7 +643,7 @@ struct xrt_device
 	 * @param v               vertical texture coordinate
 	 * @param[out] out_result corresponding u,v pairs for all three color channels.
 	 */
-	bool (*compute_distortion)(
+	xrt_result_t (*compute_distortion)(
 	    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result);
 
 	/*!
@@ -512,10 +685,11 @@ struct xrt_device
 	 *
 	 * @param[in] xdev The device.
 	 * @param[in] form_factor Form factor to check.
-	 *
-	 * @return true if given form factor is available; otherwise false.
+	 * @param[out] out_available true if given form factor is available; otherwise false.
 	 */
-	bool (*is_form_factor_available)(struct xrt_device *xdev, enum xrt_form_factor form_factor);
+	xrt_result_t (*is_form_factor_available)(struct xrt_device *xdev,
+	                                         enum xrt_form_factor form_factor,
+	                                         bool *out_available);
 
 	/*!
 	 * @brief Get battery status information.
@@ -529,6 +703,40 @@ struct xrt_device
 	                                   bool *out_present,
 	                                   bool *out_charging,
 	                                   float *out_charge);
+
+	/*!
+	 * @brief Get the current display brightness.
+	 *
+	 * @param[in] xdev             The device.
+	 * @param[out] out_brightness  Current display brightness. Usually between 0 and 1. Some devices may
+	 *                             exceed 1 if the supported range exceeds 100%
+	 */
+	xrt_result_t (*get_brightness)(struct xrt_device *xdev, float *out_brightness);
+
+	/*!
+	 * @brief Set the display brightness.
+	 *
+	 * @param[in] xdev            The device.
+	 * @param[in] brightness      Desired display brightness. Usually between 0 and 1. Some devices may
+	 *                            allow exceeding 1 if the supported range exceeds 100%, but it will be clamped to
+	 *                            the supported range.
+	 * @param[in] relative        Whether to add \a brightness to the current brightness, instead of overwriting
+	 *                            the current brightness.
+	 */
+	xrt_result_t (*set_brightness)(struct xrt_device *xdev, float brightness, bool relative);
+
+	/*!
+	 * @brief Gets the compositor info for a device for the given mode.
+	 *
+	 * This function should never block, and never wait on congested locks.
+	 *
+	 * @param[in] xdev            The device.
+	 * @param[in] mode            The mode to query with.
+	 * @param[out] out_info       Populated with the output data.
+	 */
+	xrt_result_t (*get_compositor_info)(struct xrt_device *xdev,
+	                                    const struct xrt_device_compositor_mode *mode,
+	                                    struct xrt_device_compositor_info *out_info);
 
 	/*!
 	 * Enable the feature for this device.
@@ -547,6 +755,17 @@ struct xrt_device
 	xrt_result_t (*end_feature)(struct xrt_device *xdev, enum xrt_device_feature_type type);
 
 	/*!
+	 * Notify the device of it's new chirality, or that it no longer has a set chirality.
+	 *
+	 * Devices are assumed to have no set chirality by default.
+	 *
+	 * @param[in] xdev          The device.
+	 * @param[in] has_chirality Whether or not the device has a set chirality.
+	 * @param[in] chirality     The device's current chirality (unset if `has_chirality` is false).
+	 */
+	xrt_result_t (*notify_chirality)(struct xrt_device *xdev, bool has_chirality, enum xrt_hand chirality);
+
+	/*!
 	 * Destroy device.
 	 */
 	void (*destroy)(struct xrt_device *xdev);
@@ -561,7 +780,7 @@ struct xrt_device
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_update_inputs(struct xrt_device *xdev)
 {
 	return xdev->update_inputs(xdev);
@@ -574,7 +793,7 @@ xrt_device_update_inputs(struct xrt_device *xdev)
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_tracked_pose(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             int64_t at_timestamp_ns,
@@ -590,14 +809,14 @@ xrt_device_get_tracked_pose(struct xrt_device *xdev,
  *
  * @public @memberof xrt_device
  */
-static inline void
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_hand_tracking(struct xrt_device *xdev,
                              enum xrt_input_name name,
                              int64_t desired_timestamp_ns,
                              struct xrt_hand_joint_set *out_value,
                              int64_t *out_timestamp_ns)
 {
-	xdev->get_hand_tracking(xdev, name, desired_timestamp_ns, out_value, out_timestamp_ns);
+	return xdev->get_hand_tracking(xdev, name, desired_timestamp_ns, out_value, out_timestamp_ns);
 }
 
 /*!
@@ -607,7 +826,7 @@ xrt_device_get_hand_tracking(struct xrt_device *xdev,
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_face_tracking(struct xrt_device *xdev,
                              enum xrt_input_name facial_expression_type,
                              int64_t at_timestamp_ns,
@@ -617,13 +836,26 @@ xrt_device_get_face_tracking(struct xrt_device *xdev,
 }
 
 /*!
+ * Helper function for @ref xrt_device::get_face_calibration_state_android.
+ *
+ * @copydoc xrt_device::get_face_calibration_state_android
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_get_face_calibration_state_android(struct xrt_device *xdev, bool *out_face_is_calibrated)
+{
+	return xdev->get_face_calibration_state_android(xdev, out_face_is_calibrated);
+}
+
+/*!
  * Helper function for @ref xrt_device::get_body_skeleton.
  *
  * @copydoc xrt_device::get_body_skeleton
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_body_skeleton(struct xrt_device *xdev,
                              enum xrt_input_name body_tracking_type,
                              struct xrt_body_skeleton *out_value)
@@ -638,7 +870,7 @@ xrt_device_get_body_skeleton(struct xrt_device *xdev,
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_body_joints(struct xrt_device *xdev,
                            enum xrt_input_name body_tracking_type,
                            int64_t desired_timestamp_ns,
@@ -648,16 +880,126 @@ xrt_device_get_body_joints(struct xrt_device *xdev,
 }
 
 /*!
+ * Helper function for @ref xrt_device::reset_body_tracking_calibration_meta.
+ *
+ * @copydoc xrt_device::reset_body_tracking_calibration_meta
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_reset_body_tracking_calibration_meta(struct xrt_device *xdev)
+{
+	if (xdev->reset_body_tracking_calibration_meta == NULL) {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+	return xdev->reset_body_tracking_calibration_meta(xdev);
+}
+
+/*!
+ * Helper function for @ref xrt_device::set_body_tracking_calibration_override_meta.
+ *
+ * @copydoc xrt_device::set_body_tracking_calibration_override_meta
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_set_body_tracking_calibration_override_meta(struct xrt_device *xdev, float new_body_height)
+{
+	if (xdev->set_body_tracking_calibration_override_meta == NULL) {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+	return xdev->set_body_tracking_calibration_override_meta(xdev, new_body_height);
+}
+
+/*!
+ * Helper function for @ref xrt_device::set_body_tracking_fidelity_meta.
+ *
+ * @copydoc xrt_device::set_body_tracking_fidelity_meta
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_set_body_tracking_fidelity_meta(struct xrt_device *xdev, enum xrt_body_tracking_fidelity_meta new_fidelity)
+{
+	if (xdev->set_body_tracking_fidelity_meta == NULL) {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+	return xdev->set_body_tracking_fidelity_meta(xdev, new_fidelity);
+}
+
+/*!
  * Helper function for @ref xrt_device::set_output.
  *
  * @copydoc xrt_device::set_output
  *
  * @public @memberof xrt_device
  */
-static inline void
-xrt_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const struct xrt_output_value *value)
 {
 	xdev->set_output(xdev, name, value);
+	return XRT_SUCCESS;
+}
+
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_get_output_limits(struct xrt_device *xdev, struct xrt_output_limits *limits)
+{
+	if (xdev->get_output_limits) {
+		return xdev->get_output_limits(xdev, limits);
+	} else {
+		return XRT_ERROR_NOT_IMPLEMENTED;
+	}
+}
+
+/*!
+ * Helper function for @ref xrt_device::begin_plane_detection_ext.
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_begin_plane_detection_ext(struct xrt_device *xdev,
+                                     const struct xrt_plane_detector_begin_info_ext *begin_info,
+                                     uint64_t plane_detection_id,
+                                     uint64_t *out_plane_detection_id)
+{
+	return xdev->begin_plane_detection_ext(xdev, begin_info, plane_detection_id, out_plane_detection_id);
+}
+
+/*!
+ * Helper function for @ref xrt_device::destroy_plane_detection_ext.
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_destroy_plane_detection_ext(struct xrt_device *xdev, uint64_t plane_detection_id)
+{
+	return xdev->destroy_plane_detection_ext(xdev, plane_detection_id);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_plane_detections_ext.
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_get_plane_detection_state_ext(struct xrt_device *xdev,
+                                         uint64_t plane_detection_id,
+                                         enum xrt_plane_detector_state_ext *out_state)
+{
+	return xdev->get_plane_detection_state_ext(xdev, plane_detection_id, out_state);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_plane_detections_ext.
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_get_plane_detections_ext(struct xrt_device *xdev,
+                                    uint64_t plane_detection_id,
+                                    struct xrt_plane_detections_ext *out_detections)
+{
+	return xdev->get_plane_detections_ext(xdev, plane_detection_id, out_detections);
 }
 
 /*!
@@ -666,17 +1008,25 @@ xrt_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const 
  * @copydoc xrt_device::get_view_poses
  * @public @memberof xrt_device
  */
-static inline void
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_view_poses(struct xrt_device *xdev,
                           const struct xrt_vec3 *default_eye_relation,
                           int64_t at_timestamp_ns,
+                          enum xrt_view_type view_type,
                           uint32_t view_count,
                           struct xrt_space_relation *out_head_relation,
                           struct xrt_fov *out_fovs,
                           struct xrt_pose *out_poses)
 {
-	xdev->get_view_poses(xdev, default_eye_relation, at_timestamp_ns, view_count, out_head_relation, out_fovs,
-	                     out_poses);
+	return xdev->get_view_poses( //
+	    xdev,                    //
+	    default_eye_relation,    //
+	    at_timestamp_ns,         //
+	    view_type,               //
+	    view_count,              //
+	    out_head_relation,       //
+	    out_fovs,                //
+	    out_poses);              //
 }
 
 /*!
@@ -686,7 +1036,7 @@ xrt_device_get_view_poses(struct xrt_device *xdev,
  *
  * @public @memberof xrt_device
  */
-static inline bool
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_compute_distortion(
     struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
 {
@@ -700,7 +1050,7 @@ xrt_device_compute_distortion(
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_visibility_mask(struct xrt_device *xdev,
                                enum xrt_visibility_mask_type type,
                                uint32_t view_index,
@@ -716,7 +1066,7 @@ xrt_device_get_visibility_mask(struct xrt_device *xdev,
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_ref_space_usage(struct xrt_device *xdev,
                            enum xrt_reference_space_type type,
                            enum xrt_input_name name,
@@ -732,10 +1082,10 @@ xrt_device_ref_space_usage(struct xrt_device *xdev,
  *
  * @public @memberof xrt_device
  */
-static inline bool
-xrt_device_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor, bool *out_available)
 {
-	return xdev->is_form_factor_available(xdev, form_factor);
+	return xdev->is_form_factor_available(xdev, form_factor, out_available);
 }
 
 /*!
@@ -745,10 +1095,49 @@ xrt_device_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_facto
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
 {
 	return xdev->get_battery_status(xdev, out_present, out_charging, out_charge);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_brightness.
+ *
+ * @copydoc xrt_device::get_brightness
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_get_brightness(struct xrt_device *xdev, float *out_brightness)
+{
+	return xdev->get_brightness(xdev, out_brightness);
+}
+
+/*!
+ * Helper function for @ref xrt_device::set_brightness.
+ *
+ * @copydoc xrt_device::set_brightness
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_set_brightness(struct xrt_device *xdev, float brightness, bool relative)
+{
+	return xdev->set_brightness(xdev, brightness, relative);
+}
+
+/*!
+ * Helper function for @ref xrt_device::get_compositor_info.
+ *
+ * @copydoc xrt_device::get_compositor_info
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_get_compositor_info(struct xrt_device *xdev,
+                               const struct xrt_device_compositor_mode *mode,
+                               struct xrt_device_compositor_info *out_info)
+{
+	return xdev->get_compositor_info(xdev, mode, out_info);
 }
 
 /*!
@@ -758,7 +1147,7 @@ xrt_device_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_begin_feature(struct xrt_device *xdev, enum xrt_device_feature_type type)
 {
 	return xdev->begin_feature(xdev, type);
@@ -771,10 +1160,23 @@ xrt_device_begin_feature(struct xrt_device *xdev, enum xrt_device_feature_type t
  *
  * @public @memberof xrt_device
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_device_end_feature(struct xrt_device *xdev, enum xrt_device_feature_type type)
 {
 	return xdev->end_feature(xdev, type);
+}
+
+/*!
+ * Helper function for @ref xrt_device::notify_chirality.
+ *
+ * @copydoc xrt_device::notify_chirality
+ *
+ * @public @memberof xrt_device
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_device_notify_chirality(struct xrt_device *xdev, bool has_chirality, enum xrt_hand chirality)
+{
+	return xdev->notify_chirality(xdev, has_chirality, chirality);
 }
 
 /*!
@@ -784,7 +1186,7 @@ xrt_device_end_feature(struct xrt_device *xdev, enum xrt_device_feature_type typ
  *
  * @public @memberof xrt_device
  */
-static inline void
+XRT_NONNULL_ALL static inline void
 xrt_device_destroy(struct xrt_device **xdev_ptr)
 {
 	struct xrt_device *xdev = *xdev_ptr;

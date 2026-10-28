@@ -1,10 +1,10 @@
 // Copyright 2020-2023, Collabora, Ltd.
-// Copyright 2020-2021, Moses Turner
+// Copyright 2020-2021, Moshi Turner
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief   Driver for Ultraleap's V2 API for the Leap Motion Controller.
- * @author  Moses Turner <mosesturner@protonmail.com>
+ * @author  Moshi Turner <moshiturner@protonmail.com>
  * @author  Christoph Haag <christoph.haag@collabora.com>
  * @ingroup drv_ulv2
  */
@@ -39,7 +39,7 @@ enum xrt_space_relation_flags valid_flags = (enum xrt_space_relation_flags)(
     XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT);
 
 // Excuse my sketchy thread stuff, I'm sure this violates all kinds of best practices. It uusssuallyyy doesn't explode.
-// -Moses Turner
+// -Moshi Turner
 enum leap_thread_status
 {
 	THREAD_NOT_STARTED,
@@ -204,7 +204,7 @@ leap_input_loop(void *ptr_to_xdev)
 	Leap::Controller LeapController;
 	os_nanosleep(U_1_000_000_000 * 0.01);
 	// sleep for an arbitrary amount of time so that Leap::Controller can initialize and connect to the service.
-	float start = (float)os_monotonic_get_ns() / (float)U_1_000_000_000;
+	float start = (float)os_monotonic_get_ns() / (float)U_TIME_1S_IN_NS;
 	// would be nice to do this only if we're not building release ^^. don't know how to do that though.
 
 	for (int i = 0; i < num_tries; i++) {
@@ -228,10 +228,10 @@ leap_input_loop(void *ptr_to_xdev)
 			          "Retrying (%i / %i)",
 			          i, num_tries);
 		}
-		os_nanosleep(U_1_000_000_000 * retry_sleep_time); // 1 second * retry_sleep_time
+		os_nanosleep(U_TIME_1S_IN_NS * retry_sleep_time); // 1 second * retry_sleep_time
 	}
 
-	ULV2_DEBUG(ulv2d, "Waited %f seconds", ((float)os_monotonic_get_ns() / (float)U_1_000_000_000) - start);
+	ULV2_DEBUG(ulv2d, "Waited %f seconds", ((float)os_monotonic_get_ns() / (float)U_TIME_1S_IN_NS) - start);
 
 	bool hmdpolicyset = false;
 
@@ -264,7 +264,7 @@ leap_input_loop(void *ptr_to_xdev)
 			ULV2_DEBUG(ulv2d, "HMD policy set.");
 			break;
 		}
-		os_nanosleep(U_1_000_000_000 * retry_sleep_time); // 1 second * retry_sleep_time
+		os_nanosleep(U_TIME_1S_IN_NS * retry_sleep_time); // 1 second * retry_sleep_time
 	}
 	ULV2_TRACE(ulv2d, "thread OK\n");
 	ulv2d->our_thread_status = THREAD_OK;
@@ -309,7 +309,7 @@ leap_input_loop(void *ptr_to_xdev)
 		}
 		os_thread_helper_lock(&ulv2d->leap_loop_oth);
 		memcpy(&ulv2d->joints_read_out, &ulv2d->joints_write_in, sizeof(struct xrt_hand_joint_set) * 2);
-		//! @todo (Moses Turner) Could be using LeapController.now() to try to emulate our own pose prediction,
+		//! @todo (Moshi Turner) Could be using LeapController.now() to try to emulate our own pose prediction,
 		//! but I ain't got time for that
 		ulv2d->hand_exists[0] = leftbeendone;
 		ulv2d->hand_exists[1] = rightbeendone;
@@ -331,12 +331,12 @@ ulv2_device_get_hand_tracking(struct xrt_device *xdev,
 {
 	struct ulv2_device *ulv2d = ulv2_device(xdev);
 
-	if (name != XRT_INPUT_GENERIC_HAND_TRACKING_LEFT && name != XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT) {
+	if (name != XRT_INPUT_HT_UNOBSTRUCTED_LEFT && name != XRT_INPUT_HT_UNOBSTRUCTED_RIGHT) {
 		ULV2_ERROR(ulv2d, "unknown input name for hand tracker");
 		return;
 	}
 
-	bool hand_index = (name == XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT); // 0 if left, 1 if right.
+	bool hand_index = (name == XRT_INPUT_HT_UNOBSTRUCTED_RIGHT); // 0 if left, 1 if right.
 
 	bool hand_valid = ulv2d->hand_exists[hand_index];
 
@@ -398,13 +398,13 @@ ulv2_create_device(struct xrt_device **out_xdev)
 	strncpy(ulv2d->base.str, "Leap Motion v2 driver", XRT_DEVICE_NAME_LEN);
 	strncpy(ulv2d->base.serial, "Leap Motion v2 driver", XRT_DEVICE_NAME_LEN);
 
-	ulv2d->base.inputs[0].name = XRT_INPUT_GENERIC_HAND_TRACKING_LEFT;
-	ulv2d->base.inputs[1].name = XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT;
+	ulv2d->base.inputs[0].name = XRT_INPUT_HT_UNOBSTRUCTED_LEFT;
+	ulv2d->base.inputs[1].name = XRT_INPUT_HT_UNOBSTRUCTED_RIGHT;
 
 	ulv2d->base.name = XRT_DEVICE_HAND_TRACKER;
 
 	ulv2d->base.device_type = XRT_DEVICE_TYPE_HAND_TRACKER;
-	ulv2d->base.hand_tracking_supported = true;
+	ulv2d->base.supported.hand_tracking = true;
 
 	u_var_add_root(ulv2d, "Leap Motion v2 driver", true);
 	u_var_add_ro_text(ulv2d, ulv2d->base.str, "Name");

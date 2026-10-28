@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,6 +13,7 @@
 #include "util/u_handles.h"
 
 #include "vk/vk_image_allocator.h"
+#include "vk/vk_compositor_flags.h"
 
 #include <vulkan/vulkan_core.h>
 #include <xrt/xrt_handles.h>
@@ -135,10 +137,7 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	};
 
 	ret = vk->vkGetAndroidHardwareBufferPropertiesANDROID(vk->device, a_buffer, &a_buffer_props);
-	if (ret != VK_SUCCESS) {
-		U_LOG_E("vkGetAndroidHardwareBufferPropertiesANDROID: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkGetAndroidHardwareBufferPropertiesANDROID");
 
 	//! @todo Actually use this buffer for something other then getting the format.
 	// Does null-check, validity check and clears.
@@ -184,7 +183,6 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	    .sType = VK_STRUCTURE_TYPE_EXTERNAL_FORMAT_ANDROID,
 	    .externalFormat = a_buffer_format_props.externalFormat,
 	};
-	CHAIN(format_android);
 
 	if (image_format == VK_FORMAT_R8G8B8A8_SRGB) {
 		// Some versions of Android can't allocate native sRGB, use UNORM and correct gamma later.
@@ -192,17 +190,26 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 
 		// https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkImageViewCreateInfo-image-01019
 		image_create_flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-
-		// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html#VUID-VkImageCreateInfo-pNext-02396
-		format_android.externalFormat = 0;
-		assert(a_buffer_format_props.format != VK_FORMAT_UNDEFINED); // Make sure there is a Vulkan format.
-		assert(format_android.externalFormat == 0);
+		has_mutable_usage = true;
 
 		add_format_non_dup(&flh, VK_FORMAT_R8G8B8A8_UNORM);
 		add_format_non_dup(&flh, VK_FORMAT_R8G8B8A8_SRGB);
 	}
 
-	if (vk_csci_is_format_supported(vk, image_format, info->bits)) {
+	// https://www.khronos.org/registry/vulkan/specs/1.3-extensions/man/html/VkImageCreateInfo.html#VUID-VkImageCreateInfo-pNext-02396
+	if (has_mutable_usage) {
+		format_android.externalFormat = 0;
+		// Make sure there is a Vulkan format.
+		if (a_buffer_format_props.format == VK_FORMAT_UNDEFINED) {
+			VK_WARN(vk,
+			        "vkGetAndroidHardwareBufferPropertiesANDROID: AHB has no Vulkan-mappable format. "
+			        "External format chain required, but external formats cannot be mutable. Swapchain "
+			        "creation may fail!");
+			assert(false);
+		}
+	}
+
+	if (vk_csci_is_format_supported(vk, image_format, info->create, info->bits)) {
 		// Format is supported, no need for VkExternalFormatANDROID
 		format_android.externalFormat = 0;
 		assert(a_buffer_format_props.format != VK_FORMAT_UNDEFINED); // Make sure there is a Vulkan format.
@@ -233,6 +240,19 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	}
 #endif
 
+#ifdef VK_EXT_image_tiling_control
+	VkImageTilingControlCreateInfoEXT image_tiling_control_create_info = {
+	    .sType = VK_STRUCTURE_TYPE_IMAGE_TILING_CONTROL_CREATE_INFO_EXT,
+	    .tilingControl = VK_IMAGE_TILING_CONTROL_MAX_PERFORMANCE_EXT,
+	};
+
+	bool tiling_control =
+	    (info->create & XRT_SWAPCHAIN_CREATE_TILING_MAX_PERFORMANCE) != 0 && vk->features.image_tiling_control;
+	if (tiling_control) {
+		CHAIN(image_tiling_control_create_info);
+	}
+#endif
+
 	if (info->face_count == 6) {
 		image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
@@ -256,20 +276,20 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	// VUID-VkImageCreateInfo-pNext-01974
 	if (format_android.externalFormat != 0) {
 		create_info.format = VK_FORMAT_UNDEFINED;
+		CHAIN(format_android);
 	}
 #endif
 
 	ret = vk->vkCreateImage(vk->device, &create_info, NULL, &image);
-	if (ret != VK_SUCCESS) {
-		U_LOG_E("vkCreateImage: %s", vk_result_string(ret));
-		return ret;
-	}
+	VK_CHK_AND_RET(ret, "vkCreateImage");
 
 	// In
+#if !defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER)
 	VkImageMemoryRequirementsInfo2 memory_requirements_info = {
 	    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
 	    .image = image,
 	};
+#endif
 
 	// Out->pNext
 	VkMemoryDedicatedRequirements memory_dedicated_requirements = {
@@ -320,27 +340,34 @@ create_image(struct vk_bundle *vk, const struct xrt_swapchain_create_info *info,
 	 * Create and bind the memory.
 	 */
 
+	// Reset the next chain.
+	next_chain = NULL;
+
 	// In->pNext->pNext
 	VkMemoryDedicatedAllocateInfoKHR dedicated_memory_info = {
 	    .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
 	    .image = image,
 	    .buffer = VK_NULL_HANDLE,
 	};
+	if (use_dedicated_allocation) {
+		CHAIN(dedicated_memory_info);
+	}
 
 	// In->pNext
 	VkExportMemoryAllocateInfo export_alloc_info = {
 	    .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
-	    .pNext = use_dedicated_allocation ? &dedicated_memory_info : NULL,
 	    .handleTypes = memory_handle_type,
 	};
+	CHAIN(export_alloc_info);
 
 	ret = vk_alloc_and_bind_image_memory(   //
 	    vk,                                 // vk_bundle
 	    image,                              // image
 	    requirements,                       // requirements
-	    &export_alloc_info,                 // pNext_for_allocate
+	    next_chain,                         // pNext_for_allocate
 	    "vk_image_allocator::create_image", // caller_name
 	    &device_memory);                    // out_mem
+	VK_CHK_ONLY_PRINT(ret, "vk_alloc_and_bind_image_memory");
 	if (ret != VK_SUCCESS) {
 		vk->vkDestroyImage(vk->device, image, NULL);
 		return ret;
@@ -391,6 +418,7 @@ vk_ic_allocate(struct vk_bundle *vk,
 	size_t i = 0;
 	for (; i < image_count; i++) {
 		ret = create_image(vk, xscci, &out_vkic->images[i]);
+		VK_CHK_ONLY_PRINT(ret, "create_image");
 		if (ret != VK_SUCCESS) {
 			break;
 		}
@@ -455,6 +483,7 @@ vk_ic_from_natives(struct vk_bundle *vk,
 		    &native_images[i],             // image_native
 		    &out_vkic->images[i].handle,   // out_image
 		    &out_vkic->images[i].memory);  // out_mem
+		VK_CHK_ONLY_PRINT(ret, "vk_create_image_from_native");
 		if (ret != VK_SUCCESS) {
 			if (!native_images[i].is_dxgi_handle) {
 				u_graphics_buffer_unref(&buf);
@@ -516,6 +545,7 @@ vk_ic_get_handles(struct vk_bundle *vk,
 	size_t i = 0;
 	for (; i < vkic->image_count && i < max_handles; i++) {
 		ret = vk_get_native_handle_from_device_memory(vk, vkic->images[i].memory, &out_handles[i]);
+		VK_CHK_ONLY_PRINT(ret, "vk_get_native_handle_from_device_memory");
 		if (ret != VK_SUCCESS) {
 			break;
 		}

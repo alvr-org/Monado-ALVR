@@ -17,8 +17,6 @@
 #include "util/u_device.h"
 #include "util/u_hand_tracking.h"
 
-#include "vive/vive_bindings.h"
-
 #include "math/m_api.h"
 
 #include "util/u_hand_simulation.h"
@@ -137,7 +135,7 @@ r_device_get_tracked_pose(struct xrt_device *xdev,
 	return XRT_SUCCESS;
 }
 
-static void
+static xrt_result_t
 r_device_get_hand_tracking(struct xrt_device *xdev,
                            enum xrt_input_name name,
                            int64_t requested_timestamp_ns,
@@ -147,10 +145,9 @@ r_device_get_hand_tracking(struct xrt_device *xdev,
 	struct r_device *rd = r_device(xdev);
 	struct r_hub *r = rd->r;
 
-
-	if (name != XRT_INPUT_GENERIC_HAND_TRACKING_LEFT && name != XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT) {
-		U_LOG_E("Unknown input name for hand tracker: 0x%0x", name);
-		return;
+	if (name != XRT_INPUT_HT_CONFORMING_LEFT && name != XRT_INPUT_HT_CONFORMING_RIGHT) {
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&rd->base, u_log_get_global_level(), name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	struct r_remote_controller_data *latest = rd->is_left ? &r->latest.left : &r->latest.right;
@@ -165,7 +162,9 @@ r_device_get_hand_tracking(struct xrt_device *xdev,
 
 	// Get the pose of the hand.
 	struct xrt_space_relation relation;
-	xrt_device_get_tracked_pose(xdev, XRT_INPUT_INDEX_GRIP_POSE, requested_timestamp_ns, &relation);
+	xrt_result_t xret =
+	    xrt_device_get_tracked_pose(xdev, XRT_INPUT_INDEX_GRIP_POSE, requested_timestamp_ns, &relation);
+	U_LOG_CHK_AND_RET(u_log_get_global_level(), xret, "xrt_device_get_tracked_pose");
 
 	// Simulate the hand.
 	enum xrt_hand hand = rd->is_left ? XRT_HAND_LEFT : XRT_HAND_RIGHT;
@@ -175,25 +174,7 @@ r_device_get_hand_tracking(struct xrt_device *xdev,
 
 	// This is a lie
 	*out_timestamp_ns = requested_timestamp_ns;
-}
-
-static void
-r_device_get_view_poses(struct xrt_device *xdev,
-                        const struct xrt_vec3 *default_eye_relation,
-                        int64_t at_timestamp_ns,
-                        uint32_t view_count,
-                        struct xrt_space_relation *out_head_relation,
-                        struct xrt_fov *out_fovs,
-                        struct xrt_pose *out_poses)
-{
-	assert(false);
-}
-
-static void
-r_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	struct r_device *rd = r_device(xdev);
-	(void)rd;
+	return XRT_SUCCESS;
 }
 
 /*!
@@ -210,19 +191,14 @@ r_device_create(struct r_hub *r, bool is_left)
 	    struct r_device, flags, input_count, output_count);
 
 	// Setup the basics.
+	u_device_populate_function_pointers(&rd->base, r_device_get_tracked_pose, r_device_destroy);
 	rd->base.update_inputs = r_device_update_inputs;
-	rd->base.get_tracked_pose = r_device_get_tracked_pose;
 	rd->base.get_hand_tracking = r_device_get_hand_tracking;
-	rd->base.get_view_poses = r_device_get_view_poses;
-	rd->base.set_output = r_device_set_output;
-	rd->base.destroy = r_device_destroy;
 	rd->base.tracking_origin = &r->origin;
-	rd->base.orientation_tracking_supported = true;
-	rd->base.position_tracking_supported = true;
-	rd->base.hand_tracking_supported = true;
+	rd->base.supported.orientation_tracking = true;
+	rd->base.supported.position_tracking = true;
+	rd->base.supported.hand_tracking = true;
 	rd->base.name = XRT_DEVICE_INDEX_CONTROLLER;
-	rd->base.binding_profiles = vive_binding_profiles_index;
-	rd->base.binding_profile_count = vive_binding_profiles_index_count;
 	rd->r = r;
 	rd->is_left = is_left;
 
@@ -253,9 +229,9 @@ r_device_create(struct r_hub *r, bool is_left)
 	rd->base.inputs[17].name = XRT_INPUT_INDEX_GRIP_POSE;
 	rd->base.inputs[18].name = XRT_INPUT_INDEX_AIM_POSE;
 	if (is_left) {
-		rd->base.inputs[19].name = XRT_INPUT_GENERIC_HAND_TRACKING_LEFT;
+		rd->base.inputs[19].name = XRT_INPUT_HT_CONFORMING_LEFT;
 	} else {
-		rd->base.inputs[19].name = XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT;
+		rd->base.inputs[19].name = XRT_INPUT_HT_CONFORMING_RIGHT;
 	}
 	rd->base.inputs[20].name = XRT_INPUT_GENERIC_PALM_POSE;
 

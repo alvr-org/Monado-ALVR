@@ -27,7 +27,7 @@ extern "C" {
  */
 
 int
-survive_get_devices(struct xrt_device **out_xdevs, struct vive_config **out_vive_config);
+survive_get_devices(struct xrt_prober *xp, struct xrt_device **out_xdevs, struct vive_config **out_vive_config);
 
 #ifdef __cplusplus
 }

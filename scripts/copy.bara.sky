@@ -1,31 +1,36 @@
-# Copyright 2022, Collabora, Ltd.
+# Copyright 2022-2025, Collabora, Ltd.
 #
 # SPDX-License-Identifier: BSL-1.0
-"""Configuration for "copybara" <https://github.com/google/copybara> to update vendored source"""
+"""Configuration for "copybara" <https://github.com/google/copybara> to update vendored source."""
 
-gitlab_url = "git@gitlab.freedesktop.org:rpavlik/monado.git"
+gitlab_url = "git@ssh.gitlab.freedesktop.org:rpavlik/monado.git"
 author = "Rylie Pavlik <rylie.pavlik@collabora.com>"
+
+# Helpful flag when working on these workflows:
+# --git-destination-non-fast-forward
 
 # update-stb: Update STB libraries
 core.workflow(
-    name = "update-stb",
-    origin = git.github_origin(
-        url = "https://github.com/nothings/stb.git",
-        ref = "master",
+    name="update-stb",
+    custom_rev_id="STB_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/nothings/stb.git",
+        ref="master",
     ),
-    destination = git.destination(
-        url = gitlab_url,
-        fetch = "main",
-        push = "update-stb",
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-stb",
     ),
-    destination_files = glob(["src/external/stb/*.h"]),
-    origin_files = glob(["stb_image_write.h"]),
-    authoring = authoring.pass_thru(author),
-    transformations = [
+    destination_files=glob(["src/external/stb/*.h"]),
+    origin_files=glob(["stb_image_write.h"]),
+    authoring=authoring.pass_thru(author),
+    transformations=[
         metadata.replace_message("external/stb: Update stb libraries from upstream"),
         core.move("", "src/external/stb/"),
     ],
 )
+
 
 # Custom transformation that writes the COMMIT file in the nanopb directory
 def write_nanopb_commit(ctx):
@@ -34,35 +39,42 @@ def write_nanopb_commit(ctx):
         core.format("%s\n", [ctx.find_label("GIT_DESCRIBE_CHANGE_VERSION")]),
     )
 
+
 # update-nanopb: Update NanoPB library
-# WARNING: Also requires update of the generated .pb.h and .pb.c files,
+# WARNING: May also require update of the generated .pb.h and .pb.c files,
 # not currently done by this code!
 core.workflow(
-    name = "update-nanopb",
-    origin = git.github_origin(
-        url = "https://github.com/nanopb/nanopb.git",
+    name="update-nanopb",
+    custom_rev_id="NANOPB_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/nanopb/nanopb.git",
         # ref = "master",
-        describe_version = True,
-        version_selector = core.latest_version(
-            format = "refs/tags/nanopb-${n0}.${n1}.${n2}",
-            regex_groups = {
+        describe_version=True,
+        version_selector=core.latest_version(
+            format="refs/tags/nanopb-${n0}.${n1}.${n2}",
+            regex_groups={
                 "n0": "[0-9]+",
                 "n1": "[0-9]+",
                 "n2": "[0-9]+",
             },
         ),
     ),
-    destination = git.destination(
-        url = gitlab_url,
-        fetch = "main",
-        push = "update-nanopb",
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-nanopb",
     ),
-    destination_files = glob(["src/external/nanopb/*.{h,c,txt}"], exclude = ["src/external/nanopb/monado_metrics.pb.{c,h}"]),
-    origin_files = glob(["*.{h,c,txt}"], exclude = ["CMakeLists.txt", "CHANGELOG.txt"]),
-    authoring = authoring.pass_thru(author),
-    transformations = [
+    destination_files=glob(
+        ["src/external/nanopb/*.{h,c,txt}"],
+        exclude=["src/external/nanopb/monado_metrics.pb.{c,h}"],
+    ),
+    origin_files=glob(["*.{h,c,txt}"], exclude=["CMakeLists.txt", "requirements.txt"]),
+    authoring=authoring.pass_thru(author),
+    transformations=[
         metadata.expose_label("GIT_DESCRIBE_CHANGE_VERSION"),
-        metadata.replace_message("external/nanopb: Update nanopb from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"),
+        metadata.replace_message(
+            "external/nanopb: Update nanopb from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"
+        ),
         core.move("", "src/external/nanopb/"),
         # core.format()
         write_nanopb_commit,
@@ -71,83 +83,158 @@ core.workflow(
 
 # update-cjson: Update cJSON library
 core.workflow(
-    name = "update-cjson",
-    origin = git.github_origin(
-        url = "https://github.com/DaveGamble/cJSON.git",
+    name="update-cjson",
+    custom_rev_id="CJSON_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/DaveGamble/cJSON.git",
         # ref = "master",
-        describe_version = True,
-        version_selector = core.latest_version(
-            format = "refs/tags/v${n0}.${n1}.${n2}",
-            regex_groups = {
+        describe_version=True,
+        version_selector=core.latest_version(
+            format="refs/tags/v${n0}.${n1}.${n2}",
+            regex_groups={
                 "n0": "[0-9]+",
                 "n1": "[0-9]+",
                 "n2": "[0-9]+",
             },
         ),
     ),
-    destination = git.destination(
-        url = gitlab_url,
-        fetch = "main",
-        push = "update-cjson",
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-cjson",
     ),
-    destination_files = glob(["src/external/cjson/cjson/*"]),
-    origin_files = glob(["cJSON.{h,c}", "{CHANGELOG,CONTRIBUTORS}.md", "LICENSE"]),
-    authoring = authoring.pass_thru(author),
-    transformations = [
+    destination_files=glob(["src/external/cjson/cjson/*"]),
+    origin_files=glob(["cJSON.{h,c}", "{CHANGELOG,CONTRIBUTORS}.md", "LICENSE"]),
+    authoring=authoring.pass_thru(author),
+    transformations=[
         metadata.expose_label("GIT_DESCRIBE_CHANGE_VERSION"),
-        metadata.replace_message("external/cjson: Update cJSON from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"),
+        metadata.replace_message(
+            "external/cjson: Update cJSON from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"
+        ),
         core.move("", "src/external/cjson/cjson/"),
     ],
 )
 
-# update-catch2: Update Catch2 library, in case there's another 2.x release
+# update-catch2: Update Catch2 library (amalgamated version)
 core.workflow(
-    name = "update-catch2",
-    origin = git.github_origin(
-        url = "https://github.com/catchorg/Catch2.git",
-        # ref = "master",
-        describe_version = True,
-        version_selector = core.latest_version(
-            format = "refs/tags/v${n0}.${n1}.${n2}",
-            regex_groups = {
-                "n0": "2",
+    name="update-catch2",
+    custom_rev_id="CATCH2_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/catchorg/Catch2.git",
+        describe_version=True,
+        version_selector=core.latest_version(
+            format="refs/tags/v${n0}.${n1}.${n2}",
+            regex_groups={
+                "n0": "3",
                 "n1": "[0-9]+",
                 "n2": "[0-9]+",
             },
         ),
     ),
-    destination = git.destination(
-        url = gitlab_url,
-        fetch = "main",
-        push = "update-catch2",
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-catch2",
     ),
-    destination_files = glob(["src/external/Catch2/*"]),
-    origin_files = glob(["single_include/catch2/catch.hpp"]),
-    authoring = authoring.pass_thru(author),
-    transformations = [
+    destination_files=glob(["src/external/Catch2/*"]),
+    origin_files=glob(["extras/catch_amalgamated.*", "LICENSE.txt"]),
+    authoring=authoring.pass_thru(author),
+    transformations=[
         metadata.expose_label("GIT_DESCRIBE_CHANGE_VERSION"),
-        metadata.replace_message("external/Catch2: Update Catch2 from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"),
-        core.move("single_include/catch2/catch.hpp", "src/external/Catch2/catch/"),
+        metadata.replace_message(
+            "external/Catch2: Update Catch2 from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"
+        ),
+        core.move("extras/", "src/external/Catch2/"),
+        core.move("LICENSE.txt", "src/external/Catch2/LICENSE.txt"),
     ],
 )
 
 # update-renderdoc: Update RenderDoc API
 core.workflow(
-    name = "update-renderdoc",
-    origin = git.github_origin(
-        url = "https://github.com/baldurk/renderdoc.git",
-        ref = "v1.x",
+    name="update-renderdoc",
+    custom_rev_id="RENDERDOC_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/baldurk/renderdoc.git",
+        ref="v1.x",
     ),
-    destination = git.destination(
-        url = gitlab_url,
-        fetch = "main",
-        push = "update-renderdoc",
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-renderdoc",
     ),
-    destination_files = glob(["src/external/renderdoc_api/*.h"]),
-    origin_files = glob(["renderdoc/api/app/*.h"]),
-    authoring = authoring.pass_thru(author),
-    transformations = [
-        metadata.replace_message("external/renderdoc_api: Update RenderDoc API from upstream"),
+    destination_files=glob(["src/external/renderdoc_api/*.h"]),
+    origin_files=glob(["renderdoc/api/app/*.h"]),
+    authoring=authoring.pass_thru(author),
+    transformations=[
+        metadata.expose_label("GIT_DESCRIBE_CHANGE_VERSION"),
+        metadata.replace_message(
+            "external/renderdoc_api: Update RenderDoc API from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"
+        ),
         core.move("renderdoc/api/app/", "src/external/renderdoc_api/"),
+    ],
+)
+
+# update-jnipp: Update jnipp library (used on Android)
+core.workflow(
+    name="update-jnipp",
+    custom_rev_id="JNIPP_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/mitchdowd/jnipp.git",
+        describe_version=True,
+        ref="master",
+    ),
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-jnipp",
+    ),
+    destination_files=glob(["src/external/jnipp/**"]),
+    origin_files=glob(["**"], exclude=[".*", ".*/**", "*.sln"]),
+    authoring=authoring.pass_thru(author),
+    transformations=[
+        metadata.expose_label("GIT_DESCRIBE_CHANGE_VERSION"),
+        metadata.replace_message(
+            "Update jnipp from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"
+        ),
+        core.move("", "src/external/jnipp/"),
+    ],
+)
+
+
+# update-openxr: Update OpenXR headers
+core.workflow(
+    name="update-openxr",
+    custom_rev_id="OPENXR_REV_ID",
+    origin=git.github_origin(
+        url="https://github.com/KhronosGroup/OpenXR-SDK.git",
+        ref="main",
+        describe_version=True,
+        # version_selector=core.latest_version(
+        #     format="refs/tags/release-${n0}.${n1}.${n2}",
+        #     regex_groups={
+        #         "n0": "1",
+        #         "n1": "[0-9]+",
+        #         "n2": "[0-9]+",
+        #     },
+        # ),
+    ),
+    destination=git.destination(
+        url=gitlab_url,
+        fetch="main",
+        push="update-openxr",
+    ),
+    destination_files=glob(
+        ["src/external/openxr_includes/openxr/openxr*.h"],
+        exclude=["src/external/openxr_includes/openxr/openxr_extension_helpers.h"],
+    ),
+    origin_files=glob(["include/openxr/*.h"]),
+    mode="SQUASH",
+    authoring=authoring.pass_thru(author),
+    transformations=[
+        metadata.expose_label("GIT_DESCRIBE_CHANGE_VERSION"),
+        metadata.replace_message(
+            "external/openxr_includes: Update OpenXR headers from upstream ${GIT_DESCRIBE_CHANGE_VERSION}"
+        ),
+        core.move("include/openxr/", "src/external/openxr_includes/openxr/"),
     ],
 )

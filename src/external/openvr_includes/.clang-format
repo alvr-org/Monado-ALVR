@@ -1,0 +1,38 @@
+---
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: 2026, Beyley Cardellio
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: Auto
+
+DisableFormat: false
+SortIncludes: false
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+MaxEmptyLinesToKeep: 3
+
+IndentWidth: 8
+TabWidth: 8
+UseTab: ForIndentation
+AccessModifierOffset: -8
+IndentCaseLabels: false
+NamespaceIndentation: Inner
+
+ColumnLimit: 10000
+ReflowComments: true
+
+AlwaysBreakAfterReturnType: None
+AllowShortFunctionsOnASingleLine: All
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterEnum: true
+  AfterStruct: true
+  AfterClass: true
+  SplitEmptyFunction: false
+  AfterFunction: true
+  AfterNamespace: false
+
+BinPackArguments: true
+BinPackParameters: true

@@ -702,19 +702,24 @@ struct u_pc_display_timing_config
 	 */
 };
 
-/*!
- * Default configuration values for display-timing-aware compositor pacing.
- *
- * @see u_pc_display_timing_config, u_pc_display_timing_create
- */
-extern const struct u_pc_display_timing_config U_PC_DISPLAY_TIMING_CONFIG_DEFAULT;
-
 
 /*
  *
  * Implementations.
  *
  */
+
+/*!
+ * Gets the default configuration of the composition pacing helper.
+ *
+ * Some of the configuration values returned from this function can be
+ * configured using debug options.
+ *
+ * @ingroup aux_pacing
+ * @see u_pacing_compositor
+ */
+struct u_pc_display_timing_config
+u_pc_display_timing_get_default_config(void);
 
 /*!
  * Creates a new composition pacing helper that uses real display timing information.

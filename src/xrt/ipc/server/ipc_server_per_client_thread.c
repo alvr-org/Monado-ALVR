@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,8 +12,15 @@
 #include "util/u_misc.h"
 #include "util/u_trace_marker.h"
 
+#include "xrt/xrt_body_tracker.h"
+#include "xrt/xrt_hand_tracker.h"
+#include "xrt/xrt_io_cache.h"
+
+#include "shared/ipc_protocol.h"
+#include "shared/ipc_shmem.h"
 #include "shared/ipc_utils.h"
 #include "server/ipc_server.h"
+#include "server/ipc_server_thread_shutdown.h"
 #include "ipc_server_generated.h"
 
 #ifndef XRT_OS_WINDOWS
@@ -35,6 +43,55 @@
  *
  */
 
+static void *
+delayed_exit_thread(void *_server)
+{
+	struct ipc_server *s = (struct ipc_server *)_server;
+
+	// Sleep for the delay duration
+	os_nanosleep(s->exit_when_idle_delay_ns);
+
+	// Check if we still have no clients after the delay
+	os_mutex_lock(&s->global_state.lock);
+	bool should_exit =
+	    (s->exit_when_idle && s->global_state.connected_client_count == 0 && s->last_client_disconnect_ns > 0);
+	os_mutex_unlock(&s->global_state.lock);
+
+	if (should_exit) {
+		IPC_INFO(s, "All clients disconnected for %u milliseconds, shutting down.",
+		         (unsigned int)(s->exit_when_idle_delay_ns / U_TIME_1MS_IN_NS));
+		s->running = false;
+	}
+
+	return NULL;
+}
+
+static void
+handle_exit_on_disconnect(struct ipc_server *s)
+{
+	if (!s->running) {
+		return;
+	}
+
+	// Should we stop the server when a client disconnects?
+	if (s->exit_on_disconnect) {
+		s->running = false;
+	}
+
+	os_mutex_lock(&s->global_state.lock);
+	bool do_delayed_exit = s->exit_when_idle && s->global_state.connected_client_count == 0;
+	os_mutex_unlock(&s->global_state.lock);
+
+	// Should we stop when all clients disconnect?
+	if (do_delayed_exit) {
+		s->last_client_disconnect_ns = os_monotonic_get_ns();
+
+		struct os_thread thread;
+		os_thread_start(&thread, delayed_exit_thread, (void *)s);
+		// We intentionally don't join this thread - it's fire and forget
+	}
+}
+
 static void
 common_shutdown(volatile struct ipc_client_state *ics)
 {
@@ -47,9 +104,15 @@ common_shutdown(volatile struct ipc_client_state *ics)
 
 	ipc_message_channel_close((struct ipc_message_channel *)&ics->imc);
 
+	ipc_shmem_destroy((xrt_shmem_handle_t *)&ics->ism_handle, (void **)&ics->server->isms[ics->server_thread_index],
+	                  sizeof(struct ipc_shared_memory));
+
 	ics->server->threads[ics->server_thread_index].state = IPC_THREAD_STOPPING;
 	ics->server_thread_index = -1;
 	memset((void *)&ics->client_state, 0, sizeof(struct ipc_app_state));
+
+	// Decrement the connected client counter
+	ics->server->global_state.connected_client_count--;
 
 	os_mutex_unlock(&ics->server->global_state.lock);
 
@@ -101,10 +164,52 @@ common_shutdown(volatile struct ipc_client_state *ics)
 		ics->device_feature_used[i] = false;
 	}
 
-	// Should we stop the server when a client disconnects?
-	if (ics->server->exit_on_disconnect) {
-		ics->server->running = false;
+	// Destroy body trackers owned by this client.
+	for (uint32_t i = 0; i < IPC_MAX_CLIENT_BODY_TRACKERS; i++) {
+		xrt_body_tracker_destroy((struct xrt_body_tracker **)&ics->objects.xbts[i]);
 	}
+
+	// Destroy hand trackers owned by this client.
+	for (uint32_t i = 0; i < IPC_MAX_CLIENT_HAND_TRACKERS; i++) {
+		xrt_hand_tracker_destroy((struct xrt_hand_tracker **)&ics->objects.xhts[i]);
+	}
+
+	// Destroy app systems owned by this client.
+	for (uint32_t i = 0; i < IPC_MAX_CLIENT_APP_SYSTEMS; i++) {
+		xrt_app_system_destroy((struct xrt_app_system **)&ics->objects.xasys[i]);
+	}
+
+	// Destroy app instances owned by this client.
+	for (uint32_t i = 0; i < IPC_MAX_CLIENT_APP_INSTANCES; i++) {
+		xrt_app_instance_destroy((struct xrt_app_instance **)&ics->objects.xainsts[i]);
+	}
+
+	// Destroy input/output caches owned by this client.
+	for (uint32_t i = 0; i < IPC_MAX_CLIENT_IO_CACHES; i++) {
+		xrt_io_cache_destroy((struct xrt_io_cache **)&ics->objects.xics[i]);
+	}
+
+	// Clear the tracking origins array.
+	for (uint32_t i = 0; i < XRT_SYSTEM_MAX_DEVICES; i++) {
+		/*
+		 * We don't control the lifetime of the tracking origins,
+		 * so we just set the pointer to NULL.
+		 */
+		ics->objects.xtracks[i] = NULL;
+	}
+
+	// Make sure undestroyed plane detections are cleaned up
+	for (uint32_t i = 0; i < ics->plane_detection_count; i++) {
+		xrt_device_destroy_plane_detection_ext(ics->plane_detection_xdev[i], ics->plane_detection_ids[i]);
+	}
+	free(ics->plane_detection_ids);
+	free(ics->plane_detection_xdev);
+	ics->plane_detection_ids = NULL;
+	ics->plane_detection_xdev = NULL;
+	ics->plane_detection_size = 0;
+	ics->plane_detection_count = 0;
+
+	handle_exit_on_disconnect(ics->server);
 
 	ipc_server_deactivate_session(ics);
 }
@@ -149,7 +254,11 @@ client_loop(volatile struct ipc_client_state *ics)
 {
 	U_TRACE_SET_THREAD_NAME("IPC Client");
 
-	IPC_INFO(ics->server, "Client %u connected", ics->client_state.id);
+	// Call the client connected callback.
+	ics->server->callbacks->client_connected( //
+	    ics->server,                          //
+	    ics->client_state.id,                 //
+	    ics->server->callback_data);          //
 
 	// Claim the client fd.
 	int epoll_fd = setup_epoll(ics);
@@ -157,7 +266,9 @@ client_loop(volatile struct ipc_client_state *ics)
 		return;
 	}
 
-	while (ics->server->running) {
+	struct ipc_thread *it = &ics->server->threads[ics->server_thread_index];
+	ipc_server_client_thread_set_running(ics->server, it);
+	while (ipc_server_client_thread_is_running(ics->server, it)) {
 		const int half_a_second_ms = 500;
 		struct epoll_event event = XRT_STRUCT_INIT;
 		int ret = 0;
@@ -180,7 +291,6 @@ client_loop(volatile struct ipc_client_state *ics)
 
 		// Detect clients disconnecting gracefully.
 		if (ret > 0 && (event.events & EPOLLHUP) != 0) {
-			IPC_INFO(ics->server, "Client disconnected.");
 			break;
 		}
 
@@ -195,6 +305,12 @@ client_loop(volatile struct ipc_client_state *ics)
 		size_t cmd_size = ipc_command_size(cmd);
 		if (cmd_size == 0) {
 			IPC_ERROR(ics->server, "Invalid command size.");
+			break;
+		}
+
+		// This needs to hold true.
+		if (cmd_size > IPC_BUF_SIZE) {
+			IPC_ERROR(ics->server, "Command too large! (%u > %u)", (uint32_t)cmd_size, IPC_BUF_SIZE);
 			break;
 		}
 
@@ -221,7 +337,12 @@ client_loop(volatile struct ipc_client_state *ics)
 	}
 
 	close(epoll_fd);
-	epoll_fd = -1;
+
+	// Call the client disconnected callback.
+	ics->server->callbacks->client_disconnected( //
+	    ics->server,                             //
+	    ics->client_state.id,                    //
+	    ics->server->callback_data);             //
 
 	// Following code is same for all platforms.
 	common_shutdown(ics);
@@ -235,9 +356,9 @@ pipe_print_get_last_error(volatile struct ipc_client_state *ics, const char *fun
 	// This is the error path.
 	DWORD err = GetLastError();
 	if (err == ERROR_BROKEN_PIPE) {
-		IPC_INFO(ics->server, "%s: %d %s", func, err, ipc_winerror(err));
+		IPC_INFO(ics->server, "%s: %lu %s", func, err, ipc_winerror(err));
 	} else {
-		IPC_ERROR(ics->server, "%s failed: %d %s", func, err, ipc_winerror(err));
+		IPC_ERROR(ics->server, "%s failed: %lu %s", func, err, ipc_winerror(err));
 	}
 }
 
@@ -246,9 +367,15 @@ client_loop(volatile struct ipc_client_state *ics)
 {
 	U_TRACE_SET_THREAD_NAME("IPC Client");
 
-	IPC_INFO(ics->server, "Client connected");
+	// Call the client connected callback.
+	ics->server->callbacks->client_connected( //
+	    ics->server,                          //
+	    ics->client_state.id,                 //
+	    ics->server->callback_data);          //
 
-	while (ics->server->running) {
+	struct ipc_thread *it = &ics->server->threads[ics->server_thread_index];
+	ipc_server_client_thread_set_running(ics->server, it);
+	while (ipc_server_client_thread_is_running(ics->server, it)) {
 		uint8_t buf[IPC_BUF_SIZE] = {0};
 		DWORD len = 0;
 		BOOL bret = false;
@@ -303,6 +430,12 @@ client_loop(volatile struct ipc_client_state *ics)
 		}
 	}
 
+	// Call the client disconnected callback.
+	ics->server->callbacks->client_disconnected( //
+	    ics->server,                             //
+	    ics->client_state.id,                    //
+	    ics->server->callback_data);             //
+
 	// Following code is same for all platforms.
 	common_shutdown(ics);
 }
@@ -336,6 +469,12 @@ ipc_server_client_destroy_session_and_compositor(volatile struct ipc_client_stat
 		// Drop our reference, does NULL checking. Cast away volatile.
 		xrt_compositor_semaphore_reference((struct xrt_compositor_semaphore **)&ics->xcsems[j], NULL);
 		IPC_TRACE(ics->server, "Destroyed compositor semaphore %d.", j);
+	}
+
+	for (uint32_t j = 0; j < IPC_MAX_CLIENT_FUTURES; j++) {
+		// Drop our reference, does NULL checking. Cast away volatile.
+		xrt_future_reference((struct xrt_future **)&ics->xfts[j], NULL);
+		IPC_TRACE(ics->server, "Destroyed future %d.", j);
 	}
 
 	os_mutex_unlock(&ics->server->global_state.lock);

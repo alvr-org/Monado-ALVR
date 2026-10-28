@@ -1,9 +1,10 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Compositor mirroring code.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_main
  */
@@ -11,6 +12,11 @@
 #include "xrt/xrt_results.h"
 #include "math/m_mathinclude.h"
 #include "main/comp_mirror_to_debug_gui.h"
+
+#include "cache/render_compute_pipeline_cache.h"
+#include "cache/render_shader_specialization_helpers.h"
+
+#include "render/render_interface.h"
 
 
 /*
@@ -318,9 +324,9 @@ comp_mirror_init(struct comp_mirror_to_debug_gui *m,
 
 	VK_NAME_DESCRIPTOR_POOL(vk, m->blit.descriptor_pool, "comp_mirror_to_debug_ui blit descriptor pool");
 
-	C(vk_create_pipeline_cache(vk, &m->blit.pipeline_cache));
+	C(vk_create_pipeline_cache(vk, &m->blit.driver_pipeline_cache));
 
-	VK_NAME_PIPELINE_CACHE(vk, m->blit.pipeline_cache, "comp_mirror_to_debug_ui blit pipeline cache");
+	VK_NAME_PIPELINE_CACHE(vk, m->blit.driver_pipeline_cache, "comp_mirror_to_debug_ui blit pipeline cache");
 
 	C(create_blit_descriptor_set_layout(vk, &m->blit.descriptor_set_layout));
 
@@ -334,13 +340,36 @@ comp_mirror_init(struct comp_mirror_to_debug_gui *m,
 
 	VK_NAME_PIPELINE_LAYOUT(vk, m->blit.pipeline_layout, "comp_mirror_to_debug_ui blit pipeline layout");
 
-	C(vk_create_compute_pipeline( //
-	    vk,                       // vk_bundle
-	    m->blit.pipeline_cache,   // pipeline_cache
-	    shaders->blit_comp,       // shader
-	    m->blit.pipeline_layout,  // pipeline_layout
-	    NULL,                     // specialization_info
-	    &m->blit.pipeline));      // out_compute_pipeline
+	xrt_result_t xret = render_blit_pipeline_cache_create("comp_mirror_to_debug_gui blit", &m->blit.pipeline_cache);
+	XVK_CHK_ONLY_PRINT(xret, "render_blit_pipeline_cache_create");
+	if (xret != XRT_SUCCESS) {
+		comp_mirror_fini(m, vk);
+		return VK_ERROR_INITIALIZATION_FAILED;
+	}
+
+	xret = render_blit_pipeline_cache_init( //
+	    m->blit.pipeline_cache,             //
+	    shaders->blit_comp,                 //
+	    m->blit.pipeline_layout,            //
+	    m->blit.driver_pipeline_cache);     //
+	XVK_CHK_ONLY_PRINT(xret, "render_blit_pipeline_cache_init");
+	if (xret != XRT_SUCCESS) {
+		comp_mirror_fini(m, vk);
+		return VK_ERROR_INITIALIZATION_FAILED;
+	}
+
+	const struct render_blit_spec blit_variant = render_make_blit_spec(0);
+
+	xret = render_blit_pipeline_cache_get( //
+	    m->blit.pipeline_cache,            //
+	    vk,                                //
+	    &blit_variant,                     //
+	    &m->blit.pipeline);                //
+	XVK_CHK_ONLY_PRINT(xret, "render_blit_pipeline_cache_get");
+	if (xret != XRT_SUCCESS) {
+		comp_mirror_fini(m, vk);
+		return VK_ERROR_INITIALIZATION_FAILED;
+	}
 
 	VK_NAME_PIPELINE(vk, m->blit.pipeline, "comp_mirror_to_debug_ui blit pipeline");
 
@@ -592,22 +621,21 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 	}
 
 	// Copy arguments.
-	struct vk_cmd_copy_image_info copy_info = {
-	    .src.old_layout = old_layout,
-	    .src.src_access_mask = src_access_mask,
-	    .src.src_stage_mask = src_stage_mask,
+	struct vk_cmd_image_transfer_info transfer_info = {
+	    .src.params.layout = old_layout,
+	    .src.params.access_mask = src_access_mask,
+	    .src.params.stage_mask = src_stage_mask,
+	    .src.params.rect.extent = {.w = m->image_extent.width, .h = m->image_extent.height},
 	    .src.fm_image = bounce_fm_image,
 
-	    .dst.old_layout = wrap->layout,
-	    .dst.src_access_mask = VK_ACCESS_HOST_READ_BIT,
-	    .dst.src_stage_mask = VK_PIPELINE_STAGE_HOST_BIT,
+	    .dst.params.layout = wrap->layout,
+	    .dst.params.access_mask = VK_ACCESS_HOST_READ_BIT,
+	    .dst.params.stage_mask = VK_PIPELINE_STAGE_HOST_BIT,
+	    .dst.params.rect.extent = {.w = m->image_extent.width, .h = m->image_extent.height},
 	    .dst.fm_image = target_fm_image,
-
-	    .size.w = m->image_extent.width,
-	    .size.h = m->image_extent.height,
 	};
 
-	vk_cmd_copy_image_locked(vk, cmd, &copy_info);
+	vk_cmd_copy_image_locked(vk, cmd, &transfer_info);
 
 	// Barrier readback image to host so we can safely read
 	vk_cmd_image_barrier_locked(              //
@@ -655,7 +683,7 @@ comp_mirror_do_blit(struct comp_mirror_to_debug_gui *m,
 
 	// Tidies the descriptor we created.
 	vk->vkResetDescriptorPool(vk->device, m->blit.descriptor_pool, 0);
-	return XRT_ERROR_VULKAN;
+	return XRT_SUCCESS;
 }
 
 void
@@ -676,9 +704,12 @@ comp_mirror_fini(struct comp_mirror_to_debug_gui *m, struct vk_bundle *vk)
 	vk_cmd_pool_destroy(vk, &m->cmd_pool);
 
 	// Destroy blit shader Vulkan resources.
-	D(Pipeline, m->blit.pipeline);
+	if (m->blit.pipeline_cache != NULL) {
+		m->blit.pipeline = VK_NULL_HANDLE;
+		render_blit_pipeline_cache_destroy(&m->blit.pipeline_cache, vk);
+	}
 	D(PipelineLayout, m->blit.pipeline_layout);
-	D(PipelineCache, m->blit.pipeline_cache);
+	D(PipelineCache, m->blit.driver_pipeline_cache);
 	D(DescriptorPool, m->blit.descriptor_pool);
 	D(DescriptorSetLayout, m->blit.descriptor_set_layout);
 

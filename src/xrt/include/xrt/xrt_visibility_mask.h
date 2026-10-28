@@ -1,4 +1,5 @@
 // Copyright 2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -33,7 +34,7 @@ struct xrt_visibility_mask
  *
  * @ingroup xrt_iface
  */
-static inline uint32_t *
+XRT_NONNULL_ALL static inline uint32_t *
 xrt_visibility_mask_get_indices(const struct xrt_visibility_mask *mask)
 {
 	return (uint32_t *)&mask[1];
@@ -44,7 +45,7 @@ xrt_visibility_mask_get_indices(const struct xrt_visibility_mask *mask)
  *
  * @ingroup xrt_iface
  */
-static inline struct xrt_vec2 *
+XRT_NONNULL_ALL static inline struct xrt_vec2 *
 xrt_visibility_mask_get_vertices(const struct xrt_visibility_mask *mask)
 {
 	const uint32_t *indices = xrt_visibility_mask_get_indices(mask);
@@ -56,7 +57,7 @@ xrt_visibility_mask_get_vertices(const struct xrt_visibility_mask *mask)
  *
  * @ingroup xrt_iface
  */
-static inline size_t
+XRT_NONNULL_ALL static inline size_t
 xrt_visibility_mask_get_size(const struct xrt_visibility_mask *mask)
 {
 	return sizeof(*mask) +                               //

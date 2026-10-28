@@ -1,10 +1,10 @@
-// Copyright 2022, Collabora, Ltd.
+// Copyright 2022-2026, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Mercury hand tracking main file.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Charlton Rodda <charlton.rodda@collabora.com>
  * @ingroup tracking
  */
@@ -21,11 +21,12 @@
 #include "xrt/xrt_tracking.h"
 
 
+#include <algorithm>
+#include <array>
 #include <numeric>
 
 
 namespace xrt::tracking::hand::mercury {
-#define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
 
 DEBUG_GET_ONCE_LOG_OPTION(mercury_log, "MERCURY_LOG", U_LOGGING_WARN)
 DEBUG_GET_ONCE_BOOL_OPTION(mercury_optimize_hand_size, "MERCURY_optimize_hand_size", true)
@@ -151,11 +152,20 @@ check_outside_view(struct HandTracking *hgt, struct t_camera_extra_info_one_view
 	return false;
 }
 
+/*!
+ * Transform 3d joint keypoint positions into per-view camera coordinates
+ *
+ * @param[in,out] hgt Hand tracking global structure
+ * @param[in] pts Keypoints (in world space relative to left camera?)
+ * @param[in] hand_idx 0 is left, 1 is right
+ * @param[in] also_debug_output if true, will also draw on the debug image
+ * @param[out] num_outside optional count of keypoints outside of bounds per view
+ */
 static void
-back_project(struct HandTracking *hgt,        //
-             Eigen::Array<float, 3, 21> &pts, //
-             int hand_idx,                    //
-             bool also_debug_output,          //
+back_project(struct HandTracking *hgt,              //
+             const Eigen::Array<float, 3, 21> &pts, //
+             int hand_idx,                          //
+             bool also_debug_output,                //
              int num_outside[2])
 {
 
@@ -173,9 +183,14 @@ back_project(struct HandTracking *hgt,        //
 		Eigen::Vector3f p = map_vec3(move_amount.position);
 		Eigen::Quaternionf q = map_quat(move_amount.orientation);
 
+		// 3 rows (xyz), 21 cols (on for each keypoint)
 		Eigen::Array<float, 3, 21> pts_relative_to_camera = {};
 
 		bool invalid[21] = {};
+
+		// TODO is this sufficient?
+		// Eigen::Matrix3f rot = q.matrix();
+		// pts_relative_to_camera = (pts.colwise() * rot).colwise() + p;
 
 		for (int i = 0; i < 21; i++) {
 			pts_relative_to_camera.col(i) = (q * pts.col(i)) + p;
@@ -185,6 +200,8 @@ back_project(struct HandTracking *hgt,        //
 			}
 		}
 
+		// in 2D camera space... normalized?
+		// TODO these stay uninitialized if the point is already considered "invalid" - probable UB later
 		xrt_vec2 keypoints_global[21];
 
 		for (int i = 0; i < 21; i++) {
@@ -204,12 +221,7 @@ back_project(struct HandTracking *hgt,        //
 		}
 
 		if (num_outside != NULL) {
-			num_outside[view_idx] = 0;
-			for (int i = 0; i < 21; i++) {
-				if (invalid[i]) {
-					num_outside[view_idx]++;
-				}
-			}
+			num_outside[view_idx] = std::count(std::begin(invalid), std::end(invalid), true);
 
 			xrt_vec2 min = keypoints_global[0];
 			xrt_vec2 max = keypoints_global[0];
@@ -325,20 +337,6 @@ handle_changed_image_size(HandTracking *hgt, xrt_size &new_one_view_size)
 	return true;
 }
 
-float
-hand_confidence_value(float reprojection_error, one_frame_input &input)
-{
-	float out_confidence = 0.0f;
-	for (int view_idx = 0; view_idx < 2; view_idx++) {
-		for (int i = 0; i < 21; i++) {
-			// whatever
-			out_confidence += input.views[view_idx].keypoints_in_scaled_stereographic[i].confidence_xy;
-		}
-	}
-	out_confidence /= 42.0f; // number of hand joints
-	float reproj_err_mul = 1.0f / ((reprojection_error * 10) + 1.0f);
-	return out_confidence * reproj_err_mul;
-}
 
 
 xrt_vec3
@@ -355,14 +353,12 @@ check_new_user_event(struct HandTracking *hgt)
 		hgt->tuneable_values.new_user_event = false;
 		hgt->hand_seen_before[0] = false;
 		hgt->hand_seen_before[1] = false;
-		hgt->refinement.hand_size_refinement_schedule_x = 0;
-		hgt->refinement.optimizing = true;
-		hgt->target_hand_size = STANDARD_HAND_SIZE;
+		hgt->hand_size_refinement.newUserEvent();
 	}
 }
 
 
-
+/// The area the intersection of these regions of interest, relative to the combined area (Intersection Over Union)
 static float
 hand_bounding_boxes_iou(const hand_region_of_interest &one, const hand_region_of_interest &two)
 {
@@ -411,7 +407,7 @@ dispatch_and_process_hand_detections(struct HandTracking *hgt)
 
 	int num_views = 0;
 
-	if (hgt->tuneable_values.always_run_detection_model || hgt->refinement.optimizing ||
+	if (hgt->tuneable_values.always_run_detection_model || hgt->hand_size_refinement.isOptimizing() ||
 	    hgt->tuneable_values.detection_model_in_both_views) {
 		u_worker_group_push(hgt->group, run_hand_detection, &infos[0]);
 		u_worker_group_push(hgt->group, run_hand_detection, &infos[1]);
@@ -469,8 +465,7 @@ dispatch_and_process_hand_detections(struct HandTracking *hgt)
 					if (iou > hgt->tuneable_values.mpiou_single_detection.val) {
 						HG_DEBUG(hgt,
 						         "Rejected single detection because the iou for hand idx %d, "
-						         "view idx "
-						         "%d was %f",
+						         "view idx %d was %f",
 						         hand_idx, view_idx, iou);
 						good_to_go = false;
 						break;
@@ -512,7 +507,7 @@ void
 predict_new_regions_of_interest(struct HandTracking *hgt)
 {
 
-	xrt_hand_masks_sample masks{}; // Zero initialization
+	xrt_device_masks_sample masks{}; // Zero initialization
 
 	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
 		// If we don't have the past two frames, this code doesn't do what we want.
@@ -564,28 +559,27 @@ predict_new_regions_of_interest(struct HandTracking *hgt)
 		for (int view_idx = 0; view_idx < 2; view_idx++) {
 			hand_region_of_interest &hroi = hgt->views[view_idx].regions_of_interest_this_frame[hand_idx];
 			auto &masks_view = masks.views[view_idx];
-			auto &masks_hand = masks_view.hands[hand_idx];
-
-			masks_view.enabled = true;
+			auto &masks_device = masks_view.devices[hand_idx];
 
 			if (num_outside[view_idx] < hgt->tuneable_values.max_num_outside_view) {
 				hroi.provenance = ROIProvenance::POSE_PREDICTION;
 				hroi.found = true;
 
+				// Scale factor for uncertainty
 				const float SCALER = 1.25f;
 				float s = hroi.size_px * SCALER;
 				xrt_vec2 &c = hroi.center_px;
-				masks_hand.rect = xrt_rect_f32{c.x - s / 2, c.y - s / 2, s, s};
-				masks_hand.enabled = true;
+				masks_device.rect = xrt_rect_f32{c.x - s / 2, c.y - s / 2, s, s};
+				masks_device.enabled = true;
 			} else {
 				hroi.found = false;
-				masks_hand.enabled = false;
+				masks_device.enabled = false;
 			}
 		}
 	}
 
 	if (hgt->hand_masks_sink != NULL) {
-		xrt_sink_push_hand_masks(hgt->hand_masks_sink, &masks);
+		xrt_sink_push_device_masks(hgt->hand_masks_sink, &masks);
 	}
 }
 
@@ -612,7 +606,7 @@ stop_everything_if_hands_are_overlapping(struct HandTracking *hgt)
 		if (!left_box.found || !right_box.found) {
 			continue;
 		}
-		box_iou::Box this_nbox(left_box.center_px, right_box.size_px);
+		box_iou::Box this_nbox(left_box.center_px, left_box.size_px);
 		box_iou::Box other_nbox(right_box.center_px, right_box.size_px);
 		float iou = box_iou::boxIOU(this_nbox, other_nbox);
 		if (iou > hgt->tuneable_values.mpiou_any.val) {
@@ -677,16 +671,16 @@ HandTracking::~HandTracking()
 
 	xrt_frame_reference(&this->visualizers.old_frame, NULL);
 
-	release_onnx_wrap(&this->views[0].keypoint[0]);
-	release_onnx_wrap(&this->views[0].keypoint[1]);
-	release_onnx_wrap(&this->views[0].detection);
-
-
-	release_onnx_wrap(&this->views[1].keypoint[0]);
-	release_onnx_wrap(&this->views[1].keypoint[1]);
-	release_onnx_wrap(&this->views[1].detection);
-
+	// Stop all the workers before we release the ONNX state
 	u_worker_group_reference(&this->group, NULL);
+
+	release_onnx_state(&this->views[0].keypoint[0]);
+	release_onnx_state(&this->views[0].keypoint[1]);
+	release_onnx_state(&this->views[0].detection);
+
+	release_onnx_state(&this->views[1].keypoint[0]);
+	release_onnx_state(&this->views[1].keypoint[1]);
+	release_onnx_state(&this->views[1].detection);
 
 	t_stereo_camera_calibration_reference(&this->calib, NULL);
 
@@ -697,19 +691,14 @@ HandTracking::~HandTracking()
 	u_frame_times_widget_teardown(&this->ft_widget);
 }
 
-void
-HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
-                               struct xrt_frame *left_frame,
-                               struct xrt_frame *right_frame,
-                               struct xrt_hand_joint_set *out_left_hand,
-                               struct xrt_hand_joint_set *out_right_hand,
-                               int64_t *out_timestamp_ns)
+static void
+callback_process_unsafe(HandTracking *hgt,
+                        struct xrt_frame *left_frame,
+                        struct xrt_frame *right_frame,
+                        struct xrt_hand_joint_set *out_left_hand,
+                        struct xrt_hand_joint_set *out_right_hand,
+                        int64_t *out_timestamp_ns)
 {
-	XRT_TRACE_MARKER();
-
-	HandTracking *hgt = (struct HandTracking *)ht_sync;
-
-	hgt->current_frame_timestamp = left_frame->timestamp;
 
 	struct xrt_hand_joint_set *out_xrt_hands[2] = {out_left_hand, out_right_hand};
 
@@ -744,10 +733,6 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 
 	hgt->views[0].run_model_on_this = cv::Mat(view_size, CV_8UC1, left_frame->data, left_frame->stride);
 	hgt->views[1].run_model_on_this = cv::Mat(view_size, CV_8UC1, right_frame->data, right_frame->stride);
-
-
-	*out_timestamp_ns = hgt->current_frame_timestamp; // No filtering, fine to do this now. Also just a reminder
-	                                                  // that this took you 2 HOURS TO DEBUG THAT ONE TIME.
 
 	hgt->debug_scribble =
 	    u_sink_debug_is_active(&hgt->debug_sink_ann) && u_sink_debug_is_active(&hgt->debug_sink_model);
@@ -804,7 +789,7 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 
 	// Every now and then if we're not already tracking both hands, try to detect new hands.
 	bool saw_both_hands_last_frame = hgt->last_frame_hand_detected[0] && hgt->last_frame_hand_detected[1];
-	if (!saw_both_hands_last_frame) {
+	if (!saw_both_hands_last_frame || hgt->tuneable_values.always_run_detection_model) {
 		dispatch_and_process_hand_detections(hgt);
 	}
 
@@ -837,48 +822,42 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 	}
 	u_worker_group_wait_all(hgt->group);
 
-	// Spaghetti logic for optimizing hand size
-	bool any_hands_are_only_visible_in_one_view = false;
-
-	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
-		any_hands_are_only_visible_in_one_view =                             //
-		    any_hands_are_only_visible_in_one_view ||                        //
-		    (hgt->views[0].regions_of_interest_this_frame[hand_idx].found != //
-		     hgt->views[1].regions_of_interest_this_frame[hand_idx].found);
-	}
-
-	constexpr float mul_max = 1.0;
-	constexpr float frame_max = 100;
+	// Hand size refinement/optimization state
 	bool optimize_hand_size;
+	{
+		constexpr size_t kLH = 0;
+		constexpr size_t kRH = 1;
 
-	if ((hgt->refinement.hand_size_refinement_schedule_x > frame_max)) {
-		hgt->refinement.hand_size_refinement_schedule_y = mul_max;
-		optimize_hand_size = false;
-		hgt->refinement.optimizing = false;
-	} else {
-		hgt->refinement.hand_size_refinement_schedule_y =
-		    powf((hgt->refinement.hand_size_refinement_schedule_x / frame_max), 2) * mul_max;
-		optimize_hand_size = true;
-		hgt->refinement.optimizing = true;
+		// input data
+
+		const std::array<HandSizeRefinement::ViewData, kNumViews> view_data{
+		    HandSizeRefinement::ViewData{{
+		        {hgt->views[0].regions_of_interest_this_frame[kLH].found},
+		        {hgt->views[0].regions_of_interest_this_frame[kRH].found},
+		    }},
+		    HandSizeRefinement::ViewData{{
+		        {hgt->views[1].regions_of_interest_this_frame[kLH].found},
+		        {hgt->views[1].regions_of_interest_this_frame[kRH].found},
+		    }},
+		};
+
+		const std::array<HandSizeRefinement::HandData, kNumHands> hand_data{
+		    HandSizeRefinement::HandData{
+		        .this_frame_hand_detected = hgt->this_frame_hand_detected[0],
+		        .hand_seen_before = hgt->hand_seen_before[0],
+		    },
+		    HandSizeRefinement::HandData{
+		        .this_frame_hand_detected = hgt->this_frame_hand_detected[1],
+		        .hand_seen_before = hgt->hand_seen_before[1],
+		    },
+		};
+
+		optimize_hand_size = hgt->hand_size_refinement.framePreOptimizer(view_data, hand_data);
+
+		hgt->target_hand_size = hgt->hand_size_refinement.getTargetHandSize();
+
+		optimize_hand_size = optimize_hand_size && hgt->tuneable_values.optimize_hand_size;
 	}
-
-	if (any_hands_are_only_visible_in_one_view) {
-		optimize_hand_size = false;
-	}
-
-
-	// if either hand was not visible before the last new-user event but is visible now, reset the schedule
-	// a bit.
-	if ((hgt->this_frame_hand_detected[0] && !hgt->hand_seen_before[0]) ||
-	    (hgt->this_frame_hand_detected[1] && !hgt->hand_seen_before[1])) {
-		hgt->refinement.hand_size_refinement_schedule_x =
-		    std::min(hgt->refinement.hand_size_refinement_schedule_x, frame_max / 2);
-	}
-
-	optimize_hand_size = optimize_hand_size && hgt->tuneable_values.optimize_hand_size;
-
-	int num_hands = 0;
-	float avg_hand_size = 0;
 
 	// Dispatch the optimizers!
 	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
@@ -900,7 +879,8 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 			continue;
 		}
 
-
+		// propagate "no ROI" to "no keypoint outputs"
+		// TODO seems redundant?
 		for (int view = 0; view < 2; view++) {
 			hand_region_of_interest &from_model = hgt->views[view].regions_of_interest_this_frame[hand_idx];
 			if (!from_model.found) {
@@ -935,8 +915,6 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 				double diff_d = time_ns_to_s(diff);
 				smoothing_factor = hgt->tuneable_values.opt_smooth_factor.val * (1 / 60.0f) / diff_d;
 			}
-		} else {
-			reprojection_error_threshold = hgt->tuneable_values.max_reprojection_error.val;
 		}
 
 
@@ -951,7 +929,7 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 		                  smoothing_factor,
 		                  optimize_hand_size,                              //
 		                  hgt->target_hand_size,                           //
-		                  hgt->refinement.hand_size_refinement_schedule_y, //
+		                  hgt->hand_size_refinement.getHandSizeErrorMul(), //
 		                  hgt->tuneable_values.amt_use_depth.val,
 		                  *put_in_set,   //
 		                  out_hand_size, //
@@ -972,13 +950,8 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 		}
 
 
-		avg_hand_size += out_hand_size;
-		num_hands++;
-
-		if (!any_hands_are_only_visible_in_one_view) {
-			hgt->refinement.hand_size_refinement_schedule_x +=
-			    hand_confidence_value(reprojection_error, hgt->keypoint_outputs[hand_idx]);
-		}
+		hgt->hand_size_refinement.frameHandPostOptimizer(out_hand_size, reprojection_error,
+		                                                 hgt->keypoint_outputs[hand_idx]);
 
 		u_hand_joints_apply_joint_width(put_in_set);
 
@@ -1007,10 +980,7 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 	// Push our timestamp back as well
 	hgt->history_timestamps.push_back(hgt->current_frame_timestamp);
 
-	// More hand-size-optimization spaghetti
-	if (num_hands > 0) {
-		hgt->target_hand_size = (float)avg_hand_size / (float)num_hands;
-	}
+	hgt->hand_size_refinement.framePost();
 
 	// State tracker tweaks
 	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
@@ -1070,11 +1040,43 @@ HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
 }
 
 void
+HandTracking::cCallbackProcess(struct t_hand_tracking_sync *ht_sync,
+                               struct xrt_frame *left_frame,
+                               struct xrt_frame *right_frame,
+                               struct xrt_hand_joint_set *out_left_hand,
+                               struct xrt_hand_joint_set *out_right_hand,
+                               int64_t *out_timestamp_ns)
+{
+	XRT_TRACE_MARKER();
+
+	HandTracking *hgt = &HandTracking::fromC(ht_sync);
+
+	hgt->current_frame_timestamp = left_frame->timestamp;
+
+	// No filtering, fine to do this now. Also just a reminder that this took you 2 HOURS TO DEBUG THAT ONE TIME.
+	*out_timestamp_ns = hgt->current_frame_timestamp;
+
+	try {
+		callback_process_unsafe(hgt, left_frame, right_frame, out_left_hand, out_right_hand, out_timestamp_ns);
+	} catch (const std::exception &e) {
+		HG_ERROR(hgt, "Exception in hand tracking process callback: %s", e.what());
+
+		// Mark the hands as not active since an exception occurred.
+		out_left_hand->is_active = false;
+		out_right_hand->is_active = false;
+	}
+}
+
+void
 HandTracking::cCallbackDestroy(t_hand_tracking_sync *ht_sync)
 {
 	HandTracking *ht_ptr = &HandTracking::fromC(ht_sync);
 
-	delete ht_ptr;
+	try {
+		delete ht_ptr;
+	} catch (const std::exception &e) {
+		HG_ERROR(ht_ptr, "Exception in hand tracking destroy callback: %s", e.what());
+	}
 }
 
 } // namespace xrt::tracking::hand::mercury
@@ -1121,14 +1123,20 @@ t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
 	hgt->views[0].camera_info = extra_camera_info.views[0];
 	hgt->views[1].camera_info = extra_camera_info.views[1];
 
-	init_hand_detection(hgt, &hgt->views[0].detection);
-	init_hand_detection(hgt, &hgt->views[1].detection);
+	try {
+		init_hand_detection(hgt, &hgt->views[0].detection);
+		init_hand_detection(hgt, &hgt->views[1].detection);
 
-	init_keypoint_estimation(hgt, &hgt->views[0].keypoint[0]);
-	init_keypoint_estimation(hgt, &hgt->views[0].keypoint[1]);
+		init_keypoint_estimation(hgt, &hgt->views[0].keypoint[0]);
+		init_keypoint_estimation(hgt, &hgt->views[0].keypoint[1]);
 
-	init_keypoint_estimation(hgt, &hgt->views[1].keypoint[0]);
-	init_keypoint_estimation(hgt, &hgt->views[1].keypoint[1]);
+		init_keypoint_estimation(hgt, &hgt->views[1].keypoint[0]);
+		init_keypoint_estimation(hgt, &hgt->views[1].keypoint[1]);
+	} catch (const std::exception &e) {
+		HG_ERROR(hgt, "Failed to initialize ONNX runtime: %s", e.what());
+		delete hgt;
+		return NULL;
+	}
 	hgt->keypoint_estimation_run_func = xrt::tracking::hand::mercury::run_keypoint_estimation;
 
 	hgt->views[0].view = 0;
@@ -1149,9 +1157,16 @@ t_hand_tracking_sync_mercury_create(struct t_stereo_camera_calibration *calib,
 	u_var_add_ro_f32(hgt, &hgt->ft_widget.fps, "FPS!");
 	u_var_add_f32_timing(hgt, hgt->ft_widget.debug_var, "Frame timing!");
 
-	u_var_add_f32(hgt, &hgt->target_hand_size, "Hand size (Meters between wrist and middle-proximal joint)");
-	u_var_add_ro_f32(hgt, &hgt->refinement.hand_size_refinement_schedule_x, "Schedule (X value)");
-	u_var_add_ro_f32(hgt, &hgt->refinement.hand_size_refinement_schedule_y, "Schedule (Y value)");
+	u_var_add_ro_f32(hgt, &hgt->target_hand_size, "Hand size (Meters between wrist and middle-proximal joint)");
+
+
+	float *hand_size_refinement_schedule_x = nullptr;
+	float *hand_size_refinement_schedule_y = nullptr;
+	hgt->hand_size_refinement.get_refinement_schedule_ptrs(hand_size_refinement_schedule_x,
+	                                                       hand_size_refinement_schedule_y);
+
+	u_var_add_ro_f32(hgt, hand_size_refinement_schedule_x, "Schedule (X value)");
+	u_var_add_ro_f32(hgt, hand_size_refinement_schedule_y, "Schedule (Y value)");
 
 
 	u_var_add_bool(hgt, &hgt->tuneable_values.new_user_event, "Estimate hand sizes");

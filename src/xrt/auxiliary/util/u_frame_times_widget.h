@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Shared code for visualizing frametimes.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 

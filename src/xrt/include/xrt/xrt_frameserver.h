@@ -12,6 +12,8 @@
 #pragma once
 
 #include "xrt/xrt_frame.h"
+#include "xrt/xrt_results.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,22 +86,31 @@ struct xrt_fs
 
 	/*!
 	 * Enumerate all available modes that this frameserver supports.
+	 *
+	 * This *may* return no modes, which should be checked by the caller.
+	 * In this case, the frameserver does not support streaming frames.
 	 */
-	bool (*enumerate_modes)(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count);
+	xrt_result_t (*enumerate_modes)(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count);
 
 	/*!
-	 * Set the capture parameters, may not be supported on all capture
-	 * devices.
+	 * Set the capture parameters, not all types of parameters may be supported on some capture devices.
+	 *
+	 * This function *must* not fail from a subset of requested parameters being unsupported!
 	 */
-	bool (*configure_capture)(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp);
+	xrt_result_t (*configure_capture)(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp);
 
 	/*!
 	 * Start the capture stream.
+	 *
+	 * @param xfs              The frameserver
+	 * @param xs               The sink for this frameserver to push frames into
+	 * @param capture_type     The type of capture this is
+	 * @param descriptor_index The mode the stream should start with.
 	 */
-	bool (*stream_start)(struct xrt_fs *xfs,
-	                     struct xrt_frame_sink *xs,
-	                     enum xrt_fs_capture_type capture_type,
-	                     uint32_t descriptor_index);
+	xrt_result_t (*stream_start)(struct xrt_fs *xfs,
+	                             struct xrt_frame_sink *xs,
+	                             enum xrt_fs_capture_type capture_type,
+	                             uint32_t descriptor_index);
 
 	/*!
 	 * Setup SLAM sinks for all the sensors a SLAM implementation may supports and
@@ -111,17 +122,17 @@ struct xrt_fs
 	 *
 	 * @todo Fix this incongruence. Maybe rename the interface to xrt_data_source.
 	 */
-	bool (*slam_stream_start)(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks);
+	xrt_result_t (*slam_stream_start)(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks);
 
 	/*!
 	 * Stop the capture stream.
 	 */
-	bool (*stream_stop)(struct xrt_fs *xfs);
+	xrt_result_t (*stream_stop)(struct xrt_fs *xfs);
 
 	/*!
 	 * Is the capture stream running.
 	 */
-	bool (*is_running)(struct xrt_fs *xfs);
+	xrt_result_t (*is_running)(struct xrt_fs *xfs, bool *out_is_running);
 };
 
 
@@ -138,7 +149,7 @@ struct xrt_fs
  *
  * @public @memberof xrt_fs
  */
-static inline bool
+static inline xrt_result_t
 xrt_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count)
 {
 	return xfs->enumerate_modes(xfs, out_modes, out_count);
@@ -151,7 +162,7 @@ xrt_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint3
  *
  * @public @memberof xrt_fs
  */
-static inline bool
+static inline xrt_result_t
 xrt_fs_configure_capture(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp)
 {
 	return xfs->configure_capture(xfs, cp);
@@ -164,7 +175,7 @@ xrt_fs_configure_capture(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *c
  *
  * @public @memberof xrt_fs
  */
-static inline bool
+static inline xrt_result_t
 xrt_fs_stream_start(struct xrt_fs *xfs,
                     struct xrt_frame_sink *xs,
                     enum xrt_fs_capture_type capture_type,
@@ -180,7 +191,7 @@ xrt_fs_stream_start(struct xrt_fs *xfs,
  *
  * @public @memberof xrt_fs
  */
-static inline bool
+static inline xrt_result_t
 xrt_fs_slam_stream_start(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks)
 {
 	return xfs->slam_stream_start(xfs, sinks);
@@ -193,7 +204,7 @@ xrt_fs_slam_stream_start(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks)
  *
  * @public @memberof xrt_fs
  */
-static inline bool
+static inline xrt_result_t
 xrt_fs_stream_stop(struct xrt_fs *xfs)
 {
 	return xfs->stream_stop(xfs);
@@ -206,10 +217,10 @@ xrt_fs_stream_stop(struct xrt_fs *xfs)
  *
  * @public @memberof xrt_fs
  */
-static inline bool
-xrt_fs_is_running(struct xrt_fs *xfs)
+static inline xrt_result_t
+xrt_fs_is_running(struct xrt_fs *xfs, bool *out_is_running)
 {
-	return xfs->is_running(xfs);
+	return xfs->is_running(xfs, out_is_running);
 }
 
 

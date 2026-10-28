@@ -4,7 +4,7 @@
  * @file
  * @brief Wrapper around Mercury's parametric hand code, used by Index and OpenGloves to simulate hand tracking.
  * @author Christoph Haag <christoph.haag@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Daniel Willmott <web@dan-w.com>
  * @ingroup aux_util
  */
@@ -31,8 +31,6 @@ struct orientations54
 {
 	struct xrt_quat q[HAND_SIM_NUM_FINGERS][HAND_SIM_NUM_ORIENTATIONS_IN_FINGER];
 };
-
-#define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
 
 // For debugging.
 #if 0

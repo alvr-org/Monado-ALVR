@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  An @ref xrt_frame_sink that takes two frames, enforces gen-lock and pushes downstream in left-right order
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_util
  */

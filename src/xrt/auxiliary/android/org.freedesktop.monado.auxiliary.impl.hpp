@@ -72,10 +72,7 @@ namespace org::freedesktop::monado::auxiliary {
 		jfloat *refreshRates =
 		    (jfloat *)jni::env()->GetFloatArrayElements((jfloatArray)refreshRateArray.getHandle(), 0);
 		jsize length = jni::env()->GetArrayLength((jfloatArray)refreshRateArray.getHandle());
-		std::vector<float> refreshRateVector;
-		for (int i = 0; i < length; i++) {
-			refreshRateVector.push_back(refreshRates[i]);
-		}
+		std::vector<float> refreshRateVector(refreshRates, refreshRates + length);
 		return refreshRateVector;
 	}
 

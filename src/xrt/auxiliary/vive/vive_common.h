@@ -12,6 +12,8 @@
 
 #include "xrt/xrt_compiler.h"
 
+#include "util/u_time.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +35,21 @@ extern "C" {
  */
 
 
+/*!
+ * Headset variant.
+ *
+ * @ingroup aux_vive
+ */
+enum VIVE_VARIANT
+{
+	VIVE_UNKNOWN = 0,
+	VIVE_VARIANT_VIVE,
+	VIVE_VARIANT_PRO,
+	VIVE_VARIANT_INDEX,
+	VIVE_VARIANT_PRO2,
+	VIVE_VARIANT_BEYOND,
+};
+
 #define HTC_VID 0x0bb4
 #define VALVE_VID 0x28de
 
@@ -46,6 +63,15 @@ extern "C" {
 #define VIVE_WATCHMAN_DONGLE 0x2101
 #define VIVE_WATCHMAN_DONGLE_GEN2 0x2102
 
+enum VIVE_VARIANT
+vive_determine_variant(const char *model_number);
+
+bool
+vive_variant_scanout_info(enum VIVE_VARIANT variant,
+                          time_duration_ns frame_period_ns,
+                          time_duration_ns *out_scanout_time_ns,
+                          enum xrt_scanout_direction *out_scanout_direction,
+                          enum xrt_panel_refresh_type *out_panel_refresh_type);
 
 #ifdef __cplusplus
 }

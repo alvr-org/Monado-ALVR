@@ -85,7 +85,7 @@ constexpr xrt_space_relation kSpaceRelationOnlyPosition = {
  *
  */
 
-enum Functions
+enum Functions : std::uint8_t
 {
 	NV,               // (Non-Identity) (Space Relation) Neither Position/Orientation Valid, Not Tracked
 	VT,               // (Non-Identity) (Space Relation) Position/Orientation Valid, Tracked

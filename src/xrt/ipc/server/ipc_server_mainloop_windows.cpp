@@ -1,5 +1,6 @@
 // Copyright 2022, Magic Leap, Inc.
 // Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -115,7 +116,7 @@ create_pipe_instance(struct ipc_server_mainloop *ml, bool first)
 	if (!bret) {
 		DWORD err = GetLastError();
 		char buffer[1024];
-		U_LOG_E("ConvertStringSecurityDescriptorToSecurityDescriptor: %u %s", err, ERROR_STR(buffer, err));
+		U_LOG_E("ConvertStringSecurityDescriptorToSecurityDescriptor: %lu %s", err, ERROR_STR(buffer, err));
 	}
 
 	LPSECURITY_ATTRIBUTES lpsa = nullptr;
@@ -153,17 +154,17 @@ create_pipe_instance(struct ipc_server_mainloop *ml, bool first)
 
 	DWORD err = GetLastError();
 	if (err == ERROR_PIPE_BUSY) {
-		U_LOG_W("CreateNamedPipeA failed: %d %s An existing client must disconnect first!", err,
+		U_LOG_W("CreateNamedPipeA failed: %lu %s An existing client must disconnect first!", err,
 		        ipc_winerror(err));
 	} else {
-		U_LOG_E("CreateNamedPipeA failed: %d %s", err, ipc_winerror(err));
+		U_LOG_E("CreateNamedPipeA failed: %lu %s", err, ipc_winerror(err));
 		if (err == ERROR_ACCESS_DENIED && first) {
 			char path[MAX_PATH];
 			char *exe = get_current_process_name(path);
 			ULONG pid = get_pipe_server_pid(ml->pipe_name);
 			if (pid) {
 				U_LOG_E(
-				    "An existing process id %d has the communication pipe already created. You likely "
+				    "An existing process id %lu has the communication pipe already created. You likely "
 				    "have \"%s\" running already. This service instance cannot continue...",
 				    pid, exe);
 			} else {
@@ -202,7 +203,7 @@ handle_connected_client(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 	}
 
 	DWORD err = GetLastError();
-	U_LOG_E("SetNamedPipeHandleState(PIPE_READMODE_MESSAGE | PIPE_WAIT) failed: %d %s", err, ipc_winerror(err));
+	U_LOG_E("SetNamedPipeHandleState(PIPE_READMODE_MESSAGE | PIPE_WAIT) failed: %lu %s", err, ipc_winerror(err));
 	ipc_server_handle_failure(vs);
 }
 
@@ -218,7 +219,7 @@ ipc_server_mainloop_poll(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 {
 	IPC_TRACE_MARKER();
 
-	if (_kbhit()) {
+	if (!vs->no_stdin && _kbhit()) {
 		U_LOG_E("console input! exiting...");
 		ipc_server_handle_shutdown_signal(vs);
 		return;
@@ -233,7 +234,7 @@ ipc_server_mainloop_poll(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 
 	if (ConnectNamedPipe(ml->pipe_handle, nullptr)) {
 		DWORD err = GetLastError();
-		U_LOG_E("ConnectNamedPipe unexpected return TRUE treating as failure: %d %s", err, ipc_winerror(err));
+		U_LOG_E("ConnectNamedPipe unexpected return TRUE treating as failure: %lu %s", err, ipc_winerror(err));
 		ipc_server_handle_failure(vs);
 		return;
 	}
@@ -242,14 +243,14 @@ ipc_server_mainloop_poll(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 	case ERROR_PIPE_LISTENING: return;
 	case ERROR_PIPE_CONNECTED: handle_connected_client(vs, ml); return;
 	default:
-		U_LOG_E("ConnectNamedPipe failed: %d %s", err, ipc_winerror(err));
+		U_LOG_E("ConnectNamedPipe failed: %lu %s", err, ipc_winerror(err));
 		ipc_server_handle_failure(vs);
 		return;
 	}
 }
 
 int
-ipc_server_mainloop_init(struct ipc_server_mainloop *ml)
+ipc_server_mainloop_init(struct ipc_server_mainloop *ml, bool no_stdin)
 {
 	IPC_TRACE_MARKER();
 
@@ -259,7 +260,7 @@ ipc_server_mainloop_init(struct ipc_server_mainloop *ml)
 	constexpr char pipe_prefix[] = "\\\\.\\pipe\\";
 	constexpr int prefix_len = sizeof(pipe_prefix) - 1;
 	char pipe_name[MAX_PATH + prefix_len];
-	strcpy(pipe_name, pipe_prefix);
+	snprintf(pipe_name, ARRAY_SIZE(pipe_name), pipe_prefix);
 
 	if (u_file_get_path_in_runtime_dir(XRT_IPC_MSG_SOCK_FILENAME, pipe_name + prefix_len, MAX_PATH) == -1) {
 		U_LOG_E("u_file_get_path_in_runtime_dir failed!");

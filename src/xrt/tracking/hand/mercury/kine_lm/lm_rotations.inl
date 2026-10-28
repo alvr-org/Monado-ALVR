@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Autodiff-safe rotations for Levenberg-Marquardt kinematic optimizer.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 
@@ -46,17 +46,16 @@ namespace xrt::tracking::hand::mercury::lm {
 
 template <typename T>
 inline void
-CurlToQuaternion(const T &curl, Quat<T> &result)
+CurlToQuaternion(const T &theta, Quat<T> &result)
 {
-	const T theta_squared = curl * curl;
+	const T theta_squared = theta * theta;
 
 	// For points not at the origin, the full conversion is numerically stable.
 	if (likely(theta_squared > T(0.0))) {
-		const T theta = curl;
-		const T half_theta = curl * T(0.5);
+		const T half_theta = theta * T(0.5);
 		const T k = sin(half_theta) / theta;
 		result.w = cos(half_theta);
-		result.x = curl * k;
+		result.x = theta * k;
 		result.y = T(0.0);
 		result.z = T(0.0);
 	} else {
@@ -65,7 +64,7 @@ CurlToQuaternion(const T &curl, Quat<T> &result)
 		// computed correctly when Jets are used.
 		const T k(0.5);
 		result.w = T(1.0);
-		result.x = curl * k;
+		result.x = theta * k;
 		result.y = T(0.0);
 		result.z = T(0.0);
 	}

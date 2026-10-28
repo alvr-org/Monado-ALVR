@@ -1,4 +1,5 @@
 // Copyright 2018-2020, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,11 +13,27 @@
 
 #include <xrt/xrt_defines.h>
 
-#include <oxr/oxr_input_transform.h>
+#include <oxr/actions/oxr_binding_registry.h>
+#include <oxr/actions/oxr_input_transform.h>
 #include <oxr/oxr_logger.h>
 #include <oxr/oxr_objects.h>
 
 using Catch::Generators::values;
+
+struct mock_binding_point
+{
+	oxr_binding_point_template templ = {};
+	oxr_binding_point point = {};
+
+	mock_binding_point(const char *path,
+	                   enum oxr_binding_value_transform value_transform = OXR_BINDING_VALUE_TRANSFORM_NONE)
+	{
+		templ.path = path;
+		templ.value_transform = value_transform;
+		point.templ = &templ;
+		point.value_transform = value_transform;
+	}
+};
 
 TEST_CASE("input_transform")
 {
@@ -29,6 +46,13 @@ TEST_CASE("input_transform")
 
 	oxr_input_value_tagged input = {};
 	oxr_input_value_tagged output = {};
+	mock_binding_point mock_float{"/mock_float"};
+	mock_binding_point mock_bool{"/mock_bool"};
+	mock_binding_point mock_pose{"/mock_pose"};
+	mock_binding_point mock{"/mock"};
+	mock_binding_point mock_vec2{"/mock_vec2"};
+	mock_binding_point mock_vec2_x{"/mock_vec2/x", OXR_BINDING_VALUE_TRANSFORM_VEC2_GET_X};
+	mock_binding_point mock_vec2_y{"/mock_vec2/y", OXR_BINDING_VALUE_TRANSFORM_VEC2_GET_Y};
 
 	SECTION("Float action")
 	{
@@ -39,7 +63,7 @@ TEST_CASE("input_transform")
 			input.type = XRT_INPUT_TYPE_VEC1_MINUS_ONE_TO_ONE;
 
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "float_action",
-			                                       "/mock_float", &transforms, &transform_count));
+			                                       &mock_float.point, &transforms, &transform_count));
 
 			// Just identity
 			CHECK(transform_count == 1);
@@ -60,7 +84,7 @@ TEST_CASE("input_transform")
 			input.type = XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE;
 
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "float_action",
-			                                       "/mock_float", &transforms, &transform_count));
+			                                       &mock_float.point, &transforms, &transform_count));
 
 			// Just identity
 			CHECK(transform_count == 1);
@@ -85,7 +109,7 @@ TEST_CASE("input_transform")
 			SECTION("path component x")
 			{
 				CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-				                                       "float_action", "/mock_vec2/x", &transforms,
+				                                       "float_action", &mock_vec2_x.point, &transforms,
 				                                       &transform_count));
 
 				// A get-x
@@ -99,7 +123,7 @@ TEST_CASE("input_transform")
 			SECTION("path component y")
 			{
 				CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-				                                       "float_action", "/mock_vec2/y", &transforms,
+				                                       "float_action", &mock_vec2_y.point, &transforms,
 				                                       &transform_count));
 
 				// A get-y
@@ -113,8 +137,8 @@ TEST_CASE("input_transform")
 			SECTION("no component")
 			{
 				CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-				                                             "float_action", "/mock_vec2", &transforms,
-				                                             &transform_count));
+				                                             "float_action", &mock_vec2.point,
+				                                             &transforms, &transform_count));
 
 				// Shouldn't make a transform, not possible
 				CHECK(transform_count == 0);
@@ -129,7 +153,7 @@ TEST_CASE("input_transform")
 		{
 			input.type = XRT_INPUT_TYPE_BOOLEAN;
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "float_action",
-			                                       "/mock_bool", &transforms, &transform_count));
+			                                       &mock_bool.point, &transforms, &transform_count));
 
 			// A bool-to-float
 			CHECK(transform_count == 1);
@@ -161,7 +185,7 @@ TEST_CASE("input_transform")
 			input.type = XRT_INPUT_TYPE_BOOLEAN;
 
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "bool_action",
-			                                       "/mock_bool", &transforms, &transform_count));
+			                                       &mock_bool.point, &transforms, &transform_count));
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
 
@@ -179,7 +203,7 @@ TEST_CASE("input_transform")
 			input.type = XRT_INPUT_TYPE_VEC1_MINUS_ONE_TO_ONE;
 
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "bool_action",
-			                                       "/mock_float", &transforms, &transform_count));
+			                                       &mock_float.point, &transforms, &transform_count));
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
 
@@ -207,7 +231,7 @@ TEST_CASE("input_transform")
 			input.type = XRT_INPUT_TYPE_VEC1_ZERO_TO_ONE;
 
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "bool_action",
-			                                       "/mock_float", &transforms, &transform_count));
+			                                       &mock_float.point, &transforms, &transform_count));
 			// A bool to float
 			CHECK(transform_count == 1);
 			CHECK(transforms != nullptr);
@@ -240,7 +264,7 @@ TEST_CASE("input_transform")
 			SECTION("x")
 			{
 				CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-				                                       "float_action", "/mock_vec2/x", &transforms,
+				                                       "float_action", &mock_vec2_x.point, &transforms,
 				                                       &transform_count));
 				CHECK(transform_count == 2);
 				CHECK(transforms != nullptr);
@@ -252,7 +276,7 @@ TEST_CASE("input_transform")
 			SECTION("y")
 			{
 				CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-				                                       "float_action", "/mock_vec2/y", &transforms,
+				                                       "float_action", &mock_vec2_y.point, &transforms,
 				                                       &transform_count));
 				CHECK(transform_count == 2);
 				CHECK(transforms != nullptr);
@@ -264,7 +288,7 @@ TEST_CASE("input_transform")
 			SECTION("no component")
 			{
 				CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-				                                             "float_action", "/mock", &transforms,
+				                                             "float_action", &mock.point, &transforms,
 				                                             &transform_count));
 
 				// Shouldn't make a transform, not possible
@@ -277,6 +301,38 @@ TEST_CASE("input_transform")
 		}
 	}
 
+	SECTION("Vector2 action")
+	{
+		XrActionType action_type = XR_ACTION_TYPE_VECTOR2F_INPUT;
+		input.type = XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE;
+
+		SECTION("From Vec2 identity")
+		{
+			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "vec2_action",
+			                                       &mock_vec2.point, &transforms, &transform_count));
+			CHECK(transform_count == 1);
+			CHECK(transforms != nullptr);
+		}
+
+		SECTION("Reject Vec2 bound through X component")
+		{
+			CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
+			                                             "vec2_action", &mock_vec2_x.point, &transforms,
+			                                             &transform_count));
+			CHECK(transform_count == 0);
+			CHECK(transforms == nullptr);
+		}
+
+		SECTION("Reject Vec2 bound through Y component")
+		{
+			CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
+			                                             "vec2_action", &mock_vec2_y.point, &transforms,
+			                                             &transform_count));
+			CHECK(transform_count == 0);
+			CHECK(transforms == nullptr);
+		}
+	}
+
 	SECTION("Pose action")
 	{
 		XrActionType action_type = XR_ACTION_TYPE_POSE_INPUT;
@@ -285,7 +341,7 @@ TEST_CASE("input_transform")
 		{
 			input.type = XRT_INPUT_TYPE_POSE;
 			CHECK(oxr_input_transform_create_chain(&log, &slog, input.type, action_type, "pose_action",
-			                                       "/mock_pose", &transforms, &transform_count));
+			                                       &mock_pose.point, &transforms, &transform_count));
 			// Identity, just so this binding doesn't get culled.
 			CHECK(transform_count == 1);
 		}
@@ -304,10 +360,33 @@ TEST_CASE("input_transform")
 			input.type = input_type;
 
 			CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
-			                                             "pose_action", "/mock", &transforms,
+			                                             "pose_action", &mock.point, &transforms,
 			                                             &transform_count));
 
 			// not possible
+			CHECK(transform_count == 0);
+			CHECK(transforms == nullptr);
+		}
+
+		SECTION("Reject Vec2 binding points")
+		{
+			input.type = XRT_INPUT_TYPE_VEC2_MINUS_ONE_TO_ONE;
+
+			CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
+			                                             "pose_action", &mock_vec2.point, &transforms,
+			                                             &transform_count));
+			CHECK(transform_count == 0);
+			CHECK(transforms == nullptr);
+
+			CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
+			                                             "pose_action", &mock_vec2_x.point, &transforms,
+			                                             &transform_count));
+			CHECK(transform_count == 0);
+			CHECK(transforms == nullptr);
+
+			CHECK_FALSE(oxr_input_transform_create_chain(&log, &slog, input.type, action_type,
+			                                             "pose_action", &mock_vec2_y.point, &transforms,
+			                                             &transform_count));
 			CHECK(transform_count == 0);
 			CHECK(transforms == nullptr);
 		}

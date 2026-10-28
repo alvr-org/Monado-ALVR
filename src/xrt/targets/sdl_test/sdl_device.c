@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -11,8 +12,10 @@
 #include "math/m_mathinclude.h"
 
 #include "util/u_device.h"
+#include "util/u_device_id.h"
 #include "util/u_distortion_mesh.h"
 
+#include <stdio.h>
 
 static xrt_result_t
 sdl_hmd_get_tracked_pose(struct xrt_device *xdev,
@@ -70,6 +73,8 @@ void
 sdl_device_init(struct sdl_program *sp)
 {
 	struct xrt_device *xdev = &sp->xdev_base;
+
+	u_device_id_assign(xdev);
 
 	// Setup pointers.
 	xdev->inputs = sp->inputs;

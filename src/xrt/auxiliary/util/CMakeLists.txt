@@ -1,4 +1,5 @@
 # Copyright 2019-2024, Collabora, Ltd.
+# Copyright 2024-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
 
 ####
@@ -20,18 +21,31 @@ add_library(
 	u_autoexpgain.h
 	u_bitwise.c
 	u_bitwise.h
-	u_builders.c
-	u_builders.h
+	u_body_tracker.c
+	u_body_tracker.h
+	u_body_tracker_ni.c
+	u_body_tracker_ni.h
+	u_builder_helpers.c
+	u_builder_helpers.h
+	u_builder_search.c
+	u_builder_search.h
+	u_cobs.c
+	u_cobs.h
 	u_debug.c
 	u_debug.h
 	u_deque.cpp
 	u_deque.h
 	u_device.c
 	u_device.h
+	u_device_id.c
+	u_device_id.h
+	u_device_ni.c
+	u_device_ni.h
 	u_distortion.c
 	u_distortion.h
 	u_distortion_mesh.c
 	u_distortion_mesh.h
+	u_distortion_mesh_rift.c
 	u_documentation.h
 	u_file.c
 	u_file.cpp
@@ -40,6 +54,12 @@ add_library(
 	u_format.h
 	u_frame.c
 	u_frame.h
+	u_frameserver.c
+	u_frameserver.h
+	u_frameserver_ni.c
+	u_frameserver_ni.h
+	u_future.h
+	u_future.cpp
 	u_generic_callbacks.hpp
 	u_git_tag.h
 	u_hand_tracking.c
@@ -69,6 +89,7 @@ add_library(
 	u_metrics.h
 	u_misc.c
 	u_misc.h
+	u_native_images.h
 	u_native_images_debug.h
 	u_pacing.h
 	u_pacing_app.c
@@ -78,18 +99,22 @@ add_library(
 	u_pretty_print.h
 	u_prober.c
 	u_prober.h
-	u_session.c
-	u_session.h
-	u_space_overseer.c
-	u_space_overseer.h
-	u_string_list.cpp
-	u_string_list.h
-	u_string_list.hpp
-	u_system.c
-	u_system.h
+	u_resampler.c
+	u_resampler.h
+	u_str_to_enum.c
+	u_str_to_enum.h
+	u_extension_list.cpp
+	u_extension_list.h
+	u_extension_list.hpp
+	u_system_devices.c
+	u_system_devices.h
+	u_system_devices_ni.c
+	u_system_devices_ni.h
 	u_system_helpers.c
 	u_system_helpers.h
 	u_template_historybuf.hpp
+	u_thread_priority.c
+	u_thread_priority.h
 	u_time.cpp
 	u_time.h
 	u_trace_marker.c
@@ -107,6 +132,7 @@ add_library(
 	u_visibility_mask.h
 	u_win32_com_guard.cpp
 	u_win32_com_guard.hpp
+	u_weak_ptr.hpp
 	u_worker.c
 	u_worker.cpp
 	u_worker.h
@@ -116,9 +142,9 @@ add_library(
 target_link_libraries(
 	aux_util
 	PUBLIC
-		xrt-external-nanopb
+		xrt-external-metrics
+		xrt-external-bcdec
 		aux-includes
-		aux_generated_bindings
 		aux_os
 		aux_math
 	)
@@ -126,12 +152,22 @@ target_link_libraries(
 # Only uses normal Windows libraries, doesn't add anything extra.
 if(WIN32)
 	target_sources(aux_util PRIVATE u_windows.c u_windows.h)
+endif()
+
+# WIL is lacking official support on MINGW.
+# If necessary, please refer to https://github.com/microsoft/wil/pull/467
+if(WIN32 AND NOT MINGW)
 	target_link_libraries(aux_util PRIVATE WIL::WIL)
 endif()
 
 # Only uses POSIX/Linux libraries, doesn't add anything extra.
 if(XRT_HAVE_LINUX OR ANDROID)
 	target_sources(aux_util PRIVATE u_linux.c u_linux.h)
+endif()
+
+# Only uses Android NDK libraries, doesn't add anything extra.
+if(ANDROID)
+	target_sources(aux_util PRIVATE u_android.c u_android.h)
 endif()
 
 # Is basically used everywhere, unavoidable.
@@ -157,9 +193,6 @@ if(ANDROID)
 	target_link_libraries(aux_util PUBLIC ${ANDROID_LOG_LIBRARY})
 endif()
 
-# Internal dependency and doesn't bring in any DSO.
-target_include_directories(aux_util PRIVATE ${EIGEN3_INCLUDE_DIR})
-
 ####
 # Debug UI library
 #
@@ -179,7 +212,9 @@ if(XRT_FEATURE_DEBUG_GUI)
 	endif()
 
 	if(XRT_HAVE_SDL2)
-		target_link_libraries(aux_util_debug_gui PRIVATE st_gui xrt-external-imgui-sdl2)
+		target_link_libraries(
+			aux_util_debug_gui PRIVATE st_gui_base xrt-external-imgui-sdl2
+			)
 
 		if(XRT_BUILD_DRIVER_QWERTY)
 			target_link_libraries(
@@ -196,6 +231,7 @@ endif()
 add_library(
 	aux_util_sink STATIC
 	u_sink.h
+	u_sink_blob_visualizer.c
 	u_sink_combiner.c
 	u_sink_force_genlock.c
 	u_sink_converter.c
@@ -204,7 +240,7 @@ add_library(
 	u_sink_simple_queue.c
 	u_sink_quirk.c
 	u_sink_split.c
-	u_sink_stereo_sbs_to_slam_sbs.c
+	u_sink_stereo_sbs_split.c
 	)
 target_link_libraries(
 	aux_util_sink
@@ -231,4 +267,16 @@ target_link_libraries(aux_util_process PUBLIC aux-includes aux_util)
 if(XRT_HAVE_LIBBSD)
 	target_include_directories(aux_util_process SYSTEM PRIVATE ${LIBBSD_INCLUDE_DIRS})
 	target_link_libraries(aux_util_process PUBLIC ${LIBBSD_LIBRARIES})
+endif()
+
+####
+# Scribble library
+#
+
+add_library(aux_util_scribble STATIC u_frame_scribble.cpp u_frame_scribble.h)
+target_link_libraries(aux_util_scribble PUBLIC aux-includes aux_util)
+
+if(XRT_HAVE_OPENCV)
+	target_link_libraries(aux_util_scribble PUBLIC ${OpenCV_LIBRARIES})
+	target_include_directories(aux_util_scribble SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS})
 endif()

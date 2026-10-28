@@ -55,7 +55,7 @@ TEST_CASE("render_calc_uv_to_tangent_lengths_rect")
 			render_calc_uv_to_tangent_lengths_rect(&f45, &result);
 
 			/*
-			 * We expect a fov of 45 degrees in all angles to have tangets
+			 * We expect a fov of 45 degrees in all angles to have tangents
 			 * of 1 or -1. In order to transform uv [0 .. 1] to [-1 .. 1]
 			 * we need to have a width of 2 and a offset of -1.
 			 */

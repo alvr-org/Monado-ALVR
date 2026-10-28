@@ -1,4 +1,5 @@
 // Copyright 2019, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -40,6 +41,15 @@
 
 #if defined(__MINGW32__)
 #define XRT_ENV_MINGW
+#endif
+
+#if defined(__APPLE__) && defined(__MACH__)
+#include <TargetConditionals.h>
+#if TARGET_OS_MAC == 1
+#define XRT_OS_OSX
+#define XRT_OS_UNIX
+#define XRT_OS_WAS_AUTODETECTED
+#endif // TARGET_OS_MAC
 #endif
 
 #ifndef XRT_OS_WAS_AUTODETECTED

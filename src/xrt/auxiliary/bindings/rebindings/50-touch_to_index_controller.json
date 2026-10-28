@@ -1,0 +1,45 @@
+{
+	"touch_controller_to_index_controller": {
+		"source_profile": "/interaction_profiles/oculus/touch_controller",
+		"target_profile": "/interaction_profiles/valve/index_controller",
+		"helpers": [
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/output"
+		],
+		"bindings": {
+			"/user/hand/left/input/menu": "/user/hand/left/input/system",
+			"/user/hand/left/input/menu/click": "/user/hand/left/input/system/click",
+			"/user/hand/left/input/trigger/proximity": false,
+			"/user/hand/left/input/trigger/proximity_fb": false,
+			"/user/hand/left/input/trigger/touch": true,
+			"/user/hand/left/input/thumb_fb/proximity_fb": false,
+			"/user/hand/left/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/left/input/thumbrest/touch": "/user/hand/left/input/trackpad/touch",
+			"/user/hand/left/input/thumbstick/touch": true,
+			"/user/hand/left/input/x": "/user/hand/left/input/a",
+			"/user/hand/left/input/x/click": "/user/hand/left/input/a/click",
+			"/user/hand/left/input/x/touch": "/user/hand/left/input/a/touch",
+			"/user/hand/left/input/y": "/user/hand/left/input/b",
+			"/user/hand/left/input/y/click": "/user/hand/left/input/b/click",
+			"/user/hand/left/input/y/touch": "/user/hand/left/input/b/touch",
+			"/user/hand/right/input/a": true,
+			"/user/hand/right/input/a/click": true,
+			"/user/hand/right/input/a/touch": true,
+			"/user/hand/right/input/b": true,
+			"/user/hand/right/input/b/click": true,
+			"/user/hand/right/input/b/touch": true,
+			"/user/hand/right/input/system": true,
+			"/user/hand/right/input/system/click": true,
+			"/user/hand/right/input/trigger/proximity": false,
+			"/user/hand/right/input/trigger/proximity_fb": false,
+			"/user/hand/right/input/trigger/touch": true,
+			"/user/hand/right/input/thumb_fb/proximity_fb": false,
+			"/user/hand/right/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/right/input/thumbrest/touch": "/user/hand/right/input/trackpad/touch",
+			"/user/hand/right/input/thumbstick/touch": true
+		}
+	}
+}

@@ -1,7 +1,7 @@
 <!--
 Copyright 2022, Collabora, Ltd.
 Authors:
-Moses Turner <moses@collabora.com>
+Moshi Turner <moshiturner@protonmail.com>
 SPDX-License-Identifier: CC0-1.0
 -->
 

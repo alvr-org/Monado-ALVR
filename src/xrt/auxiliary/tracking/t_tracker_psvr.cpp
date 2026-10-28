@@ -114,7 +114,7 @@ using namespace xrt::auxiliary::tracking;
 //! Namespace for PSVR tracking implementation
 namespace xrt::auxiliary::tracking::psvr {
 
-typedef enum blob_type
+typedef enum blob_type : std::uint8_t
 {
 	BLOB_TYPE_UNKNOWN,
 	BLOB_TYPE_SIDE,
@@ -156,7 +156,7 @@ struct View
 	}
 };
 
-typedef enum led_tag
+typedef enum led_tag : std::uint8_t
 {
 	TAG_TL,
 	TAG_TR,
@@ -321,9 +321,12 @@ static void
 init_filter(cv::KalmanFilter &kf, float process_cov, float meas_cov, float dt)
 {
 	kf.init(6, 3);
-	kf.transitionMatrix =
-	    (cv::Mat_<float>(6, 6) << 1.0, 0.0, 0.0, dt, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, dt, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-	     dt, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+	kf.transitionMatrix = cv::Mat_<float>({6, 6}, {1.0f, 0.0f, 0.0f, dt,   0.0f, 0.0f, //
+	                                               0.0f, 1.0f, 0.0f, 0.0f, dt,   0.0f, //
+	                                               0.0f, 0.0f, 1.0f, 0.0f, 0.0f, dt,   //
+	                                               0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, //
+	                                               0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, //
+	                                               0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f});
 
 	cv::setIdentity(kf.measurementMatrix, cv::Scalar::all(1.0f));
 	cv::setIdentity(kf.errorCovPost, cv::Scalar::all(0.0f));
@@ -824,7 +827,7 @@ solve_with_imu(TrackerPSVR &t,
 		(void)closest_index;
 
 		proximity_data_t p;
-		match_data_t measurement = measurements->at(i);
+		const match_data_t &measurement = measurements->at(i);
 
 		p.position = measurement.position;
 		p.vertex_index = measurement.vertex_index;
@@ -841,7 +844,7 @@ solve_with_imu(TrackerPSVR &t,
 
 		std::vector<match_model_t> temp_measurement_list;
 		for (uint32_t i = 0; i < proximity_data.size(); i++) {
-			proximity_data_t p = proximity_data[i];
+			const proximity_data_t &p = proximity_data[i];
 			Eigen::Vector4f model_vertex = t.model_vertices[p.vertex_index].position;
 			Eigen::Vector4f measurement_vertex = p.position;
 			Eigen::Vector4f measurement_offset = t.corrected_imu_rotation * model_vertex;
@@ -1568,7 +1571,6 @@ process(TrackerPSVR &t, struct xrt_frame *xf)
 			float xdiff = r_blob.pt.x - l_blob.pt.x;
 			float ydiff = r_blob.pt.y - l_blob.pt.y;
 			if ((ydiff < 3.0f) && (ydiff > -3.0f) && (abs(xdiff) < lowest_dist)) {
-				lowest_dist = abs(xdiff);
 				r_index = j;
 				l_index = i;
 			}
@@ -1740,11 +1742,9 @@ process(TrackerPSVR &t, struct xrt_frame *xf)
 			PSVR_INFO("TOO MANY BAD CORRECTIONS. DRIFTED?");
 		}
 
-		std::vector<match_data_t> resolved;
-		for (uint32_t i = 0; i < solved.size(); i++) {
-			resolved.push_back(solved[i]);
-		}
+		std::vector<match_data_t> resolved = solved;
 		solved.clear();
+
 		model_center_transform = solve_with_imu(t, &resolved, &predicted_pose, &solved, PSVR_SEARCH_RADIUS);
 	}
 

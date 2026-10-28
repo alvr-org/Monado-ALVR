@@ -1,4 +1,5 @@
 // Copyright 2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -103,6 +104,17 @@ public:
 	~SharedThreadGroup()
 	{
 		u_worker_group_reference(&mGroup, nullptr);
+	}
+
+	/*!
+	 * In-general it's recommended to use the TaskCollection helper,
+	 * but some use cases requires direct access to the push function,
+	 * so it's provided here.
+	 */
+	void
+	push(u_worker_group_func_t f, void *data)
+	{
+		u_worker_group_push(mGroup, f, data);
 	}
 
 	friend TaskCollection;

@@ -1,5 +1,5 @@
 # Copyright 2019-2022, Mesa contributors
-# Copyright 2022, Collabora, Ltd.
+# Copyright 2022-2026, Collabora, Ltd.
 # SPDX-License-Identifier: MIT
 # Based on https://gitlab.freedesktop.org/mesa/mesa/-/blob/8396df5ad90aeb6ab2267811aba2187954562f81/.gitlab-ci/windows/mesa_build.ps1
 
@@ -66,6 +66,7 @@ $cmakeArgs = @(
     "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
     "-DCMAKE_TOOLCHAIN_FILE=$toolchainfile"
     "-DCMAKE_INSTALL_PREFIX=$installdir"
+    "-DCMAKE_COMPILE_WARNING_AS_ERROR=ON"
     "-DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON"
 )
 cmake @cmakeArgs

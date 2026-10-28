@@ -1,4 +1,5 @@
 // Copyright 2019, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,6 +15,8 @@
 #include "util/u_file.h"
 #include "util/u_json.h"
 #include "util/u_debug.h"
+#include "util/u_pretty_print.h"
+#include "util/u_str_to_enum.h"
 
 #include "u_config_json.h"
 
@@ -22,7 +25,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "bindings/b_generated_bindings.h"
 #include <assert.h>
 
 DEBUG_GET_ONCE_OPTION(active_config, "P_OVERRIDE_ACTIVE_CONFIG", NULL)
@@ -61,7 +63,7 @@ u_config_json_open_or_create_file(struct u_config_json *json, const char *filena
 
 	json->file_loaded = true;
 
-	char *str = u_file_read_content(file);
+	char *str = u_file_read_content(file, NULL);
 	fclose(file);
 	if (str == NULL) {
 		U_LOG_E("Could not read the contents of '%s'!", tmp);
@@ -238,7 +240,7 @@ u_config_json_get_active(struct u_config_json *json, enum u_config_json_active_c
 }
 
 bool
-u_config_json_get_remote_settings(struct u_config_json *json, int *out_port, uint32_t *out_view_count)
+u_config_json_get_remote_settings(struct u_config_json *json, struct u_config_remote_settings *out_settings)
 {
 	cJSON *t = cJSON_GetObjectItemCaseSensitive(json->root, "remote");
 	if (t == NULL) {
@@ -265,8 +267,34 @@ u_config_json_get_remote_settings(struct u_config_json *json, int *out_port, uin
 		return false;
 	}
 
-	*out_port = port;
-	*out_view_count = view_count;
+	out_settings->port = port;
+	out_settings->view_count = (uint32_t)view_count;
+
+	// Optional, keep the caller's defaults if missing or invalid.
+	int w_pixels = 0;
+	if (get_obj_int(t, "w_pixels", &w_pixels) && w_pixels > 0) {
+		out_settings->w_pixels = (uint32_t)w_pixels;
+	} else {
+		U_LOG_W("Unable to read 'w_pixels' value, fallback to default %u", out_settings->w_pixels);
+	}
+	int h_pixels = 0;
+	if (get_obj_int(t, "h_pixels", &h_pixels) && h_pixels > 0) {
+		out_settings->h_pixels = (uint32_t)h_pixels;
+	} else {
+		U_LOG_W("Unable to read 'h_pixels' value, fallback to default %u", out_settings->h_pixels);
+	}
+	float w_meters = 0.0f;
+	if (get_obj_float(t, "w_meters", &w_meters) && w_meters > 0.0f) {
+		out_settings->w_meters = w_meters;
+	} else {
+		U_LOG_W("Unable to read 'w_meters' value, fallback to default %f", out_settings->w_meters);
+	}
+	float h_meters = 0.0f;
+	if (get_obj_float(t, "h_meters", &h_meters) && h_meters > 0.0f) {
+		out_settings->h_meters = h_meters;
+	} else {
+		U_LOG_W("Unable to read 'h_meters' value, fallback to default %f", out_settings->h_meters);
+	}
 
 	return true;
 }
@@ -337,7 +365,7 @@ u_config_json_get_tracking_overrides(struct u_config_json *json,
 
 		char input_name[512] = {'\0'};
 		get_obj_str(override, "xrt_input_name", input_name, 512);
-		o->input_name = xrt_input_name_enum(input_name);
+		o->input_name = u_str_to_xrt_input_name_or_default(input_name);
 
 		if (bad) {
 			*out_override_count = 0;
@@ -504,7 +532,7 @@ u_config_json_save_overrides(struct u_config_json *json, struct xrt_tracking_ove
 
 		cJSON_AddItemToObject(entry, "offset", make_pose(&overrides[i].offset));
 
-		const char *input_name_string = xrt_input_name_string(overrides[i].input_name);
+		const char *input_name_string = u_str_xrt_input_name(overrides[i].input_name);
 		cJSON_AddStringToObject(entry, "xrt_input_name", input_name_string);
 
 		cJSON_AddItemToArray(o, entry);

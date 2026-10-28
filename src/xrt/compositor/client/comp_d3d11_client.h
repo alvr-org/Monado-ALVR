@@ -35,7 +35,7 @@ struct client_d3d11_compositor;
  * @public @memberof client_d3d11_compositor
  * @see xrt_compositor_native
  */
-struct xrt_compositor_d3d11 *
+struct xrt_compositor *
 client_d3d11_compositor_create(struct xrt_compositor_native *xcn, ID3D11Device *device);
 
 

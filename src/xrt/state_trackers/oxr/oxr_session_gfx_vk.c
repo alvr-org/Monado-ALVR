@@ -21,7 +21,7 @@
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
-#include "oxr_handle.h"
+#include "oxr_handle_base.h"
 
 
 #ifndef XR_USE_GRAPHICS_API_VULKAN
@@ -140,26 +140,26 @@ oxr_session_populate_vk(struct oxr_logger *log,
 #endif
 
 	struct xrt_compositor_native *xcn = sess->xcn;
-	struct xrt_compositor_vk *xcvk = xrt_gfx_vk_provider_create( //
-	    xcn,                                                     //
-	    next->instance,                                          //
-	    vkGetInstanceProcAddr,                                   //
-	    next->physicalDevice,                                    //
-	    next->device,                                            //
-	    external_fence_fd_enabled,                               //
-	    external_semaphore_fd_enabled,                           //
-	    timeline_semaphore_enabled,                              //
-	    image_format_list_enabled,                               //
-	    debug_utils_enabled,                                     //
-	    renderdoc_enabled,                                       //
-	    next->queueFamilyIndex,                                  //
-	    next->queueIndex);                                       //
+	struct xrt_compositor *xc = xrt_gfx_vk_provider_create( //
+	    xcn,                                                //
+	    next->instance,                                     //
+	    vkGetInstanceProcAddr,                              //
+	    next->physicalDevice,                               //
+	    next->device,                                       //
+	    external_fence_fd_enabled,                          //
+	    external_semaphore_fd_enabled,                      //
+	    timeline_semaphore_enabled,                         //
+	    image_format_list_enabled,                          //
+	    debug_utils_enabled,                                //
+	    renderdoc_enabled,                                  //
+	    next->queueFamilyIndex,                             //
+	    next->queueIndex);                                  //
 
-	if (xcvk == NULL) {
+	if (xc == NULL) {
 		return oxr_error(log, XR_ERROR_INITIALIZATION_FAILED, "Failed to create an vk client compositor");
 	}
 
-	sess->compositor = &xcvk->base;
+	sess->compositor = xc;
 	sess->create_swapchain = oxr_swapchain_vk_create;
 
 	return XR_SUCCESS;

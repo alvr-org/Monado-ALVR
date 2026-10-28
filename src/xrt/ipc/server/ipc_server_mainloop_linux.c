@@ -1,4 +1,5 @@
 // Copyright 2020-2021, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -21,6 +22,7 @@
 #include "util/u_debug.h"
 #include "util/u_trace_marker.h"
 #include "util/u_file.h"
+#include "util/u_truncate_printf.h"
 
 #include "shared/ipc_shmem.h"
 #include "server/ipc_server.h"
@@ -38,6 +40,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 #include <assert.h>
 #include <limits.h>
 #include "util/u_debug.h"
@@ -46,14 +49,6 @@
 #include <systemd/sd-daemon.h>
 #endif
 
-/*
- * "XRT_NO_STDIN" option disables stdin and prevents monado-service from terminating.
- * This could be useful for situations where there is no proper or in a non-interactive shell.
- * Two example scenarios are:
- *    * IDE terminals,
- *    * Some scripting environments where monado-service is spawned in the background
- */
-DEBUG_GET_ONCE_BOOL_OPTION(skip_stdin, "XRT_NO_STDIN", false)
 
 /*
  *
@@ -83,7 +78,7 @@ static int
 create_listen_socket(struct ipc_server_mainloop *ml, int *out_fd)
 {
 	// no fd provided
-	struct sockaddr_un addr;
+	struct sockaddr_un addr = XRT_STRUCT_INIT;
 	int fd;
 	int ret;
 
@@ -102,10 +97,17 @@ create_listen_socket(struct ipc_server_mainloop *ml, int *out_fd)
 		return -1;
 	}
 
-	memset(&addr, 0, sizeof(addr));
+	// Make sure the path fits.
+	const int dst_size = (int)ARRAY_SIZE(addr.sun_path);
+	if (size >= dst_size) {
+		U_LOG_E("Total IPC path too long (%i > %i)", size, dst_size);
+		return -1;
+	}
 
+	// Struct zero init at declaration.
 	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, sock_file);
+	// Use truncate here to avoid warnings.
+	u_truncate_snprintf(addr.sun_path, dst_size, "%s", sock_file);
 
 	ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
 
@@ -174,8 +176,29 @@ init_listen_socket(struct ipc_server_mainloop *ml)
 	return fd;
 }
 
+static volatile sig_atomic_t got_shutdown_signal = 0;
+
+static void
+shutdown_signal_handler(int sig)
+{
+	(void)sig;
+	got_shutdown_signal = 1;
+}
+
+static void
+install_signal_handlers(void)
+{
+	struct sigaction sa = {0};
+	sa.sa_handler = shutdown_signal_handler;
+	sigemptyset(&sa.sa_mask);
+	// SA_RESETHAND: after first signal, reset to default so a second signal kills immediately.
+	sa.sa_flags = SA_RESETHAND;
+	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGINT, &sa, NULL);
+}
+
 static int
-init_epoll(struct ipc_server_mainloop *ml)
+init_epoll(struct ipc_server_mainloop *ml, bool no_stdin)
 {
 	int ret = epoll_create1(EPOLL_CLOEXEC);
 	if (ret < 0) {
@@ -186,7 +209,7 @@ init_epoll(struct ipc_server_mainloop *ml)
 
 	struct epoll_event ev = {0};
 
-	if (!ml->launched_by_socket && !debug_get_bool_option_skip_stdin()) {
+	if (!ml->launched_by_socket && !no_stdin) {
 		// Can't do this when launched by systemd socket activation by
 		// default.
 		// This polls stdin.
@@ -250,6 +273,13 @@ ipc_server_mainloop_poll(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 		return;
 	}
 
+	// Check if a signal handler set the shutdown flag.
+	if (got_shutdown_signal) {
+		U_LOG_I("Got shutdown signal, shutting down.");
+		ipc_server_handle_shutdown_signal(vs);
+		return;
+	}
+
 	for (int i = 0; i < ret; i++) {
 		// If we get data on stdin, stop.
 		if (events[i].data.fd == 0) {
@@ -265,7 +295,7 @@ ipc_server_mainloop_poll(struct ipc_server *vs, struct ipc_server_mainloop *ml)
 }
 
 int
-ipc_server_mainloop_init(struct ipc_server_mainloop *ml)
+ipc_server_mainloop_init(struct ipc_server_mainloop *ml, bool no_stdin)
 {
 	IPC_TRACE_MARKER();
 
@@ -275,7 +305,9 @@ ipc_server_mainloop_init(struct ipc_server_mainloop *ml)
 		return ret;
 	}
 
-	ret = init_epoll(ml);
+	install_signal_handlers();
+
+	ret = init_epoll(ml, no_stdin);
 	if (ret < 0) {
 		ipc_server_mainloop_deinit(ml);
 		return ret;

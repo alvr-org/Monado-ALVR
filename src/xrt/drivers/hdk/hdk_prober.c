@@ -1,4 +1,4 @@
-// Copyright 2019, Collabora, Ltd.
+// Copyright 2019-2026, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -37,6 +37,10 @@ hdk_found(struct xrt_prober *xp,
 
 	unsigned char buf[256] = {0};
 	int result = xrt_prober_get_string_descriptor(xp, dev, XRT_PROBER_STRING_PRODUCT, buf, sizeof(buf));
+	if (result <= 0) {
+		U_LOG_E("xrt_prober_get_string_descriptor failed: %d", result);
+		return -1;
+	}
 
 	enum HDK_VARIANT variant = HDK_UNKNOWN;
 	const char *name = NULL;

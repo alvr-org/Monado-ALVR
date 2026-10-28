@@ -1,0 +1,60 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"body_tracker_create": {
+		"in": [
+			{"name": "info", "type": "struct ipc_body_tracker_create_info"}
+		],
+		"out": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "supported", "type": "struct xrt_body_tracker_supported"}
+		]
+	},
+
+	"body_tracker_locate": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "base_space_id", "type": "uint32_t"},
+			{"name": "base_offset", "type": "struct xrt_pose"},
+			{"name": "at_timestamp_ns", "type": "int64_t"}
+		],
+		"out": [
+			{"name": "location", "type": "struct xrt_body_tracker_location"}
+		]
+	},
+
+	"body_tracker_get_skeleton": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "skeleton", "type": "struct xrt_body_skeleton"}
+		]
+	},
+
+	"body_tracker_reset_calibration_meta": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+
+	"body_tracker_set_calibration_override_meta": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "body_height", "type": "float"}
+		]
+	},
+
+	"body_tracker_set_fidelity_meta": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "fidelity", "type": "enum xrt_body_tracking_fidelity_meta"}
+		]
+	},
+
+	"body_tracker_destroy": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	}
+}

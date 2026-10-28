@@ -1,9 +1,10 @@
 // Copyright 2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Builder helpers for Vive/Index devices.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_vive
  */
@@ -13,8 +14,7 @@
 
 #include "util/u_misc.h"
 #include "util/u_logging.h"
-#include "util/u_builders.h"
-#include "util/u_system_helpers.h"
+#include "util/u_builder_search.h"
 
 #include "vive_common.h"
 #include "vive_builder.h"

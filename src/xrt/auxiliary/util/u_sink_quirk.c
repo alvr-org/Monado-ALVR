@@ -23,9 +23,7 @@ struct u_sink_quirk
 	struct xrt_frame_sink *downstream;
 	struct xrt_frame_sink *right;
 
-	bool stereo_sbs;
-	bool ps4_cam;
-	bool leap_motion;
+	struct u_sink_quirk_params params;
 };
 
 static void
@@ -36,17 +34,17 @@ quirk_frame(struct xrt_frame_sink *xfs, struct xrt_frame *xf)
 	//! @todo this is not thread safe, but right no other thing has access
 	//! to the frame (or should).
 
-	if (q->stereo_sbs) {
+	if (q->params.stereo_sbs) {
 		xf->stereo_format = XRT_STEREO_FORMAT_SBS;
 	}
 
-	if (q->leap_motion) {
+	if (q->params.leap_motion) {
 		xf->stereo_format = XRT_STEREO_FORMAT_INTERLEAVED;
 		xf->format = XRT_FORMAT_L8;
 		xf->width *= 2;
 	}
 
-	if (q->ps4_cam) {
+	if (q->params.ps4_cam) {
 		// Stereo format.
 		xf->stereo_format = XRT_STEREO_FORMAT_SBS;
 
@@ -68,6 +66,10 @@ quirk_frame(struct xrt_frame_sink *xfs, struct xrt_frame *xf)
 			break;
 		default: break;
 		}
+	}
+
+	if (q->params.bayer_as_l8 && xf->format == XRT_FORMAT_BAYER_GR8) {
+		xf->format = XRT_FORMAT_L8;
 	}
 
 	q->downstream->push_frame(q->downstream, xf);
@@ -105,9 +107,7 @@ u_sink_quirk_create(struct xrt_frame_context *xfctx,
 	q->node.destroy = destroy;
 	q->downstream = downstream;
 
-	q->stereo_sbs = params->stereo_sbs;
-	q->ps4_cam = params->ps4_cam;
-	q->leap_motion = params->leap_motion;
+	q->params = *params;
 
 	xrt_frame_context_add(xfctx, &q->node);
 

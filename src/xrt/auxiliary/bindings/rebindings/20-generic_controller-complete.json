@@ -1,0 +1,61 @@
+{
+	"generic_controller_to_index_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/valve/index_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abab_controller"
+		]
+	},
+	"generic_to_vive_cosmos_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/htc/vive_cosmos_controller",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/generic/primary_secondary_to_abxy",
+			"/helper/controller/transform/squeeze_click"
+		]
+	},
+	"generic_to_contactglove2_with_magnetra2_mnd": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/mnd/contactglove2_with_magnetra2_mnd",
+		"helpers": [
+			"/helper/controller/generic/to_abab_controller"
+		]
+	},
+	"generic_to_flipvr": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/mndx/flipvr",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/squeeze",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/generic/primary_secondary_to_abxy",
+			"/helper/controller/transform/thumbstick_to_joystick"
+		]
+	},
+	"generic_to_pssense_controller_mndx": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/mndx/pssense_controller_mndx",
+		"helpers": [
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/thumbstick",
+			"/helper/controller/identity/trigger",
+			"/helper/controller/transform/squeeze_click"
+		],
+		"bindings": {
+			"/user/hand/left/input/primary": "/user/hand/left/input/square_mndx",
+			"/user/hand/left/input/primary/click": "/user/hand/left/input/square_mndx/click",
+			"/user/hand/left/input/secondary": "/user/hand/left/input/triangle_mndx",
+			"/user/hand/left/input/secondary/click": "/user/hand/left/input/triangle_mndx/click",
+			"/user/hand/right/input/primary": "/user/hand/right/input/cross_mndx",
+			"/user/hand/right/input/primary/click": "/user/hand/right/input/cross_mndx/click",
+			"/user/hand/right/input/secondary": "/user/hand/right/input/circle_mndx",
+			"/user/hand/right/input/secondary/click": "/user/hand/right/input/circle_mndx/click"
+		}
+	}
+}

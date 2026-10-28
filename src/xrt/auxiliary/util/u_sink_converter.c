@@ -4,7 +4,7 @@
  * @file
  * @brief  @ref xrt_frame_sink converters and other helpers.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 
@@ -22,6 +22,9 @@
 #include "jpeglib.h"
 #endif
 
+#define BCDEC_IMPLEMENTATION
+#define BCDEC_BC4BC5_PRECISE
+#include "bcdec.h"
 
 /*
  *
@@ -289,6 +292,28 @@ from_YUV888_to_R8G8B8(struct xrt_frame *dst_frame, uint32_t w, uint32_t h, size_
  */
 
 #ifdef XRT_HAVE_JPEG
+
+#include <setjmp.h>
+
+struct jpeg_decoder_err
+{
+	struct jpeg_error_mgr base;
+
+	char error_msg[JMSG_LENGTH_MAX];
+	jmp_buf setjmp_buffer;
+};
+
+METHODDEF(void) handle_jpeg_error(j_common_ptr cinfo)
+{
+	struct jpeg_decoder_err *err_mgr = (struct jpeg_decoder_err *)cinfo->err;
+
+	(*(cinfo->err->format_message))(cinfo, err_mgr->error_msg);
+	U_LOG_E("JPEG decode error: %s", err_mgr->error_msg);
+
+	// Jump to the setjmp point if we get an error
+	longjmp(err_mgr->setjmp_buffer, 1);
+}
+
 static bool
 check_header(size_t size, const uint8_t *data)
 {
@@ -306,7 +331,7 @@ check_header(size_t size, const uint8_t *data)
 }
 
 static bool
-from_MJPEG_to_R8G8B8(struct xrt_frame *dst_frame, size_t size, const uint8_t *data)
+from_MJPEG_to_frame(struct xrt_frame *dst_frame, size_t size, const uint8_t *data)
 {
 	SINK_TRACE_MARKER();
 
@@ -315,12 +340,19 @@ from_MJPEG_to_R8G8B8(struct xrt_frame *dst_frame, size_t size, const uint8_t *da
 	}
 
 	struct jpeg_decompress_struct cinfo = {0};
-	struct jpeg_error_mgr jerr = {0};
+	struct jpeg_decoder_err jerr = {0};
 
-	cinfo.err = jpeg_std_error(&jerr);
-	jerr.trace_level = 0;
+	cinfo.err = jpeg_std_error(&jerr.base);
+	jerr.base.trace_level = 0;
+	jerr.base.error_exit = handle_jpeg_error;
 
 	jpeg_create_decompress(&cinfo);
+
+	// If an error occurs, it will longjmp back here, indicating failure
+	if (setjmp(jerr.setjmp_buffer)) {
+		goto fail;
+	}
+
 	jpeg_mem_src(&cinfo, data, size);
 
 	int ret = jpeg_read_header(&cinfo, TRUE);
@@ -329,7 +361,18 @@ from_MJPEG_to_R8G8B8(struct xrt_frame *dst_frame, size_t size, const uint8_t *da
 		return false;
 	}
 
-	cinfo.out_color_space = JCS_RGB;
+	switch (dst_frame->format) {
+	case XRT_FORMAT_L8: cinfo.out_color_space = JCS_GRAYSCALE; break;
+	case XRT_FORMAT_R8G8B8: cinfo.out_color_space = JCS_RGB; break;
+	case XRT_FORMAT_YUV888: cinfo.out_color_space = JCS_YCbCr; break;
+	default: {
+		assert(!"unsupported format");
+
+		jpeg_destroy_decompress(&cinfo);
+		return false;
+	}
+	}
+
 	jpeg_start_decompress(&cinfo);
 
 	uint8_t *moving_ptr = dst_frame->data;
@@ -345,51 +388,35 @@ from_MJPEG_to_R8G8B8(struct xrt_frame *dst_frame, size_t size, const uint8_t *da
 	jpeg_destroy_decompress(&cinfo);
 
 	return true;
-}
-
-static bool
-from_MJPEG_to_YUV888(struct xrt_frame *dst_frame, size_t size, const uint8_t *data)
-{
-	SINK_TRACE_MARKER();
-
-	if (!check_header(size, data)) {
-		return false;
-	}
-
-	struct jpeg_decompress_struct cinfo = {0};
-	struct jpeg_error_mgr jerr = {0};
-
-	cinfo.err = jpeg_std_error(&jerr);
-	jerr.trace_level = 0;
-
-	jpeg_create_decompress(&cinfo);
-	jpeg_mem_src(&cinfo, data, size);
-
-	int ret = jpeg_read_header(&cinfo, TRUE);
-	if (ret != JPEG_HEADER_OK) {
-		jpeg_destroy_decompress(&cinfo);
-		return false;
-	}
-
-	cinfo.out_color_space = JCS_YCbCr;
-	jpeg_start_decompress(&cinfo);
-
-	uint8_t *moving_ptr = dst_frame->data;
-
-	uint32_t scanlines_read = 0;
-	while (scanlines_read < cinfo.image_height) {
-		int read_count = jpeg_read_scanlines(&cinfo, &moving_ptr, 16);
-		moving_ptr += read_count * dst_frame->stride;
-		scanlines_read += read_count;
-	}
-
-	jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
-
-	return true;
+fail:
+	jpeg_abort_decompress(&cinfo);
+	return false;
 }
 #endif
 
+/*
+ *
+ * BC4
+ *
+ */
+
+static void
+from_BC4_to_L8(struct xrt_frame *dst_frame, uint32_t w, uint32_t h, size_t stride, const uint8_t *data)
+{
+	SINK_TRACE_MARKER();
+
+	assert(w % 4 == 0);
+	assert(h % 4 == 0);
+
+	const uint8_t *src = data;
+	for (uint32_t y = 0; y < h; y += 4) {
+		for (uint32_t x = 0; x < w; x += 4) {
+			bcdec_bc4(src, dst_frame->data + (y * dst_frame->stride) + x, dst_frame->stride, false);
+
+			src += BCDEC_BC4_BLOCK_SIZE;
+		}
+	}
+}
 
 /*
  *
@@ -485,6 +512,12 @@ convert_frame_l8(struct xrt_frame_sink *xs, struct xrt_frame *xf)
 	struct xrt_frame *converted = NULL;
 
 	switch (xf->format) {
+	case XRT_FORMAT_BC4:
+		if (!create_frame_with_format(xf, XRT_FORMAT_L8, &converted)) {
+			return;
+		}
+		from_BC4_to_L8(converted, xf->width, xf->height, xf->stride, xf->data);
+		break;
 	case XRT_FORMAT_L8: s->downstream->push_frame(s->downstream, xf); return;
 	case XRT_FORMAT_YUYV422:
 		if (!create_frame_with_format(xf, XRT_FORMAT_L8, &converted)) {
@@ -492,6 +525,19 @@ convert_frame_l8(struct xrt_frame_sink *xs, struct xrt_frame *xf)
 		}
 		from_YUYV422_to_L8(converted, xf->width, xf->height, xf->stride, xf->data);
 		break;
+#ifdef XRT_HAVE_JPEG
+	case XRT_FORMAT_MJPEG:
+		if (!create_frame_with_format(xf, XRT_FORMAT_L8, &converted)) {
+			return;
+		}
+
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
+			// Make sure to free frame when we fail to decode.
+			xrt_frame_reference(&converted, NULL);
+			return;
+		}
+		break;
+#endif
 	default: U_LOG_E("Cannot convert from '%s' to L8!", u_format_str(xf->format)); return;
 	}
 
@@ -521,6 +567,12 @@ convert_frame_r8g8b8_or_l8(struct xrt_frame_sink *xs, struct xrt_frame *xf)
 		}
 		from_BAYER_GR8_to_R8G8B8(converted, w, h, xf->stride, xf->data);
 		break;
+	case XRT_FORMAT_BC4:
+		if (!create_frame_with_format(xf, XRT_FORMAT_L8, &converted)) {
+			return;
+		}
+		from_BC4_to_L8(converted, xf->width, xf->height, xf->stride, xf->data);
+		break;
 	case XRT_FORMAT_YUYV422:
 		if (!create_frame_with_format(xf, XRT_FORMAT_R8G8B8, &converted)) {
 			return;
@@ -544,7 +596,7 @@ convert_frame_r8g8b8_or_l8(struct xrt_frame_sink *xs, struct xrt_frame *xf)
 		if (!create_frame_with_format(xf, XRT_FORMAT_R8G8B8, &converted)) {
 			return;
 		}
-		if (!from_MJPEG_to_R8G8B8(converted, xf->size, xf->data)) {
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
 			// Make sure to free frame when we fail to decode.
 			xrt_frame_reference(&converted, NULL);
 			return;
@@ -612,7 +664,7 @@ convert_frame_r8g8b8_bayer_or_l8(struct xrt_frame_sink *xs, struct xrt_frame *xf
 		if (!create_frame_with_format(xf, XRT_FORMAT_R8G8B8, &converted)) {
 			return;
 		}
-		if (!from_MJPEG_to_R8G8B8(converted, xf->size, xf->data)) {
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
 			// Make sure to free frame when we fail to decode.
 			xrt_frame_reference(&converted, NULL);
 			return;
@@ -676,7 +728,7 @@ convert_frame_r8g8b8(struct xrt_frame_sink *xs, struct xrt_frame *xf)
 		if (!create_frame_with_format(xf, XRT_FORMAT_R8G8B8, &converted)) {
 			return;
 		}
-		if (!from_MJPEG_to_R8G8B8(converted, xf->size, xf->data)) {
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
 			// Make sure to free frame when we fail to decode.
 			xrt_frame_reference(&converted, NULL);
 			return;
@@ -702,6 +754,18 @@ convert_frame_rgb_yuv_yuyv_uyvy_or_l8(struct xrt_frame_sink *xs, struct xrt_fram
 	struct xrt_frame *converted = NULL;
 
 	switch (xf->format) {
+	case XRT_FORMAT_BAYER_GR8: {
+		uint32_t w = xf->width / 2;
+		uint32_t h = xf->height / 2;
+
+		if (!create_frame_with_format_of_size(xf, w, h, XRT_FORMAT_R8G8B8, &converted)) {
+			return;
+		}
+
+		from_BAYER_GR8_to_R8G8B8(converted, w, h, xf->stride, xf->data);
+
+		break;
+	}
 	case XRT_FORMAT_R8G8B8:
 	case XRT_FORMAT_L8:
 	case XRT_FORMAT_YUYV422:
@@ -712,7 +776,7 @@ convert_frame_rgb_yuv_yuyv_uyvy_or_l8(struct xrt_frame_sink *xs, struct xrt_fram
 		if (!create_frame_with_format(xf, XRT_FORMAT_YUV888, &converted)) {
 			return;
 		}
-		if (!from_MJPEG_to_YUV888(converted, xf->size, xf->data)) {
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
 			return;
 		}
 		break;
@@ -747,7 +811,7 @@ convert_frame_yuv_yuyv_uyvy_or_l8(struct xrt_frame_sink *xs, struct xrt_frame *x
 		if (!create_frame_with_format(xf, XRT_FORMAT_YUV888, &converted)) {
 			return;
 		}
-		if (!from_MJPEG_to_YUV888(converted, xf->size, xf->data)) {
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
 			return;
 		}
 		break;
@@ -783,7 +847,7 @@ convert_frame_yuv_or_yuyv(struct xrt_frame_sink *xs, struct xrt_frame *xf)
 		if (!create_frame_with_format(xf, XRT_FORMAT_YUV888, &converted)) {
 			return;
 		}
-		if (!from_MJPEG_to_YUV888(converted, xf->size, xf->data)) {
+		if (!from_MJPEG_to_frame(converted, xf->size, xf->data)) {
 			return;
 		}
 		break;
@@ -977,6 +1041,55 @@ u_sink_create_to_yuv_or_yuyv(struct xrt_frame_context *xfctx,
 
 	struct u_sink_converter *s = U_TYPED_CALLOC(struct u_sink_converter);
 	s->base.push_frame = convert_frame_yuv_or_yuyv;
+	s->node.break_apart = break_apart;
+	s->node.destroy = destroy;
+	s->downstream = downstream;
+
+	xrt_frame_context_add(xfctx, &s->node);
+
+	*out_xfs = &s->base;
+}
+
+static void
+convert_half_scale(struct xrt_frame_sink *xs, struct xrt_frame *xf)
+{
+	struct u_sink_converter *s = (struct u_sink_converter *)xs;
+
+	uint32_t w = xf->width / 2;
+	uint32_t h = xf->height / 2;
+	struct xrt_frame *converted = NULL;
+
+	if (!create_frame_with_format_of_size(xf, w, h, XRT_FORMAT_L8, &converted)) {
+		return;
+	}
+
+	for (uint32_t x = 0; x < w; x++) {
+		for (uint32_t y = 0; y < h; y++) {
+			uint16_t sum = 0;
+			sum += xf->data[((y * 2) * xf->stride) + (x * 2)];
+			sum += xf->data[((y * 2) * xf->stride) + (x * 2) + 1];
+			sum += xf->data[(((y * 2) + 1) * xf->stride) + (x * 2)];
+			sum += xf->data[(((y * 2) + 1) * xf->stride) + (x * 2) + 1];
+
+			converted->data[(y * converted->stride) + x] = (uint8_t)(sum / 4);
+		}
+	}
+
+	s->downstream->push_frame(s->downstream, converted);
+
+	// Refcount in case it's being held downstream.
+	xrt_frame_reference(&converted, NULL);
+}
+
+void
+u_sink_create_half_scale(struct xrt_frame_context *xfctx,
+                         struct xrt_frame_sink *downstream,
+                         struct xrt_frame_sink **out_xfs)
+{
+	assert(downstream != NULL);
+
+	struct u_sink_converter *s = U_TYPED_CALLOC(struct u_sink_converter);
+	s->base.push_frame = convert_half_scale;
 	s->node.break_apart = break_apart;
 	s->node.destroy = destroy;
 	s->downstream = downstream;

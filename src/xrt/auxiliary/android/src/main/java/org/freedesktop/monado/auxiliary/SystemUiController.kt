@@ -32,7 +32,9 @@ class SystemUiController(view: View) {
 
     private abstract class Impl(var view: View) {
         private val uiHandler: Handler = Handler(Looper.getMainLooper())
+
         abstract fun hide()
+
         fun runOnUiThread(runnable: Runnable) {
             uiHandler.post(runnable)
         }

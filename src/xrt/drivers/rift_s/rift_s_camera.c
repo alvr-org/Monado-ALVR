@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Collabora, Ltd.
+ * Copyright 2021-2026, Collabora, Ltd.
  * Copyright 2022 Jan Schmidt
  * SPDX-License-Identifier: BSL-1.0
  *
@@ -15,13 +15,13 @@
  * @author Jan Schmidt <jan@centricular.com>
  * @ingroup drv_rift_s
  */
-#include <asm/byteorder.h>
 #include <string.h>
 
 #include "rift_s.h"
 #include "rift_s_camera.h"
 
 #include "os/os_threading.h"
+#include "xrt/xrt_byte_order.h"
 
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_frame.h"
@@ -139,6 +139,8 @@ rift_s_camera_create(struct xrt_prober *xp,
                      struct rift_s_tracker *tracker,
                      struct rift_s_camera_calibration_block *camera_calibration)
 {
+	xrt_result_t xret;
+	struct xrt_fs_mode *modes = NULL;
 	struct rift_s_camera_finder finder = {
 	    0,
 	};
@@ -152,7 +154,7 @@ rift_s_camera_create(struct xrt_prober *xp,
 	/* Re-probe devices. The v4l2 camera device should have appeared by now */
 	int retry_count = 5;
 	do {
-		xrt_result_t xret = xrt_prober_probe(xp);
+		xret = xrt_prober_probe(xp);
 
 		if (xret != XRT_SUCCESS) {
 			return NULL;
@@ -208,15 +210,17 @@ rift_s_camera_create(struct xrt_prober *xp,
 
 	struct xrt_frame_sink *tmp = &cam->in_sink;
 
-	struct xrt_fs_mode *modes = NULL;
-	uint32_t count;
-
-	xrt_fs_enumerate_modes(finder.xfs, &modes, &count);
+	uint32_t mode_count;
+	xret = xrt_fs_enumerate_modes(finder.xfs, &modes, &mode_count);
+	if (xret != XRT_SUCCESS) {
+		RIFT_S_ERROR("Failed to enumerate frameserver modes.");
+		goto cleanup;
+	}
 
 	bool found_mode = false;
 	uint32_t selected_mode = 0;
 
-	for (; selected_mode < count; selected_mode++) {
+	for (; selected_mode < mode_count; selected_mode++) {
 		if (modes[selected_mode].format == XRT_FORMAT_YUYV422) {
 			found_mode = true;
 			break;
@@ -229,12 +233,12 @@ rift_s_camera_create(struct xrt_prober *xp,
 	}
 
 	if (!found_mode) {
-		selected_mode = 0;
 		RIFT_S_ERROR("Couldn't find compatible camera input format.");
 		goto cleanup;
 	}
 
 	free(modes);
+	modes = NULL;
 
 	u_var_add_root(cam, "Oculus Rift S Cameras", true);
 
@@ -254,11 +258,18 @@ rift_s_camera_create(struct xrt_prober *xp,
 	u_var_add_sink_debug(cam, &cam->debug_sinks[1], "Controller Streams");
 
 	/* Finally, start the video feed */
-	xrt_fs_stream_start(finder.xfs, tmp, XRT_FS_CAPTURE_TYPE_TRACKING, selected_mode);
+	xret = xrt_fs_stream_start(finder.xfs, tmp, XRT_FS_CAPTURE_TYPE_TRACKING, selected_mode);
+	if (xret != XRT_SUCCESS) {
+		//! @todo Should we try to switch to an explicit 3dof mode?
+		RIFT_S_ERROR("Failed to start frameserver stream.");
+		goto cleanup;
+	}
 
 	return cam;
 
 cleanup:
+	free(modes);
+
 	rift_s_camera_destroy(cam);
 	return NULL;
 }
@@ -407,7 +418,7 @@ receive_cam_frame(struct xrt_frame_sink *sink, struct xrt_frame *xf)
 		//! @todo Update expgain independently for each camera like in WMR
 		update_expgain(cam, frames[0]);
 
-		uint64_t frame_ts_ns = (uint64_t)__le64_to_cpu(row_data.data.frame_ts) * OS_NS_PER_USEC;
+		uint64_t frame_ts_ns = (uint64_t)__le64_to_cpu(row_data.data.frame_ts) * U_TIME_1US_IN_NS;
 		rift_s_tracker_push_slam_frames(cam->tracker, frame_ts_ns, frames);
 
 		for (int i = 0; i < RIFT_S_CAMERA_COUNT; i++) {

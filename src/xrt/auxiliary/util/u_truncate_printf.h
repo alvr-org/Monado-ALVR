@@ -1,4 +1,5 @@
 // Copyright 2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -54,6 +55,10 @@ u_truncate_vsnprintf(char *chars, size_t char_count, const char *fmt, va_list ar
 
 	return ret;
 }
+
+// Cannot use the XRT_PRINTF_FORMAT macro on a function definition.
+static inline int
+u_truncate_snprintf(char *chars, size_t char_count, const char *fmt, ...) XRT_PRINTF_FORMAT(3, 4);
 
 /*!
  * We want to truncate the value, not get the possible written, and error when

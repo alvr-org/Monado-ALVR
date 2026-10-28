@@ -34,6 +34,7 @@ typedef void *GLXContext;
 typedef void *EGLDisplay;
 typedef void *EGLContext;
 typedef void *EGLConfig;
+typedef void *EGLDeviceEXT;
 typedef unsigned int EGLenum;
 typedef void (*__eglMustCastToProperFunctionPointerType)(void); // NOLINT
 typedef __eglMustCastToProperFunctionPointerType (*PFNEGLGETPROCADDRESSPROC)(const char *procname);
@@ -62,8 +63,15 @@ typedef __eglMustCastToProperFunctionPointerType (*PFNEGLGETPROCADDRESSPROC)(con
 #include "openxr/openxr.h"                    // IWYU pragma: export
 #include "openxr/openxr_platform.h"           // IWYU pragma: export
 #include "openxr/openxr_loader_negotiation.h" // IWYU pragma: export
+#include "openxr/openxr_reflection.h"         // IWYU pragma: export
 
-#include "openxr/XR_MNDX_hydra.h"
-#include "openxr/XR_MNDX_xdev_space.h"
-#include "openxr/XR_MNDX_system_buttons.h"
 #include "openxr/XR_MNDX_ball_on_a_stick_controller.h"
+#include "openxr/XR_MNDX_blubur_s1.h"
+#include "openxr/XR_MNDX_oculus_remote.h"
+#include "openxr/XR_MNDX_hydra.h"
+#include "openxr/XR_MNDX_psvr2_interaction.h"
+#include "openxr/XR_MNDX_system_buttons.h"
+#include "openxr/XR_MNDX_xdev_space.h"
+#include "openxr/XR_MNDX_flipvr.h"
+#include "openxr/XR_MND_query_egl_device.h"
+#include "openxr/XR_MND_contactglove2_interaction.h"

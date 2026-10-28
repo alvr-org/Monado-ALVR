@@ -20,8 +20,19 @@ extern "C" {
 #endif
 
 struct _JavaVM;
-struct xrt_instance_android;
 struct xrt_instance_info;
+
+
+/*!
+ * @interface xrt_instance_android
+ *
+ * This is the interface to the Android-specific "aspect" of @ref xrt_instance.
+ *
+ * It is expected that your implementation of this interface will be nested in your
+ * implementation of @ref xrt_instance. It does not have a separate create or
+ * destroy function as it is an (optional) aspect of the instance.
+ */
+struct xrt_instance_android;
 
 /*!
  * Distinguishes the possible Android lifecycle events from each other.
@@ -49,15 +60,6 @@ typedef bool (*xrt_android_lifecycle_event_handler_t)(struct xrt_instance_androi
 
 #ifdef XRT_OS_ANDROID
 
-/*!
- * @interface xrt_instance_android
- *
- * This is the interface to the Android-specific "aspect" of @ref xrt_instance.
- *
- * It is expected that your implementation of this interface will be nested in your
- * implementation of @ref xrt_instance. It does not have a separate create or
- * destroy function as it is an (optional) aspect of the instance.
- */
 struct xrt_instance_android
 {
 

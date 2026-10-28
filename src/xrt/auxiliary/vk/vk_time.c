@@ -1,4 +1,5 @@
 // Copyright 2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,7 +15,7 @@
 #include "vk/vk_helpers.h"
 
 
-#ifdef VK_EXT_calibrated_timestamps
+#if defined(VK_EXT_calibrated_timestamps) || defined(VK_KHR_calibrated_timestamps)
 
 /*
  *
@@ -25,22 +26,14 @@
 uint64_t
 from_host_ticks_to_host_ns(uint64_t ticks)
 {
-#if defined(XRT_OS_LINUX)
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 
 	// No-op on Linux.
 	return ticks;
 
 #elif defined(XRT_OS_WINDOWS)
 
-	static int64_t ns_per_qpc_tick = 0;
-	if (ns_per_qpc_tick == 0) {
-		// Fixed at startup, so we can cache this.
-		LARGE_INTEGER freq;
-		QueryPerformanceFrequency(&freq);
-		ns_per_qpc_tick = U_1_000_000_000 / freq.QuadPart;
-	}
-
-	return ticks / ns_per_qpc_tick;
+	return ticks * os_ns_per_qpc_tick_get();
 
 #else
 #error "Vulkan timestamp domain needs porting"
@@ -59,12 +52,7 @@ vk_convert_timestamps_to_host_ns(struct vk_bundle *vk, uint32_t count, uint64_t 
 {
 	VkResult ret;
 
-	if (!vk->has_EXT_calibrated_timestamps) {
-		VK_ERROR(vk, "VK_EXT_calibrated_timestamps not enabled");
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-
-#if defined(XRT_OS_LINUX)
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 #define CPU_TIME_DOMAIN VK_TIME_DOMAIN_CLOCK_MONOTONIC_EXT
 #elif defined(XRT_OS_WINDOWS)
 #define CPU_TIME_DOMAIN VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_EXT
@@ -86,20 +74,42 @@ vk_convert_timestamps_to_host_ns(struct vk_bundle *vk, uint32_t count, uint64_t 
 	    },
 	};
 
-	assert(vk->vkGetCalibratedTimestampsEXT != NULL);
-
 	uint64_t timestamps[2];
 	uint64_t max_deviation;
 
-	ret = vk->vkGetCalibratedTimestampsEXT( //
-	    vk->device,                         // device
-	    2,                                  // timestampCount
-	    timestamp_info,                     // pTimestampInfos
-	    timestamps,                         // pTimestamps
-	    &max_deviation);                    // pMaxDeviation
-	if (ret != VK_SUCCESS) {
-		VK_ERROR(vk, "vkGetCalibratedTimestampsEXT: %s", vk_result_string(ret));
-		return ret;
+#ifdef VK_KHR_calibrated_timestamps
+	if (vk->has_KHR_calibrated_timestamps) {
+		assert(vk->vkGetCalibratedTimestampsKHR != NULL);
+		ret = vk->vkGetCalibratedTimestampsKHR( //
+		    vk->device,                         // device
+		    2,                                  // timestampCount
+		    timestamp_info,                     // pTimestampInfos
+		    timestamps,                         // pTimestamps
+		    &max_deviation);                    // pMaxDeviation
+		if (ret != VK_SUCCESS) {
+			VK_ERROR(vk, "vkGetCalibratedTimestampsKHR: %s", vk_result_string(ret));
+			return ret;
+		}
+	} else
+#endif
+#ifdef VK_EXT_calibrated_timestamps
+	    if (vk->has_EXT_calibrated_timestamps) {
+		assert(vk->vkGetCalibratedTimestampsEXT != NULL);
+		ret = vk->vkGetCalibratedTimestampsEXT( //
+		    vk->device,                         // device
+		    2,                                  // timestampCount
+		    timestamp_info,                     // pTimestampInfos
+		    timestamps,                         // pTimestamps
+		    &max_deviation);                    // pMaxDeviation
+		if (ret != VK_SUCCESS) {
+			VK_ERROR(vk, "vkGetCalibratedTimestampsEXT: %s", vk_result_string(ret));
+			return ret;
+		}
+	} else
+#endif
+	{
+		VK_ERROR(vk, "VK_{EXT,KHR}_calibrated_timestamps not enabled");
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
 	}
 
 	uint64_t now_ticks = timestamps[0];
@@ -145,4 +155,4 @@ vk_convert_timestamps_to_host_ns(struct vk_bundle *vk, uint32_t count, uint64_t 
 	return VK_SUCCESS;
 }
 
-#endif /* VK_EXT_calibrated_timestamps */
+#endif /* defined(VK_EXT_calibrated_timestamps) || defined(VK_KHR_calibrated_timestamps) */

@@ -174,11 +174,10 @@ rift_s_hexdump_buffer(const char *label, const unsigned char *buf, int length)
 {
 	char outbuf[16384] = "";
 	int bufsize = sizeof(outbuf) - 2;
-	int printed = 0;
-
-	printed += rift_s_snprintf_hexdump_buffer(outbuf, bufsize - printed, label, buf, length);
-
-	RIFT_S_DEBUG("%s", outbuf);
+	int printed = rift_s_snprintf_hexdump_buffer(outbuf, bufsize, label, buf, length);
+	if (printed > 0) {
+		RIFT_S_DEBUG("%s", outbuf);
+	}
 }
 
 static int
@@ -488,7 +487,7 @@ rift_s_read_devices_list(struct os_hid_device *handle, rift_s_devices_list_t *de
 	for (int i = 0; i < num_records; i++) {
 		dev_list->devices[i] = *(rift_s_device_type_record_t *)(pos);
 		pos += sizeof(rift_s_device_type_record_t);
-		assert(sizeof(rift_s_device_type_record_t) == 28);
+		static_assert(sizeof(rift_s_device_type_record_t) == 28, "sizeof(rift_s_device_type_record_t) != 28");
 	}
 	dev_list->num_devices = num_records;
 

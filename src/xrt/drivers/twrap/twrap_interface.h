@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Tiny xrt_device exposing SLAM capabilities.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_twrap
  */
 

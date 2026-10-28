@@ -489,8 +489,8 @@ hdk_device_create(struct os_hid_device *dev, enum HDK_VARIANT variant)
 		u_device_dump_config(&hd->base, __func__, hd->base.str);
 	}
 
-	hd->base.orientation_tracking_supported = true;
-	hd->base.position_tracking_supported = false;
+	hd->base.supported.orientation_tracking = true;
+	hd->base.supported.position_tracking = false;
 	hd->base.device_type = XRT_DEVICE_TYPE_HMD;
 
 	return hd;

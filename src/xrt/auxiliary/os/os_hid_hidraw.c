@@ -12,8 +12,8 @@
 
 #ifdef XRT_OS_LINUX
 
+#include "os/os_fd.h"
 #include "util/u_misc.h"
-#include <poll.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -42,33 +42,8 @@ static int
 os_hidraw_read(struct os_hid_device *ohdev, uint8_t *data, size_t length, int milliseconds)
 {
 	struct hid_hidraw *hrdev = (struct hid_hidraw *)ohdev;
-	struct pollfd fds;
-	int ret;
 
-	if (milliseconds >= 0) {
-		fds.fd = hrdev->fd;
-		fds.events = POLLIN;
-		fds.revents = 0;
-		ret = poll(&fds, 1, milliseconds);
-
-		if (ret == -1 || ret == 0) {
-			// Error or timeout.
-			return ret;
-		}
-		if (fds.revents & (POLLERR | POLLHUP | POLLNVAL)) {
-			// Device disconnect?
-			return -1;
-		}
-	}
-
-	ret = read(hrdev->fd, data, length);
-
-	if (ret < 0 && (errno == EAGAIN || errno == EINPROGRESS)) {
-		// Process most likely received a signal.
-		ret = 0;
-	}
-
-	return ret;
+	return (int)os_fd_read(hrdev->fd, data, length, milliseconds);
 }
 
 static int

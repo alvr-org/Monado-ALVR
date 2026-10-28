@@ -8,17 +8,17 @@
  * @ingroup comp_client
  */
 
-#include <stdlib.h>
+#include "xrt/xrt_instance.h"
+#include "xrt/xrt_gfx_xlib.h"
 
 #include "util/u_misc.h"
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
-#include "oxr_handle.h"
+#include "oxr_handle_base.h"
 
-#include "xrt/xrt_instance.h"
-#include "xrt/xrt_gfx_xlib.h"
+#include <stdlib.h>
 
 
 #ifndef XR_USE_PLATFORM_XLIB
@@ -36,14 +36,14 @@ oxr_session_populate_gl_xlib(struct oxr_logger *log,
                              struct oxr_session *sess)
 {
 	struct xrt_compositor_native *xcn = sess->xcn;
-	struct xrt_compositor_gl *xcgl = xrt_gfx_provider_create_gl_xlib(
+	struct xrt_compositor *xc = xrt_gfx_provider_create_gl_xlib(
 	    xcn, next->xDisplay, next->visualid, next->glxFBConfig, next->glxDrawable, next->glxContext);
 
-	if (xcgl == NULL) {
+	if (xc == NULL) {
 		return oxr_error(log, XR_ERROR_INITIALIZATION_FAILED, "Failed to create an xlib client compositor");
 	}
 
-	sess->compositor = &xcgl->base;
+	sess->compositor = xc;
 	sess->create_swapchain = oxr_swapchain_gl_create;
 
 	return XR_SUCCESS;

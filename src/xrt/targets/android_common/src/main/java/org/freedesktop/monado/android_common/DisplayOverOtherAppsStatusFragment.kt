@@ -30,7 +30,7 @@ class DisplayOverOtherAppsStatusFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View? {
         val view =
             inflater.inflate(R.layout.fragment_display_over_other_app_status, container, false)
@@ -43,28 +43,32 @@ class DisplayOverOtherAppsStatusFragment : Fragment() {
 
     private fun updateStatus(view: View?) {
         displayOverOtherAppsEnabled = Settings.canDrawOverlays(requireContext())
-        val tv = view!!.findViewById<TextView>(R.id.textDisplayOverOtherAppsStatus)
-        // Combining format with html style tag might have problem. See
-        // https://developer.android.com/guide/topics/resources/string-resource.html#StylingWithHTML
-        val msg =
-            getString(
-                R.string.msg_display_over_other_apps,
-                if (displayOverOtherAppsEnabled) getString(R.string.enabled)
-                else getString(R.string.disabled)
-            )
-        tv.text = Html.fromHtml(msg, Html.FROM_HTML_MODE_LEGACY)
+        with(requireNotNull(view)) {
+            val tv = this.findViewById<TextView>(R.id.textDisplayOverOtherAppsStatus)
+            // Combining format with html style tag might have problem. See
+            // https://developer.android.com/guide/topics/resources/string-resource.html#StylingWithHTML
+            val msg =
+                getString(
+                    R.string.msg_display_over_other_apps,
+                    if (displayOverOtherAppsEnabled) getString(R.string.enabled)
+                    else getString(R.string.disabled),
+                )
+            tv.text = Html.fromHtml(msg, Html.FROM_HTML_MODE_LEGACY)
+        }
     }
 
     private fun launchDisplayOverOtherAppsSettings() {
         // Since Android 11, framework ignores the uri and takes user to the top-level settings.
         // See https://developer.android.com/about/versions/11/privacy/permissions#system-alert
         // for detail.
-        val intent =
-            Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + context!!.packageName)
-            )
-        startActivityForResult(intent, REQUEST_CODE_DISPLAY_OVER_OTHER_APPS)
+        with(requireNotNull(context)) {
+            val intent =
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + this.packageName),
+                )
+            startActivityForResult(intent, REQUEST_CODE_DISPLAY_OVER_OTHER_APPS)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

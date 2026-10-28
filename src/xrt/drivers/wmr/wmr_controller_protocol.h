@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <asm/byteorder.h>
+#include "xrt/xrt_byte_order.h"
 
 #include "wmr_protocol.h"
 

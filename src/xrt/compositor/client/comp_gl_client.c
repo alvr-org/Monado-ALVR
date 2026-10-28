@@ -121,7 +121,7 @@ handle_fencing_or_finish(struct client_gl_compositor *c)
 	if (c->insert_fence != NULL) {
 		COMP_TRACE_IDENT(insert_fence);
 
-		xret = c->insert_fence(&c->base.base, &sync_handle);
+		xret = c->insert_fence(&c->base, &sync_handle);
 		if (xret != XRT_SUCCESS) {
 			U_LOG_E("Failed to insert a fence");
 		}
@@ -578,7 +578,7 @@ client_gl_compositor_destroy(struct xrt_compositor *xc)
  */
 
 void
-client_gl_compositor_close(struct client_gl_compositor *c)
+client_gl_compositor_fini(struct client_gl_compositor *c)
 {
 	os_mutex_destroy(&c->context_mutex);
 }
@@ -594,27 +594,27 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 	assert(context_begin_locked != NULL);
 	assert(context_end_locked != NULL);
 
-	c->base.base.get_swapchain_create_properties = client_gl_compositor_get_swapchain_create_properties;
-	c->base.base.create_swapchain = client_gl_swapchain_create;
-	c->base.base.create_passthrough = client_gl_compositor_passthrough_create;
-	c->base.base.create_passthrough_layer = client_gl_compositor_passthrough_layer_create;
-	c->base.base.destroy_passthrough = client_gl_compositor_passthrough_destroy;
-	c->base.base.begin_session = client_gl_compositor_begin_session;
-	c->base.base.end_session = client_gl_compositor_end_session;
-	c->base.base.wait_frame = client_gl_compositor_wait_frame;
-	c->base.base.begin_frame = client_gl_compositor_begin_frame;
-	c->base.base.discard_frame = client_gl_compositor_discard_frame;
-	c->base.base.layer_begin = client_gl_compositor_layer_begin;
-	c->base.base.layer_projection = client_gl_compositor_layer_projection;
-	c->base.base.layer_projection_depth = client_gl_compositor_layer_projection_depth;
-	c->base.base.layer_quad = client_gl_compositor_layer_quad;
-	c->base.base.layer_cube = client_gl_compositor_layer_cube;
-	c->base.base.layer_cylinder = client_gl_compositor_layer_cylinder;
-	c->base.base.layer_equirect1 = client_gl_compositor_layer_equirect1;
-	c->base.base.layer_equirect2 = client_gl_compositor_layer_equirect2;
-	c->base.base.layer_passthrough = client_gl_compositor_layer_passthrough;
-	c->base.base.layer_commit = client_gl_compositor_layer_commit;
-	c->base.base.destroy = client_gl_compositor_destroy;
+	c->base.get_swapchain_create_properties = client_gl_compositor_get_swapchain_create_properties;
+	c->base.create_swapchain = client_gl_swapchain_create;
+	c->base.create_passthrough = client_gl_compositor_passthrough_create;
+	c->base.create_passthrough_layer = client_gl_compositor_passthrough_layer_create;
+	c->base.destroy_passthrough = client_gl_compositor_passthrough_destroy;
+	c->base.begin_session = client_gl_compositor_begin_session;
+	c->base.end_session = client_gl_compositor_end_session;
+	c->base.wait_frame = client_gl_compositor_wait_frame;
+	c->base.begin_frame = client_gl_compositor_begin_frame;
+	c->base.discard_frame = client_gl_compositor_discard_frame;
+	c->base.layer_begin = client_gl_compositor_layer_begin;
+	c->base.layer_projection = client_gl_compositor_layer_projection;
+	c->base.layer_projection_depth = client_gl_compositor_layer_projection_depth;
+	c->base.layer_quad = client_gl_compositor_layer_quad;
+	c->base.layer_cube = client_gl_compositor_layer_cube;
+	c->base.layer_cylinder = client_gl_compositor_layer_cylinder;
+	c->base.layer_equirect1 = client_gl_compositor_layer_equirect1;
+	c->base.layer_equirect2 = client_gl_compositor_layer_equirect2;
+	c->base.layer_passthrough = client_gl_compositor_layer_passthrough;
+	c->base.layer_commit = client_gl_compositor_layer_commit;
+	c->base.destroy = client_gl_compositor_destroy;
 	c->context_begin_locked = context_begin_locked;
 	c->context_end_locked = context_end_locked;
 	c->create_swapchain = create_swapchain;
@@ -625,7 +625,7 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 	uint32_t count = 0;
 
 	// Make sure that we can fit all formats in the destination.
-	static_assert(ARRAY_SIZE(xcn->base.info.formats) == ARRAY_SIZE(c->base.base.info.formats), "mismatch");
+	static_assert(ARRAY_SIZE(xcn->base.info.formats) == ARRAY_SIZE(c->base.info.formats), "mismatch");
 
 	for (uint32_t i = 0; i < xcn->base.info.format_count; i++) {
 		int64_t f = vk_format_to_gl(xcn->base.info.formats[i]);
@@ -633,15 +633,15 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 			continue;
 		}
 
-		c->base.base.info.formats[count++] = f;
+		c->base.info.formats[count++] = f;
 	}
-	c->base.base.info.format_count = count;
+	c->base.info.format_count = count;
 
 	// Get max texture size.
 	GLint max_texture_size = 0;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
 	if (max_texture_size > 0) {
-		c->base.base.info.max_texture_size = (uint32_t)max_texture_size;
+		c->base.info.max_texture_size = (uint32_t)max_texture_size;
 	}
 
 	os_mutex_init(&c->context_mutex);

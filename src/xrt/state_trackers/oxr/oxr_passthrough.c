@@ -7,10 +7,6 @@
  * @ingroup oxr_main
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "math/m_api.h"
 #include "math/m_space.h"
 #include "util/u_debug.h"
@@ -18,10 +14,15 @@
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
-#include "oxr_handle.h"
-#include "oxr_input_transform.h"
+#include "oxr_handle_base.h"
+#include "actions/oxr_input_transform.h"
 #include "oxr_chain.h"
 #include "oxr_pretty_print.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 /*
  *

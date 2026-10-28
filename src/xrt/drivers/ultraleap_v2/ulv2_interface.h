@@ -1,10 +1,10 @@
 // Copyright 2020-2021, Collabora, Ltd.
-// Copyright 2020-2021, Moses Turner.
+// Copyright 2020-2021, Moshi Turner.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief   Driver for Ultraleap's V2 API for the Leap Motion Controller.
- * @author  Moses Turner <mosesturner@protonmail.com>
+ * @author  Moshi Turner <moshiturner@protonmail.com>
  * @author  Christoph Haag <christoph.haag@collabora.com>
  * @ingroup drv_ulv2
  */

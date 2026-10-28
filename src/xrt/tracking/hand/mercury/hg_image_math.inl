@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Helper header for drawing and image transforms
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 #pragma once

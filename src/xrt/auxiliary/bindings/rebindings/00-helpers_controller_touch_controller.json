@@ -1,0 +1,77 @@
+{
+	"/helper/controller/touch/menu_to_system": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/menu": "/user/hand/left/input/system",
+			"/user/hand/left/input/menu/click": "/user/hand/left/input/system/click",
+			"/user/hand/right/input/system": true,
+			"/user/hand/right/input/system/click": true
+		}
+	},
+	"/helper/controller/touch/no_proximity": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumb_fb/proximity_fb": false,
+			"/user/hand/left/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/left/input/trigger/proximity": false,
+			"/user/hand/left/input/trigger/proximity_fb": false,
+			"/user/hand/right/input/thumb_fb/proximity_fb": false,
+			"/user/hand/right/input/thumb_resting_surfaces/proximity": false,
+			"/user/hand/right/input/trigger/proximity": false,
+			"/user/hand/right/input/trigger/proximity_fb": false
+		}
+	},
+	"/helper/controller/touch/no_thumbrest": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumbrest/touch": false,
+			"/user/hand/right/input/thumbrest/touch": false
+		}
+	},
+	"/helper/controller/touch/trigger_touch_to_value": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/trigger/touch": "/user/hand/left/input/trigger/value",
+			"/user/hand/right/input/trigger/touch": "/user/hand/right/input/trigger/value"
+		}
+	},
+	"/helper/controller/touch/proximity_fb_to_proximity": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumb_fb/proximity_fb": "/user/hand/left/input/thumb_resting_surfaces/proximity",
+			"/user/hand/left/input/thumb_resting_surfaces/proximity": true,
+			"/user/hand/left/input/thumbrest/touch": true,
+			"/user/hand/left/input/trigger/proximity": true,
+			"/user/hand/left/input/trigger/proximity_fb": "/user/hand/left/input/trigger/proximity",
+			"/user/hand/right/input/thumb_fb/proximity_fb": "/user/hand/right/input/thumb_resting_surfaces/proximity",
+			"/user/hand/right/input/thumb_resting_surfaces/proximity": true,
+			"/user/hand/right/input/thumbrest/touch": true,
+			"/user/hand/right/input/trigger/proximity": true,
+			"/user/hand/right/input/trigger/proximity_fb": "/user/hand/right/input/trigger/proximity"
+		}
+	},
+	"/helper/controller/touch/proximity_without_fb": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumb_fb/proximity_fb": false,
+			"/user/hand/left/input/thumb_resting_surfaces/proximity": true,
+			"/user/hand/left/input/thumbrest/touch": true,
+			"/user/hand/left/input/trigger/proximity": true,
+			"/user/hand/left/input/trigger/proximity_fb": false,
+			"/user/hand/right/input/thumb_fb/proximity_fb": false,
+			"/user/hand/right/input/thumb_resting_surfaces/proximity": true,
+			"/user/hand/right/input/thumbrest/touch": true,
+			"/user/hand/right/input/trigger/proximity": true,
+			"/user/hand/right/input/trigger/proximity_fb": false
+		}
+	},
+	"/helper/controller/touch/stick_and_trigger_touch": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumbstick/touch": true,
+			"/user/hand/left/input/trigger/touch": true,
+			"/user/hand/right/input/thumbstick/touch": true,
+			"/user/hand/right/input/trigger/touch": true
+		}
+	}
+}

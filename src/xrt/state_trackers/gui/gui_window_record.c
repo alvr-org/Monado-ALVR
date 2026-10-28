@@ -123,6 +123,10 @@ create_pipeline(struct gui_record_window *rw)
 		format = XRT_FORMAT_R8G8B8;
 		do_convert = true;
 	}
+	if (format == XRT_FORMAT_BC4) {
+		format = XRT_FORMAT_L8;
+		do_convert = true;
+	}
 
 	struct gstreamer_sink *gs = NULL;
 	gstreamer_sink_create_with_pipeline(gp, width, height, format, source_name, &gs, &tmp);

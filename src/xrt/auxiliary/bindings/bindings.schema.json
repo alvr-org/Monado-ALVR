@@ -44,7 +44,9 @@
                 "slide_meta",
                 "proximity",
                 "proximity_fb",
-                "proximity_meta"
+                "proximity_meta",
+                "double_tap_logitech",
+                "docked_logitech"
             ]
         },
         "subActionPathName": {
@@ -64,11 +66,13 @@
             "enum": [
                 "gamepad",
                 "holographic_controller",
+                "khr_generic_controller",
                 "khr_simple_controller",
                 "knuckles",
                 "oculus_touch",
                 "vive_controller",
-                "vive_pro"
+                "vive_pro",
+                "flipvr_controller_vc1b"
             ]
         },
         "monadoDeviceName": {
@@ -76,12 +80,20 @@
             "pattern": "^XRT_DEVICE_([A-Z0-9_]+)$"
         },
         "monadoBindingDefine": {
-            "type": "string",
-            "pattern": "^XRT_(INPUT|OUTPUT)_([A-Z0-9_]+)$"
+            "description": "Monado input or output enum, or false when this component has no Monado mapping",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "pattern": "^XRT_(INPUT|OUTPUT)_([A-Z0-9_]+)$"
+                },
+                {
+                    "const": false
+                }
+            ]
         },
         "monadoBindings": {
             "title": "Components and their Monado define",
-            "description": "The keys/property names here must match the list of components on this path",
+            "description": "The keys must match the components list. A value of false exposes the component with no Monado input or output.",
             "type": "object",
             "$comment": "Keep properties in sync with #/definitions/componentNames - not using that in propertyNames for the sake of json-editor",
             "properties": {

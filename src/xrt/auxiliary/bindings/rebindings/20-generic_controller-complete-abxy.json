@@ -1,0 +1,79 @@
+{
+	"generic_controller_to_touch_controller_quest_1_rift_s": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_quest_1_rift_s",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_touch_controller_quest_2": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_quest_2",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_touch_controller_rift_cv1": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/meta/touch_controller_rift_cv1",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_touch_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/oculus/touch_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_touch_plus_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/meta/touch_plus_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_touch_pro_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/meta/touch_pro_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_to_mr_controller_oppo": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/oppo/mr_controller_oppo",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_pico_neo3_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/bytedance/pico_neo3_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_pico4_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/bytedance/pico4_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_to_vive_focus3_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/htc/vive_focus3_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	},
+	"generic_controller_to_mixed_reality_controller": {
+		"source_profile": "/interaction_profiles/khr/generic_controller",
+		"target_profile": "/interaction_profiles/hp/mixed_reality_controller",
+		"helpers": [
+			"/helper/controller/generic/to_abxy_controller"
+		]
+	}
+}

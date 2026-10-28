@@ -60,11 +60,11 @@ struct client_vk_swapchain
  * Wraps the real compositor providing a Vulkan based interface.
  *
  * @ingroup comp_client
- * @implements xrt_compositor_vk
+ * @implements xrt_compositor
  */
 struct client_vk_compositor
 {
-	struct xrt_compositor_vk base;
+	struct xrt_compositor base;
 
 	//! Owning reference to the backing native compositor
 	struct xrt_compositor_native *xcn;
@@ -114,6 +114,26 @@ client_vk_compositor_create(struct xrt_compositor_native *xcn,
                             bool renderdoc_enabled,
                             uint32_t queueFamilyIndex,
                             uint32_t queueIndex);
+
+/*!
+ * Blit a Vulkan image to a swapchain image.
+ *
+ * @public @memberof client_vk_compositor
+ * @param c Client compositor to use for blit.
+ * @param xsc Swapchain to blit to, must be a client_vk_swapchain.
+ * @param src_image Source image to blit from, must be compatible with the swapchain format.
+ * @param src_params Blit parameters for the source image.
+ * @param dst_index Index of the swapchain image to blit to.
+ * @param dst_params Blit parameters for the destination image.
+ * @return XRT_SUCCESS on success, XRT_ERROR_VULKAN if a Vulkan error occurred.
+ */
+xrt_result_t
+client_vk_compositor_blit_to_swapchain(struct client_vk_compositor *c,
+                                       struct xrt_swapchain *xsc,
+                                       const struct vk_cmd_first_mip_image *src_image,
+                                       const struct vk_cmd_blit_image_params *src_params,
+                                       uint32_t dst_index,
+                                       const struct vk_cmd_blit_image_params *dst_params);
 
 
 #ifdef __cplusplus

@@ -1,4 +1,5 @@
 // Copyright 2023-2024, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -179,115 +180,6 @@ u_native_images_debug_clear(struct u_native_images_debug *unid)
 	u_native_images_debug_lock(unid);
 	u_native_images_debug_clear_locked(unid);
 	u_native_images_debug_unlock(unid);
-}
-
-
-/*
- *
- * Swapchain.
- *
- */
-
-/*!
- * Allows to debug image that is in GPU memory.
- *
- * @ingroup aux_util
- */
-struct u_swapchain_debug
-{
-	//! Base for native image debugging.
-	struct u_native_images_debug base;
-
-	//! Protected by @p base::mutex.
-	struct xrt_swapchain_native *xscn;
-};
-
-/*!
- * Must be called before variable is tracked.
- *
- * @ingroup aux_util
- */
-static inline void
-u_swapchain_debug_init(struct u_swapchain_debug *uscd)
-{
-	u_native_images_debug_init(&uscd->base);
-}
-
-/*!
- * Updates all variables atomically by holding the lock.
- *
- * @ingroup aux_util
- */
-static inline void
-u_swapchain_debug_set(struct u_swapchain_debug *uscd,
-                      struct xrt_swapchain_native *xscn,
-                      const struct xrt_swapchain_create_info *xscci,
-                      uint32_t active_index,
-                      bool flip_y)
-{
-	u_native_images_debug_lock(&uscd->base);
-
-	u_native_images_debug_set_locked( //
-	    &uscd->base,                  //
-	    xscn->limited_unique_id,      //
-	    xscn->images,                 //
-	    xscn->base.image_count,       //
-	    xscci,                        //
-	    active_index,                 //
-	    flip_y);                      //
-
-	xrt_swapchain_native_reference(&uscd->xscn, xscn);
-
-	u_native_images_debug_unlock(&uscd->base);
-}
-
-/*!
- * Clear all variables atomically by holding the lock, still valid to use.
- *
- * @ingroup aux_util
- */
-static inline void
-u_swapchain_debug_clear(struct u_swapchain_debug *uscd)
-{
-	u_native_images_debug_lock(&uscd->base);
-	u_native_images_debug_clear_locked(&uscd->base);
-	xrt_swapchain_native_reference(&uscd->xscn, NULL);
-	u_native_images_debug_unlock(&uscd->base);
-}
-
-/*!
- * Must not be called while variable longer tracked, after @p u_var_remove_root.
- *
- * @ingroup aux_util
- */
-static inline void
-u_swapchain_debug_destroy(struct u_swapchain_debug *uscd)
-{
-	xrt_swapchain_native_reference(&uscd->xscn, NULL);
-	uscd->base.active_index = 0;
-	os_mutex_destroy(&uscd->base.mutex);
-}
-
-/*!
- * Simple lock helper.
- *
- * @ingroup aux_util
- */
-static inline void
-u_swapchain_debug_lock(struct u_swapchain_debug *uscd)
-{
-	u_native_images_debug_lock(&uscd->base);
-}
-
-/*!
- * Simple lock helper.
- *
- * @ingroup aux_util
- */
-static inline void
-u_swapchain_debug_unlock(struct u_swapchain_debug *uscd)
-{
-	u_native_images_debug_unlock(&uscd->base);
 }
 
 

@@ -1,9 +1,10 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Compositor mirroring code.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup comp_main
  */
@@ -20,6 +21,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct render_blit_pipeline_cache;
 
 
 /*!
@@ -56,8 +59,11 @@ struct comp_mirror_to_debug_gui
 
 	struct
 	{
-		//! Private here for now.
-		VkPipelineCache pipeline_cache;
+		//! Vulkan pipeline cache object passed to vkCreateComputePipelines.
+		VkPipelineCache driver_pipeline_cache;
+
+		//! Get-or-create cache for blit.comp specialization variants.
+		struct render_blit_pipeline_cache *pipeline_cache;
 
 		//! Descriptor pool for blit.
 		VkDescriptorPool descriptor_pool;

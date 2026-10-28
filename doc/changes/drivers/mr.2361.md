@@ -1,1 +1,0 @@
-- steamvr_lh: Add new steamvr beta driver internal interface

@@ -1,4 +1,5 @@
 # Copyright 2019, Collabora, Ltd.
+# Copyright 2025-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
 
 ######
@@ -14,12 +15,17 @@ set(RUNTIME_TARGET
 # OpenXR 1.0
 set(XR_API_MAJOR "1")
 
-add_library(${RUNTIME_TARGET} MODULE target.c libopenxr.def)
+if(APPLE)
+	# Needed to make a dynlib.
+	add_library(${RUNTIME_TARGET} SHARED target.c)
+else()
+	add_library(${RUNTIME_TARGET} MODULE target.c libopenxr.def)
+endif()
 
 # Note: Order may matter in these lists!
 target_link_libraries(${RUNTIME_TARGET} PUBLIC aux_vk aux_os aux_util aux_math)
 
-if(XRT_FEATURE_SERVICE)
+if(XRT_FEATURE_IPC_CLIENT)
 	target_link_libraries(${RUNTIME_TARGET} PUBLIC st_oxr ipc_client comp_client)
 else()
 	target_link_libraries(
@@ -34,7 +40,14 @@ else()
 		)
 endif()
 
-if(NOT WIN32)
+if(APPLE)
+	# Only expose the negotiate symbol.
+	set_property(
+		TARGET ${RUNTIME_TARGET}
+		APPEND_STRING
+		PROPERTY LINK_FLAGS "-Wl,-exported_symbol -Wl,_xrNegotiateLoaderRuntimeInterface"
+		)
+elseif(NOT WIN32)
 	# Force the main "negotiate" symbol's inclusion
 	# and use a version script to ensure that's the only one we expose.
 	set_property(
@@ -77,8 +90,7 @@ generate_openxr_runtime_manifest_buildtree(
 	)
 
 ###
-# Prepare the installable manifest: will be generated completely at install time,
-# by a script we generate now.
+# Prepare the installable manifest for the configured install layout.
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	# Windows: install manifest to top level
 	set(_extra_args)

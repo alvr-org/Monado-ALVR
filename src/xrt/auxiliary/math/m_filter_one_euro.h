@@ -4,7 +4,7 @@
 /*!
  * @file
  * @brief  Header for a "One Euro Filter" implementation.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jan Schmidt <jan@centricular.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
@@ -27,6 +27,11 @@
 #define M_EURO_FILTER_HEAD_TRACKING_FCMIN 30.0
 #define M_EURO_FILTER_HEAD_TRACKING_FCMIN_D 25.0
 #define M_EURO_FILTER_HEAD_TRACKING_BETA 0.6
+
+// Suggestions. These are suitable for noisy eye tracking data.
+#define M_EURO_FILTER_EYE_TRACKING_FCMIN 1.00
+#define M_EURO_FILTER_EYE_TRACKING_FCMIN_D 0.05
+#define M_EURO_FILTER_EYE_TRACKING_BETA 0.007
 
 
 #ifdef __cplusplus

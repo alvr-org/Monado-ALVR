@@ -15,7 +15,7 @@
 #include "client/comp_gl_xlib_client.h"
 
 
-struct xrt_compositor_gl *
+struct xrt_compositor *
 xrt_gfx_provider_create_gl_xlib(struct xrt_compositor_native *xcn,
                                 Display *xDisplay,
                                 uint32_t visualid,

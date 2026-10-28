@@ -1,4 +1,5 @@
 # Copyright 2019-2023, Collabora, Ltd.
+# Copyright 2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
 
 ####
@@ -22,9 +23,18 @@ add_library(
 	target_lists STATIC target_builder_interface.h target_builder_legacy.c target_lists.c
 			    target_lists.h
 	)
-target_link_libraries(target_lists PRIVATE xrt-interfaces aux_util aux_util_sink drv_includes x264 AlvrRender vk)
-
-get_property(alvr_inc_dirs TARGET AlvrRender PROPERTY INCLUDE_DIRECTORIES)
+target_link_libraries(
+	target_lists
+	PUBLIC target_helpers
+	PRIVATE
+		xrt-interfaces
+		tracking-includes
+		aux_util
+		aux_util_sink
+		drv_includes
+		base
+		vk
+	)
 target_include_directories(target_lists PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 ###
@@ -37,6 +47,15 @@ endif()
 
 if(XRT_BUILD_DRIVER_PSVR OR XRT_BUILD_DRIVER_PSMV)
 	target_sources(target_lists PRIVATE target_builder_rgb_tracking.c)
+endif()
+
+if(XRT_BUILD_DRIVER_PSVR2)
+	target_sources(target_lists PRIVATE target_builder_psvr2.c)
+endif()
+
+if(XRT_BUILD_DRIVER_RIFT)
+	target_sources(target_lists PRIVATE target_builder_rift.c)
+	target_link_libraries(target_lists PRIVATE constellation)
 endif()
 
 if(XRT_BUILD_DRIVER_RIFT_S)
@@ -89,6 +108,14 @@ endif()
 
 if(XRT_BUILD_DRIVER_ARDUINO)
 	target_link_libraries(target_lists PRIVATE drv_arduino)
+endif()
+
+if(XRT_BUILD_DRIVER_BLUBUR_S1)
+	target_link_libraries(target_lists PRIVATE drv_blubur_s1)
+endif()
+
+if(XRT_BUILD_DRIVER_CONTACTGLOVE)
+	target_link_libraries(target_lists PRIVATE drv_contactglove)
 endif()
 
 target_link_libraries(target_lists PRIVATE drv_cemu)
@@ -153,12 +180,24 @@ if(XRT_BUILD_DRIVER_PSVR)
 	target_link_libraries(target_lists PRIVATE drv_psvr)
 endif()
 
+if(XRT_BUILD_DRIVER_PSVR2)
+	target_link_libraries(target_lists PRIVATE drv_psvr2)
+endif()
+
 if(XRT_BUILD_DRIVER_REALSENSE)
 	target_link_libraries(target_lists PRIVATE drv_realsense)
 endif()
 
 if(XRT_BUILD_DRIVER_REMOTE)
 	target_link_libraries(target_lists PRIVATE drv_remote)
+endif()
+
+if(XRT_BUILD_DRIVER_RIFT)
+	target_link_libraries(target_lists PRIVATE drv_rift)
+endif()
+
+if(XRT_BUILD_DRIVER_RIFT_SENSOR)
+	target_link_libraries(target_lists PRIVATE drv_rift_sensor)
 endif()
 
 if(XRT_BUILD_DRIVER_RIFT_S)
@@ -220,6 +259,10 @@ if(XRT_BUILD_DRIVER_SIMULAVR)
 	target_link_libraries(target_lists PRIVATE drv_svr)
 endif()
 
+if(XRT_BUILD_DRIVER_SOLARXR)
+	target_link_libraries(target_lists PRIVATE drv_solarxr)
+endif()
+
 ####
 # Instance
 #
@@ -235,6 +278,7 @@ if(XRT_MODULE_COMPOSITOR_MAIN OR XRT_MODULE_COMPOSITOR_NULL)
 			st_prober
 			target_lists
 			drv_includes
+			base
 		)
 	target_include_directories(target_instance PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${alvr_inc_dirs})
 
@@ -260,6 +304,7 @@ target_link_libraries(
 		st_prober
 		target_lists
 		drv_includes
+		base
 	)
 target_include_directories(target_instance_no_comp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

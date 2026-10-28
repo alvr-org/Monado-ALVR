@@ -1,9 +1,10 @@
-// Copyright 2023-2024, Tobias Frisch
+// Copyright 2023-2025, Tobias Frisch
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Xreal Air prober code.
- * @author Tobias Frisch <thejackimonster@gmail.com>
+ * @author Tobias Frisch <jacki@thejackimonster.de>
  * @ingroup drv_xreal_air
  */
 
@@ -17,13 +18,15 @@
 
 #include "xrt/xrt_config_drivers.h"
 #include "xrt/xrt_prober.h"
+#include "xrt/xrt_system.h"
 
-#include "util/u_builders.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
 #include "util/u_logging.h"
-#include "util/u_system_helpers.h"
 #include "util/u_trace_marker.h"
+#include "util/u_builder_search.h"
+
+#include "target_builder_helpers.h"
 
 #include "xreal_air/xreal_air_hmd.h"
 #include "xreal_air/xreal_air_interface.h"
@@ -46,12 +49,34 @@ static const char *driver_list[] = {
     "xreal_air",
 };
 
-#define XREAL_AIR_DRIVER_PRODUCT_IDS 3
+#define XREAL_AIR_DRIVER_PRODUCT_IDS 4
 
 static const uint16_t driver_product_ids[XREAL_AIR_DRIVER_PRODUCT_IDS] = {
     XREAL_AIR_PID,
     XREAL_AIR_2_PID,
     XREAL_AIR_2_PRO_PID,
+    XREAL_AIR_2_ULTRA_PID,
+};
+
+static const uint16_t driver_handle_ifaces[XREAL_AIR_DRIVER_PRODUCT_IDS] = {
+    3,
+    3,
+    3,
+    2,
+};
+
+static const uint16_t driver_control_ifaces[XREAL_AIR_DRIVER_PRODUCT_IDS] = {
+    4,
+    4,
+    4,
+    0,
+};
+
+static const uint16_t driver_max_sensor_buffer_sizes[XREAL_AIR_DRIVER_PRODUCT_IDS] = {
+    64,
+    64,
+    64,
+    512,
 };
 
 
@@ -74,10 +99,7 @@ xreal_air_estimate_system(struct xrt_builder *xb,
 	U_ZERO(estimate);
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
-
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	U_LOG_CHK_AND_RET(xreal_air_log_level, xret, "xrt_prober_lock_list");
 
 	struct xrt_prober_device *dev = NULL;
 	uint16_t product_index = 0;
@@ -97,9 +119,9 @@ xreal_air_estimate_system(struct xrt_builder *xb,
 	}
 
 	xret = xrt_prober_unlock_list(xp, &xpdevs);
-	assert(xret == XRT_SUCCESS);
+	U_LOG_CHK_AND_RET(xreal_air_log_level, xret, "xrt_prober_unlock_list");
 
-	return XRT_SUCCESS;
+	return xret;
 }
 
 static xrt_result_t
@@ -109,15 +131,13 @@ xreal_air_open_system_impl(struct xrt_builder *xb,
                            struct xrt_tracking_origin *origin,
                            struct xrt_system_devices *xsysd,
                            struct xrt_frame_context *xfctx,
-                           struct u_builder_roles_helper *ubrh)
+                           struct t_builder_options *tbo)
 {
 	struct xrt_prober_device **xpdevs = NULL;
 	size_t xpdev_count = 0;
 	xrt_result_t xret = XRT_SUCCESS;
 
 	DRV_TRACE_MARKER();
-
-	xreal_air_log_level = debug_get_log_option_xreal_air_log();
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -142,7 +162,7 @@ xreal_air_open_system_impl(struct xrt_builder *xb,
 	}
 
 	struct os_hid_device *hid_handle = NULL;
-	int result = xrt_prober_open_hid_interface(xp, dev_hmd, XREAL_AIR_HANDLE_IFACE, &hid_handle);
+	int result = xrt_prober_open_hid_interface(xp, dev_hmd, driver_handle_ifaces[product_index], &hid_handle);
 
 	if (result != 0) {
 		XREAL_AIR_ERROR("Failed to open Xreal Air handle interface");
@@ -150,7 +170,7 @@ xreal_air_open_system_impl(struct xrt_builder *xb,
 	}
 
 	struct os_hid_device *hid_control = NULL;
-	result = xrt_prober_open_hid_interface(xp, dev_hmd, XREAL_AIR_CONTROL_IFACE, &hid_control);
+	result = xrt_prober_open_hid_interface(xp, dev_hmd, driver_control_ifaces[product_index], &hid_control);
 
 	if (result != 0) {
 		os_hid_destroy(hid_handle);
@@ -172,7 +192,8 @@ xreal_air_open_system_impl(struct xrt_builder *xb,
 		goto fail;
 	}
 
-	struct xrt_device *xreal_air_device = xreal_air_hmd_create_device(hid_handle, hid_control, xreal_air_log_level);
+	struct xrt_device *xreal_air_device = xreal_air_hmd_create_device(
+	    hid_handle, hid_control, xreal_air_log_level, driver_max_sensor_buffer_sizes[product_index]);
 
 	if (xreal_air_device == NULL) {
 		XREAL_AIR_ERROR("Failed to initialise Xreal Air driver");
@@ -180,10 +201,10 @@ xreal_air_open_system_impl(struct xrt_builder *xb,
 	}
 
 	// Add to device list.
-	xsysd->xdevs[xsysd->xdev_count++] = xreal_air_device;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = xreal_air_device;
 
 	// Assign to role(s).
-	ubrh->head = xreal_air_device;
+	tbo->head = xreal_air_device;
 
 	return XRT_SUCCESS;
 
@@ -219,18 +240,20 @@ xreal_air_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 xreal_air_builder_create(void)
 {
-	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
+	struct t_builder *ub = U_TYPED_CALLOC(struct t_builder);
+
+	xreal_air_log_level = debug_get_log_option_xreal_air_log();
 
 	// xrt_builder fields.
 	ub->base.estimate_system = xreal_air_estimate_system;
-	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.open_system = t_builder_open_system_static_roles;
 	ub->base.destroy = xreal_air_destroy;
 	ub->base.identifier = "xreal_air";
 	ub->base.name = "Xreal Air";
 	ub->base.driver_identifiers = driver_list;
 	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	// u_builder fields.
+	// t_builder fields.
 	ub->open_system_static_roles = xreal_air_open_system_impl;
 
 	return &ub->base;

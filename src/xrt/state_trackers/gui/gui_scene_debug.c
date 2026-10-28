@@ -1,4 +1,5 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -38,6 +39,8 @@
 #include "imgui_monado/cimgui_monado.h"
 
 #include <float.h>
+#include <inttypes.h>
+
 
 /*
  *
@@ -302,10 +305,8 @@ on_f32_arr(const char *name, void *ptr)
 	int length = f32_arr->length;
 	float *arr = (float *)f32_arr->data;
 
-	ImVec2 min, max;
-	igGetWindowContentRegionMin(&min);
-	igGetWindowContentRegionMax(&max);
-	ImVec2 graph_size = {max.x - min.x, 200};
+	ImVec2 region = igGetContentRegionAvail();
+	ImVec2 graph_size = {region.x, 200};
 
 	float stats_min = FLT_MAX;
 	float stats_max = FLT_MAX;
@@ -323,6 +324,23 @@ on_f32_arr(const char *name, void *ptr)
 }
 
 static void
+on_u16_arr(const char *name, void *ptr)
+{
+	struct u_var_u16_arr *u16_arr = ptr;
+
+	igDragScalarN(         //
+	    name,              //
+	    ImGuiDataType_U16, //
+	    u16_arr->data,     //
+	    u16_arr->length,   //
+	    0.2,               //
+	    NULL,              //
+	    NULL,              //
+	    NULL,              //
+	    1.0f);             //
+}
+
+static void
 on_timing(const char *name, void *ptr)
 {
 	struct u_var_timing *frametime_arr = ptr;
@@ -331,10 +349,8 @@ on_timing(const char *name, void *ptr)
 	int length = f32_arr->length;
 	float *arr = (float *)f32_arr->data;
 
-	ImVec2 min, max;
-	igGetWindowContentRegionMin(&min);
-	igGetWindowContentRegionMax(&max);
-	ImVec2 graph_size = {max.x - min.x, 200};
+	ImVec2 region = igGetContentRegionAvail();
+	ImVec2 graph_size = {region.x, 200};
 
 	float stats_min = FLT_MAX;
 	float stats_max = 0;
@@ -375,6 +391,34 @@ on_pose(const char *name, void *ptr)
 }
 
 static void
+on_ro_i64_ns(const char *name, void *ptr)
+{
+	const ImGuiInputTextFlags ro_i_flags = ImGuiInputTextFlags_ReadOnly;
+
+	// Display in a more readable format.
+	double time = time_ns_to_ms_f(*(int64_t *)ptr);
+
+	igBeginGroup();
+	igPushID_Str(name);
+	igPushMultiItemsWidths(2, igCalcItemWidth());
+
+	igPushID_Int(0);
+	igInputScalar("", ImGuiDataType_Double, &time, NULL, NULL, "%+.3f ms", ro_i_flags);
+	igPopItemWidth();
+	igPopID();
+
+	igSameLine(0, 4.0f);
+
+	igPushID_Int(1);
+	igInputScalar(name, ImGuiDataType_U64, ptr, NULL, NULL, "%" PRIu64 " ns", ro_i_flags);
+	igPopItemWidth();
+	igPopID();
+
+	igPopID();
+	igEndGroup();
+}
+
+static void
 on_ff_vec3_var(struct u_var_info *info, struct gui_program *p)
 {
 	char tmp[512];
@@ -405,10 +449,8 @@ on_ff_vec3_var(struct u_var_info *info, struct gui_program *p)
 
 	struct plot_state state = {ff, os_monotonic_get_ns()};
 
-	ImVec2 min, max;
-	igGetWindowContentRegionMin(&min);
-	igGetWindowContentRegionMax(&max);
-	ImVec2 size = {max.x - min.x, 256};
+	ImVec2 region = igGetContentRegionAvail();
+	ImVec2 size = {region.x, 256};
 	bool shown = ImPlot_BeginPlot(name, size, 0);
 	if (!shown) {
 		return;
@@ -473,6 +515,7 @@ static void
 on_button_var(const char *name, void *ptr)
 {
 	struct u_var_button *btn = (struct u_var_button *)ptr;
+
 	ImVec2 dims = {btn->width, btn->height};
 	const char *label = strlen(btn->label) == 0 ? name : btn->label;
 	bool disabled = btn->disabled;
@@ -482,13 +525,21 @@ on_button_var(const char *name, void *ptr)
 		igPushItemFlag(ImGuiItemFlags_Disabled, true);
 	}
 
-	if (igButton(label, dims)) {
+	if (igButton(label, dims) && btn->cb) {
 		btn->cb(btn->ptr);
 	}
 
 	if (disabled) {
 		igPopItemFlag();
 		igPopStyleVar(1);
+	}
+
+	// Checking for downed.
+	if (disabled) {
+		btn->downed = false;
+	} else {
+		btn->downed = igIsItemHovered(ImGuiHoveredFlags_RectOnly) && igIsMouseDown_Nil(ImGuiMouseButton_Left) &&
+		              igIsItemActive();
 	}
 }
 
@@ -512,10 +563,8 @@ on_curve_var(const char *name, void *ptr)
 {
 	struct u_var_curve *c = (struct u_var_curve *)ptr;
 
-	ImVec2 min, max;
-	igGetWindowContentRegionMin(&min);
-	igGetWindowContentRegionMax(&max);
-	ImVec2 size = {max.x - min.x, 256};
+	ImVec2 region = igGetContentRegionAvail();
+	ImVec2 size = {region.x, 256};
 
 	bool shown = ImPlot_BeginPlot(name, size, 0);
 	if (!shown) {
@@ -533,10 +582,8 @@ static void
 on_curves_var(const char *name, void *ptr)
 {
 	struct u_var_curves *cs = (struct u_var_curves *)ptr;
-	ImVec2 min, max;
-	igGetWindowContentRegionMin(&min);
-	igGetWindowContentRegionMax(&max);
-	ImVec2 size = {max.x - min.x, 256};
+	ImVec2 region = igGetContentRegionAvail();
+	ImVec2 size = {region.x, 256};
 
 	bool shown = ImPlot_BeginPlot(name, size, 0);
 	if (!shown) {
@@ -560,6 +607,12 @@ on_draggable_f32_var(const char *name, void *ptr)
 	igDragFloat(name, &d->val, d->step, d->min, d->max, "%+f", ImGuiSliderFlags_None);
 }
 
+static void
+on_draggable_u8_var(const char *name, void *ptr)
+{
+	struct u_var_draggable_u8 *d = (struct u_var_draggable_u8 *)ptr;
+	igDragScalar(name, ImGuiDataType_U8, d->val, d->step, &d->min, &d->max, NULL, ImGuiSliderFlags_None);
+}
 static void
 on_draggable_u16_var(const char *name, void *ptr)
 {
@@ -646,6 +699,8 @@ on_elem(struct u_var_info *info, void *priv)
 	case U_VAR_KIND_RGB_U8: on_color_rgb_u8(name, ptr); break;
 	case U_VAR_KIND_U8: igDragScalar(name, ImGuiDataType_U8, ptr, drag_speed, NULL, NULL, NULL, power); break;
 	case U_VAR_KIND_U16: igDragScalar(name, ImGuiDataType_U16, ptr, drag_speed, NULL, NULL, NULL, power); break;
+	case U_VAR_KIND_U16_ARR: on_u16_arr(name, ptr); break;
+	case U_VAR_KIND_U32: igDragScalar(name, ImGuiDataType_U32, ptr, drag_speed, NULL, NULL, NULL, power); break;
 	case U_VAR_KIND_U64: igDragScalar(name, ImGuiDataType_U64, ptr, drag_speed, NULL, NULL, NULL, power); break;
 	case U_VAR_KIND_I32: igInputInt(name, (int *)ptr, 1, 10, i_flags); break;
 	case U_VAR_KIND_I64: igInputScalar(name, ImGuiDataType_S64, ptr, NULL, NULL, NULL, i_flags); break;
@@ -658,25 +713,35 @@ on_elem(struct u_var_info *info, void *priv)
 	case U_VAR_KIND_POSE: on_pose(name, ptr); break;
 	case U_VAR_KIND_LOG_LEVEL: igCombo_Str(name, (int *)ptr, "Trace\0Debug\0Info\0Warn\0Error\0\0", 5); break;
 	case U_VAR_KIND_RO_TEXT: igText("%s: '%s'", name, (char *)ptr); break;
-	case U_VAR_KIND_RO_FTEXT: igText(ptr ? (char *)ptr : "%s", name); break;
+	case U_VAR_KIND_RO_RAW_TEXT: igText("%s", (char *)ptr); break;
+	case U_VAR_KIND_RO_U8: igInputScalar(name, ImGuiDataType_U8, ptr, NULL, NULL, NULL, ro_i_flags); break;
+	case U_VAR_KIND_RO_I16: igInputScalar(name, ImGuiDataType_S16, ptr, NULL, NULL, NULL, ro_i_flags); break;
 	case U_VAR_KIND_RO_I32: igInputScalar(name, ImGuiDataType_S32, ptr, NULL, NULL, NULL, ro_i_flags); break;
+	case U_VAR_KIND_RO_U16: igInputScalar(name, ImGuiDataType_U16, ptr, NULL, NULL, NULL, ro_i_flags); break;
 	case U_VAR_KIND_RO_U32: igInputScalar(name, ImGuiDataType_U32, ptr, NULL, NULL, NULL, ro_i_flags); break;
 	case U_VAR_KIND_RO_F32: igInputScalar(name, ImGuiDataType_Float, ptr, NULL, NULL, "%+f", ro_i_flags); break;
 	case U_VAR_KIND_RO_I64: igInputScalar(name, ImGuiDataType_S64, ptr, NULL, NULL, NULL, ro_i_flags); break;
-	case U_VAR_KIND_RO_U64: igInputScalar(name, ImGuiDataType_S64, ptr, NULL, NULL, NULL, ro_i_flags); break;
+	case U_VAR_KIND_RO_U64: igInputScalar(name, ImGuiDataType_U64, ptr, NULL, NULL, NULL, ro_i_flags); break;
 	case U_VAR_KIND_RO_F64: igInputScalar(name, ImGuiDataType_Double, ptr, NULL, NULL, "%+f", ro_i_flags); break;
+	case U_VAR_KIND_RO_I64_NS: on_ro_i64_ns(name, ptr); break;
+	case U_VAR_KIND_RO_VEC2_F32: igInputFloat2(name, (float *)ptr, "%+f", ro_i_flags); break;
 	case U_VAR_KIND_RO_VEC3_I32: igInputInt3(name, (int *)ptr, ro_i_flags); break;
 	case U_VAR_KIND_RO_VEC3_F32: igInputFloat3(name, (float *)ptr, "%+f", ro_i_flags); break;
+	case U_VAR_KIND_RO_VEC3_F64:
+		igInputScalarN(name, ImGuiDataType_Double, (double *)ptr, 3, NULL, NULL, "%+f", ro_i_flags);
+		break;
 	case U_VAR_KIND_RO_QUAT_F32: igInputFloat4(name, (float *)ptr, "%+f", ro_i_flags); break;
 	case U_VAR_KIND_RO_FF_VEC3_F32: on_ff_vec3_var(info, state->p); break;
 	case U_VAR_KIND_GUI_HEADER: assert(false && "Should be handled before this"); break;
 	case U_VAR_KIND_GUI_HEADER_BEGIN: on_gui_header_begin(name, state); break;
 	case U_VAR_KIND_GUI_HEADER_END: on_gui_header_end(); break;
+	case U_VAR_KIND_GUI_SAMELINE: igSameLine(0.0, 4.0f); break;
 	case U_VAR_KIND_SINK_DEBUG: on_sink_debug_var(name, ptr, state); break;
 	case U_VAR_KIND_NATIVE_IMAGES_DEBUG: on_native_images_debug_var(name, ptr, state); break;
 	case U_VAR_KIND_DRAGGABLE_F32: on_draggable_f32_var(name, ptr); break;
 	case U_VAR_KIND_BUTTON: on_button_var(name, ptr); break;
 	case U_VAR_KIND_COMBO: on_combo_var(name, ptr); break;
+	case U_VAR_KIND_DRAGGABLE_U8: on_draggable_u8_var(name, ptr); break;
 	case U_VAR_KIND_DRAGGABLE_U16: on_draggable_u16_var(name, ptr); break;
 	case U_VAR_KIND_HISTOGRAM_F32: on_histogram_f32_var(name, ptr); break;
 	case U_VAR_KIND_CURVE: on_curve_var(name, ptr); break;
@@ -1027,11 +1092,6 @@ scene_destroy(struct gui_scene *scene, struct gui_program *p)
 void
 gui_scene_debug(struct gui_program *p)
 {
-	// Only create devices if we have a instance and no system devices.
-	if (p->instance != NULL && p->xsysd == NULL) {
-		gui_prober_select(p);
-	}
-
 	struct debug_scene *ds = U_TYPED_CALLOC(struct debug_scene);
 
 	ds->base.render = scene_render;

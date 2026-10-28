@@ -1,7 +1,7 @@
 # CI and Generated Stuff Readme
 
 <!--
-# Copyright 2018-2024, Collabora, Ltd. and the Monado contributors
+# Copyright 2018-2025, Collabora, Ltd. and the Monado contributors
 #
 # SPDX-License-Identifier: CC0-1.0
 -->
@@ -16,7 +16,7 @@ You can install it with:
 
 <!-- do not break the following line, it is used in CI setup too, to make sure it works -->
 ```sh
-pipx install git+https://gitlab.freedesktop.org/freedesktop/ci-templates@185ede0e9b9b1924b92306ab8b882a6294e92613
+pipx install git+https://gitlab.freedesktop.org/freedesktop/ci-templates@fb9d50ccb3cbbb4c6dc5f9ef53a0ad3cb0d8a177
 ```
 
 On Windows you will also need to have GNU make and busybox installed, such as with:

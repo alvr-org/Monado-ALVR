@@ -321,6 +321,26 @@ struct psmv_parsed_calibration_zcm2
 	struct xrt_vec3_i32 gyro_bias;
 };
 
+enum psmv_battery_state
+{
+	//! Battery is between 0% and 20%
+	BATTERY_STATE_0_20 = 0x00,
+	//! Battery is between 20% and 40%
+	BATTERY_STATE_20_40 = 0x01,
+	//! Battery is between 40% and 60%
+	BATTERY_STATE_40_60 = 0x02,
+	//! Battery is between 60% and 80%
+	BATTERY_STATE_60_80 = 0x03,
+	//! Battery is between 80% and 100%
+	BATTERY_STATE_80_100 = 0x04,
+	//! Battery is full
+	BATTERY_STATE_100 = 0x05,
+	//! Battery is charging
+	BATTERY_STATE_CHARGING = 0xEE,
+	//! Battery is plugged in, but is full
+	BATTERY_STATE_CHARGING_FULL = 0xFE,
+};
+
 /*!
  * Input package for ZCM1.
  */
@@ -339,8 +359,9 @@ struct psmv_input_zcm1
 	struct psmv_vec3_u16_wire gyro_f2;
 	uint8_t temp_mag[6];
 	uint8_t timestamp_low;
-	uint8_t pad[49 - 44];
+	uint8_t ext_data[5];
 };
+static_assert(sizeof(struct psmv_input_zcm1) == 49, "bad struct size");
 
 /*!
  * Input package for ZCM2.
@@ -364,6 +385,7 @@ struct psmv_input_zcm2
 	uint8_t pad1[2];
 	uint8_t timestamp_low_copy;
 };
+static_assert(sizeof(struct psmv_input_zcm2) == 44, "bad struct size");
 
 /*!
  * A parsed sample of accel and gyro.
@@ -382,7 +404,7 @@ struct psmv_parsed_input
 	uint32_t buttons;
 	uint16_t timestamp;
 	uint16_t timestamp_copy;
-	uint8_t battery;
+	enum psmv_battery_state battery;
 	uint8_t seq_no;
 
 
@@ -921,13 +943,14 @@ amp_scale(struct psmv_device *psmv, float amp)
 	return amp * (max - min) + min;
 }
 
-static void
-psmv_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
+static xrt_result_t
+psmv_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const struct xrt_output_value *value)
 {
 	struct psmv_device *psmv = psmv_device(xdev);
 
 	if (name != XRT_OUTPUT_NAME_PSMV_RUMBLE_VIBRATION) {
-		return;
+		U_LOG_XDEV_UNSUPPORTED_OUTPUT(&psmv->base, psmv->log_level, name);
+		return XRT_ERROR_OUTPUT_UNSUPPORTED;
 	}
 
 	os_mutex_lock(&psmv->lock);
@@ -944,36 +967,41 @@ psmv_device_set_output(struct xrt_device *xdev, enum xrt_output_name name, const
 	psmv_led_and_trigger_update_locked(psmv, now);
 
 	os_mutex_unlock(&psmv->lock);
+	return XRT_SUCCESS;
 }
 
+static xrt_result_t
+psmv_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
+{
+	struct psmv_device *psmv = psmv_device(xdev);
 
-/*
- *
- * Bindings
- *
- */
+	float charge = 0.0;
+	float charging = false;
+	switch (psmv->last.battery) {
+	case BATTERY_STATE_0_20: charge = 0.1; break;
+	case BATTERY_STATE_20_40: charge = 0.3; break;
+	case BATTERY_STATE_40_60: charge = 0.5; break;
+	case BATTERY_STATE_60_80: charge = 0.7; break;
+	case BATTERY_STATE_80_100: charge = 0.9; break;
+	case BATTERY_STATE_100: charge = 1.0; break;
+	case BATTERY_STATE_CHARGING:
+		// this is a gross estimate, but it's the best we can do
+		charge = 0.5;
+		charging = true;
+		break;
+	case BATTERY_STATE_CHARGING_FULL:
+		charge = 1.0;
+		charging = true;
+		break;
+	}
 
-static struct xrt_binding_input_pair simple_inputs[4] = {
-    {XRT_INPUT_SIMPLE_SELECT_CLICK, XRT_INPUT_PSMV_TRIGGER_VALUE},
-    {XRT_INPUT_SIMPLE_MENU_CLICK, XRT_INPUT_PSMV_MOVE_CLICK},
-    {XRT_INPUT_SIMPLE_GRIP_POSE, XRT_INPUT_PSMV_GRIP_POSE},
-    {XRT_INPUT_SIMPLE_AIM_POSE, XRT_INPUT_PSMV_AIM_POSE},
-};
+	*out_charging = charging;
+	*out_charge = charge;
 
-static struct xrt_binding_output_pair simple_outputs[1] = {
-    {XRT_OUTPUT_NAME_SIMPLE_VIBRATION, XRT_OUTPUT_NAME_PSMV_RUMBLE_VIBRATION},
-};
+	*out_present = true;
 
-static struct xrt_binding_profile binding_profiles[1] = {
-    {
-        .name = XRT_DEVICE_SIMPLE_CONTROLLER,
-        .inputs = simple_inputs,
-        .input_count = ARRAY_SIZE(simple_inputs),
-        .outputs = simple_outputs,
-        .output_count = ARRAY_SIZE(simple_outputs),
-    },
-};
-
+	return XRT_SUCCESS;
+}
 
 /*
  *
@@ -1035,9 +1063,8 @@ psmv_device_create(struct xrt_prober *xp, struct xrt_prober_device *xpdev, struc
 	psmv->base.update_inputs = psmv_device_update_inputs;
 	psmv->base.get_tracked_pose = psmv_device_get_tracked_pose;
 	psmv->base.set_output = psmv_device_set_output;
+	psmv->base.get_battery_status = psmv_get_battery_status;
 	psmv->base.name = XRT_DEVICE_PSMV;
-	psmv->base.binding_profiles = binding_profiles;
-	psmv->base.binding_profile_count = ARRAY_SIZE(binding_profiles);
 	psmv->fusion.rot.w = 1.0f;
 	psmv->fusion.fusion = imu_fusion_create();
 	psmv->log_level = debug_get_log_option_psmv_log();
@@ -1225,8 +1252,9 @@ psmv_device_create(struct xrt_prober *xp, struct xrt_prober_device *xpdev, struc
 	u_var_add_log_level(psmv, &psmv->log_level, "Log level");
 	// clang-format on
 
-	psmv->base.orientation_tracking_supported = true;
-	psmv->base.position_tracking_supported = psmv->ball != NULL;
+	psmv->base.supported.orientation_tracking = true;
+	psmv->base.supported.battery_status = true;
+	psmv->base.supported.position_tracking = psmv->ball != NULL;
 	psmv->base.device_type = XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER;
 
 	// And finally done

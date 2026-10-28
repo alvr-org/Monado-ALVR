@@ -1,4 +1,5 @@
-# Copyright 2020-2023, Collabora, Ltd.
+# Copyright 2020-2025, Collabora, Ltd.
+# Copyright 2025-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
 
 # Catch2
@@ -7,13 +8,17 @@ if(BUILD_TESTING)
 	target_include_directories(
 		xrt-external-catch2 SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/Catch2
 		)
+	# clang-22 gives a warning for this in our build configuration, so let's disable it.
+	target_compile_definitions(xrt-external-catch2 PUBLIC CATCH_CONFIG_NO_COUNTER)
+	if(MSVC)
+		# Needed for Visual Studio 2019.
+		# https://github.com/catchorg/Catch2/issues/2916#issuecomment-2404082203
+		target_compile_options(xrt-external-catch2 PRIVATE "/Zc:hiddenFriend-")
+	endif()
 endif()
 
 # OpenVR
-add_library(xrt-external-openvr INTERFACE)
-target_include_directories(
-	xrt-external-openvr SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/openvr_includes
-	)
+add_subdirectory(openvr_includes)
 
 # cJSON
 add_library(xrt-external-cjson INTERFACE)
@@ -66,8 +71,6 @@ endif()
 # Nano Protobuf
 add_library(
 	xrt-external-nanopb STATIC
-	nanopb/monado_metrics.pb.c
-	nanopb/monado_metrics.pb.h
 	nanopb/pb.h
 	nanopb/pb_common.c
 	nanopb/pb_common.h
@@ -78,11 +81,30 @@ add_library(
 	)
 target_include_directories(xrt-external-nanopb PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/nanopb)
 
+add_library(xrt-external-metrics STATIC metrics/monado_metrics.pb.c metrics/monado_metrics.pb.h)
+
+if(ANDROID)
+	target_compile_options(xrt-external-metrics PRIVATE -Wno-gnu-offsetof-extensions)
+endif()
+
+target_include_directories(xrt-external-metrics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/metrics/)
+
+target_link_libraries(xrt-external-metrics PUBLIC xrt-external-nanopb)
+
+if(ANDROID)
+	add_library(
+		xrt-external-cardboard STATIC cardboard/cardboard_device.pb.h
+					      cardboard/cardboard_device.pb.c
+		)
+
+	target_include_directories(
+		xrt-external-cardboard PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cardboard/
+		)
+	target_link_libraries(xrt-external-cardboard PUBLIC xrt-external-nanopb)
+endif()
+
 # OpenXR
-add_library(xrt-external-openxr INTERFACE)
-target_include_directories(
-	xrt-external-openxr INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/openxr_includes
-	)
+add_subdirectory(openxr_includes)
 
 # External VIT interface
 if(XRT_FEATURE_SLAM)
@@ -90,6 +112,11 @@ if(XRT_FEATURE_SLAM)
 	target_include_directories(
 		xrt-external-vit INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/vit_includes
 		)
+endif()
+
+# Vulkan
+if(XRT_HAVE_VULKAN)
+	add_subdirectory(vulkan)
 endif()
 
 # SDL
@@ -108,6 +135,10 @@ endif()
 add_library(xrt-external-stb INTERFACE)
 target_include_directories(xrt-external-stb SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/stb)
 
+# bcdec
+add_library(xrt-external-bcdec INTERFACE)
+target_include_directories(xrt-external-bcdec SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/bcdec)
+
 # renderdoc
 add_library(xrt-external-renderdoc INTERFACE)
 target_include_directories(
@@ -116,85 +147,15 @@ target_include_directories(
 
 # imgui
 if(XRT_HAVE_OPENGL)
-	add_library(
-		xrt-external-imgui STATIC
-		# imgui 1.90.8-docking
-		imgui/imgui/imconfig.h
-		imgui/imgui/imgui.cpp
-		imgui/imgui/imgui_tables.cpp
-		imgui/imgui/imgui.h
-		imgui/imgui/imgui_demo.cpp
-		imgui/imgui/imgui_draw.cpp
-		imgui/imgui/backends/imgui_impl_opengl3.cpp
-		imgui/imgui/backends/imgui_impl_opengl3.h
-		imgui/imgui/imgui_internal.h
-		imgui/imgui/imgui_widgets.cpp
-		imgui/imgui/imstb_rectpack.h
-		imgui/imgui/imstb_textedit.h
-		imgui/imgui/imstb_truetype.h
-		# cimgui 7c16d31cdb9d2db3038b324fe967ffa76b02c8c4
-		imgui/cimgui/cimgui.cpp
-		imgui/cimgui/cimgui.h
-		imgui/cimgui/cimgui_impl.h
-		# implot 0.17 f156599faefe316f7dd20fe6c783bf87c8bb6fd9
-		imgui/implot/implot.cpp
-		imgui/implot/implot.h
-		imgui/implot/implot_internal.h
-		imgui/implot/implot_items.cpp
-		imgui/implot/implot_demo.cpp
-		# cimplot 439f705b1cfae0e9fbe42c13ab5b45becc47d404
-		imgui/cimplot/cimplot.cpp
-		imgui/cimplot/cimplot.h
-		imgui/imgui_monado/imgui_monado.cpp
-		)
-
-	target_include_directories(
-		xrt-external-imgui SYSTEM
-		PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/imgui
-		PRIVATE
-			${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui
-			${CMAKE_CURRENT_SOURCE_DIR}/imgui/cimgui
-			${CMAKE_CURRENT_SOURCE_DIR}/imgui/implot
-		)
-	target_compile_definitions(xrt-external-imgui PUBLIC CIMGUI_NO_EXPORT CIMGUI_USE_OPENGL3)
-
-	if(WIN32)
-		target_compile_definitions(
-			xrt-external-imgui
-			PUBLIC "IMGUI_IMPL_API=extern\ \"C\" __declspec\(dllexport\)"
-			)
-	else()
-		target_compile_definitions(xrt-external-imgui PUBLIC "IMGUI_IMPL_API=extern\ \"C\"")
-	endif()
-
-	set_target_properties(xrt-external-imgui PROPERTIES INTERPROCEDURAL_OPTIMIZATION OFF)
-	target_link_libraries(xrt-external-imgui PUBLIC xrt-external-glad)
-
-	if(XRT_HAVE_SDL2)
-		add_library(
-			xrt-external-imgui-sdl2 STATIC imgui/imgui/backends/imgui_impl_sdl2.cpp
-						       imgui/imgui/backends/imgui_impl_sdl2.h
-			)
-		target_include_directories(
-			xrt-external-imgui-sdl2 SYSTEM
-			PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui
-			)
-		target_compile_definitions(xrt-external-imgui-sdl2 PUBLIC CIMGUI_USE_SDL2)
-		target_link_libraries(
-			xrt-external-imgui-sdl2 PUBLIC xrt-external-imgui xrt-external-sdl2
-			)
-		set_target_properties(
-			xrt-external-imgui-sdl2 PROPERTIES INTERPROCEDURAL_OPTIMIZATION OFF
-			)
-	endif()
-
+	add_subdirectory(imgui)
 endif()
 
-# tinyceres
-add_library(xrt-external-tinyceres INTERFACE)
-target_include_directories(
-	xrt-external-tinyceres SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/tinyceres/include
-	)
+# Ceres, from the system if we have it
+if(XRT_HAVE_BIGCERES)
+	add_subdirectory(bigceres)
+endif()
+
+add_subdirectory(tinyceres)
 
 # Tracy
 if(XRT_HAVE_TRACY)

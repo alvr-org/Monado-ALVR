@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Driver to emulate controllers from hand-tracking input
- * @author Moses Turner <moses@collabora.com>>
+ * @author Moshi Turner <moshiturner@protonmail.com>>
  *
  * @ingroup drv_cemu
  */

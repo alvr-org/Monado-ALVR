@@ -1,0 +1,18 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"tracking_origin_get_list": {
+		"out": [
+			{"name": "list", "type": "struct ipc_tracking_origin_list"}
+		]
+	},
+
+	"tracking_origin_get_info": {
+		"in": [
+			{"name": "tracking_origin_id", "type": "uint32_t"}
+		],
+		"out": [
+			{"name": "info", "type": "struct ipc_tracking_origin_info"}
+		]
+	}
+}

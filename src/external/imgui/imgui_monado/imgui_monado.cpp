@@ -8,11 +8,11 @@
  * based on ImGui::PlotEx() from dear imgui, v1.76 WIP
  */
 
-#include "../imgui/imgui.h"
 
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
+#include "../imgui/imgui.h"
 #include "../imgui/imgui_internal.h"
 
 #include <stdint.h>
@@ -91,7 +91,7 @@ static void PlotTimings(const char *label,
   ItemSize(total_bb, style.FramePadding.y);
   if (!ItemAdd(total_bb, 0, &frame_bb))
     return;
-  const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.InFlags);
+  const bool hovered = ItemHoverable(frame_bb, id, g.LastItemData.ItemFlags);
 
   float v_min = FLT_MAX;
   float v_max = -FLT_MAX;

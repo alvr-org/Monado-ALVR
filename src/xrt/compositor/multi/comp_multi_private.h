@@ -19,6 +19,9 @@
 
 #include "util/u_pacing.h"
 
+#include "comp_multi_interface.h"
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -126,6 +129,8 @@ struct multi_compositor
 		int64_t z_order;
 
 		bool session_active;
+		bool is_base_session;
+		enum xrt_view_type session_view_type;
 	} state;
 
 	struct
@@ -321,6 +326,8 @@ struct multi_system_compositor
 	//! Base interface.
 	struct xrt_system_compositor base;
 
+	comp_multi_view_config_callback_func_t get_view_config_callback;
+
 	//! Extra functions to handle multi client.
 	struct xrt_multi_compositor_control xmcc;
 
@@ -368,6 +375,9 @@ struct multi_system_compositor
 
 	//! List of active clients.
 	struct multi_compositor *clients[MULTI_MAX_CLIENTS];
+
+	//! Chroma key parameters in HSV space
+	struct xrt_layer_chroma_key_data chroma_key;
 };
 
 /*!

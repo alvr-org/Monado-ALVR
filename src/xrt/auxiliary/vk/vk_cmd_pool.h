@@ -31,7 +31,18 @@ extern "C" {
  */
 struct vk_cmd_pool
 {
+	//! The command pool for command buffers
 	VkCommandPool pool;
+
+	/*!
+	 * @brief Queue (family) associated with @ref vk_cmd_pool::pool,
+	 *
+	 * weak reference to any queue in @ref vk_bundle (e.g. vk_bundle::[graphics|compute]_queue)
+	 * should not live longer than the @ref vk_bundle instance.
+	 */
+	struct vk_bundle_queue *queue;
+
+	//! Command Pool mutex
 	struct os_mutex mutex;
 };
 
@@ -48,7 +59,21 @@ struct vk_cmd_pool
  * @public @memberof vk_cmd_pool
  */
 XRT_CHECK_RESULT VkResult
-vk_cmd_pool_init(struct vk_bundle *vk, struct vk_cmd_pool *pool, VkCommandPoolCreateFlags flags);
+vk_cmd_pool_init_for_queue(struct vk_bundle *vk,
+                           struct vk_cmd_pool *pool,
+                           VkCommandPoolCreateFlags flags,
+                           struct vk_bundle_queue *queue);
+
+/*!
+ * Create a command buffer pool.
+ *
+ * @public @memberof vk_cmd_pool
+ */
+static inline XRT_CHECK_RESULT VkResult
+vk_cmd_pool_init(struct vk_bundle *vk, struct vk_cmd_pool *pool, VkCommandPoolCreateFlags flags)
+{
+	return vk_cmd_pool_init_for_queue(vk, pool, flags, vk->main_queue);
+}
 
 /*!
  * Destroy a command buffer pool, lock must not be held, externally
@@ -113,7 +138,7 @@ vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk,
                                                        struct vk_cmd_pool *pool,
                                                        VkCommandBuffer cmd_buffer)
 {
-	return vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(vk, pool->pool, cmd_buffer);
+	return vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(vk, pool->queue, pool->pool, cmd_buffer);
 }
 
 /*!
@@ -184,7 +209,7 @@ vk_cmd_pool_submit(
     struct vk_bundle *vk, struct vk_cmd_pool *pool, uint32_t count, const VkSubmitInfo *infos, VkFence fence)
 {
 	vk_cmd_pool_lock(pool);
-	VkResult ret = vk_cmd_submit_locked(vk, count, infos, fence);
+	VkResult ret = vk_cmd_submit_locked(vk, pool->queue, count, infos, fence);
 	vk_cmd_pool_unlock(pool);
 	return ret;
 }

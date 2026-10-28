@@ -1,0 +1,19 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"instance_get_shm_fd": {
+		"out_handles": {"type": "xrt_shmem_handle_t"}
+	},
+
+	"instance_describe_client": {
+		"in": [
+			{"name": "desc", "type": "struct ipc_client_description"}
+		]
+	},
+
+	"instance_is_system_available": {
+		"out": [
+			{"name": "available", "type": "bool"}
+		]
+	}
+}

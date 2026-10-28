@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2020-2025, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 // Author: Rylie Pavlik <rylie.pavlik@collabora.com>
 
@@ -22,6 +22,8 @@ Context::Meta::Meta(bool deferDrop)
           classRef().getMethod("getClassLoader", "()Ljava/lang/ClassLoader;")),
       getExternalFilesDir(classRef().getMethod(
           "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;")),
+      getFilesDir(classRef().getMethod(
+          "getFilesDir", "()Ljava/io/File;")),
       startActivity(
           classRef().getMethod("startActivity", "(Landroid/content/Intent;)V")),
       startActivity1(classRef().getMethod(

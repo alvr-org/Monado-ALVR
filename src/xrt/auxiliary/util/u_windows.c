@@ -137,7 +137,8 @@ enable_privilege_on_process(HANDLE hProcess, LPCTSTR lpszPrivilege)
 bool
 try_to_grant_privilege(enum u_logging_level log_level, HANDLE hProcess, LPCTSTR lpszPrivilege)
 {
-	BOOL bRet, bHas;
+	XRT_MAYBE_UNUSED BOOL bRet;
+	BOOL bHas;
 
 	if (check_privilege_on_process(hProcess, lpszPrivilege, &bHas)) {
 		LOG_D("%s: %s", lpszPrivilege, bHas ? "true" : "false");

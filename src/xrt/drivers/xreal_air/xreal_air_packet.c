@@ -1,9 +1,9 @@
-// Copyright 2023-2024, Tobias Frisch
+// Copyright 2023-2025, Tobias Frisch
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Xreal Air packet parsing implementation.
- * @author Tobias Frisch <thejackimonster@gmail.com>
+ * @author Tobias Frisch <jacki@thejackimonster.de>
  * @ingroup drv_xreal_air
  */
 
@@ -227,21 +227,9 @@ read_sample(const uint8_t **buffer, struct xreal_air_parsed_sample *sample)
 	read_i15_to_i32(buffer, &sample->mag.z);
 }
 
-
-/*
- *
- * Exported functions.
- *
- */
-
-bool
-xreal_air_parse_calibration_buffer(struct xreal_air_parsed_calibration *calibration, const char *buffer, size_t size)
+static void
+parse_calibration_json(struct xreal_air_parsed_calibration *calibration, cJSON *dev1)
 {
-	cJSON *root = cJSON_ParseWithLength(buffer, size);
-
-	cJSON *imu = cJSON_GetObjectItem(root, "IMU");
-	cJSON *dev1 = cJSON_GetObjectItem(imu, "device_1");
-
 	read_json_vec3(dev1, "accel_bias", &calibration->accel_bias);
 	read_json_quat(dev1, "accel_q_gyro", &calibration->accel_q_gyro);
 	read_json_vec3(dev1, "gyro_bias", &calibration->gyro_bias);
@@ -253,17 +241,48 @@ xreal_air_parse_calibration_buffer(struct xreal_air_parsed_calibration *calibrat
 	read_json_vec3(dev1, "scale_mag", &calibration->scale_mag);
 
 	read_json_array(dev1, "imu_noises", 4, calibration->imu_noises);
-
-	cJSON_Delete(root);
-	return true;
 }
 
+
+/*
+ *
+ * Exported functions.
+ *
+ */
+#include <stdio.h>
+
 bool
-xreal_air_parse_sensor_packet(struct xreal_air_parsed_sensor *sensor, const uint8_t *buffer, int size)
+xreal_air_parse_calibration_buffer(struct xreal_air_parsed_calibration *calibration, const char *buffer, size_t size)
+{
+	bool result = false;
+
+	cJSON *root = cJSON_ParseWithLength(buffer, size);
+	cJSON *imu = cJSON_GetObjectItem(root, "IMU");
+
+	if (imu) {
+		cJSON *dev1 = cJSON_GetObjectItem(imu, "device_1");
+
+		if (dev1) {
+			parse_calibration_json(calibration, dev1);
+			result = true;
+		}
+	}
+
+	cJSON_Delete(root);
+	return result;
+}
+
+#include <stdio.h>
+
+bool
+xreal_air_parse_sensor_packet(struct xreal_air_parsed_sensor *sensor,
+                              const uint8_t *buffer,
+                              size_t size,
+                              size_t max_size)
 {
 	const uint8_t *start = buffer;
 
-	if (size != 64) {
+	if ((size != max_size) || (size < 64)) {
 		return false;
 	}
 
@@ -295,11 +314,12 @@ xreal_air_parse_sensor_packet(struct xreal_air_parsed_sensor *sensor, const uint
 bool
 xreal_air_parse_sensor_control_data_packet(struct xreal_air_parsed_sensor_control_data *data,
                                            const uint8_t *buffer,
-                                           int size)
+                                           size_t size,
+                                           size_t max_size)
 {
 	const uint8_t *start = buffer;
 
-	if (size != 64) {
+	if ((size != max_size) || (size < 8)) {
 		return false;
 	}
 
@@ -316,9 +336,9 @@ xreal_air_parse_sensor_control_data_packet(struct xreal_air_parsed_sensor_contro
 	read_u8(&buffer, &data->msgid);
 
 	// Sensor control data depending on action
-	read_u8_array(&buffer, data->data, 56);
+	read_u8_array(&buffer, data->data, size - 8);
 
-	return (size_t)buffer - (size_t)start == 64;
+	return (size_t)buffer - (size_t)start == max_size;
 }
 
 bool

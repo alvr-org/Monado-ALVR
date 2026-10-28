@@ -1,9 +1,10 @@
 // Copyright 2022-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Builder for SimulaVR devices
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup xrt_iface
  */
 
@@ -15,15 +16,16 @@
 #include "xrt/xrt_config_drivers.h"
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_prober.h"
+#include "xrt/xrt_system.h"
 
-#include "util/u_builders.h"
 #include "util/u_config_json.h"
 #include "util/u_debug.h"
 #include "util/u_device.h"
 #include "util/u_sink.h"
-#include "util/u_system_helpers.h"
 #include "util/u_file.h"
+#include "util/u_builder_search.h"
 
+#include "target_builder_helpers.h"
 #include "target_builder_interface.h"
 
 #include "simula/svr_interface.h"
@@ -51,7 +53,7 @@ static const char *driver_list[] = {
 
 struct simula_builder
 {
-	struct u_builder base;
+	struct t_builder base;
 
 	struct svr_two_displays_distortion display_distortion;
 };
@@ -71,7 +73,7 @@ process_poly_values(const cJSON *values, struct svr_display_distortion_polynomia
 static bool
 process_config(const char *config_path, struct svr_two_displays_distortion *out_dist)
 {
-	char *file_content = u_file_read_content_from_path(config_path);
+	char *file_content = u_file_read_content_from_path(config_path, NULL);
 	if (file_content == NULL) {
 		U_LOG_E("The file at \"%s\" was unable to load. Either there wasn't a file there or it was empty.",
 		        config_path);
@@ -199,7 +201,7 @@ svr_open_system_impl(struct xrt_builder *xb,
                      struct xrt_tracking_origin *origin,
                      struct xrt_system_devices *xsysd,
                      struct xrt_frame_context *xfctx,
-                     struct u_builder_roles_helper *ubrh)
+                     struct t_builder_options *tbo)
 {
 	struct simula_builder *sb = (struct simula_builder *)xb;
 	xrt_result_t result = XRT_SUCCESS;
@@ -220,10 +222,10 @@ svr_open_system_impl(struct xrt_builder *xb,
 	    XRT_TRACKING_OVERRIDE_ATTACHED, svr_dev, t265_dev, XRT_INPUT_GENERIC_TRACKER_POSE, &ident);
 
 	// Add to device list.
-	xsysd->xdevs[xsysd->xdev_count++] = head_device;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = head_device;
 
 	// Assign to role(s).
-	ubrh->head = head_device;
+	tbo->head = head_device;
 
 end:
 	return result;
@@ -249,14 +251,14 @@ t_builder_simula_create(void)
 
 	// xrt_builder fields.
 	sb->base.base.estimate_system = svr_estimate_system;
-	sb->base.base.open_system = u_builder_open_system_static_roles;
+	sb->base.base.open_system = t_builder_open_system_static_roles;
 	sb->base.base.destroy = svr_destroy;
 	sb->base.base.identifier = "simula";
 	sb->base.base.name = "SimulaVR headset";
 	sb->base.base.driver_identifiers = driver_list;
 	sb->base.base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	// u_builder fields.
+	// t_builder fields.
 	sb->base.open_system_static_roles = svr_open_system_impl;
 
 	return &sb->base.base;

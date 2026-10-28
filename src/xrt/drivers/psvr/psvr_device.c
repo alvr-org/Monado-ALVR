@@ -376,11 +376,9 @@ handle_tracker_sensor_msg(struct psvr_device *psvr, unsigned char *buffer, int s
 	// Simplest is the buttons.
 	psvr->buttons = s->buttons;
 
-	uint32_t tick_delta = 500;
-
 	// Startup correction, ignore last_sample_tick if zero.
 	if (last_sample_tick > 0) {
-		tick_delta = calc_delta_and_handle_rollover(s->samples[0].tick, last_sample_tick);
+		uint32_t tick_delta = calc_delta_and_handle_rollover(s->samples[0].tick, last_sample_tick);
 
 		// The PSVR device can buffer sensor data from previous
 		// sessions which we can get at the start of new sessions.
@@ -388,7 +386,6 @@ handle_tracker_sensor_msg(struct psvr_device *psvr, unsigned char *buffer, int s
 		// @todo Maybe reset sensor fusion?
 		if (tick_delta < 400 || tick_delta > 600) {
 			PSVR_DEBUG(psvr, "tick_delta = %u", tick_delta);
-			tick_delta = 500;
 		}
 	}
 
@@ -1006,12 +1003,13 @@ psvr_device_destroy(struct xrt_device *xdev)
 	u_device_free(&psvr->base);
 }
 
-static bool
+static xrt_result_t
 psvr_compute_distortion(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
 {
 	struct psvr_device *psvr = psvr_device(xdev);
 
-	return u_compute_distortion_panotools(&psvr->vals, u, v, result);
+	u_compute_distortion_panotools(&psvr->vals, u, v, result);
+	return XRT_SUCCESS;
 }
 
 
@@ -1175,8 +1173,8 @@ psvr_device_create_auto_prober(struct hid_device_info *sensor_hid_info,
 		psvr->base.tracking_origin = psvr->tracker->origin;
 	}
 
-	psvr->base.orientation_tracking_supported = true;
-	psvr->base.position_tracking_supported = psvr->tracker != NULL;
+	psvr->base.supported.orientation_tracking = true;
+	psvr->base.supported.position_tracking = psvr->tracker != NULL;
 	psvr->base.device_type = XRT_DEVICE_TYPE_HMD;
 
 	PSVR_DEBUG(psvr, "YES!");

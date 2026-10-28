@@ -37,6 +37,7 @@
 #include "util/u_trace_marker.h"
 #include "util/u_distortion_mesh.h"
 #include "util/u_sink.h"
+#include "util/u_pretty_print.h"
 
 #ifdef XRT_OS_LINUX
 #include "util/u_linux.h"
@@ -82,10 +83,6 @@ DEBUG_GET_ONCE_BOOL_OPTION(wmr_handtracking, "WMR_HANDTRACKING", true)
 DEBUG_GET_ONCE_OPTION(slam_submit_from_start, "SLAM_SUBMIT_FROM_START", NULL)
 #endif
 
-//! Specifies the y offset of the views.
-DEBUG_GET_ONCE_NUM_OPTION(left_view_y_offset, "WMR_LEFT_DISPLAY_VIEW_Y_OFFSET", 0)
-DEBUG_GET_ONCE_NUM_OPTION(right_view_y_offset, "WMR_RIGHT_DISPLAY_VIEW_Y_OFFSET", 0)
-
 
 #define WMR_TRACE(d, ...) U_LOG_XDEV_IFL_T(&d->base, d->log_level, __VA_ARGS__)
 #define WMR_DEBUG(d, ...) U_LOG_XDEV_IFL_D(&d->base, d->log_level, __VA_ARGS__)
@@ -121,7 +118,9 @@ const struct wmr_headset_descriptor headset_map[] = {
     {WMR_HEADSET_LENOVO_EXPLORER, "Lenovo VR-2511N", "Lenovo Explorer", NULL, NULL, NULL},
     {WMR_HEADSET_MEDION_ERAZER_X1000, "Medion Erazer X1000", "Medion Erazer", NULL, NULL, NULL},
     {WMR_HEADSET_DELL_VISOR, "DELL VR118", "Dell Visor", NULL, NULL, NULL},
+    {WMR_HEADSET_ACER_AH100, "Acer", "AH100", NULL, NULL, NULL},
     {WMR_HEADSET_ACER_AH101, "Acer", "AH101", NULL, NULL, NULL},
+    {WMR_HEADSET_FUJITSU_FMVHDS1, "Fujitsu", "Fujitsu FMVHDS1", NULL, NULL, NULL},
 };
 const int headset_map_n = sizeof(headset_map) / sizeof(headset_map[0]);
 
@@ -418,7 +417,7 @@ hololens_handle_sensors_avg(struct wmr_hmd *wh, const unsigned char *buffer, int
 	os_mutex_unlock(&wh->fusion.mutex);
 
 	// SLAM tracking
-	wmr_source_push_imu_packet(wh->tracking.source, t, avg_raw_accel, avg_raw_gyro);
+	wmr_source_push_imu_packet(wh->tracking.source, WMR_HMD_IMU_INDEX, t, avg_raw_accel, avg_raw_gyro);
 }
 
 static void
@@ -468,7 +467,7 @@ hololens_handle_sensors_all(struct wmr_hmd *wh, const unsigned char *buffer, int
 	// SLAM tracking
 	for (int i = 0; i < IMU_SAMPLES_PER_PACKET; i++) {
 		timepoint_ns t = wh->packet.gyro_timestamp[i] * WMR_MS_HOLOLENS_NS_PER_TICK;
-		wmr_source_push_imu_packet(wh->tracking.source, t, raw_accel[i], raw_gyro[i]);
+		wmr_source_push_imu_packet(wh->tracking.source, WMR_HMD_IMU_INDEX, t, raw_accel[i], raw_gyro[i]);
 	}
 }
 
@@ -660,7 +659,7 @@ wmr_run_thread(void *ptr)
 	struct wmr_hmd *wh = (struct wmr_hmd *)ptr;
 
 	U_TRACE_SET_THREAD_NAME("WMR: USB-HMD");
-	os_thread_helper_name(&wh->oth, "WMR: USB-HMD");
+	os_thread_name_self("WMR: USB-HMD");
 
 #ifdef XRT_OS_LINUX
 	// Try to raise priority of this thread.
@@ -931,11 +930,9 @@ wmr_read_config_part(struct wmr_hmd *wh, unsigned char type, unsigned char *data
 {
 	DRV_TRACE_MARKER();
 
-	unsigned char buf[33];
-	int offset = 0;
-	int size;
+	unsigned char buf[33] = {0};
 
-	size = wmr_config_command_sync(wh, 0x0b, buf, sizeof(buf));
+	int size = wmr_config_command_sync(wh, 0x0b, buf, sizeof(buf));
 	if (size != 33 || buf[0] != 0x02) {
 		WMR_ERROR(wh, "Failed to issue command 0b: %02x %02x %02x", buf[0], buf[1], buf[2]);
 		return -1;
@@ -947,6 +944,7 @@ wmr_read_config_part(struct wmr_hmd *wh, unsigned char type, unsigned char *data
 		return -1;
 	}
 
+	int offset = 0;
 	while (true) {
 		size = wmr_config_command_sync(wh, 0x08, buf, sizeof(buf));
 		if (size != 33 || (buf[1] != 0x01 && buf[1] != 0x02)) {
@@ -975,24 +973,20 @@ wmr_read_config_raw(struct wmr_hmd *wh, uint8_t **out_data, size_t *out_size)
 {
 	DRV_TRACE_MARKER();
 
-	unsigned char meta[84];
-	uint8_t *data;
-	int size;
-	int data_size;
-
-	size = wmr_read_config_part(wh, 0x06, meta, sizeof(meta));
+	unsigned char meta[84] = {0};
+	int size = wmr_read_config_part(wh, 0x06, meta, sizeof(meta));
 	WMR_DEBUG(wh, "(0x06, meta) => %d", size);
-
-	if (size < 0) {
-		return -1;
-	}
 
 	/*
 	 * No idea what the other 64 bytes of metadata are, but the first two
 	 * seem to be little endian size of the data store.
 	 */
-	data_size = meta[0] | (meta[1] << 8);
-	data = calloc(1, data_size + 1);
+	if (size < 2) {
+		return -1;
+	}
+
+	int data_size = meta[0] | (meta[1] << 8);
+	uint8_t *data = calloc(1, data_size + 1);
 	if (!data) {
 		return -1;
 	}
@@ -1245,154 +1239,6 @@ wmr_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&wh->base);
 }
 
-static bool
-compute_distortion_wmr(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
-{
-	DRV_TRACE_MARKER();
-
-	struct wmr_hmd *wh = wmr_hmd(xdev);
-
-	assert(view == 0 || view == 1);
-
-	const struct wmr_distortion_eye_config *ec = wh->config.eye_params + view;
-	struct wmr_hmd_distortion_params *distortion_params = wh->distortion_params + view;
-
-	// Results r/g/b.
-	struct xrt_vec2 tc[3];
-
-	// Dear compiler, please vectorize.
-	for (int i = 0; i < 3; i++) {
-		const struct wmr_distortion_3K *distortion3K = ec->distortion3K + i;
-
-		/* Scale the 0..1 input UV back to pixels relative to the distortion center,
-		 * accounting for the right eye starting at X = panel_width / 2.0 */
-		struct xrt_vec2 pix_coord = {(u + 1.0f * view) * (ec->display_size.x / 2.0f) -
-		                                 distortion3K->eye_center.x,
-		                             v * ec->display_size.y - distortion3K->eye_center.y};
-
-		if (view == 0) {
-			pix_coord.y += (float)wh->left_view_y_offset;
-		} else if (view == 1) {
-			pix_coord.y += (float)wh->right_view_y_offset;
-		}
-
-		float r2 = m_vec2_dot(pix_coord, pix_coord);
-		float k1 = (float)distortion3K->k[0];
-		float k2 = (float)distortion3K->k[1];
-		float k3 = (float)distortion3K->k[2];
-
-		float d = 1.0f + r2 * (k1 + r2 * (k2 + r2 * k3));
-
-		/* Map the distorted pixel coordinate back to normalised view plane coords using the inverse affine
-		 * xform */
-		struct xrt_vec3 p = {(pix_coord.x * d + distortion3K->eye_center.x),
-		                     (pix_coord.y * d + distortion3K->eye_center.y), 1.0f};
-		struct xrt_vec3 vp;
-		math_matrix_3x3_transform_vec3(&distortion_params->inv_affine_xform, &p, &vp);
-
-		/* Finally map back to the input texture 0..1 range based on the render FoV (from tex_N_range.x ..
-		 * tex_N_range.y) */
-		tc[i].x = ((vp.x / vp.z) - distortion_params->tex_x_range.x) /
-		          (distortion_params->tex_x_range.y - distortion_params->tex_x_range.x);
-		tc[i].y = ((vp.y / vp.z) - distortion_params->tex_y_range.x) /
-		          (distortion_params->tex_y_range.y - distortion_params->tex_y_range.x);
-	}
-
-	result->r = tc[0];
-	result->g = tc[1];
-	result->b = tc[2];
-
-	return true;
-}
-
-/*
- * Compute the visible area bounds by calculating the X/Y limits of a
- * crosshair through the distortion center, and back-project to the render FoV,
- */
-static void
-compute_distortion_bounds(struct wmr_hmd *wh,
-                          int view,
-                          float *out_angle_left,
-                          float *out_angle_right,
-                          float *out_angle_down,
-                          float *out_angle_up)
-{
-	DRV_TRACE_MARKER();
-
-	assert(view == 0 || view == 1);
-
-	float tanangle_left = 0.0f;
-	float tanangle_right = 0.0f;
-	float tanangle_up = 0.0f;
-	float tanangle_down = 0.0f;
-
-	const struct wmr_distortion_eye_config *ec = wh->config.eye_params + view;
-	struct wmr_hmd_distortion_params *distortion_params = wh->distortion_params + view;
-
-	for (int i = 0; i < 3; i++) {
-		const struct wmr_distortion_3K *distortion3K = ec->distortion3K + i;
-
-		/* The X coords start at 0 for the left eye, and display_size.x / 2.0 for the right */
-		const struct xrt_vec2 pix_coords[4] = {
-		    /* -eye_center_x, 0 */
-		    {(1.0f * view) * (ec->display_size.x / 2.0f) - distortion3K->eye_center.x, 0.0f},
-		    /* 0, -eye_center_y */
-		    {0.0f, -distortion3K->eye_center.y},
-		    /* width-eye_center_x, 0 */
-		    {(1.0f + 1.0f * view) * (ec->display_size.x / 2.0f) - distortion3K->eye_center.x, 0.0f},
-		    /* 0, height-eye_center_y */
-		    {0.0f, ec->display_size.y - distortion3K->eye_center.y},
-		};
-
-		for (int c = 0; c < 4; c++) {
-			const struct xrt_vec2 pix_coord = pix_coords[c];
-
-			float k1 = distortion3K->k[0];
-			float k2 = distortion3K->k[1];
-			float k3 = distortion3K->k[2];
-
-			float r2 = m_vec2_dot(pix_coord, pix_coord);
-
-			/* distort the pixel */
-			float d = 1.0f + r2 * (k1 + r2 * (k2 + r2 * k3));
-
-			/* Map the distorted pixel coordinate back to normalised view plane coords using the inverse
-			 * affine xform */
-			struct xrt_vec3 p = {(pix_coord.x * d + distortion3K->eye_center.x),
-			                     (pix_coord.y * d + distortion3K->eye_center.y), 1.0f};
-			struct xrt_vec3 vp;
-
-			math_matrix_3x3_transform_vec3(&distortion_params->inv_affine_xform, &p, &vp);
-			vp.x /= vp.z;
-			vp.y /= vp.z;
-
-			if (pix_coord.x < 0.0f) {
-				if (vp.x < tanangle_left)
-					tanangle_left = vp.x;
-			} else {
-				if (vp.x > tanangle_right)
-					tanangle_right = vp.x;
-			}
-
-			if (pix_coord.y < 0.0f) {
-				if (vp.y < tanangle_up)
-					tanangle_up = vp.y;
-			} else {
-				if (vp.y > tanangle_down)
-					tanangle_down = vp.y;
-			}
-
-			WMR_DEBUG(wh, "channel %d delta coord %f, %f d pixel %f %f, %f -> %f, %f", i, pix_coord.x,
-			          pix_coord.y, d, p.x, p.y, vp.x, vp.y);
-		}
-	}
-
-	*out_angle_left = atanf(tanangle_left);
-	*out_angle_right = atanf(tanangle_right);
-	*out_angle_down = -atanf(tanangle_down);
-	*out_angle_up = -atanf(tanangle_up);
-}
-
 XRT_MAYBE_UNUSED static struct t_camera_calibration
 wmr_hmd_get_cam_calib(struct wmr_hmd *wh, int cam_index)
 {
@@ -1575,14 +1421,14 @@ wmr_hmd_get_imu_calib(struct wmr_hmd *wh)
 	        {
 	            .transform = {{at[0], at[1], at[2]}, {at[3], at[4], at[5]}, {at[6], at[7], at[8]}},
 	            .offset = {-ao.x, -ao.y, -ao.z}, // negative because slam system will add, not subtract
-	            .bias_std = {sqrt(ab.x), sqrt(ab.y), sqrt(ab.z)}, // sqrt because we want stdev not variance
+	            .bias_std = {sqrtf(ab.x), sqrtf(ab.y), sqrtf(ab.z)}, // sqrt because we want stdev not variance
 	            .noise_std = {an.x, an.y, an.z},
 	        },
 	    .gyro =
 	        {
 	            .transform = {{gt[0], gt[1], gt[2]}, {gt[3], gt[4], gt[5]}, {gt[6], gt[7], gt[8]}},
 	            .offset = {-go.x, -go.y, -go.z},
-	            .bias_std = {sqrt(gb.x), sqrt(gb.y), sqrt(gb.z)},
+	            .bias_std = {sqrtf(gb.x), sqrtf(gb.y), sqrtf(gb.z)},
 	            .noise_std = {gn.x, gn.y, gn.z},
 	        },
 	};
@@ -1703,7 +1549,7 @@ wmr_hmd_guess_camera_orientation(struct wmr_hmd *wh)
 static int
 wmr_hmd_hand_track(struct wmr_hmd *wh,
                    struct t_stereo_camera_calibration *stereo_calib,
-                   struct xrt_hand_masks_sink *masks_sink,
+                   struct xrt_device_masks_sink *masks_sink,
                    struct xrt_slam_sinks **out_sinks,
                    struct xrt_device **out_device)
 {
@@ -1838,9 +1684,9 @@ wmr_hmd_setup_trackers(struct wmr_hmd *wh, struct xrt_slam_sinks *out_sinks, str
 #endif
 	bool hand_enabled = hand_supported && hand_wanted;
 
-	wh->base.orientation_tracking_supported = dof3_enabled || slam_enabled;
-	wh->base.position_tracking_supported = slam_enabled;
-	wh->base.hand_tracking_supported = false; // out_handtracker will handle it
+	wh->base.supported.orientation_tracking = dof3_enabled || slam_enabled;
+	wh->base.supported.position_tracking = slam_enabled;
+	wh->base.supported.hand_tracking = false; // out_handtracker will handle it
 
 	wh->tracking.slam_enabled = slam_enabled;
 	wh->tracking.hand_enabled = hand_enabled;
@@ -1882,7 +1728,7 @@ wmr_hmd_setup_trackers(struct wmr_hmd *wh, struct xrt_slam_sinks *out_sinks, str
 	// Initialize hand tracker
 	struct xrt_slam_sinks *hand_sinks = NULL;
 	struct xrt_device *hand_device = NULL;
-	struct xrt_hand_masks_sink *masks_sink = slam_sinks ? slam_sinks->hand_masks : NULL;
+	struct xrt_device_masks_sink *masks_sink = slam_sinks ? slam_sinks->masks[0] : NULL;
 	if (wh->tracking.hand_enabled) {
 		int hand_status = wmr_hmd_hand_track(wh, stereo_calib, masks_sink, &hand_sinks, &hand_device);
 		if (hand_status != 0 || hand_sinks == NULL || hand_device == NULL) {
@@ -1926,6 +1772,43 @@ wmr_hmd_request_controller_status(struct wmr_hmd *wh)
 	return wmr_hmd_send_controller_packet(wh, cmd, sizeof(cmd));
 }
 
+static xrt_result_t
+compute_distortion_wmr(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
+{
+	struct wmr_hmd *wh = wmr_hmd(xdev);
+
+	u_compute_distortion_poly_3k(&wh->config.eye_params[view].poly_3k, view, u, v, out_result);
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
+get_compositor_info_wmr(struct xrt_device *xdev,
+                        const struct xrt_device_compositor_mode *mode,
+                        struct xrt_device_compositor_info *out_info)
+{
+	struct wmr_hmd *wh = wmr_hmd(xdev);
+
+	double scanout_multiplier = 0.0;
+	enum xrt_panel_refresh_type refresh_mode = XRT_PANEL_REFRESH_TYPE_GLOBAL;
+	enum xrt_scanout_direction scanout_direction = XRT_SCANOUT_DIRECTION_NONE;
+
+	if (wh->hmd_desc->hmd_type == WMR_HEADSET_SAMSUNG_800ZAA ||
+	    wh->hmd_desc->hmd_type == WMR_HEADSET_SAMSUNG_XE700X3AI) {
+		refresh_mode = XRT_PANEL_REFRESH_TYPE_ROLLING;
+		scanout_direction = XRT_SCANOUT_DIRECTION_TOP_TO_BOTTOM;
+		scanout_multiplier = 1600.0 / 1624.0;
+	}
+
+	*out_info = (struct xrt_device_compositor_info){
+	    .panel_refresh_type = refresh_mode,
+	    .scanout_direction = scanout_direction,
+	    .scanout_time_ns = (int64_t)(mode->frame_interval_ns * scanout_multiplier),
+	};
+
+	return XRT_SUCCESS;
+}
+
 void
 wmr_hmd_create(enum wmr_headset_type hmd_type,
                struct os_hid_device *hid_holo,
@@ -1955,12 +1838,12 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 	wh->base.get_tracked_pose = wmr_hmd_get_tracked_pose;
 	wh->base.get_view_poses = u_device_get_view_poses;
 	wh->base.destroy = wmr_hmd_destroy;
+	wh->base.get_compositor_info = get_compositor_info_wmr;
 	wh->base.name = XRT_DEVICE_GENERIC_HMD;
 	wh->base.device_type = XRT_DEVICE_TYPE_HMD;
 	wh->log_level = log_level;
 
-	wh->left_view_y_offset = debug_get_num_option_left_view_y_offset();
-	wh->right_view_y_offset = debug_get_num_option_right_view_y_offset();
+	wh->base.supported.compositor_info = true;
 
 	wh->hid_hololens_sensors_dev = hid_holo;
 	wh->hid_control_dev = hid_ctrl;
@@ -2042,7 +1925,7 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 		}
 
 		if (cur->dev_id_str && strncmp(wh->config_hdr.name, cur->dev_id_str, 64) == 0) {
-			hmd_type = cur->hmd_type;
+			assert(hmd_type == cur->hmd_type);
 			wh->hmd_desc = cur;
 			break;
 		}
@@ -2065,26 +1948,17 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 
 	// Distortion information, fills in xdev->compute_distortion().
 	for (eye = 0; eye < 2; eye++) {
-		math_matrix_3x3_inverse(&wh->config.eye_params[eye].affine_xform,
-		                        &wh->distortion_params[eye].inv_affine_xform);
+		struct xrt_fov *fov = &wh->base.hmd->distortion.fov[eye];
+		struct u_poly_3k_eye_values *poly_3k = &wh->config.eye_params[eye].poly_3k;
 
-		compute_distortion_bounds(wh, eye, &wh->base.hmd->distortion.fov[eye].angle_left,
-		                          &wh->base.hmd->distortion.fov[eye].angle_right,
-		                          &wh->base.hmd->distortion.fov[eye].angle_down,
-		                          &wh->base.hmd->distortion.fov[eye].angle_up);
+		u_compute_distortion_bounds_poly_3k(&poly_3k->inv_affine_xform, poly_3k->channels, eye, fov,
+		                                    &poly_3k->tex_x_range, &poly_3k->tex_y_range);
 
-		WMR_INFO(wh, "FoV eye %d angles left %f right %f down %f up %f", eye,
-		         wh->base.hmd->distortion.fov[eye].angle_left, wh->base.hmd->distortion.fov[eye].angle_right,
-		         wh->base.hmd->distortion.fov[eye].angle_down, wh->base.hmd->distortion.fov[eye].angle_up);
+		WMR_INFO(wh, "FoV eye %d angles left %f right %f down %f up %f", eye, fov->angle_left, fov->angle_right,
+		         fov->angle_down, fov->angle_up);
 
-		wh->distortion_params[eye].tex_x_range.x = tanf(wh->base.hmd->distortion.fov[eye].angle_left);
-		wh->distortion_params[eye].tex_x_range.y = tanf(wh->base.hmd->distortion.fov[eye].angle_right);
-		wh->distortion_params[eye].tex_y_range.x = tanf(wh->base.hmd->distortion.fov[eye].angle_down);
-		wh->distortion_params[eye].tex_y_range.y = tanf(wh->base.hmd->distortion.fov[eye].angle_up);
-
-		WMR_INFO(wh, "Render texture range %f, %f to %f, %f", wh->distortion_params[eye].tex_x_range.x,
-		         wh->distortion_params[eye].tex_y_range.x, wh->distortion_params[eye].tex_x_range.y,
-		         wh->distortion_params[eye].tex_y_range.y);
+		WMR_INFO(wh, "Render texture range %f, %f to %f, %f", poly_3k->tex_x_range.x, poly_3k->tex_y_range.x,
+		         poly_3k->tex_x_range.y, poly_3k->tex_y_range.y);
 	}
 
 	wh->base.hmd->distortion.models = XRT_DISTORTION_MODEL_COMPUTE;
@@ -2119,10 +1993,10 @@ wmr_hmd_create(enum wmr_headset_type hmd_type,
 	}
 
 	// Stream data source into sinks (if populated)
-	bool stream_started = xrt_fs_slam_stream_start(wh->tracking.source, &sinks);
-	if (!stream_started) {
+	xrt_result_t xret = xrt_fs_slam_stream_start(wh->tracking.source, &sinks);
+	if (xret != XRT_SUCCESS) {
 		//! @todo Could reach this due to !XRT_HAVE_LIBUSB but the HMD should keep working
-		WMR_WARN(wh, "Failed to start WMR source");
+		WMR_WARN(wh, "Failed to start WMR source, got %s", u_str_xrt_result(xret));
 		wmr_hmd_destroy(&wh->base);
 		wh = NULL;
 		return;

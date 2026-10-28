@@ -1,4 +1,5 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -93,7 +94,7 @@ cli_cmd_test(int argc, const char **argv)
 		printf("\tNo xrt_system_devices returned!\n");
 		return do_exit(&xi, -1);
 	}
-	if (xsysd->xdevs[0] == NULL) {
+	if (xsysd->static_xdevs[0] == NULL) {
 		printf("\tNo HMD found! :(\n");
 		return do_exit(&xi, -1);
 	}
@@ -101,11 +102,11 @@ cli_cmd_test(int argc, const char **argv)
 	printf(" :: Listing created devices!\n");
 
 	for (uint32_t i = 0; i < XRT_SYSTEM_MAX_DEVICES; i++) {
-		if (xsysd->xdevs[i] == NULL) {
+		if (xsysd->static_xdevs[i] == NULL) {
 			continue;
 		}
 
-		printf("\t%2u: %s\n", i, xsysd->xdevs[i]->str);
+		printf("\t%2u: %s\n", i, xsysd->static_xdevs[i]->str);
 	}
 
 	struct xrt_system_roles roles = XRT_SYSTEM_ROLES_INIT;
@@ -127,7 +128,7 @@ cli_cmd_test(int argc, const char **argv)
 		if (roles.ROLE < 0) {                                                                                  \
 			printf("\t" #ROLE ": " PAD "<none>\n");                                                        \
 		} else {                                                                                               \
-			printf("\t" #ROLE ": " PAD "%s\n", xsysd->xdevs[roles.ROLE]->str);                             \
+			printf("\t" #ROLE ": " PAD "%s\n", xsysd->static_xdevs[roles.ROLE]->str);                      \
 		}                                                                                                      \
 	} while (false)
 
@@ -138,9 +139,10 @@ cli_cmd_test(int argc, const char **argv)
 	PRINT_DYNR(left, "               ");
 	PRINT_DYNR(right, "              ");
 	PRINT_DYNR(gamepad, "            ");
-	PRINT_ROLE(hand_tracking.left, " ");
-	PRINT_ROLE(hand_tracking.right, "");
-
+	PRINT_ROLE(hand_tracking.unobstructed.left, " ");
+	PRINT_ROLE(hand_tracking.unobstructed.right, "");
+	PRINT_ROLE(hand_tracking.conforming.left, " ");
+	PRINT_ROLE(hand_tracking.conforming.right, "");
 
 	// End of program
 	printf(" :: All ok, shutting down.\n");

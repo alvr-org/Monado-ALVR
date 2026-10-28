@@ -17,6 +17,7 @@
 #include "util/u_format.h"
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
+#include "util/u_frameserver.h"
 
 #include "v4l2_interface.h"
 #include "v4l2_driver.h"
@@ -30,6 +31,14 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+
+/**
+ * On musl libc, the ioctl function operation is an int, where as glic takes an unsigned long.
+ * This requires casting to avoid warnings.
+ */
+#ifndef __GLIBC__
+#define ioctl(fd, op, ...) ioctl(fd, (int)(op), __VA_ARGS__)
+#endif
 
 
 /*
@@ -386,6 +395,7 @@ v4l2_list_modes_size(struct v4l2_fs *vid, const struct v4l2_fmtdesc *fmt, const 
 	case V4L2_PIX_FMT_YUYV: format = XRT_FORMAT_YUYV422; break;
 	case V4L2_PIX_FMT_UYVY: format = XRT_FORMAT_UYVY422; break;
 	case V4L2_PIX_FMT_MJPEG: format = XRT_FORMAT_MJPEG; break;
+	case V4L2_PIX_FMT_SGRBG8: format = XRT_FORMAT_BAYER_GR8; break;
 	default: V4L2_ERROR(vid, "error: Format not supported."); return;
 	}
 
@@ -419,6 +429,7 @@ v4l2_list_modes_fmt(struct v4l2_fs *vid, const struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_YUYV: break;
 	case V4L2_PIX_FMT_UYVY: break;
 	case V4L2_PIX_FMT_MJPEG: break;
+	case V4L2_PIX_FMT_SGRBG8: break;
 	default: V4L2_ERROR(vid, "error: Unknown pixelformat '%s' '%08x'", fmt->description, fmt->pixelformat); return;
 	}
 
@@ -529,17 +540,19 @@ v4l2_fs_setup_format(struct v4l2_fs *vid)
  *
  */
 
-static bool
+static xrt_result_t
 v4l2_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count)
 {
 	struct v4l2_fs *vid = v4l2_fs(xfs);
 	if (vid->num_descriptors == 0) {
-		return false;
+		(*out_count) = 0;
+		(*out_modes) = NULL;
+		return XRT_SUCCESS;
 	}
 
 	struct xrt_fs_mode *modes = U_TYPED_ARRAY_CALLOC(struct xrt_fs_mode, vid->num_descriptors);
 	if (modes == NULL) {
-		return false;
+		return XRT_ERROR_ALLOCATION;
 	}
 
 	for (uint32_t i = 0; i < vid->num_descriptors; i++) {
@@ -549,18 +562,18 @@ v4l2_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint
 	*out_modes = modes;
 	*out_count = vid->num_descriptors;
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 v4l2_fs_configure_capture(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp)
 {
 	// struct v4l2_fs *vid = v4l2_fs(xfs);
 	//! @todo
-	return false;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 v4l2_fs_stream_start(struct xrt_fs *xfs,
                      struct xrt_frame_sink *xs,
                      enum xrt_fs_capture_type capture_type,
@@ -570,7 +583,7 @@ v4l2_fs_stream_start(struct xrt_fs *xfs,
 
 	if (descriptor_index >= vid->num_descriptors) {
 		V4L2_ERROR(vid, "error Invalid descriptor_index (%i >= %i)", descriptor_index, vid->num_descriptors);
-		return false;
+		return XRT_ERROR_INVALID_ARGUMENT;
 	}
 	vid->selected = descriptor_index;
 
@@ -580,42 +593,44 @@ v4l2_fs_stream_start(struct xrt_fs *xfs,
 
 	if (!v4l2_fs_setup_format(vid)) {
 		vid->is_running = false;
-		return false;
+		return XRT_ERROR_STREAMING_START_FAILED;
 	}
 
 	if (pthread_create(&vid->stream_thread, NULL, v4l2_fs_mainloop, xfs)) {
 		vid->is_running = false;
 		V4L2_ERROR(vid, "error: Could not create thread");
-		return false;
+		return XRT_ERROR_THREADING_INIT_FAILURE;
 	}
 
 	V4L2_TRACE(vid, "info: Started!");
 
 	// we're off to the races!
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 v4l2_fs_stream_stop(struct xrt_fs *xfs)
 {
 	struct v4l2_fs *vid = v4l2_fs(xfs);
 
 	if (!vid->is_running) {
-		return true;
+		return XRT_SUCCESS;
 	}
 
 	vid->is_running = false;
 	pthread_join(vid->stream_thread, NULL);
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
-v4l2_fs_is_running(struct xrt_fs *xfs)
+static xrt_result_t
+v4l2_fs_is_running(struct xrt_fs *xfs, bool *out_is_running)
 {
 	struct v4l2_fs *vid = v4l2_fs(xfs);
 
-	return vid->is_running;
+	(*out_is_running) = vid->is_running;
+
+	return XRT_SUCCESS;
 }
 
 static void
@@ -673,6 +688,7 @@ v4l2_fs_create(struct xrt_frame_context *xfctx,
                const char *serial)
 {
 	struct v4l2_fs *vid = U_TYPED_CALLOC(struct v4l2_fs);
+	u_frameserver_populate_function_pointers(&vid->base);
 	vid->base.enumerate_modes = v4l2_fs_enumerate_modes;
 	vid->base.configure_capture = v4l2_fs_configure_capture;
 	vid->base.stream_start = v4l2_fs_stream_start;
@@ -892,10 +908,9 @@ dump_menu(struct v4l2_fs *vid, uint32_t id, uint32_t min, uint32_t max)
 static void
 dump_contron_name(uint32_t id)
 {
-	const char *str = "ERROR";
 	switch (id) {
 #define CASE(CONTROL)                                                                                                  \
-	case V4L2_CID_##CONTROL: str = "V4L2_CID_" #CONTROL; break
+	case V4L2_CID_##CONTROL: fprintf(stderr, "V4L2_CID" #CONTROL); break;
 		CASE(BRIGHTNESS);
 		CASE(CONTRAST);
 		CASE(SATURATION);
@@ -966,9 +981,8 @@ dump_contron_name(uint32_t id)
 		CASE(IRIS_ABSOLUTE);
 		CASE(IRIS_RELATIVE);
 #undef CASE
-	default: fprintf(stderr, "0x%08x", id); return;
+	default: fprintf(stderr, "0x%08x", id); break;
 	}
-	fprintf(stderr, "%s", str);
 }
 
 static void

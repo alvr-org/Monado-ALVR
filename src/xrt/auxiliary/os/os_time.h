@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -22,7 +23,15 @@
 
 #include "util/u_time.h"
 
-#ifdef XRT_OS_LINUX
+
+#if defined(XRT_OS_OSX)
+#include <time.h>
+#include <sys/time.h>
+#include <mach/mach_time.h>
+#define XRT_HAVE_TIMESPEC
+#define XRT_HAVE_TIMEVAL
+
+#elif defined(XRT_OS_LINUX)
 #include <time.h>
 #include <sys/time.h>
 #define XRT_HAVE_TIMESPEC
@@ -155,9 +164,9 @@ static inline int64_t
 os_timeval_to_ns(struct timeval *val);
 #endif
 
-#if defined(XRT_OS_LINUX) || defined(XRT_DOXYGEN)
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX) || defined(XRT_DOXYGEN)
 /*!
- * Return a realtime clock in nanoseconds (Linux-only)
+ * Return a realtime clock in nanoseconds (Linux and OSX)
  *
  * @ingroup aux_os_time_extra
  */
@@ -194,13 +203,15 @@ os_ns_per_qpc_tick_get(void);
 static inline void
 os_nanosleep(int64_t nsec)
 {
-#if defined(XRT_OS_LINUX)
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 	struct timespec spec;
-	spec.tv_sec = (nsec / U_1_000_000_000);
-	spec.tv_nsec = (nsec % U_1_000_000_000);
+	spec.tv_sec = (nsec / U_TIME_1S_IN_NS);
+	spec.tv_nsec = (nsec % U_TIME_1S_IN_NS);
 	nanosleep(&spec, NULL);
 #elif defined(XRT_OS_WINDOWS)
 	Sleep((DWORD)(nsec / U_TIME_1MS_IN_NS));
+#else
+#error "need port"
 #endif
 }
 
@@ -262,7 +273,7 @@ static inline int64_t
 os_timespec_to_ns(const struct timespec *spec)
 {
 	int64_t ns = 0;
-	ns += (int64_t)spec->tv_sec * U_1_000_000_000;
+	ns += (int64_t)spec->tv_sec * U_TIME_1S_IN_NS;
 	ns += (int64_t)spec->tv_nsec;
 	return ns;
 }
@@ -270,22 +281,19 @@ os_timespec_to_ns(const struct timespec *spec)
 static inline void
 os_ns_to_timespec(int64_t ns, struct timespec *spec)
 {
-	spec->tv_sec = (ns / U_1_000_000_000);
-	spec->tv_nsec = (ns % U_1_000_000_000);
+	spec->tv_sec = (ns / U_TIME_1S_IN_NS);
+	spec->tv_nsec = (ns % U_TIME_1S_IN_NS);
 }
 #endif // XRT_HAVE_TIMESPEC
 
-
 #if defined(XRT_HAVE_TIMEVAL) && defined(XRT_OS_LINUX)
-
-#define OS_NS_PER_USEC (1000)
 
 static inline int64_t
 os_timeval_to_ns(struct timeval *val)
 {
 	int64_t ns = 0;
-	ns += (int64_t)val->tv_sec * U_1_000_000_000;
-	ns += (int64_t)val->tv_usec * OS_NS_PER_USEC;
+	ns += (int64_t)val->tv_sec * U_TIME_1S_IN_NS;
+	ns += (int64_t)val->tv_usec * U_TIME_1US_IN_NS;
 	return ns;
 }
 #endif // defined(XRT_HAVE_TIMEVAL) && defined(XRT_OS_LINUX)
@@ -299,7 +307,7 @@ os_ns_per_qpc_tick_get(void)
 		// Fixed at startup, so we can cache this.
 		LARGE_INTEGER freq;
 		QueryPerformanceFrequency(&freq);
-		ns_per_qpc_tick = U_1_000_000_000 / freq.QuadPart;
+		ns_per_qpc_tick = U_TIME_1S_IN_NS / freq.QuadPart;
 	}
 	return ns_per_qpc_tick;
 }
@@ -308,7 +316,7 @@ os_ns_per_qpc_tick_get(void)
 static inline int64_t
 os_monotonic_get_ns(void)
 {
-#if defined(XRT_OS_LINUX)
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 	struct timespec ts;
 	int ret = clock_gettime(CLOCK_MONOTONIC, &ts);
 	if (ret != 0) {
@@ -325,7 +333,7 @@ os_monotonic_get_ns(void)
 #endif
 }
 
-#ifdef XRT_OS_LINUX
+#if defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 static inline int64_t
 os_realtime_get_ns(void)
 {
@@ -337,6 +345,10 @@ os_realtime_get_ns(void)
 
 	return os_timespec_to_ns(&ts);
 }
+#elif defined(XRT_OS_WINDOWS)
+// Not implemented on Windows
+#else
+#error "need port or decide not to implement"
 #endif
 
 

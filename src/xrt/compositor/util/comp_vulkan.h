@@ -1,4 +1,5 @@
 // Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -10,9 +11,12 @@
 #pragma once
 
 #include "xrt/xrt_compositor.h"
+
 #include "util/u_logging.h"
-#include "util/u_string_list.h"
+#include "util/u_extension_list.h"
+
 #include "vk/vk_helpers.h"
+#include "vk/vk_compositor_flags.h"
 
 
 #ifdef __cplusplus
@@ -32,16 +36,16 @@ struct comp_vulkan_arguments
 	PFN_vkGetInstanceProcAddr get_instance_proc_address;
 
 	//! Extensions that the instance is created with.
-	struct u_string_list *required_instance_extensions;
+	struct u_extension_list *required_instance_extensions;
 
 	//! Extensions that the instance is created with.
-	struct u_string_list *optional_instance_extensions;
+	struct u_extension_list *optional_instance_extensions;
 
 	//! Extensions that the device is created with.
-	struct u_string_list *required_device_extensions;
+	struct u_extension_list *required_device_extensions;
 
 	//! Extensions that the device is created with.
-	struct u_string_list *optional_device_extensions;
+	struct u_extension_list *optional_device_extensions;
 
 	//! Logging level to be set on the @ref vk_bundle.
 	enum u_logging_level log_level;
@@ -54,6 +58,12 @@ struct comp_vulkan_arguments
 
 	//! Vulkan physical device to be selected, -1 for auto.
 	int selected_gpu_index;
+
+	//! When true, select the physical device whose UUID matches @ref selected_gpu_uuid.
+	bool lookup_with_uuid;
+
+	//! Vulkan physical device UUID to select when @ref lookup_with_uuid is true.
+	xrt_uuid_t selected_gpu_uuid;
 
 	//! Vulkan physical device index for clients to use, -1 for auto.
 	int client_gpu_index;

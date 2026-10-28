@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -49,6 +50,7 @@ u_prober_bus_type_to_string(enum xrt_bus_type t)
 		ENUM_TO_STR(XRT_BUS_TYPE_UNKNOWN);
 		ENUM_TO_STR(XRT_BUS_TYPE_USB);
 		ENUM_TO_STR(XRT_BUS_TYPE_BLUETOOTH);
+		ENUM_TO_STR(XRT_BUS_TYPE_ANY);
 	}
 	return "XRT_BUS_TYPE_<INVALID>";
 }

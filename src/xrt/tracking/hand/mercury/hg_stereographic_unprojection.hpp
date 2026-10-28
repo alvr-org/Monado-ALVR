@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Stereographic unprojection
- * @author Moshi Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 

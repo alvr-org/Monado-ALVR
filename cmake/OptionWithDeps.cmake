@@ -112,28 +112,15 @@ function(option_with_deps option doc)
     # Check the actual deps, determine if the option is available
     set(_avail ON)
     foreach(d ${_option_deps_DEPENDS})
-        if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.18)
-            cmake_language(
-                EVAL
-                CODE
-                "
-                    if(${d})
-                    else()
-                        set(_avail OFF)
-                        set(_cond ${d})
-                    endif()")
-        else()
-            # cmake_language(EVAL CODE was added in 3.18 so evaluate it the "old" way before then.
-            # turn spaces into semicolons so we have a list of arguments, signalling to CMAKE
-            # to interpret the "if()" differently
-            string(REGEX REPLACE " +" ";" CMAKE_DEPENDENT_OPTION_DEP "${d}")
-            if(${CMAKE_DEPENDENT_OPTION_DEP})
-
-            else()
-                set(_avail OFF)
-                set(_cond ${d})
-            endif()
-        endif()
+        cmake_language(
+            EVAL
+            CODE
+            "
+                if(${d})
+                else()
+                    set(_avail OFF)
+                    set(_cond ${d})
+                endif()")
     endforeach()
 
     # Error if option was requested but not available

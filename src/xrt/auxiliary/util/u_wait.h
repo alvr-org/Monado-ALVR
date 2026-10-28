@@ -1,4 +1,5 @@
 // Copyright 2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -24,6 +25,9 @@
 
 #elif defined(XRT_OS_LINUX) || defined(XRT_OS_ANDROID)
 #define U_WAIT_MEASURED_SCHEDULER_LATENCY_NS (uint64_t)(50 * 1000)
+#elif defined(XRT_OS_OSX)
+//! @TODO Measure
+#define U_WAIT_MEASURED_SCHEDULER_LATENCY_NS (uint64_t)(0)
 #elif defined(XRT_OS_WINDOWS)
 #define U_WAIT_MEASURED_SCHEDULER_LATENCY_NS (uint64_t)(0)
 #else

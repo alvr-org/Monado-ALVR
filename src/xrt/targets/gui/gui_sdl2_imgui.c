@@ -53,7 +53,7 @@ gui_sdl2_imgui_loop(struct sdl2_program *p)
 	igCreateContext(NULL);
 
 	// Local state
-	ImGuiIO *io = igGetIO();
+	ImGuiIO *io = igGetIO_Nil();
 
 	// Make window layout file "imgui.ini" live in config dir
 	XRT_MAYBE_UNUSED int res = u_file_get_path_in_config_dir("imgui.ini", p->layout_file, sizeof(p->layout_file));

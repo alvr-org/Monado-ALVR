@@ -1,4 +1,5 @@
-// Copyright 2019-2020, Collabora, Ltd.
+// Copyright 2019-2025, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -12,6 +13,7 @@
 #include "xrt/xrt_config_build.h"
 
 #include "util/u_debug.h"
+#include "util/u_pretty_print.h"
 #include "u_json.h"
 #include "util/u_truncate_printf.h"
 
@@ -28,10 +30,13 @@
  */
 
 /*
- * Avoid 4K stack variables.
- * https://learn.microsoft.com/en-us/windows/win32/devnotes/-win32-chkstk
+ * Try to make the buffer size as small as possible, but not too small,
+ * this stays within the "fast" stack variables limits on x64 bit builds on
+ * Windows, but not on 32 bit builds.
+ *
+ * See https://learn.microsoft.com/en-us/windows/win32/devnotes/-win32-chkstk
  */
-#define LOG_BUFFER_SIZE (3 * 1024)
+#define LOG_BUFFER_SIZE (7 * 1024)
 
 /*
  * 16MB max binary data
@@ -68,6 +73,38 @@ enum u_logging_level
 u_log_get_global_level(void)
 {
 	return debug_get_log_option_global_log();
+}
+
+
+/*
+ *
+ * Logging file code.
+ *
+ */
+
+static FILE *g_log_file = NULL;
+
+void
+u_log_set_output_file(const char *filename)
+{
+	// While not thread safe, this function is externally synchronized.
+	if (g_log_file != NULL) {
+		FILE *tmp = g_log_file;
+		g_log_file = NULL;
+
+		fflush(tmp);
+		fclose(tmp);
+		tmp = NULL;
+	}
+
+	if (filename == NULL) {
+		return; // Turning off file logging.
+	}
+
+	g_log_file = fopen(filename, "w");
+	if (g_log_file == NULL) {
+		U_LOG_E("Failed to open '%s'", filename);
+	}
 }
 
 
@@ -293,7 +330,7 @@ print_prefix(const char *func, enum u_logging_level level, char *buf, int remain
 	int ret = 0;
 
 #ifdef XRT_FEATURE_COLOR_LOG
-	if (isatty(STDERR_FILENO)) {
+	if (g_log_file == NULL && isatty(STDERR_FILENO)) {
 		ret = print_prefix_color(func, level, buf, remaining);
 	} else {
 		ret = print_prefix_mono(func, level, buf, remaining);
@@ -395,18 +432,27 @@ do_print(const char *file, int line, const char *func, enum u_logging_level leve
 	} else {
 		__android_log_write(prio, storage_tag, storage);
 	}
-#elif defined XRT_OS_WINDOWS || defined XRT_OS_LINUX
+#elif defined(XRT_OS_WINDOWS) || defined(XRT_OS_LINUX) || defined(XRT_OS_OSX)
 
 	// We want a newline, so add it, then null-terminate again.
 	storage[printed++] = '\n';
 	storage[printed] = '\0'; // Don't count zero termination as printed.
 
-#if defined XRT_OS_WINDOWS
+#if defined(XRT_OS_WINDOWS)
 	// Visual Studio output needs the newline char
 	OutputDebugStringA(storage);
 #endif
 
-	fwrite(storage, printed, 1, stderr);
+	FILE *output = g_log_file != NULL ? g_log_file : stderr;
+	fwrite(storage, printed, 1, output);
+
+#if defined(XRT_OS_WINDOWS)
+	/*
+	 * Windows like to buffer messages, call flush here to make sure all
+	 * logs gets written out in case of sudden exits and crashes.
+	 */
+	fflush(output);
+#endif
 
 #else
 #error "Port needed for logging function"
@@ -423,9 +469,53 @@ do_print(const char *file, int line, const char *func, enum u_logging_level leve
  */
 
 void
+u_log_print_result(enum u_logging_level cond_level,
+                   const char *file,
+                   int line,
+                   const char *calling_fn,
+                   xrt_result_t xret,
+                   const char *called_fn)
+{
+	bool success = xret == XRT_SUCCESS;
+	enum u_logging_level level = success ? U_LOGGING_INFO : U_LOGGING_ERROR;
+
+	// Should we be logging?
+	if (level < cond_level) {
+		return;
+	}
+
+	struct u_pp_sink_stack_only sink;
+	u_pp_delegate_t dg = u_pp_sink_stack_only_init(&sink);
+
+	if (success) {
+		u_pp(dg, "%s: ", called_fn);
+	} else {
+		u_pp(dg, "%s failed: ", called_fn);
+	}
+
+	u_pp_xrt_result(dg, xret);
+	u_pp(dg, " [%s:%i]", file, line);
+
+	u_log(file, line, calling_fn, level, "%s", sink.buffer);
+}
+
+static u_log_filter_func_t g_filter = NULL;
+
+void
+u_log_set_filter(u_log_filter_func_t filter)
+{
+	g_filter = filter;
+}
+
+void
 u_log(const char *file, int line, const char *func, enum u_logging_level level, const char *format, ...)
 {
 	va_list args;
+	// Check filter first
+	if (g_filter != NULL && !g_filter(file, line, func, level)) {
+		return; // Skip this message
+	}
+
 	va_start(args, format);
 	DISPATCH_SINK(file, line, func, level, format, args);
 	do_print(file, line, func, level, format, args);
@@ -442,6 +532,10 @@ u_log_xdev(const char *file,
            ...)
 {
 	va_list args;
+	// Check filter first
+	if (g_filter != NULL && !g_filter(file, line, func, level)) {
+		return; // Skip this message
+	}
 	va_start(args, format);
 	DISPATCH_SINK(file, line, func, level, format, args);
 	do_print(file, line, func, level, format, args);

@@ -83,7 +83,6 @@ WndProc(HWND hWnd, unsigned int message, WPARAM wParam, LPARAM lParam)
 		// We might want to handle messages differently in here.
 		return DefWindowProcW(hWnd, message, wParam, lParam);
 	}
-	struct comp_compositor *c = cwm->base.base.c;
 	switch (message) {
 	case WM_PAINT:
 		// COMP_INFO(c, "WM_PAINT");
@@ -134,7 +133,6 @@ comp_window_mswin_destroy(struct comp_target *ct)
 static void
 comp_window_mswin_update_window_title(struct comp_target *ct, const char *title)
 {
-	struct comp_window_mswin *cwm = (struct comp_window_mswin *)ct;
 	//! @todo
 }
 
@@ -194,7 +192,7 @@ comp_window_mswin_init_swapchain(struct comp_target *ct, uint32_t width, uint32_
 static void
 comp_window_mswin_flush(struct comp_target *ct)
 {
-	struct comp_window_mswin *cwm = (struct comp_window_mswin *)ct;
+	//! @todo
 }
 
 static void
@@ -229,7 +227,6 @@ comp_window_mswin_window_loop(struct comp_window_mswin *cwm)
 	}
 	COMP_INFO(ct->c, "Starting the Windows window message loop");
 
-	bool done = false;
 	while (os_thread_helper_is_running(&cwm->oth)) {
 		// force handling messages.
 		MSG msg;
@@ -278,8 +275,6 @@ comp_window_mswin_thread(struct comp_window_mswin *cwm)
 {
 	struct comp_target *ct = &cwm->base.base;
 
-	RECT rc = {0, 0, (LONG)(ct->width), (LONG)ct->height};
-
 	WNDCLASSEXW wcex;
 	U_ZERO(&wcex);
 	wcex.cbSize = sizeof(WNDCLASSEXW);
@@ -298,8 +293,7 @@ comp_window_mswin_thread(struct comp_window_mswin *cwm)
 	wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 #endif
 	COMP_INFO(ct->c, "Registering window class");
-	ATOM window_class = RegisterClassExW(&wcex);
-	if (!window_class) {
+	if (0 == RegisterClassExW(&wcex)) {
 		COMP_ERROR_GETLASTERROR(ct->c, "Failed to register window class: %s",
 		                        "Failed to register window class");
 		comp_window_mswin_mark_exited(cwm);
@@ -309,7 +303,7 @@ comp_window_mswin_thread(struct comp_window_mswin *cwm)
 	comp_window_mswin_window_loop(cwm);
 
 	COMP_INFO(ct->c, "Unregistering window class");
-	if (0 == UnregisterClassW((LPCWSTR)window_class, NULL)) {
+	if (0 == UnregisterClassW(szWindowClass, NULL)) {
 		COMP_ERROR_GETLASTERROR(ct->c, "Failed to unregister window class: %s",
 		                        "Failed to unregister window class");
 	}
@@ -322,7 +316,7 @@ comp_window_mswin_thread_func(void *ptr)
 {
 
 	struct comp_window_mswin *cwm = (struct comp_window_mswin *)ptr;
-	os_thread_helper_name(&(cwm->oth), "Compositor Window Message Thread");
+	os_thread_name_self("Compositor Window Message Thread");
 
 	comp_window_mswin_thread(cwm);
 	os_thread_helper_signal_stop(&cwm->oth);
@@ -354,7 +348,7 @@ comp_window_mswin_init(struct comp_target *ct)
 	return ret;
 }
 
-static void
+XRT_MAYBE_UNUSED static void
 comp_window_mswin_configure(struct comp_window_mswin *w, int32_t width, int32_t height)
 {
 	if (w->base.base.c->settings.fullscreen && !w->fullscreen_requested) {

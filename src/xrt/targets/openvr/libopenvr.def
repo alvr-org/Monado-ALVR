@@ -1,0 +1,6 @@
+; Copyright 2019, Collabora, Ltd.
+; Copyright 2026, Beyley Cardellio
+; SPDX-License-Identifier: BSL-1.0
+EXPORTS
+    VRClientCoreFactory
+    HmdSystemFactory

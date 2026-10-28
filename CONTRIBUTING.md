@@ -1,24 +1,52 @@
-# Contribution Guidelines
+# Contribution Requirements and Guidelines
 
 <!--
-Copyright 2018-2019 Collabora, Ltd.
+Copyright 2018-2026 Collabora, Ltd.
 
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-There are plenty of valid reasons why someone might not be able
-to follow all of the guidelines in this section, and that's OK,
-especially for new contributors or those new to open source entirely.
+The following section of this file labeled as "Policy", as well as
+the Code of Conduct, available at
+<https://www.freedesktop.org/wiki/CodeOfConduct/>, are **MANDATORY**, and
+apply in their entirety to anyone involved in the project. See the README for
+associated Code of Conduct contacts.
+
+## Policy: Contribution Provenance and Developer Certificate of Origin
+
+Every commit in a Merge Request **MUST** include a `Signed-off-by:` tag in the
+commit message. By adding this tag, you agree to the **Developer Certificate of
+Origin (DCO) v1.1** found at <https://developercertificate.org/> or in the
+source tree as DCO-1.1. This certifies, among other things, that you have the
+right to submit the code under the project's license. Before submitting code,
+please read the text of the DCO itself for complete details.
+
+Note that only a human can legally certify the DCO. If you are not the original,
+sole author of a patch, you must gather `Signed-off-by:` tags from all
+contributors to a patch. One of the `Signed-off-by:` tags must match the Git
+author metadata for each commit.
+
+Submissions without a valid sign-off (or sign-offs) will be rejected.
+---
+
+## Guidelines
+
+Unlike the preceding mandatory policies, there are plenty of valid reasons why
+someone might not be able to follow all of the guidelines in this section, and
+that's OK, especially for new contributors or those new to open source entirely.
 Let us know and we'll figure out a way to help you get involved successfully.
 
-> Important note: Unlike the guidelines here, the Code of Conduct,
-> available at <https://www.freedesktop.org/wiki/CodeOfConduct/>,
-> is **not** optional,
-> and applies in its entirety to anyone involved in the project,
-> for the safety and comfort of all.
-> See the README for associated contacts.
+### Large Scale Contributions
 
-## Pull/Merge Requests
+For large scale contributions, such as those involving extensive scope, numerous commits, cross-cutting impact, or changes to architecture and APIs, we recommend a structured but collaborative approach to ensure a smooth review process:
+
+- **Align on Design Early**: To minimize back-and-forth during MR reviews, we kindly ask that you open an 'RFC' GitLab Work Item (Issue) or a Draft Merge Request early in your process. Discussing your intended approach beforehand ensures you are aligned with Monado reviewers before investing heavily in writing code. You can begin implementation once at least one core maintainer gives explicit approval, for example, a "thumbs-up" or explicit comment on the thread.
+
+- **Phase Your Work**: Whenever possible, please try to break down large contributions into smaller, phased Merge Requests with focused commits, rather than submitting a single massive update.
+
+- **Keep Discussions Public**: To help build a shared history and context for the whole community, try to keep design and review conversations on public GitLab Issues and Merge Requests.
+
+### Pull/Merge Requests
 
 - If you're considering starting work on a large change that you'd like to contribute,
   it is recommended to first open an issue before you start,

@@ -1,4 +1,5 @@
 // Copyright 2020, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -41,10 +42,11 @@ public:
 	}
 
 	void
-	signalStartupComplete()
+	signalStartupComplete(ipc_server *s)
 	{
 		std::unique_lock<std::mutex> lock{server_mutex};
 		startup_complete = true;
+		server = s;
 		startup_cond.notify_all();
 	}
 
@@ -53,15 +55,39 @@ public:
 	{
 		std::unique_lock lock(server_mutex);
 		if (!server && !server_thread) {
-			server_thread = std::make_unique<std::thread>(
-			    [&]() { ipc_server_main_android(&server, signalStartupCompleteTrampoline, this); });
+			server_thread =
+			    std::make_unique<std::thread>([&]() { ipc_server_main_common(&ismi, &callbacks, this); });
 		}
 	}
 
 	static void
-	signalStartupCompleteTrampoline(void *data)
+	signalInitFailed(xrt_result_t xret, void *data)
 	{
-		static_cast<IpcServerHelper *>(data)->signalStartupComplete();
+		static_cast<IpcServerHelper *>(data)->signalStartupComplete(nullptr);
+	}
+
+	static void
+	signalStartupCompleteTrampoline(ipc_server *s, xrt_instance *xsint, void *data)
+	{
+		static_cast<IpcServerHelper *>(data)->signalStartupComplete(s);
+	}
+
+	static void
+	signalShuttingDownTrampoline(ipc_server *s, xrt_instance *xsint, void *data)
+	{
+		// No-op
+	}
+
+	static void
+	signalClientConnectedTrampoline(struct ipc_server *s, uint32_t client_id, void *data)
+	{
+		// No-op
+	}
+
+	static void
+	signalClientDisconnectedTrampoline(struct ipc_server *s, uint32_t client_id, void *data)
+	{
+		// No-op
 	}
 
 	int32_t
@@ -114,6 +140,24 @@ private:
 		return server && completed;
 	}
 
+	const struct ipc_server_main_info ismi = {
+	    .udgci =
+	        {
+	            .window_title = "Monado Android Service",
+	            .open = U_DEBUG_GUI_OPEN_NEVER,
+	        },
+	    .exit_on_disconnect = false,
+	    .no_stdin = false,
+	};
+
+	const struct ipc_server_callbacks callbacks = {
+	    .init_failed = signalInitFailed,
+	    .mainloop_entering = signalStartupCompleteTrampoline,
+	    .mainloop_leaving = signalShuttingDownTrampoline,
+	    .client_connected = signalClientConnectedTrampoline,
+	    .client_disconnected = signalClientDisconnectedTrampoline,
+	};
+
 	//! Reference to the ipc_server, managed by ipc_server_process
 	struct ipc_server *server = NULL;
 
@@ -139,8 +183,16 @@ Java_org_freedesktop_monado_ipc_MonadoImpl_nativeStartServer(JNIEnv *env, jobjec
 {
 	JavaVM *jvm = nullptr;
 	jint result = env->GetJavaVM(&jvm);
+
 	assert(result == JNI_OK);
+	if (result != JNI_OK) {
+		U_LOG_E("service: GetJavaVM failed, got %d. This should never happen.", result);
+	}
+
 	assert(jvm);
+	if (!jvm) {
+		U_LOG_E("service: JavaVM is null? This should never happen.");
+	}
 
 	jni::init(env);
 	jni::Object monadoImpl(thiz);

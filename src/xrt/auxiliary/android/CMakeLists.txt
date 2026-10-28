@@ -1,4 +1,4 @@
-# Copyright 2019-2022, Collabora, Ltd.
+# Copyright 2019-2025, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
 
 add_library(
@@ -7,12 +7,14 @@ add_library(
 	)
 target_include_directories(android_app_glue PUBLIC ${ANDROID_NDK}/sources/android/native_app_glue)
 # disable these warnings in external code
-target_compile_options(android_app_glue PRIVATE -Wno-format-pedantic)
+target_compile_options(android_app_glue PRIVATE -Wno-format-pedantic -Wno-strict-prototypes)
 
 add_library(
 	aux_android STATIC
 	android_ahardwarebuffer_allocator.c
 	android_ahardwarebuffer_allocator.h
+	android_content.cpp
+	android_content.h
 	android_custom_surface.cpp
 	android_custom_surface.h
 	android_globals.cpp

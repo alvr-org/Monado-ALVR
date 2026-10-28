@@ -74,21 +74,11 @@ r_hmd_get_tracked_pose(struct xrt_device *xdev,
 	return XRT_SUCCESS;
 }
 
-static void
-r_hmd_get_hand_tracking(struct xrt_device *xdev,
-                        enum xrt_input_name name,
-                        int64_t at_timestamp_ns,
-                        struct xrt_hand_joint_set *out_value,
-                        int64_t *out_timestamp_ns)
-{
-	struct r_hmd *rh = r_hmd(xdev);
-	(void)rh;
-}
-
-static void
+static xrt_result_t
 r_hmd_get_view_poses(struct xrt_device *xdev,
                      const struct xrt_vec3 *default_eye_relation,
                      int64_t at_timestamp_ns,
+                     enum xrt_view_type view_type,
                      uint32_t view_count,
                      struct xrt_space_relation *out_head_relation,
                      struct xrt_fov *out_fovs,
@@ -97,23 +87,18 @@ r_hmd_get_view_poses(struct xrt_device *xdev,
 	struct r_hmd *rh = r_hmd(xdev);
 
 	if (!rh->r->latest.head.per_view_data_valid) {
-		u_device_get_view_poses(  //
-		    xdev,                 //
-		    default_eye_relation, //
-		    at_timestamp_ns,      //
-		    view_count,           //
-		    out_head_relation,    //
-		    out_fovs,             //
-		    out_poses);           //
-
-		// Done now
-		return;
+		return u_device_get_view_poses( //
+		    xdev,                       //
+		    default_eye_relation,       //
+		    at_timestamp_ns,            //
+		    view_type,                  //
+		    view_count,                 //
+		    out_head_relation,          //
+		    out_fovs,                   //
+		    out_poses);                 //
 	}
 
-	if (view_count > ARRAY_SIZE(rh->r->latest.head.views)) {
-		U_LOG_E("Asking for too many views!");
-		return;
-	}
+	assert(view_count <= ARRAY_SIZE(rh->r->latest.head.views));
 
 	copy_head_center_to_relation(rh, out_head_relation);
 
@@ -121,12 +106,8 @@ r_hmd_get_view_poses(struct xrt_device *xdev,
 		out_poses[i] = rh->r->latest.head.views[i].pose;
 		out_fovs[i] = rh->r->latest.head.views[i].fov;
 	}
-}
 
-static void
-r_hmd_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	// Empty
+	return XRT_SUCCESS;
 }
 
 /*!
@@ -143,16 +124,12 @@ r_hmd_create(struct r_hub *r)
 	    struct r_hmd, flags, input_count, output_count);
 
 	// Setup the basics.
-	rh->base.update_inputs = u_device_noop_update_inputs;
-	rh->base.get_tracked_pose = r_hmd_get_tracked_pose;
-	rh->base.get_hand_tracking = r_hmd_get_hand_tracking;
+	u_device_populate_function_pointers(&rh->base, r_hmd_get_tracked_pose, r_hmd_destroy);
 	rh->base.get_view_poses = r_hmd_get_view_poses;
-	rh->base.set_output = r_hmd_set_output;
-	rh->base.destroy = r_hmd_destroy;
 	rh->base.tracking_origin = &r->origin;
-	rh->base.orientation_tracking_supported = true;
-	rh->base.position_tracking_supported = true;
-	rh->base.hand_tracking_supported = false;
+	rh->base.supported.orientation_tracking = true;
+	rh->base.supported.position_tracking = true;
+	rh->base.supported.hand_tracking = false;
 	rh->base.name = XRT_DEVICE_GENERIC_HMD;
 	rh->base.device_type = XRT_DEVICE_TYPE_HMD;
 	rh->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
@@ -165,14 +142,17 @@ r_hmd_create(struct r_hub *r)
 	snprintf(rh->base.serial, sizeof(rh->base.serial), "Remote HMD");
 
 	// Setup info.
+	assert(r->w_pixels > 0 && r->h_pixels > 0);
+	assert(r->w_meters > 0.0f && r->h_meters > 0.0f);
+
 	bool ret = true;
 	struct u_device_simple_info info;
-	info.display.w_pixels = 1920;
-	info.display.h_pixels = 1080;
-	info.display.w_meters = 0.13f;
-	info.display.h_meters = 0.07f;
-	info.lens_horizontal_separation_meters = 0.13f / 2.0f;
-	info.lens_vertical_position_meters = 0.07f / 2.0f;
+	info.display.w_pixels = rh->r->w_pixels;
+	info.display.h_pixels = rh->r->h_pixels;
+	info.display.w_meters = rh->r->w_meters;
+	info.display.h_meters = rh->r->h_meters;
+	info.lens_horizontal_separation_meters = rh->r->w_meters / 2.0f;
+	info.lens_vertical_position_meters = rh->r->h_meters / 2.0f;
 
 	if (rh->r->view_count == 1) {
 		info.fov[0] = 120.0f * (M_PI / 180.0f);

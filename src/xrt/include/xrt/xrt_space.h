@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -78,7 +79,7 @@ xrt_space_reference(struct xrt_space **dst, struct xrt_space *src)
  *
  * The space overseer is used by the state tracker to query the poses of spaces
  * and devices in that space system. While the default implementation
- * @ref u_space_overseer implements the spaces as a graph of relatable spaces,
+ * @ref b_space_overseer implements the spaces as a graph of relatable spaces,
  * that is a implementation detail (the interface also lends itself to that
  * since bases have parents). As such the graph is not exposed in this interface
  * and spaces are technically free floating.
@@ -303,6 +304,79 @@ struct xrt_space_overseer
 	                                   struct xrt_space **out_local_space,
 	                                   struct xrt_space **out_local_floor_space);
 
+	/*
+	 *
+	 * Special inter-monado component functions.
+	 *
+	 */
+
+	/*!
+	 * Add a new device to be tracked by the space overseer. The exact
+	 * semantic of the space is determined by the implementation of the
+	 * space overseer. And may be outright rejected by the implementation.
+	 *
+	 * After this call completes successfully, the device can be passed
+	 * into the @ref xrt_space_overseer::locate_device function, but may
+	 * not be locatable immediately.
+	 *
+	 * This function is not intended to be called by the OpenXR state
+	 * tracker, but by other monado components that need to add devices
+	 * but does not own the space overseer. Components like the fixer
+	 * uppers or for push devices.
+	 *
+	 * @param[in] xso The space overseer.
+	 * @param[in] xdev The device to be tracked.
+	 * @return XRT_SUCCESS if added, otherwise an error code.
+	 */
+	xrt_result_t (*add_device)(struct xrt_space_overseer *xso, struct xrt_device *xdev);
+
+	/*!
+	 * Remove a device that was previously added with
+	 * @ref xrt_space_overseer::add_device. After this call the device can no
+	 * longer be located through this space overseer and any pose spaces that
+	 * were created for it become invalid.
+	 *
+	 * Removing a device that was never added (or has already been removed)
+	 * is a safe no-op.
+	 *
+	 * Like @ref xrt_space_overseer::add_device this is not intended to be
+	 * called by the OpenXR state tracker, but by other monado components
+	 * that add devices but do not own the space overseer, for instance to
+	 * support hotplugging.
+	 *
+	 * @param[in] xso The space overseer.
+	 * @param[in] xdev The device to stop tracking.
+	 * @return XRT_SUCCESS if removed or not present, otherwise an error code.
+	 */
+	xrt_result_t (*remove_device)(struct xrt_space_overseer *xso, struct xrt_device *xdev);
+
+	/*!
+	 * Attach a device to a different space then it was associated with
+	 * originally, the space overseer might not support this operation.
+	 *
+	 * For some space overseer implementations this operation requires
+	 * that the device has the tracking origin type of
+	 * @ref XRT_TRACKING_TYPE_ATTACHABLE. Which space that becomes the
+	 * parent space of the device when @p space is NULL is undefined,
+	 * and the device might become un-trackable.
+	 *
+	 * @param[in] xso    Owning space overseer.
+	 * @param[in] xdev   Device to attach.
+	 * @param[in] space  Space to attach the device to, may be NULL.
+	 *
+	 * @return XRT_SUCCESS on success.
+	 * @return XRT_ERROR_DEVICE_NOT_ATTACHABLE if the device does not have
+	 *         the XRT_TRACKING_TYPE_ATTACHABLE tracking origin type.
+	 */
+	xrt_result_t (*attach_device)(struct xrt_space_overseer *xso, struct xrt_device *xdev, struct xrt_space *space);
+
+
+	/*
+	 *
+	 * Destroy function always comes last.
+	 *
+	 */
+
 	/*!
 	 * Destroy function.
 	 *
@@ -318,7 +392,7 @@ struct xrt_space_overseer
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_create_offset_space(struct xrt_space_overseer *xso,
                                        struct xrt_space *parent,
                                        const struct xrt_pose *offset,
@@ -334,7 +408,7 @@ xrt_space_overseer_create_offset_space(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_create_pose_space(struct xrt_space_overseer *xso,
                                      struct xrt_device *xdev,
                                      enum xrt_input_name name,
@@ -350,7 +424,7 @@ xrt_space_overseer_create_pose_space(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_locate_space(struct xrt_space_overseer *xso,
                                 struct xrt_space *base_space,
                                 const struct xrt_pose *base_offset,
@@ -369,7 +443,7 @@ xrt_space_overseer_locate_space(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_locate_spaces(struct xrt_space_overseer *xso,
                                  struct xrt_space *base_space,
                                  const struct xrt_pose *base_offset,
@@ -390,7 +464,7 @@ xrt_space_overseer_locate_spaces(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_locate_device(struct xrt_space_overseer *xso,
                                  struct xrt_space *base_space,
                                  const struct xrt_pose *base_offset,
@@ -408,7 +482,7 @@ xrt_space_overseer_locate_device(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_ref_space_inc(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
 {
 	return xso->ref_space_inc(xso, type);
@@ -421,7 +495,7 @@ xrt_space_overseer_ref_space_inc(struct xrt_space_overseer *xso, enum xrt_refere
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type)
 {
 	return xso->ref_space_dec(xso, type);
@@ -434,7 +508,7 @@ xrt_space_overseer_ref_space_dec(struct xrt_space_overseer *xso, enum xrt_refere
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_recenter_local_spaces(struct xrt_space_overseer *xso)
 {
 	return xso->recenter_local_spaces(xso);
@@ -447,7 +521,7 @@ xrt_space_overseer_recenter_local_spaces(struct xrt_space_overseer *xso)
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_get_tracking_origin_offset(struct xrt_space_overseer *xso,
                                               struct xrt_tracking_origin *xto,
                                               struct xrt_pose *out_offset)
@@ -462,7 +536,7 @@ xrt_space_overseer_get_tracking_origin_offset(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_set_tracking_origin_offset(struct xrt_space_overseer *xso,
                                               struct xrt_tracking_origin *xto,
                                               const struct xrt_pose *offset)
@@ -477,7 +551,7 @@ xrt_space_overseer_set_tracking_origin_offset(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_get_reference_space_offset(struct xrt_space_overseer *xso,
                                               enum xrt_reference_space_type type,
                                               struct xrt_pose *out_offset)
@@ -492,7 +566,7 @@ xrt_space_overseer_get_reference_space_offset(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_set_reference_space_offset(struct xrt_space_overseer *xso,
                                               enum xrt_reference_space_type type,
                                               const struct xrt_pose *offset)
@@ -507,12 +581,51 @@ xrt_space_overseer_set_reference_space_offset(struct xrt_space_overseer *xso,
  *
  * @public @memberof xrt_space_overseer
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_space_overseer_create_local_space(struct xrt_space_overseer *xso,
                                       struct xrt_space **out_local_space,
                                       struct xrt_space **out_local_floor_space)
 {
 	return xso->create_local_space(xso, out_local_space, out_local_floor_space);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::add_device
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_space_overseer_add_device(struct xrt_space_overseer *xso, struct xrt_device *xdev)
+{
+	return xso->add_device(xso, xdev);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::remove_device
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_space_overseer_remove_device(struct xrt_space_overseer *xso, struct xrt_device *xdev)
+{
+	return xso->remove_device(xso, xdev);
+}
+
+/*!
+ * @copydoc xrt_space_overseer::attach_device
+ *
+ * Helper for calling through the function pointer.
+ *
+ * @public @memberof xrt_space_overseer
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_space_overseer_attach_device(struct xrt_space_overseer *xso, struct xrt_device *xdev, struct xrt_space *space)
+{
+	return xso->attach_device(xso, xdev, space);
 }
 
 /*!

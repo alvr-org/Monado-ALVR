@@ -9,21 +9,21 @@
  * @ingroup comp_client
  */
 
-#include <stdlib.h>
+#include "xrt/xrt_instance.h"
 
 #include "util/u_misc.h"
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
-#include "oxr_handle.h"
-
-#include "xrt/xrt_instance.h"
+#include "oxr_handle_base.h"
 
 #define EGL_NO_X11              // libglvnd
 #define MESA_EGL_NO_X11_HEADERS // mesa
 #include <EGL/egl.h>
 #include "xrt/xrt_gfx_egl.h"
+
+#include <stdlib.h>
 
 
 #ifndef XR_USE_PLATFORM_EGL
@@ -61,7 +61,7 @@ oxr_session_populate_egl(struct oxr_logger *log,
 	}
 
 	struct xrt_compositor_native *xcn = sess->xcn;
-	struct xrt_compositor_gl *xcgl = NULL;
+	struct xrt_compositor *xc = NULL;
 	xrt_result_t xret = xrt_gfx_provider_create_gl_egl( //
 	    xcn,                                            //
 	    next->display,                                  //
@@ -69,18 +69,18 @@ oxr_session_populate_egl(struct oxr_logger *log,
 	    next->context,                                  //
 	    (PFNEGLGETPROCADDRESSPROC)next->getProcAddress, //
 	    renderdoc_enabled,                              // renderdoc_enabled
-	    &xcgl);                                         //
+	    &xc);                                           //
 
 	if (xret == XRT_ERROR_EGL_CONFIG_MISSING) {
 		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
 		                 "XrGraphicsBindingEGLMNDX::config cannot be null when EGL_KHR_no_config_context is "
 		                 "not supported by the display.");
 	}
-	if (xret != XRT_SUCCESS || xcgl == NULL) {
+	if (xret != XRT_SUCCESS || xc == NULL) {
 		return oxr_error(log, XR_ERROR_INITIALIZATION_FAILED, "Failed to create an egl client compositor");
 	}
 
-	sess->compositor = &xcgl->base;
+	sess->compositor = xc;
 	sess->create_swapchain = oxr_swapchain_gl_create;
 
 	return XR_SUCCESS;

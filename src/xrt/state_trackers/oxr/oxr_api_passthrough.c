@@ -7,19 +7,20 @@
  * @ingroup oxr_api
  */
 
-#include "oxr_objects.h"
-#include "oxr_logger.h"
-#include "oxr_handle.h"
-
 #include "util/u_debug.h"
 #include "util/u_trace_marker.h"
+
+#include "oxr_objects.h"
+#include "oxr_logger.h"
+#include "oxr_handle_base.h"
 
 #include "oxr_api_funcs.h"
 #include "oxr_api_verify.h"
 #include "oxr_chain.h"
-#include "oxr_subaction.h"
+#include "actions/oxr_subaction.h"
 
 #include <stdio.h>
+
 
 XrResult
 oxr_xrCreateGeometryInstanceFB(XrSession session,
@@ -156,7 +157,7 @@ oxr_xrPassthroughLayerSetStyleFB(XrPassthroughLayerFB layer, const XrPassthrough
 	OXR_TRACE_MARKER();
 	struct oxr_passthrough_layer *pl;
 	struct oxr_logger log;
-	OXR_VERIFY_PASSTHROUGH_LAYER_AND_INIT_LOG(&log, layer, pl, "oxr_xrPassthroughLayerResumeFB");
+	OXR_VERIFY_PASSTHROUGH_LAYER_AND_INIT_LOG(&log, layer, pl, "oxr_xrPassthroughLayerSetStyleFB");
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, style, XR_TYPE_PASSTHROUGH_STYLE_FB);
 	OXR_VERIFY_PASSTHROUGH_LAYER_STYLE(&log, style);
 

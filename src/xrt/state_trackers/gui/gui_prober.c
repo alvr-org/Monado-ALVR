@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -89,11 +90,11 @@ gui_prober_update(struct gui_program *p)
 		return;
 	}
 
-	for (size_t i = 0; i < p->xsysd->xdev_count; i++) {
-		if (p->xsysd->xdevs[i] == NULL) {
+	for (size_t i = 0; i < p->xsysd->static_xdev_count; i++) {
+		if (p->xsysd->static_xdevs[i] == NULL) {
 			continue;
 		}
-		xrt_device_update_inputs(p->xsysd->xdevs[i]);
+		xrt_device_update_inputs(p->xsysd->static_xdevs[i]);
 	}
 }
 

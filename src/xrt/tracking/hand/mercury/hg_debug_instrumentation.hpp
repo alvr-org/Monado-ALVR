@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Debug instrumentation for mercury_train or others to control hand tracking.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 

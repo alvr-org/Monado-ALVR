@@ -99,6 +99,10 @@ p_dump_device(struct prober *p, struct prober_device *pdev, int id, bool use_std
 		PTT("usb.addr:         %i", pdev->usb.addr);
 	}
 
+	if (pdev->serial.path != NULL) {
+		PTT("serial.path:      %s", pdev->serial.path);
+	}
+
 	if (pdev->bluetooth.id != 0) {
 		PTT("bluetooth.id:     %012" PRIx64 "", pdev->bluetooth.id);
 	}
@@ -155,7 +159,7 @@ p_dump_device(struct prober *p, struct prober_device *pdev, int id, bool use_std
 	for (size_t j = 0; j < pdev->num_hidraws; j++) {
 		struct prober_hidraw *hidraw = &pdev->hidraws[j];
 
-		PTT("hidraw.iface:     %i", (int)hidraw->interface);
+		PTT("hidraw.iface:     %i", (int)hidraw->hid_iface);
 		PTT("hidraw.path:      '%s'", hidraw->path);
 	}
 #endif

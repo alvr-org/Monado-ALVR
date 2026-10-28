@@ -32,6 +32,7 @@
 #include "util/u_sink.h"
 #include "util/u_config_json.h"
 #include "util/u_format.h"
+#include "util/u_frameserver.h"
 
 #include "tracking/t_tracking.h"
 
@@ -673,7 +674,7 @@ partial_imu_sample_push(struct rs_source *rs, timepoint_ns ts, struct xrt_vec3 v
 	bool should_submit = (rs->gyro_fps > rs->accel_fps) == is_gyro;
 	if (should_submit) {
 		struct xrt_imu_sample sample = {ts, {accel.x, accel.y, accel.z}, {gyro.x, gyro.y, gyro.z}};
-		xrt_sink_push_imu(rs->in_sinks.imu, &sample);
+		xrt_sink_push_imu(rs->in_sinks.imus[0], &sample);
 	}
 
 	os_mutex_unlock(&rs->partial_imu_sample.mutex);
@@ -813,37 +814,43 @@ rs_source_from_xfs(struct xrt_fs *xfs)
 	return rs;
 }
 
-static bool
+static xrt_result_t
 rs_source_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count)
 {
 	struct rs_source *rs = container_of(xfs, struct rs_source, xfs);
 	struct xrt_fs_mode *modes = U_TYPED_ARRAY_CALLOC(struct xrt_fs_mode, 1);
-	RS_ASSERT(modes != NULL, "Unable to calloc rs_source playback modes");
+	if (modes == NULL) {
+		RS_ERROR(rs, "Unable to calloc rs_source playback modes");
+		return XRT_ERROR_ALLOCATION;
+	}
 
 	//! @todo only exposing the one stream configuration the user provided through
 	//! the json configuration but we could show all possible stream setups.
-	modes[0] = (struct xrt_fs_mode){.width = rs->video_width,
-	                                .height = rs->video_height,
-	                                .format = rs->xrt_video_format,
-	                                //! @todo The stereo_format being NONE is incorrect but one that supports
-	                                //! frames in different memory regions does not exist yet.
-	                                .stereo_format = XRT_STEREO_FORMAT_NONE};
+	modes[0] = (struct xrt_fs_mode){
+	    .width = rs->video_width,
+	    .height = rs->video_height,
+	    .format = rs->xrt_video_format,
+	    //! @todo The stereo_format being NONE is incorrect but one that supports
+	    //! frames in different memory regions does not exist yet.
+	    .stereo_format = XRT_STEREO_FORMAT_NONE,
+	};
 
 	*out_modes = modes;
 	*out_count = 1;
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 rs_source_configure_capture(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp)
 {
 	//! @todo implement
-	RS_ASSERT(false, "Not Implemented");
-	return false;
+	struct rs_source *rs = rs_source_from_xfs(xfs);
+	RS_WARN(rs, "Capture parameters is not implemented.");
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 rs_source_stream_stop(struct xrt_fs *xfs)
 {
 	struct rs_source *rs = rs_source_from_xfs(xfs);
@@ -851,17 +858,18 @@ rs_source_stream_stop(struct xrt_fs *xfs)
 		DO(rs2_pipeline_stop, rs->rsc.pipeline);
 		rs->is_running = false;
 	}
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
-rs_source_is_running(struct xrt_fs *xfs)
+static xrt_result_t
+rs_source_is_running(struct xrt_fs *xfs, bool *out_is_running)
 {
 	struct rs_source *rs = rs_source_from_xfs(xfs);
-	return rs->is_running;
+	(*out_is_running) = rs->is_running;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 rs_source_stream_start(struct xrt_fs *xfs,
                        struct xrt_frame_sink *xs,
                        enum xrt_fs_capture_type capture_type,
@@ -876,8 +884,8 @@ rs_source_stream_start(struct xrt_fs *xfs,
 		rs->out_sinks.cam_count = 1;
 		rs->out_sinks.cams[0] = xs;
 	} else {
-		RS_ASSERT(false, "Unsupported stream configuration xs=%p capture_type=%d", (void *)xs, capture_type);
-		return false;
+		RS_ERROR(rs, "Unsupported stream configuration xs=%p capture_type=%d", (void *)xs, capture_type);
+		return XRT_ERROR_INVALID_ARGUMENT;
 	}
 
 	struct rs_container *rsc = &rs->rsc;
@@ -889,10 +897,10 @@ rs_source_stream_start(struct xrt_fs *xfs,
 	}
 
 	rs->is_running = true;
-	return rs->is_running;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 rs_source_slam_stream_start(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks)
 {
 	struct rs_source *rs = rs_source_from_xfs(xfs);
@@ -946,8 +954,8 @@ receive_imu_sample(struct xrt_imu_sink *sink, struct xrt_imu_sample *s)
 	m_ff_vec3_f32_push(rs->gyro_ff, &gyro, ts);
 	m_ff_vec3_f32_push(rs->accel_ff, &accel, ts);
 
-	if (rs->out_sinks.imu) {
-		xrt_sink_push_imu(rs->out_sinks.imu, s);
+	if (rs->out_sinks.imus[0]) {
+		xrt_sink_push_imu(rs->out_sinks.imus[0], s);
 	}
 }
 
@@ -1007,8 +1015,8 @@ rs_hdev_create(struct xrt_prober *xp, int device_idx)
 
 	xd->inputs[0].name = XRT_INPUT_GENERIC_TRACKER_POSE;
 
-	xd->orientation_tracking_supported = true;
-	xd->position_tracking_supported = true;
+	xd->supported.orientation_tracking = true;
+	xd->supported.position_tracking = true;
 
 	xd->update_inputs = u_device_noop_update_inputs;
 	xd->get_tracked_pose = rs_hdev_get_tracked_pose;
@@ -1042,6 +1050,7 @@ rs_source_create(struct xrt_frame_context *xfctx, int device_idx)
 
 	// Setup xrt_fs
 	struct xrt_fs *xfs = &rs->xfs;
+	u_frameserver_populate_function_pointers(xfs);
 	xfs->enumerate_modes = rs_source_enumerate_modes;
 	xfs->configure_capture = rs_source_configure_capture;
 	xfs->stream_start = rs_source_stream_start;
@@ -1097,7 +1106,8 @@ rs_source_create(struct xrt_frame_context *xfctx, int device_idx)
 	rs->in_sinks.cam_count = 2;
 	rs->in_sinks.cams[0] = &rs->left_sink;
 	rs->in_sinks.cams[1] = &rs->right_sink;
-	rs->in_sinks.imu = &rs->imu_sink;
+	rs->in_sinks.imu_count = 1;
+	rs->in_sinks.imus[0] = &rs->imu_sink;
 
 	// Prepare UI
 	u_sink_debug_init(&rs->ui_left_sink);

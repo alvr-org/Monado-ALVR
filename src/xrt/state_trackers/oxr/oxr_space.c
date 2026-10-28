@@ -1,4 +1,5 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -6,7 +7,6 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup oxr_main
  */
-
 
 #include "xrt/xrt_space.h"
 
@@ -18,12 +18,12 @@
 
 #include "oxr_objects.h"
 #include "oxr_logger.h"
-#include "oxr_handle.h"
-#include "oxr_input_transform.h"
+#include "oxr_handle_base.h"
 #include "oxr_chain.h"
 #include "oxr_pretty_print.h"
 #include "oxr_conversions.h"
 #include "oxr_xret.h"
+#include "actions/oxr_input.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,34 +51,40 @@ get_xrt_space_action(struct oxr_logger *log, struct oxr_space *spc, struct xrt_s
 	if (input == NULL) {
 		xrt_space_reference(&spc->action.xs, NULL);
 		spc->action.name = 0;
-		spc->action.xdev = NULL;
+		spc->action.device_id = XRT_DEVICE_ID_INVALID;
 		return XR_SUCCESS;
 	}
 
-	struct xrt_device *xdev = input->xdev;
 	enum xrt_input_name name = input->input->name;
 
-	assert(xdev != NULL);
 	assert(name != 0);
 
-	if (xdev != spc->action.xdev || name != spc->action.name) {
+	if (input->device_id.val != spc->action.device_id.val || name != spc->action.name) {
+		struct xrt_system_devices *xsysd = spc->sess->sys->xsysd;
+
+		if (spc->action.feature_eye_tracking) {
+			xrt_system_devices_feature_dec(xsysd, XRT_DEVICE_FEATURE_EYE_TRACKING);
+			spc->action.feature_eye_tracking = false;
+		}
+
 		xrt_space_reference(&spc->action.xs, NULL);
 
-		xrt_result_t xret = xrt_space_overseer_create_pose_space( //
-		    spc->sess->sys->xso,                                  //
-		    xdev,                                                 //
-		    name,                                                 //
-		    &spc->action.xs);                                     //
+		xrt_result_t xret = xrt_io_cache_create_space( //
+		    input->io_cache->xic,                      //
+		    input->device_id,                          //
+		    name,                                      //
+		    &spc->action.xs);                          //
 		if (xret != XRT_SUCCESS) {
 			oxr_warn(log, "Failed to create pose space");
 		} else {
-			struct xrt_system_devices *xsysd = spc->sess->sys->xsysd;
-			if (xdev == xsysd->static_roles.eyes) {
+			if (name == XRT_INPUT_GENERIC_EYE_GAZE_POSE) {
 				// eye tracking is being used
 				xrt_system_devices_feature_inc(xsysd, XRT_DEVICE_FEATURE_EYE_TRACKING);
+
+				spc->action.feature_eye_tracking = true;
 			}
 
-			spc->action.xdev = xdev;
+			spc->action.device_id = input->device_id;
 			spc->action.name = name;
 		}
 	}
@@ -101,10 +107,16 @@ get_xrt_space(struct oxr_logger *log, struct oxr_space *spc, struct xrt_space **
 	case OXR_SPACE_TYPE_REFERENCE_VIEW: xspace = spc->sess->sys->xso->semantic.view; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL: xspace = spc->sess->sys->xso->semantic.local; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL_FLOOR: xspace = spc->sess->sys->xso->semantic.local_floor; break;
-	case OXR_SPACE_TYPE_REFERENCE_STAGE: xspace = spc->sess->sys->xso->semantic.stage; break;
+	case OXR_SPACE_TYPE_REFERENCE_STAGE:
+		xspace = spc->sess->sys->inst->quirks.map_stage_to_local_floor
+		             ? spc->sess->sys->xso->semantic.local_floor
+		             : spc->sess->sys->xso->semantic.stage;
+		break;
 	case OXR_SPACE_TYPE_REFERENCE_UNBOUNDED_MSFT: xspace = spc->sess->sys->xso->semantic.unbounded; break;
 	case OXR_SPACE_TYPE_REFERENCE_COMBINED_EYE_VARJO: xspace = NULL; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCALIZATION_MAP_ML: xspace = NULL; break;
+	case OXR_SPACE_TYPE_REFERENCE_UNBOUNDED_ANDROID: xspace = NULL; break;
+	case OXR_SPACE_TYPE_REFERENCE_STATIONARY_EXT: xspace = NULL; break;
 	}
 
 	if (xspace == NULL) {
@@ -135,14 +147,14 @@ oxr_space_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 	}
 
 	struct xrt_system_devices *xsysd = spc->sess->sys->xsysd;
-	if (spc->action.xdev && spc->action.xdev == xsysd->static_roles.eyes) {
+	if (spc->action.feature_eye_tracking) {
 		// eye tracking isn't being used anymore
 		xrt_system_devices_feature_dec(xsysd, XRT_DEVICE_FEATURE_EYE_TRACKING);
 	}
 
 	xrt_space_reference(&spc->xdev_pose.xs, NULL);
 	xrt_space_reference(&spc->action.xs, NULL);
-	spc->action.xdev = NULL;
+	spc->action.device_id = XRT_DEVICE_ID_INVALID;
 	spc->action.name = 0;
 
 	free(spc);
@@ -163,7 +175,10 @@ oxr_space_action_create(struct oxr_logger *log,
 	struct oxr_space *spc = NULL;
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, spc, OXR_XR_DEBUG_SPACE, oxr_space_destroy, &sess->handle);
 
-	oxr_classify_subaction_paths(log, inst, 1, &createInfo->subactionPath, &subaction_paths);
+	if (!oxr_classify_subaction_path(&inst->path_cache, createInfo->subactionPath, &subaction_paths)) {
+		//! @todo This is probably an internal runtime error since it should be validated before?
+		return oxr_error(log, XR_ERROR_PATH_UNSUPPORTED, "Bad internal codepath taken (bug?)");
+	}
 
 	spc->sess = sess;
 	spc->space_type = OXR_SPACE_TYPE_ACTION;
@@ -247,6 +262,14 @@ oxr_space_xdev_pose_create(struct oxr_logger *log,
 	}
 
 	struct xrt_space *xspace = NULL;
+	/*!
+	 * @todo: Unlike action spaces, this MNDX xdev-pose path is intentionally
+	 * NOT routed through the xrt_io_cache yet. XR_MNDX_xdev_space is a
+	 * Monado-specific/experimental extension that is likely to be reworked
+	 * or superseded by a new extension, so it continues to use the space
+	 * overseer (and sess->sys->xsysd/xso) directly for now. Porting it to
+	 * the input/output cache is deferred to a later change.
+	 */
 	xrt_result_t xret = xrt_space_overseer_create_pose_space( //
 	    sess->sys->xso,                                       //
 	    xdev,                                                 //
@@ -607,4 +630,21 @@ oxr_space_locate_device(struct oxr_logger *log,
 	    out_relation);                //
 
 	return ret;
+}
+
+XrResult
+oxr_space_get_xrt_space(struct oxr_logger *log, struct oxr_space *spc, struct xrt_space **out_xspace)
+{
+	assert(out_xspace != NULL);
+	assert(*out_xspace == NULL);
+
+	struct xrt_space *xspace = NULL;
+	XrResult ret = get_xrt_space(log, spc, &xspace);
+	if (ret != XR_SUCCESS) {
+		return ret;
+	}
+
+	xrt_space_reference(out_xspace, xspace);
+
+	return XR_SUCCESS;
 }

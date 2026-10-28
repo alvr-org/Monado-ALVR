@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
-# Authors: Moses Turner <moses@collabora.com>
+# Authors: Moshi Turner <moshiturner@protonmail.com>
 """Simple script to upload Monado camera calibrations to DepthAI devices."""
 
 # Todo, make this work with calibrations from Basalt

@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -18,7 +19,7 @@
 #include <xrt/xrt_vulkan_includes.h>
 #include <vk/vk_helpers.h>
 #include <util/comp_vulkan.h>
-#include <util/u_string_list.hpp>
+#include <util/u_extension_list.hpp>
 
 
 static const char *instance_extensions_common[] = {
@@ -71,7 +72,7 @@ static const char *optional_device_extensions[] = {
 #endif
 };
 using unique_string_list =
-    std::unique_ptr<u_string_list, xrt::deleters::ptr_ptr_deleter<u_string_list, &u_string_list_destroy>>;
+    std::unique_ptr<u_extension_list, xrt::deleters::ptr_ptr_deleter<u_extension_list, &u_extension_list_destroy>>;
 
 struct VkBundleDestroyer
 {
@@ -119,28 +120,33 @@ vktest_init_bundle(struct vk_bundle *vk)
 {
 	// every backend needs at least the common extensions
 	unique_string_list required_instance_ext_list{
-	    u_string_list_create_from_array(instance_extensions_common, ARRAY_SIZE(instance_extensions_common))};
+	    u_extension_list_create_from_array(instance_extensions_common, ARRAY_SIZE(instance_extensions_common))};
 
-	unique_string_list optional_instance_ext_list{u_string_list_create()};
+	unique_string_list optional_instance_ext_list{u_extension_list_create()};
 
 	unique_string_list required_device_extension_list{
-	    u_string_list_create_from_array(required_device_extensions, ARRAY_SIZE(required_device_extensions))};
+	    u_extension_list_create_from_array(required_device_extensions, ARRAY_SIZE(required_device_extensions))};
 
 	unique_string_list optional_device_extension_list{
-	    u_string_list_create_from_array(optional_device_extensions, ARRAY_SIZE(optional_device_extensions))};
+	    u_extension_list_create_from_array(optional_device_extensions, ARRAY_SIZE(optional_device_extensions))};
 
 	U_ZERO(vk);
-	comp_vulkan_arguments args{VK_MAKE_VERSION(1, 0, 0),
-	                           vkGetInstanceProcAddr,
-	                           required_instance_ext_list.get(),
-	                           optional_instance_ext_list.get(),
-	                           required_device_extension_list.get(),
-	                           optional_device_extension_list.get(),
-	                           U_LOGGING_TRACE,
-	                           false /* only_compute_queue */,
-	                           true /*timeline_semaphore*/,
-	                           -1,
-	                           -1};
+	comp_vulkan_arguments args{
+	    VK_MAKE_VERSION(1, 0, 0),
+	    vkGetInstanceProcAddr,
+	    required_instance_ext_list.get(),
+	    optional_instance_ext_list.get(),
+	    required_device_extension_list.get(),
+	    optional_device_extension_list.get(),
+	    U_LOGGING_TRACE,
+	    false /* only_compute_queue */,
+	    true /*timeline_semaphore*/,
+	    -1,
+	    false,
+	    xrt_uuid_t{},
+	    -1,
+	};
+
 	comp_vulkan_results results{};
 	bool success = comp_vulkan_init_bundle(vk, &args, &results);
 

@@ -136,11 +136,11 @@ typedef xrt_result_t (*client_gl_insert_fence_func_t)(struct xrt_compositor *xc,
  * Wraps the real compositor providing a OpenGL based interface.
  *
  * @ingroup comp_client
- * @implements xrt_compositor_gl
+ * @implements xrt_compositor
  */
 struct client_gl_compositor
 {
-	struct xrt_compositor_gl base;
+	struct xrt_compositor base;
 
 	struct xrt_compositor_native *xcn;
 
@@ -203,7 +203,7 @@ client_gl_compositor(struct xrt_compositor *xc)
  * won't be called for you.
  *
  * @public @memberof client_gl_compositor
- * @see xrt_compositor_native
+ * @see xrt_compositor_native, client_gl_compositor_fini
  */
 bool
 client_gl_compositor_init(struct client_gl_compositor *c,
@@ -221,7 +221,7 @@ client_gl_compositor_init(struct client_gl_compositor *c,
  * @public @memberof client_gl_compositor
  */
 void
-client_gl_compositor_close(struct client_gl_compositor *c);
+client_gl_compositor_fini(struct client_gl_compositor *c);
 
 /*!
  * @copydoc client_gl_context_begin_locked_func_t

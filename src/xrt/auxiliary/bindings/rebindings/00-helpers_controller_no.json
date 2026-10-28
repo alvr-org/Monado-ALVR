@@ -1,0 +1,32 @@
+{
+	"/helper/controller/no/output": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/output/haptic": false,
+			"/user/hand/right/output/haptic": false
+		}
+	},
+	"/helper/controller/no/thumbstick": {
+		"helper": true,
+		"bindings": {
+			"/user/hand/left/input/thumbstick": false,
+			"/user/hand/left/input/thumbstick/click": false,
+			"/user/hand/left/input/thumbstick/dpad_down": false,
+			"/user/hand/left/input/thumbstick/dpad_left": false,
+			"/user/hand/left/input/thumbstick/dpad_right": false,
+			"/user/hand/left/input/thumbstick/dpad_up": false,
+			"/user/hand/left/input/thumbstick/x": false,
+			"/user/hand/left/input/thumbstick/xy": false,
+			"/user/hand/left/input/thumbstick/y": false,
+			"/user/hand/right/input/thumbstick": false,
+			"/user/hand/right/input/thumbstick/click": false,
+			"/user/hand/right/input/thumbstick/dpad_down": false,
+			"/user/hand/right/input/thumbstick/dpad_left": false,
+			"/user/hand/right/input/thumbstick/dpad_right": false,
+			"/user/hand/right/input/thumbstick/dpad_up": false,
+			"/user/hand/right/input/thumbstick/x": false,
+			"/user/hand/right/input/thumbstick/xy": false,
+			"/user/hand/right/input/thumbstick/y": false
+		}
+	}
+}

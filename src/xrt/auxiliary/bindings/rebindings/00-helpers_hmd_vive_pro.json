@@ -1,0 +1,13 @@
+{
+	"/helper/hmd/vive_pro_no_audio_buttons": {
+		"helper": true,
+		"bindings": {
+			"/user/head/input/mute_mic": false,
+			"/user/head/input/mute_mic/click": false,
+			"/user/head/input/volume_down": false,
+			"/user/head/input/volume_down/click": false,
+			"/user/head/input/volume_up": false,
+			"/user/head/input/volume_up/click": false
+		}
+	}
+}

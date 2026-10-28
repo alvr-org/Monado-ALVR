@@ -36,7 +36,7 @@ xrt_gfx_provider_create_gl_egl(struct xrt_compositor_native *xcn,
                                EGLContext context,
                                PFNEGLGETPROCADDRESSPROC get_gl_procaddr,
                                bool renderdoc_enabled,
-                               struct xrt_compositor_gl **out_xcgl);
+                               struct xrt_compositor **out_xc);
 
 #ifdef __cplusplus
 }

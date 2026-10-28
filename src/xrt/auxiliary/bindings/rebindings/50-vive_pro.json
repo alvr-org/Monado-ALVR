@@ -1,0 +1,20 @@
+{
+	"vive_pro_to_blubur_s1_mndx": {
+		"source_profile": "/interaction_profiles/htc/vive_pro",
+		"target_profile": "/interaction_profiles/mndx/blubur_s1_mndx",
+		"helpers": ["/helper/hmd/vive_pro_no_audio_buttons"],
+		"bindings": {
+			"/user/head/input/system": "/user/head/input/menu",
+			"/user/head/input/system/click": "/user/head/input/menu/click"
+		}
+	},
+	"vive_pro_to_psvr2_mndx": {
+		"source_profile": "/interaction_profiles/htc/vive_pro",
+		"target_profile": "/interaction_profiles/mndx/psvr2_mndx",
+		"helpers": ["/helper/hmd/vive_pro_no_audio_buttons"],
+		"bindings": {
+			"/user/head/input/system": true,
+			"/user/head/input/system/click": true
+		}
+	}
+}

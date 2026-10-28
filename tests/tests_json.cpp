@@ -147,4 +147,38 @@ TEST_CASE("u_json")
 		CHECK(stringToDouble.isDouble());
 		CHECK(stringToDouble.asDouble() == Catch::Approx(0.5).margin(e));
 	}
+
+	SECTION("Copy construction duplicates the JSON")
+	{
+		JSONNode copy{json_node};
+		CHECK(copy.getCJSON() != json_node.getCJSON());
+		CHECK(copy.toString(false) == json_node.toString(false));
+	}
+
+	SECTION("Copy assignment duplicates the JSON")
+	{
+		JSONNode copy;
+		copy = json_node;
+		CHECK(copy.getCJSON() != json_node.getCJSON());
+		CHECK(copy.toString(false) == json_node.toString(false));
+	}
+
+	SECTION("Move construction doesn't duplicate the JSON")
+	{
+		JSONNode temp{json_node};
+		const auto cjson = temp.getCJSON();
+		JSONNode moved{std::move(temp)};
+		CHECK(moved.getCJSON() == cjson);
+		CHECK(moved.toString(false) == json_node.toString(false));
+	}
+
+	SECTION("Move assignment doesn't duplicate the JSON")
+	{
+		JSONNode temp{json_node};
+		const auto cjson = temp.getCJSON();
+		JSONNode moved;
+		moved = std::move(temp);
+		CHECK(moved.getCJSON() == cjson);
+		CHECK(moved.toString(false) == json_node.toString(false));
+	}
 }

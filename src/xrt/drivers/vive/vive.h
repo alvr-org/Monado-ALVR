@@ -10,11 +10,12 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <asm/byteorder.h>
+#include "xrt/xrt_byte_order.h"
 
 #include "util/u_debug.h"
 #include "util/u_time.h"
+
+#include <stdint.h>
 
 /*
  *

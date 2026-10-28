@@ -1,4 +1,5 @@
 // Copyright 2020-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -23,13 +24,14 @@
 #include "util/u_file.h"
 #include "util/u_debug.h"
 #include "util/u_git_tag.h"
-#include "util/u_system_helpers.h"
 
 #include "shared/ipc_protocol.h"
 #include "shared/ipc_shmem.h"
 #include "client/ipc_client.h"
+#include "client/ipc_client_system_devices.h"
 #include "client/ipc_client_interface.h"
 #include "client/ipc_client_connection.h"
+#include "client/ipc_client_tracking_origin.h"
 
 #include "ipc_client_generated.h"
 
@@ -77,12 +79,6 @@ struct ipc_client_instance
 	struct xrt_instance base;
 
 	struct ipc_connection ipc_c;
-
-	struct xrt_tracking_origin *xtracks[XRT_SYSTEM_MAX_DEVICES];
-	size_t xtrack_count;
-
-	struct xrt_device *xdevs[XRT_SYSTEM_MAX_DEVICES];
-	size_t xdev_count;
 
 #ifdef XRT_OS_ANDROID
 	struct android_instance_base android;
@@ -136,6 +132,14 @@ err_xina:
  */
 
 static xrt_result_t
+ipc_client_instance_is_system_available(struct xrt_instance *xinst, bool *out_available)
+{
+	struct ipc_client_instance *ii = ipc_client_instance(xinst);
+	xrt_result_t xret = ipc_call_instance_is_system_available(&ii->ipc_c, out_available);
+	IPC_CHK_ALWAYS_RET(&ii->ipc_c, xret, "ipc_call_instance_is_system_available");
+}
+
+static xrt_result_t
 ipc_client_instance_create_system(struct xrt_instance *xinst,
                                   struct xrt_system **out_xsys,
                                   struct xrt_system_devices **out_xsysd,
@@ -151,32 +155,56 @@ ipc_client_instance_create_system(struct xrt_instance *xinst,
 	assert(*out_xsysd == NULL);
 	assert(out_xsysc == NULL || *out_xsysc == NULL);
 
-	struct xrt_system_devices *xsysd = NULL;
 	struct xrt_system_compositor *xsysc = NULL;
 
 	// Allocate a helper xrt_system_devices struct.
-	xsysd = ipc_client_system_devices_create(&ii->ipc_c);
+	struct ipc_client_system_devices *icsd = NULL;
+	xret = ipc_client_system_devices_create(&ii->ipc_c, &icsd);
+	IPC_CHK_AND_RET(&ii->ipc_c, xret, "ipc_client_system_devices_create");
 
-	// Take the devices from this instance.
-	for (uint32_t i = 0; i < ii->xdev_count; i++) {
-		xsysd->xdevs[i] = ii->xdevs[i];
-		ii->xdevs[i] = NULL;
+	struct xrt_system_devices *xsysd = &icsd->base.base;
+
+	// Query the server for the list of devices
+	struct ipc_device_list device_list = {0};
+	xret = ipc_call_system_devices_get_list(&ii->ipc_c, &device_list);
+	IPC_CHK_AND_RET(&ii->ipc_c, xret, "ipc_call_system_devices_get_list");
+
+	// Create client devices for each device in the list
+	uint32_t count = 0;
+	struct ipc_client_tracking_origin_manager *ictom = &icsd->tracking_origin_manager;
+	for (uint32_t i = 0; i < device_list.device_count; i++) {
+		struct ipc_device_list_entry *entry = &device_list.devices[i];
+
+		// Create the appropriate device type
+		if (entry->device_type == XRT_DEVICE_TYPE_HMD) {
+			xsysd->static_xdevs[count] = ipc_client_hmd_create(&ii->ipc_c, ictom, entry->id);
+		} else {
+			xsysd->static_xdevs[count] = ipc_client_device_create(&ii->ipc_c, ictom, entry->id);
+		}
+
+		// Check if device creation succeeded
+		if (xsysd->static_xdevs[count] != NULL) {
+			count++;
+		} else {
+			IPC_ERROR(&ii->ipc_c, "Failed to create device %u", i);
+		}
 	}
-	xsysd->xdev_count = ii->xdev_count;
-	ii->xdev_count = 0;
+	xsysd->static_xdev_count = count;
 
 #define SET_ROLE(ROLE)                                                                                                 \
 	do {                                                                                                           \
 		int32_t index = ii->ipc_c.ism->roles.ROLE;                                                             \
-		xsysd->static_roles.ROLE = index >= 0 ? xsysd->xdevs[index] : NULL;                                    \
+		xsysd->static_roles.ROLE = index >= 0 ? xsysd->static_xdevs[index] : NULL;                             \
 	} while (false)
 
 	SET_ROLE(head);
 	SET_ROLE(eyes);
 	SET_ROLE(face);
 	SET_ROLE(body);
-	SET_ROLE(hand_tracking.left);
-	SET_ROLE(hand_tracking.right);
+	SET_ROLE(hand_tracking.unobstructed.left);
+	SET_ROLE(hand_tracking.unobstructed.right);
+	SET_ROLE(hand_tracking.conforming.left);
+	SET_ROLE(hand_tracking.conforming.right);
 
 #undef SET_ROLE
 
@@ -222,6 +250,21 @@ ipc_client_instance_get_prober(struct xrt_instance *xinst, struct xrt_prober **o
 	return XRT_ERROR_PROBER_NOT_SUPPORTED;
 }
 
+static xrt_result_t
+ipc_client_instance_create_app_instance(struct xrt_instance *xinst, struct xrt_app_instance **out_xainst)
+{
+	struct ipc_client_instance *ii = ipc_client_instance(xinst);
+
+	struct xrt_app_instance *xainst = ipc_client_create_app_instance(&ii->ipc_c);
+	if (xainst == NULL) {
+		return XRT_ERROR_IPC_FAILURE;
+	}
+
+	(*out_xainst) = xainst;
+
+	return XRT_SUCCESS;
+}
+
 static void
 ipc_client_instance_destroy(struct xrt_instance *xinst)
 {
@@ -229,13 +272,6 @@ ipc_client_instance_destroy(struct xrt_instance *xinst)
 
 	// service considers us to be connected until fd is closed
 	ipc_client_connection_fini(&ii->ipc_c);
-
-	for (size_t i = 0; i < ii->xtrack_count; i++) {
-		u_var_remove_root(ii->xtracks[i]);
-		free(ii->xtracks[i]);
-		ii->xtracks[i] = NULL;
-	}
-	ii->xtrack_count = 0;
 
 #ifdef XRT_OS_ANDROID
 	android_instance_base_cleanup(&(ii->android), xinst);
@@ -267,8 +303,10 @@ xrt_result_t
 ipc_instance_create(const struct xrt_instance_info *i_info, struct xrt_instance **out_xinst)
 {
 	struct ipc_client_instance *ii = U_TYPED_CALLOC(struct ipc_client_instance);
+	ii->base.is_system_available = ipc_client_instance_is_system_available;
 	ii->base.create_system = ipc_client_instance_create_system;
 	ii->base.get_prober = ipc_client_instance_get_prober;
+	ii->base.create_app_instance = ipc_client_instance_create_app_instance;
 	ii->base.destroy = ipc_client_instance_destroy;
 
 #ifdef XRT_OS_WINDOWS
@@ -292,43 +330,6 @@ ipc_instance_create(const struct xrt_instance_info *i_info, struct xrt_instance 
 		free(ii);
 		return xret;
 	}
-
-	uint32_t count = 0;
-	struct xrt_tracking_origin *xtrack = NULL;
-	struct ipc_shared_memory *ism = ii->ipc_c.ism;
-
-	// Query the server for how many tracking origins it has.
-	count = 0;
-	for (uint32_t i = 0; i < ism->itrack_count; i++) {
-		xtrack = U_TYPED_CALLOC(struct xrt_tracking_origin);
-
-		memcpy(xtrack->name, ism->itracks[i].name, sizeof(xtrack->name));
-
-		xtrack->type = ism->itracks[i].type;
-		xtrack->initial_offset = ism->itracks[i].offset;
-		ii->xtracks[count++] = xtrack;
-
-		u_var_add_root(xtrack, "Tracking origin", true);
-		u_var_add_ro_text(xtrack, xtrack->name, "name");
-		u_var_add_pose(xtrack, &xtrack->initial_offset, "offset");
-	}
-
-	ii->xtrack_count = count;
-
-	// Query the server for how many devices it has.
-	count = 0;
-	for (uint32_t i = 0; i < ism->isdev_count; i++) {
-		struct ipc_shared_device *isdev = &ism->isdevs[i];
-		xtrack = ii->xtracks[isdev->tracking_origin_index];
-
-		if (isdev->name == XRT_DEVICE_GENERIC_HMD) {
-			ii->xdevs[count++] = ipc_client_hmd_create(&ii->ipc_c, xtrack, i);
-		} else {
-			ii->xdevs[count++] = ipc_client_device_create(&ii->ipc_c, xtrack, i);
-		}
-	}
-
-	ii->xdev_count = count;
 
 	ii->base.startup_timestamp = ii->ipc_c.ism->startup_timestamp;
 

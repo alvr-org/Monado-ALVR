@@ -1,10 +1,12 @@
 // Copyright 2018-2024, Collabora, Ltd.
-// Copyright 2023, NVIDIA CORPORATION.
+// Copyright 2023-2026, NVIDIA CORPORATION.
+// Copyright 2026, Beyley Cardellio
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  The objects representing OpenXR handles, and prototypes for internal functions used in the state tracker.
  * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @author Beyley Cardellio <ep1cm1n10n123@gmail.com>
  * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup oxr_main
  */
@@ -14,6 +16,7 @@
 #include "xrt/xrt_space.h"
 #include "xrt/xrt_limits.h"
 #include "xrt/xrt_system.h"
+#include "xrt/xrt_future.h"
 #include "xrt/xrt_device.h"
 #include "xrt/xrt_tracking.h"
 #include "xrt/xrt_compositor.h"
@@ -21,6 +24,7 @@
 #include "xrt/xrt_openxr_includes.h"
 #include "xrt/xrt_config_os.h"
 #include "xrt/xrt_config_have.h"
+#include "xrt/xrt_app_policy.h"
 
 #include "os/os_threading.h"
 
@@ -30,9 +34,22 @@
 #include "util/u_device.h"
 
 #include "oxr_extension_support.h"
-#include "oxr_subaction.h"
 #include "oxr_defines.h"
+#include "oxr_handle_cast.h"
+#include "oxr_handle_base.h"
 #include "oxr_frame_sync.h"
+#include "oxr_forward_declarations.h"
+#include "oxr_refcounted.h"
+
+#include "path/oxr_path_store.h"
+
+#include "actions/oxr_subaction.h"
+#include "actions/oxr_dpad_state.h"
+#include "actions/oxr_session_action_context.h"
+#include "actions/oxr_session_attached_actions.h"
+#include "actions/oxr_instance_path_cache.h"
+#include "actions/oxr_instance_action_context.h"
+
 
 #if defined(XRT_HAVE_D3D11) || defined(XRT_HAVE_D3D12)
 #include <dxgi.h>
@@ -64,28 +81,6 @@ extern "C" {
  */
 
 /*!
- * @brief Cast a pointer to an OpenXR handle in such a way as to avoid warnings.
- *
- * Avoids -Wpointer-to-int-cast by first casting to the same size int, then
- * promoting to the 64-bit int, then casting to the handle type. That's a lot of
- * no-ops on 64-bit, but a widening conversion on 32-bit.
- *
- * @ingroup oxr
- */
-#define XRT_CAST_PTR_TO_OXR_HANDLE(HANDLE_TYPE, PTR) ((HANDLE_TYPE)(uint64_t)(uintptr_t)(PTR))
-
-/*!
- * @brief Cast an OpenXR handle to a pointer in such a way as to avoid warnings.
- *
- * Avoids -Wint-to-pointer-cast by first casting to a 64-bit int, then to a
- * pointer-sized int, then to the desired pointer type. That's a lot of no-ops
- * on 64-bit, but a narrowing (!) conversion on 32-bit.
- *
- * @ingroup oxr
- */
-#define XRT_CAST_OXR_HANDLE_TO_PTR(PTR_TYPE, HANDLE) ((PTR_TYPE)(uintptr_t)(uint64_t)(HANDLE))
-
-/*!
  * @defgroup oxr_main OpenXR main code
  *
  * Gets called from @ref oxr_api functions and talks to devices and
@@ -96,53 +91,7 @@ extern "C" {
  */
 
 
-/*
- *
- * Forward declare structs.
- *
- */
-
-struct xrt_instance;
-struct oxr_logger;
-struct oxr_extension_status;
-struct oxr_instance;
-struct oxr_system;
-struct oxr_session;
-struct oxr_event;
-struct oxr_swapchain;
-struct oxr_space;
-struct oxr_action_set;
-struct oxr_action;
-struct oxr_debug_messenger;
-struct oxr_handle_base;
-struct oxr_subaction_paths;
-struct oxr_action_attachment;
-struct oxr_action_set_attachment;
-struct oxr_action_input;
-struct oxr_action_output;
-struct oxr_dpad_state;
-struct oxr_binding;
-struct oxr_interaction_profile;
-struct oxr_action_set_ref;
-struct oxr_action_ref;
-struct oxr_hand_tracker;
-struct oxr_facial_tracker_htc;
-struct oxr_face_tracker2_fb;
-struct oxr_body_tracker_fb;
-struct oxr_xdev_list;
-
-#define XRT_MAX_HANDLE_CHILDREN 256
 #define OXR_MAX_BINDINGS_PER_ACTION 32
-
-struct time_state;
-
-/*!
- * Function pointer type for a handle destruction function.
- *
- * @relates oxr_handle_base
- */
-typedef XrResult (*oxr_handle_destroyer)(struct oxr_logger *log, struct oxr_handle_base *hb);
-
 
 
 /*
@@ -175,30 +124,6 @@ typedef XrResult (*oxr_handle_destroyer)(struct oxr_logger *log, struct oxr_hand
 		TO = safe_copy.oxr;                                                                                    \
 	} while (false)
 
-
-/*
- *
- * oxr_handle_base.c
- *
- */
-
-/*!
- * Destroy the handle's object, as well as all child handles recursively.
- *
- * This should be how all handle-associated objects are destroyed.
- *
- * @public @memberof oxr_handle_base
- */
-XrResult
-oxr_handle_destroy(struct oxr_logger *log, struct oxr_handle_base *hb);
-
-/*!
- * Returns a human-readable label for a handle state.
- *
- * @relates oxr_handle_base
- */
-const char *
-oxr_handle_state_to_string(enum oxr_handle_state state);
 
 /*!
  *
@@ -234,6 +159,14 @@ oxr_instance_create(struct oxr_logger *log,
                     XrVersion major_minor,
                     const struct oxr_extension_status *extensions,
                     struct oxr_instance **out_inst);
+
+/*!
+ * Must be called with oxr_instance::system_init_lock held.
+ *
+ * @public @memberof oxr_instance
+ */
+XrResult
+oxr_instance_init_system_locked(struct oxr_logger *log, struct oxr_instance *inst);
 
 /*!
  * @public @memberof oxr_instance
@@ -291,75 +224,6 @@ oxr_instance_convert_win32perfcounter_to_time(struct oxr_logger *log,
  */
 
 /*!
- *
- * @name oxr_path.c
- * @{
- *
- */
-
-/*!
- * Initialize the path system.
- * @private @memberof oxr_instance
- */
-XrResult
-oxr_path_init(struct oxr_logger *log, struct oxr_instance *inst);
-
-/*!
- * @public @memberof oxr_instance
- */
-bool
-oxr_path_is_valid(struct oxr_logger *log, struct oxr_instance *inst, XrPath path);
-
-/*!
- * @public @memberof oxr_instance
- */
-void *
-oxr_path_get_attached(struct oxr_logger *log, struct oxr_instance *inst, XrPath path);
-
-/*!
- * Get the path for the given string if it exists, or create it if it does not.
- *
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_path_get_or_create(
-    struct oxr_logger *log, struct oxr_instance *inst, const char *str, size_t length, XrPath *out_path);
-
-/*!
- * Only get the path for the given string if it exists.
- *
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_path_only_get(struct oxr_logger *log, struct oxr_instance *inst, const char *str, size_t length, XrPath *out_path);
-
-/*!
- * Get a pointer and length of the internal string.
- *
- * The pointer has the same life time as the instance. The length is the number
- * of valid characters, not including the null termination character (but an
- * extra null byte is always reserved at the end so can strings can be given
- * to functions expecting null terminated strings).
- *
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_path_get_string(
-    struct oxr_logger *log, const struct oxr_instance *inst, XrPath path, const char **out_str, size_t *out_length);
-
-/*!
- * Destroy the path system and all paths that the instance has created.
- *
- * @private @memberof oxr_instance
- */
-void
-oxr_path_destroy(struct oxr_logger *log, struct oxr_instance *inst);
-
-/*!
- * @}
- */
-
-/*!
  * To go back to a OpenXR object.
  *
  * @relates oxr_action_set
@@ -380,6 +244,19 @@ oxr_hand_tracker_to_openxr(struct oxr_hand_tracker *hand_tracker)
 {
 	return XRT_CAST_PTR_TO_OXR_HANDLE(XrHandTrackerEXT, hand_tracker);
 }
+
+#ifdef OXR_HAVE_EXT_plane_detection
+/*!
+ * To go back to a OpenXR object.
+ *
+ * @relates oxr_plane_detector
+ */
+static inline XrPlaneDetectorEXT
+oxr_plane_detector_to_openxr(struct oxr_plane_detector_ext *plane_detector)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrPlaneDetectorEXT, plane_detector);
+}
+#endif // OXR_HAVE_EXT_plane_detection
 
 /*!
  * To go back to a OpenXR object.
@@ -418,6 +295,19 @@ oxr_body_tracker_fb_to_openxr(struct oxr_body_tracker_fb *body_tracker_fb)
 }
 #endif
 
+#ifdef OXR_HAVE_BD_body_tracking
+/*!
+ * To go back to a OpenXR object.
+ *
+ * @relates oxr_body_tracker_bd
+ */
+static inline XrBodyTrackerBD
+oxr_body_tracker_bd_to_openxr(struct oxr_body_tracker_bd *body_tracker_bd)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrBodyTrackerBD, body_tracker_bd);
+}
+#endif
+
 #ifdef OXR_HAVE_FB_face_tracking2
 /*!
  * To go back to a OpenXR object.
@@ -430,314 +320,19 @@ oxr_face_tracker2_fb_to_openxr(struct oxr_face_tracker2_fb *face_tracker2_fb)
 	return XRT_CAST_PTR_TO_OXR_HANDLE(XrFaceTracker2FB, face_tracker2_fb);
 }
 #endif
+
+#ifdef OXR_HAVE_ANDROID_face_tracking
 /*!
+ * To go back to a OpenXR object.
  *
- * @name oxr_input.c
- * @{
- *
+ * @relates oxr_facial_tracker_htc
  */
-
-/*!
- * Helper function to classify subaction_paths.
- *
- * Sets all members of @p subaction_paths ( @ref oxr_subaction_paths ) as
- * appropriate based on the subaction paths found in the list.
- *
- * If no paths are provided, @p subaction_paths->any will be true.
- *
- * @return false if an invalid subaction path is provided.
- *
- * @public @memberof oxr_instance
- * @see oxr_subaction_paths
- */
-bool
-oxr_classify_subaction_paths(struct oxr_logger *log,
-                             const struct oxr_instance *inst,
-                             uint32_t subaction_path_count,
-                             const XrPath *subaction_paths,
-                             struct oxr_subaction_paths *subaction_paths_out);
-
-/*!
- * Find the pose input for the set of subaction_paths
- *
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_get_pose_input(struct oxr_session *sess,
-                          uint32_t act_key,
-                          const struct oxr_subaction_paths *subaction_paths_ptr,
-                          struct oxr_action_input **out_input);
-
-/*!
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_action_set_create(struct oxr_logger *log,
-                      struct oxr_instance *inst,
-                      const XrActionSetCreateInfo *createInfo,
-                      struct oxr_action_set **out_act_set);
-
-/*!
- * @public @memberof oxr_action
- */
-XrResult
-oxr_action_create(struct oxr_logger *log,
-                  struct oxr_action_set *act_set,
-                  const XrActionCreateInfo *createInfo,
-                  struct oxr_action **out_act);
-
-/*!
- * @public @memberof oxr_session
- * @see oxr_action_set
- */
-XrResult
-oxr_session_attach_action_sets(struct oxr_logger *log,
-                               struct oxr_session *sess,
-                               const XrSessionActionSetsAttachInfo *bindInfo);
-
-
-XrResult
-oxr_session_update_action_bindings(struct oxr_logger *log, struct oxr_session *sess);
-
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_sync_data(struct oxr_logger *log,
-                     struct oxr_session *sess,
-                     uint32_t countActionSets,
-                     const XrActiveActionSet *actionSets,
-                     const XrActiveActionSetPrioritiesEXT *activePriorities);
-
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_enumerate_bound_sources(struct oxr_logger *log,
-                                   struct oxr_session *sess,
-                                   uint32_t act_key,
-                                   uint32_t sourceCapacityInput,
-                                   uint32_t *sourceCountOutput,
-                                   XrPath *sources);
-
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_get_boolean(struct oxr_logger *log,
-                       struct oxr_session *sess,
-                       uint32_t act_key,
-                       struct oxr_subaction_paths subaction_paths,
-                       XrActionStateBoolean *data);
-
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_get_vector1f(struct oxr_logger *log,
-                        struct oxr_session *sess,
-                        uint32_t act_key,
-                        struct oxr_subaction_paths subaction_paths,
-                        XrActionStateFloat *data);
-
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_get_vector2f(struct oxr_logger *log,
-                        struct oxr_session *sess,
-                        uint32_t act_key,
-                        struct oxr_subaction_paths subaction_paths,
-                        XrActionStateVector2f *data);
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_get_pose(struct oxr_logger *log,
-                    struct oxr_session *sess,
-                    uint32_t act_key,
-                    struct oxr_subaction_paths subaction_paths,
-                    XrActionStatePose *data);
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_apply_haptic_feedback(struct oxr_logger *log,
-                                 struct oxr_session *sess,
-                                 uint32_t act_key,
-                                 struct oxr_subaction_paths subaction_paths,
-                                 const XrHapticBaseHeader *hapticEvent);
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_stop_haptic_feedback(struct oxr_logger *log,
-                                struct oxr_session *sess,
-                                uint32_t act_key,
-                                struct oxr_subaction_paths subaction_paths);
-
-/*!
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_hand_tracker_create(struct oxr_logger *log,
-                        struct oxr_session *sess,
-                        const XrHandTrackerCreateInfoEXT *createInfo,
-                        struct oxr_hand_tracker **out_hand_tracker);
-
-/*!
- * @}
- */
-
-/*!
- *
- * @name oxr_binding.c
- * @{
- *
- */
-
-/*!
- * Find the best matching profile for the given @ref xrt_device.
- *
- * @param      log   Logger.
- * @param      sess  Session.
- * @param      xdev  Can be null.
- * @param[out] out_p Returned interaction profile.
- *
- * @public @memberof oxr_session
- */
-void
-oxr_find_profile_for_device(struct oxr_logger *log,
-                            struct oxr_session *sess,
-                            struct xrt_device *xdev,
-                            struct oxr_interaction_profile **out_p);
-
-void
-oxr_get_profile_for_device_name(struct oxr_logger *log,
-                                struct oxr_session *sess,
-                                enum xrt_device_name name,
-                                struct oxr_interaction_profile **out_p);
-
-struct oxr_interaction_profile *
-oxr_clone_profile(const struct oxr_interaction_profile *src_profile);
-
-/*!
- * Free all memory allocated by the binding system.
- *
- * @public @memberof oxr_instance
- */
-void
-oxr_binding_destroy_all(struct oxr_logger *log, struct oxr_instance *inst);
-
-/*!
- * Free all memory allocated by the binding system.
- *
- * @public @memberof oxr_instance
- */
-void
-oxr_session_binding_destroy_all(struct oxr_logger *log, struct oxr_session *sess);
-
-/*!
- * Find all bindings that is the given action key is bound to.
- * @public @memberof oxr_interaction_profile
- */
-void
-oxr_binding_find_bindings_from_key(struct oxr_logger *log,
-                                   struct oxr_interaction_profile *p,
-                                   uint32_t key,
-                                   size_t max_bounding_count,
-                                   struct oxr_binding **bindings,
-                                   size_t *out_binding_count);
-
-/*!
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_action_suggest_interaction_profile_bindings(struct oxr_logger *log,
-                                                struct oxr_instance *inst,
-                                                const XrInteractionProfileSuggestedBinding *suggestedBindings,
-                                                struct oxr_dpad_state *state);
-
-/*!
- * @public @memberof oxr_instance
- */
-XrResult
-oxr_action_get_current_interaction_profile(struct oxr_logger *log,
-                                           struct oxr_session *sess,
-                                           XrPath topLevelUserPath,
-                                           XrInteractionProfileState *interactionProfile);
-
-/*!
- * @public @memberof oxr_session
- */
-XrResult
-oxr_action_get_input_source_localized_name(struct oxr_logger *log,
-                                           struct oxr_session *sess,
-                                           const XrInputSourceLocalizedNameGetInfo *getInfo,
-                                           uint32_t bufferCapacityInput,
-                                           uint32_t *bufferCountOutput,
-                                           char *buffer);
-
-/*!
- * @}
- */
-
-
-/*!
- *
- * @name oxr_dpad.c
- * @{
- *
- */
-
-/*!
- * Initialises a dpad state, has to be zero init before a call to this function.
- *
- * @public @memberof oxr_dpad_state_get
- */
-bool
-oxr_dpad_state_init(struct oxr_dpad_state *state);
-
-/*!
- * Look for a entry in the state for the given action set key,
- * returns NULL if no entry has been made for that action set.
- *
- * @public @memberof oxr_dpad_state_get
- */
-struct oxr_dpad_entry *
-oxr_dpad_state_get(struct oxr_dpad_state *state, uint64_t key);
-
-/*!
- * Look for a entry in the state for the given action set key,
- * allocates a new entry if none was found.
- *
- * @public @memberof oxr_dpad_state_get
- */
-struct oxr_dpad_entry *
-oxr_dpad_state_get_or_add(struct oxr_dpad_state *state, uint64_t key);
-
-/*!
- * Frees all state and entries attached to this dpad state.
- *
- * @public @memberof oxr_dpad_state_get
- */
-void
-oxr_dpad_state_deinit(struct oxr_dpad_state *state);
-
-/*!
- * Clones all oxr_dpad_state
- * @param dst_dpad_state destination of cloning
- * @param src_dpad_state source of cloning
- * @public @memberof oxr_dpad_state_clone
- */
-bool
-oxr_dpad_state_clone(struct oxr_dpad_state *dst_dpad_state, const struct oxr_dpad_state *src_dpad_state);
-
-
-/*!
- * @}
- */
-
+static inline XrFaceTrackerANDROID
+oxr_face_tracker_android_to_openxr(struct oxr_face_tracker_android *face_tracker_android)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrFaceTrackerANDROID, face_tracker_android);
+}
+#endif
 
 /*!
  *
@@ -769,6 +364,16 @@ oxr_session_enumerate_formats(struct oxr_logger *log,
                               uint32_t formatCapacityInput,
                               uint32_t *formatCountOutput,
                               int64_t *formats);
+
+#ifdef OXR_HAVE_EXT_enumerate_swapchain_formats2
+XrResult
+oxr_session_enumerate_formats2(struct oxr_logger *log,
+                               struct oxr_session *sess,
+                               XrSwapchainFormatsEnumerateInfoEXT *enumerateInfo,
+                               uint32_t formatCapacityInput,
+                               uint32_t *formatCountOutput,
+                               int64_t *formats);
+#endif
 
 /*!
  * Change the state of the session, queues a event.
@@ -806,12 +411,6 @@ oxr_session_frame_begin(struct oxr_logger *log, struct oxr_session *sess);
 XrResult
 oxr_session_frame_end(struct oxr_logger *log, struct oxr_session *sess, const XrFrameEndInfo *frameEndInfo);
 
-XrResult
-oxr_session_hand_joints(struct oxr_logger *log,
-                        struct oxr_hand_tracker *hand_tracker,
-                        const XrHandJointsLocateInfoEXT *locateInfo,
-                        XrHandJointLocationsEXT *locations);
-
 /*
  * Gets the body pose in the base space.
  */
@@ -822,11 +421,6 @@ oxr_get_base_body_pose(struct oxr_logger *log,
                        struct xrt_device *body_xdev,
                        XrTime at_time,
                        struct xrt_space_relation *out_base_body);
-
-XrResult
-oxr_session_apply_force_feedback(struct oxr_logger *log,
-                                 struct oxr_hand_tracker *hand_tracker,
-                                 const XrForceFeedbackCurlApplyLocationsMNDX *locations);
 
 #ifdef OXR_HAVE_KHR_android_thread_settings
 XrResult
@@ -935,6 +529,19 @@ oxr_space_locate_device(struct oxr_logger *log,
                         struct oxr_space *baseSpc,
                         XrTime time,
                         struct xrt_space_relation *out_relation);
+
+/*!
+ * Get the xrt_space associated with this oxr_space, the @ref xrt_space will
+ * be reference counted by this function so the caller will need to call
+ * @ref xrt_space_reference to decrement the reference count.
+ *
+ * @param      log          Logging struct.
+ * @param      spc          Oxr space to get the xrt_space from.
+ * @param[out] out_xspace   Returns the xrt_space associated with this oxr_space.
+ * @return Any errors, XR_SUCCESS, xspace is not set on XR_ERROR_*.
+ */
+XRT_CHECK_RESULT XrResult
+oxr_space_get_xrt_space(struct oxr_logger *log, struct oxr_space *spc, struct xrt_space **out_xspace);
 
 
 /*
@@ -1048,6 +655,9 @@ bool
 oxr_system_get_force_feedback_support(struct oxr_logger *log, struct oxr_instance *inst);
 
 void
+oxr_system_get_face_tracking_android_support(struct oxr_logger *log, struct oxr_instance *inst, bool *supported);
+
+void
 oxr_system_get_face_tracking_htc_support(struct oxr_logger *log,
                                          struct oxr_instance *inst,
                                          bool *supports_eye,
@@ -1061,6 +671,18 @@ oxr_system_get_face_tracking2_fb_support(struct oxr_logger *log,
 
 bool
 oxr_system_get_body_tracking_fb_support(struct oxr_logger *log, struct oxr_instance *inst);
+
+bool
+oxr_system_get_full_body_tracking_meta_support(struct oxr_logger *log, struct oxr_instance *inst);
+
+bool
+oxr_system_get_body_tracking_calibration_meta_support(struct oxr_logger *log, struct oxr_instance *inst);
+
+bool
+oxr_system_get_body_tracking_fidelity_meta_support(struct oxr_logger *log, struct oxr_instance *inst);
+
+XRT_CHECK_RESULT XrResult
+oxr_system_poll(struct oxr_logger *log, struct oxr_system *sys);
 
 /*
  *
@@ -1102,13 +724,21 @@ oxr_event_push_XrEventDataMainSessionVisibilityChangedEXTX(struct oxr_logger *lo
 
 #ifdef OXR_HAVE_EXT_performance_settings
 XrResult
-oxr_event_push_XrEventDataPerfSettingsEXTX(struct oxr_logger *log,
-                                           struct oxr_session *sess,
-                                           enum xrt_perf_domain domain,
-                                           enum xrt_perf_sub_domain subDomain,
-                                           enum xrt_perf_notify_level fromLevel,
-                                           enum xrt_perf_notify_level toLevel);
+oxr_event_push_XrEventDataPerfSettingsEXT(struct oxr_logger *log,
+                                          struct oxr_session *sess,
+                                          enum xrt_perf_domain domain,
+                                          enum xrt_perf_sub_domain subDomain,
+                                          enum xrt_perf_notify_level fromLevel,
+                                          enum xrt_perf_notify_level toLevel);
 #endif // OXR_HAVE_EXT_performance_settings
+
+#ifdef OXR_HAVE_EXT_view_configuration_views_change
+XrResult
+oxr_event_push_XrEventDataViewConfigurationViewsChangedEXT(struct oxr_logger *log,
+                                                           struct oxr_system *system,
+                                                           enum xrt_view_type viewConfigurationType);
+#endif // OXR_HAVE_EXT_view_configuration_views_change
+
 /*!
  * This clears all pending events refers to the given session.
  */
@@ -1143,18 +773,6 @@ oxr_xdev_find_input(struct xrt_device *xdev, enum xrt_input_name name, struct xr
 bool
 oxr_xdev_find_output(struct xrt_device *xdev, enum xrt_output_name name, struct xrt_output **out_output);
 
-/*!
- * Returns the hand tracking value of the named input from the device.
- * Does NOT apply tracking origin offset to each joint.
- */
-void
-oxr_xdev_get_hand_tracking_at(struct oxr_logger *log,
-                              struct oxr_instance *inst,
-                              struct xrt_device *xdev,
-                              enum xrt_input_name name,
-                              XrTime at_time,
-                              struct xrt_hand_joint_set *out_value);
-
 #ifdef OXR_HAVE_MNDX_xdev_space
 static inline XrXDevListMNDX
 oxr_xdev_list_to_openxr(struct oxr_xdev_list *sc)
@@ -1180,6 +798,12 @@ oxr_xdev_list_space_create(struct oxr_logger *log,
                            const XrCreateXDevSpaceInfoMNDX *createInfo,
                            uint32_t index,
                            struct oxr_space **out_space);
+
+bool
+oxr_xdev_list_get_xdev(struct oxr_logger *log,
+                       struct oxr_xdev_list *xdl,
+                       XrXDevIdMNDX id,
+                       struct xrt_device **out_xdev);
 
 #endif // OXR_HAVE_MNDX_xdev_space
 
@@ -1307,6 +931,12 @@ oxr_session_populate_egl(struct oxr_logger *log,
                          XrGraphicsBindingEGLMNDX const *next,
                          struct oxr_session *sess);
 
+XrResult
+oxr_egl_get_device(struct oxr_logger *log,
+                   struct oxr_system *sys,
+                   PFN_xrEglGetProcAddressMNDX getProcAddress,
+                   EGLDeviceEXT *out_egl_device);
+
 #endif
 
 /*
@@ -1408,35 +1038,19 @@ oxr_swapchain_d3d12_create(struct oxr_logger *,
 
 
 /*!
- * Used to hold diverse child handles and ensure orderly destruction.
+ * Holds the properties that a system supports for a view configuration type.
  *
- * Each object referenced by an OpenXR handle should have one of these as its
- * first element, thus "extending" this class.
+ * @relates oxr_system
  */
-struct oxr_handle_base
+struct oxr_view_config_properties
 {
-	//! Magic (per-handle-type) value for debugging.
-	uint64_t debug;
+	XrViewConfigurationType view_config_type;
 
-	/*!
-	 * Pointer to this object's parent handle holder, if any.
-	 */
-	struct oxr_handle_base *parent;
+	uint32_t view_count;
+	XrViewConfigurationView views[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_VIEW_COUNT];
 
-	/*!
-	 * Array of children, if any.
-	 */
-	struct oxr_handle_base *children[XRT_MAX_HANDLE_CHILDREN];
-
-	/*!
-	 * Current handle state.
-	 */
-	enum oxr_handle_state state;
-
-	/*!
-	 * Destroy the object this handle refers to.
-	 */
-	oxr_handle_destroyer destroy;
+	uint32_t blend_mode_count;
+	XrEnvironmentBlendMode blend_modes[3];
 };
 
 /*!
@@ -1457,6 +1071,9 @@ struct oxr_system
 	//! The @ref xrt_iface level system.
 	struct xrt_system *xsys;
 
+	//! The @ref xrt_iface level app system.
+	struct xrt_app_system *xasys;
+
 	//! System devices used in all session types.
 	struct xrt_system_devices *xsysd;
 
@@ -1471,20 +1088,17 @@ struct oxr_system
 	//! Have the client application called the gfx api requirements func?
 	bool gotten_requirements;
 
-	XrFormFactor form_factor;
-	XrViewConfigurationType view_config_type;
-	XrViewConfigurationView views[2];
-	uint32_t blend_mode_count;
-	XrEnvironmentBlendMode blend_modes[3];
+	bool view_config_mutex_created;
+	struct os_mutex view_config_mutex;
+	uint32_t view_config_count;
+	struct oxr_view_config_properties view_configs[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_COUNT];
+	bool pending_view_config_update[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_COUNT];
+	timepoint_ns view_update_config_time[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_COUNT];
 
 	XrReferenceSpaceType reference_spaces[5];
 	uint32_t reference_space_count;
 
-	//! Cache of the last known system roles, see @ref xrt_system_roles::generation_id
-	struct xrt_system_roles dynamic_roles_cache;
-	struct os_mutex sync_actions_mutex;
-
-	struct xrt_visibility_mask *visibility_mask[2];
+	struct xrt_visibility_mask *visibility_mask[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_VIEW_COUNT];
 
 #ifdef OXR_HAVE_MNDX_xdev_space
 	bool supports_xdev_space;
@@ -1496,6 +1110,12 @@ struct oxr_system
 	//! The device returned with the last xrGetVulkanGraphicsDeviceKHR or xrGetVulkanGraphicsDevice2KHR call.
 	//! XR_NULL_HANDLE if neither has been called.
 	VkPhysicalDevice suggested_vulkan_physical_device;
+
+	/*!
+	 * Stores the vkGetInstanceProcAddr passed to xrCreateVulkanInstanceKHR to be
+	 * used when looking up Vulkan functions used by xrGetVulkanGraphicsDevice2KHR.
+	 */
+	PFN_vkGetInstanceProcAddr vk_get_instance_proc_addr;
 
 	struct
 	{
@@ -1515,90 +1135,6 @@ struct oxr_system
 #endif
 };
 
-
-/*
- * Device roles helpers.
- */
-
-// static roles
-// clang-format off
-static inline struct xrt_device *get_role_head(struct oxr_system *sys) {return sys->xsysd->static_roles.head; }
-static inline struct xrt_device *get_role_eyes(struct oxr_system *sys) {return sys->xsysd->static_roles.eyes; }
-static inline struct xrt_device *get_role_face(struct oxr_system* sys) { return sys->xsysd->static_roles.face; }
-static inline struct xrt_device *get_role_body(struct oxr_system* sys) { return sys->xsysd->static_roles.body; }
-static inline struct xrt_device *get_role_hand_tracking_left(struct oxr_system* sys) { return sys->xsysd->static_roles.hand_tracking.left; }
-static inline struct xrt_device *get_role_hand_tracking_right(struct oxr_system* sys) { return sys->xsysd->static_roles.hand_tracking.right; }
-// clang-format on
-
-// dynamic roles
-#define MAKE_GET_DYN_ROLES_FN(ROLE)                                                                                    \
-	static inline struct xrt_device *get_role_##ROLE(struct oxr_system *sys)                                       \
-	{                                                                                                              \
-		const bool is_locked = 0 == os_mutex_trylock(&sys->sync_actions_mutex);                                \
-		const int32_t xdev_idx = sys->dynamic_roles_cache.ROLE;                                                \
-		if (is_locked) {                                                                                       \
-			os_mutex_unlock(&sys->sync_actions_mutex);                                                     \
-		}                                                                                                      \
-		if (xdev_idx < 0 || xdev_idx >= (int32_t)ARRAY_SIZE(sys->xsysd->xdevs))                                \
-			return NULL;                                                                                   \
-		return sys->xsysd->xdevs[xdev_idx];                                                                    \
-	}
-MAKE_GET_DYN_ROLES_FN(left)
-MAKE_GET_DYN_ROLES_FN(right)
-MAKE_GET_DYN_ROLES_FN(gamepad)
-#undef MAKE_GET_DYN_ROLES_FN
-
-#define GET_XDEV_BY_ROLE(SYS, ROLE) (get_role_##ROLE((SYS)))
-
-
-static inline enum xrt_device_name
-get_role_profile_head(struct oxr_system *sys)
-{
-	return XRT_DEVICE_INVALID;
-}
-static inline enum xrt_device_name
-get_role_profile_eyes(struct oxr_system *sys)
-{
-	return XRT_DEVICE_INVALID;
-}
-static inline enum xrt_device_name
-get_role_profile_face(struct oxr_system *sys)
-{
-	return XRT_DEVICE_INVALID;
-}
-static inline enum xrt_device_name
-get_role_profile_body(struct oxr_system *sys)
-{
-	return XRT_DEVICE_INVALID;
-}
-static inline enum xrt_device_name
-get_role_profile_hand_tracking_left(struct oxr_system *sys)
-{
-	return XRT_DEVICE_INVALID;
-}
-static inline enum xrt_device_name
-get_role_profile_hand_tracking_right(struct oxr_system *sys)
-{
-	return XRT_DEVICE_INVALID;
-}
-
-#define MAKE_GET_DYN_ROLE_PROFILE_FN(ROLE)                                                                             \
-	static inline enum xrt_device_name get_role_profile_##ROLE(struct oxr_system *sys)                             \
-	{                                                                                                              \
-		const bool is_locked = 0 == os_mutex_trylock(&sys->sync_actions_mutex);                                \
-		const enum xrt_device_name profile_name = sys->dynamic_roles_cache.ROLE##_profile;                     \
-		if (is_locked) {                                                                                       \
-			os_mutex_unlock(&sys->sync_actions_mutex);                                                     \
-		}                                                                                                      \
-		return profile_name;                                                                                   \
-	}
-MAKE_GET_DYN_ROLE_PROFILE_FN(left)
-MAKE_GET_DYN_ROLE_PROFILE_FN(right)
-MAKE_GET_DYN_ROLE_PROFILE_FN(gamepad)
-#undef MAKE_GET_DYN_ROLES_FN
-
-#define GET_PROFILE_NAME_BY_ROLE(SYS, ROLE) (get_role_profile_##ROLE((SYS)))
-
 /*
  * Extensions helpers.
  */
@@ -1615,6 +1151,8 @@ struct oxr_extension_status
 };
 #undef MAKE_EXT_STATUS
 
+#define XRT_MAX_DEBUG_MESSENGERS 256
+
 /*!
  * Main object that ties everything together.
  *
@@ -1626,11 +1164,15 @@ struct oxr_extension_status
 struct oxr_instance
 {
 	//! Common structure for things referred to by OpenXR handles.
-	struct oxr_handle_base handle;
+	struct oxr_handle_parent_base handle;
 
 	struct u_debug_gui *debug_ui;
 
+	//! The @ref xrt_iface level instance.
 	struct xrt_instance *xinst;
+
+	//! The @ref xrt_iface level app instance.
+	struct xrt_app_instance *xainst;
 
 	//! Enabled extensions
 	struct oxr_extension_status extensions;
@@ -1642,25 +1184,16 @@ struct oxr_instance
 		XrVersion major_minor;
 	} openxr_version;
 
+	// Protects the function oxr_instance_init_system_locked.
+	struct os_mutex system_init_lock;
+
 	// Hardcoded single system.
 	struct oxr_system system;
 
 	struct time_state *timekeeping;
 
-	struct
-	{
-		struct u_hashset *name_store;
-		struct u_hashset *loc_store;
-	} action_sets;
-
-	//! Path store, for looking up paths.
-	struct u_hashset *path_store;
-	//! Mapping from ID to path.
-	struct oxr_path **path_array;
-	//! Total length of path array.
-	size_t path_array_length;
-	//! Number of paths in the array (0 is always null).
-	size_t path_num;
+	//! Path store for managing paths.
+	struct oxr_path_store path_store;
 
 	// Event queue.
 	struct
@@ -1670,20 +1203,19 @@ struct oxr_instance
 		struct oxr_event *next;
 	} event;
 
-	//! Interaction profile bindings that have been suggested by the client.
-	struct oxr_interaction_profile **profiles;
-	size_t profile_count;
+	//! Protects the sessions list @ref sessions_locked, taken before the event mutex.
+	struct os_mutex sessions_mutex;
+	//! The session list, protected by @ref sessions_mutex
+	struct oxr_session *sessions_locked;
 
-	struct oxr_session *sessions;
+	//! Path cache for actions, needs path_store to work.
+	struct oxr_instance_path_cache path_cache;
 
-	struct
-	{
+	//! Binding registry (reference-counted), shared by all action contexts of this instance.
+	struct oxr_binding_registry *binding_registry;
 
-#define SUBACTION_PATH_MEMBER(X) XrPath X;
-		OXR_FOR_EACH_SUBACTION_PATH(SUBACTION_PATH_MEMBER)
-
-#undef SUBACTION_PATH_MEMBER
-	} path_cache;
+	//! The default action context (reference-counted). Owned by instance; action sets also hold references.
+	struct oxr_instance_action_context *action_context;
 
 	struct
 	{
@@ -1701,8 +1233,33 @@ struct oxr_instance
 
 	struct
 	{
-		//! Unreal has a bug in the VulkanRHI backend.
+		/*!
+		 * Some applications can't handle depth formats, or they trigger
+		 * a bug in a specific version of the application or engine.
+		 * This flag only disables depth formats
+		 * @see disable_vulkan_format_depth_stencil for depth-stencil formats.
+		 */
+		bool disable_vulkan_format_depth;
+
+		/*!
+		 * Some applications can't handle depth stencil formats, or they
+		 * trigger a bug in a specific version of the application or
+		 * engine.
+		 *
+		 * This flag only disables depth-stencil formats,
+		 * @see disable_vulkan_format_depth flag for depth only formats.
+		 *
+		 * In the past it was used to work around a bug in Unreal's
+		 * VulkanRHI backend.
+		 */
 		bool disable_vulkan_format_depth_stencil;
+
+		/*!
+		 * Disable the listing of quad views as a supported view config,
+		 * the extensions are still exposed.
+		 */
+		bool disable_quad_views;
+
 		//! Unreal 4 has a bug calling xrEndSession; the function should just exit
 		bool skip_end_session;
 
@@ -1714,10 +1271,34 @@ struct oxr_instance
 
 		//! For applications that rely on views being parallel, notably some OpenVR games with OpenComposite.
 		bool parallel_views;
+
+		//! For applications that use stage and don't offer recentering.
+		bool map_stage_to_local_floor;
+
+		/*!
+		 * Beat Saber submits its projection layer with XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT set.
+		 * This breaks rendering because the game uses the alpha texture to store data for the bloom shader,
+		 * causing most of the game to render as black, only showing glowing parts of the image.
+		 */
+		bool no_texture_source_alpha;
+
+		/*!
+		 * Don't return XR_ERROR_VALIDATION_FAILURE if an
+		 * application sets unsupported usage flags when
+		 * calling xrCreateSwapchain.
+		 */
+		bool no_usage_bit_validation_in_create_swapchain;
+
+		/*!
+		 * Don't return XR_ERROR_VALIDATION_FAILURE if an
+		 * application sets unsupported flags in XrCompositionLayer
+		 * when calling xrEndFrame.
+		 */
+		bool no_layer_flags_bit_validation;
 	} quirks;
 
 	//! Debug messengers
-	struct oxr_debug_messenger *messengers[XRT_MAX_HANDLE_CHILDREN];
+	struct oxr_debug_messenger *messengers[XRT_MAX_DEBUG_MESSENGERS];
 
 	bool lifecycle_verbose;
 	bool debug_views;
@@ -1733,6 +1314,15 @@ struct oxr_instance
 #endif // XRT_OS_ANDROID
 };
 
+/*
+ * This includes needs to be here because it has static inline functions that
+ * de-references the oxr_instance object. This refactor was made mid-patchset
+ * so doing too many changes to other files would have been really disruptive
+ * but this include will be removed soon.
+ */
+#include "path/oxr_path_wrappers.h"
+
+
 /*!
  * Object that client program interact with.
  *
@@ -1744,7 +1334,7 @@ struct oxr_instance
 struct oxr_session
 {
 	//! Common structure for things referred to by OpenXR handles.
-	struct oxr_handle_base handle;
+	struct oxr_handle_parent_base handle;
 	struct oxr_system *sys;
 
 	//! What graphics type was this session created with.
@@ -1761,6 +1351,16 @@ struct oxr_session
 	struct oxr_session *next;
 
 	XrSessionState state;
+
+	/*!
+	 * This is set in xrBeginSession and is the primaryViewConfiguration
+	 * argument, this is then used in xrEndFrame to know which view
+	 * configuration the application is submitting it's frame in.
+	 */
+	XrViewConfigurationType current_view_config_type;
+
+	//! State of the head's XRT_INPUT_GENERIC_HEAD_DETECT input, for oxr_poll_event.
+	bool presence;
 
 	/*!
 	 * There is a extra state between xrBeginSession has been called and
@@ -1793,58 +1393,14 @@ struct oxr_session
 	struct os_precise_sleeper sleeper;
 
 	/*!
-	 * An array of action set attachments that this session owns.
-	 *
-	 * If non-null, this means action sets have been attached to this
-	 * session.
+	 * Holds all the action state that belongs on the session level.
 	 */
-	struct oxr_action_set_attachment *act_set_attachments;
+	struct oxr_session_action_context action_context;
 
 	/*!
-	 * Length of @ref oxr_session::act_set_attachments.
+	 * Per-session map of action key to action attachment (thread-safe).
 	 */
-	size_t action_set_attachment_count;
-
-	/*!
-	 * A map of action set key to action set attachments.
-	 *
-	 * If non-null, this means action sets have been attached to this
-	 * session, since this map points to elements of
-	 * oxr_session::act_set_attachments
-	 */
-	struct u_hashmap_int *act_sets_attachments_by_key;
-
-	/*!
-	 * A map of action key to action attachment.
-	 *
-	 * The action attachments are actually owned by the action set
-	 * attachments, but we own the action set attachments, so this is OK.
-	 *
-	 * If non-null, this means action sets have been attached to this
-	 * session, since this map points to @p oxr_action_attachment members of
-	 * @ref oxr_session::act_set_attachments elements.
-	 */
-	struct u_hashmap_int *act_attachments_by_key;
-
-	/*!
-	 * Clone of all suggested binding profiles at the point of action set/session attachment.
-	 * @ref oxr_session_attach_action_sets
-	 */
-	size_t profiles_on_attachment_size;
-	struct oxr_interaction_profile **profiles_on_attachment;
-
-	/*!
-	 * Currently bound interaction profile.
-	 * @{
-	 */
-
-#define OXR_PATH_MEMBER(X) XrPath X;
-
-	OXR_FOR_EACH_VALID_SUBACTION_PATH(OXR_PATH_MEMBER)
-#undef OXR_PATH_MEMBER
-	/*!
-	 * @}
-	 */
+	struct oxr_session_attached_actions attached_actions;
 
 	/*!
 	 * IPD, to be expanded to a proper 3D relation.
@@ -1869,7 +1425,7 @@ struct oxr_session
 
 	/*! initial relation of head in "global" space.
 	 * Used as reference for local space.  */
-	struct xrt_space_relation local_space_pure_relation;
+	// struct xrt_space_relation local_space_pure_relation;
 
 	bool has_lost;
 };
@@ -1912,111 +1468,6 @@ XrResult
 oxr_session_request_display_refresh_rate(struct oxr_logger *log, struct oxr_session *sess, float displayRefreshRate);
 #endif // OXR_HAVE_FB_display_refresh_rate
 
-/*!
- * dpad settings we need extracted from XrInteractionProfileDpadBindingEXT
- *
- * @ingroup oxr_input
- */
-struct oxr_dpad_settings
-{
-	float forceThreshold;
-	float forceThresholdReleased;
-	float centerRegion;
-	float wedgeAngle;
-	bool isSticky;
-};
-
-/*!
- * dpad binding extracted from XrInteractionProfileDpadBindingEXT
- */
-struct oxr_dpad_binding_modification
-{
-	XrPath binding;
-	struct oxr_dpad_settings settings;
-};
-
-/*!
- * A entry in the dpad state for one action set.
- *
- * @ingroup oxr_input
- */
-struct oxr_dpad_entry
-{
-#ifdef XR_EXT_dpad_binding
-	struct oxr_dpad_binding_modification dpads[4];
-	uint32_t dpad_count;
-#endif
-
-	uint64_t key;
-};
-
-/*!
- * Holds dpad binding state for a single interaction profile.
- *
- * @ingroup oxr_input
- */
-struct oxr_dpad_state
-{
-	struct u_hashmap_int *uhi;
-};
-
-/*!
- * dpad emulation settings from oxr_interaction_profile
- */
-struct oxr_dpad_emulation
-{
-	enum oxr_subaction_path subaction_path;
-	XrPath *paths;
-	uint32_t path_count;
-	enum xrt_input_name position;
-	enum xrt_input_name activate; // Can be zero
-};
-
-/*!
- * A single interaction profile.
- */
-struct oxr_interaction_profile
-{
-	XrPath path;
-
-	//! Used to lookup @ref xrt_binding_profile for fallback.
-	enum xrt_device_name xname;
-
-	//! Name presented to the user.
-	const char *localized_name;
-
-	struct oxr_binding *bindings;
-	size_t binding_count;
-
-	struct oxr_dpad_emulation *dpads;
-	size_t dpad_count;
-
-	struct oxr_dpad_state dpad_state;
-};
-
-/*!
- * Interaction profile binding state.
- */
-struct oxr_binding
-{
-	XrPath *paths;
-	uint32_t path_count;
-
-	//! Name presented to the user.
-	const char *localized_name;
-
-	enum oxr_subaction_path subaction_path;
-
-	uint32_t key_count;
-	uint32_t *keys;
-	//! store which entry in paths was suggested, for each action key
-	uint32_t *preferred_binding_path_index;
-
-	enum xrt_input_name input;
-	enum xrt_input_name dpad_activate;
-
-	enum xrt_output_name output;
-};
 
 /*!
  * @defgroup oxr_input OpenXR input
@@ -2044,41 +1495,6 @@ struct oxr_binding
  */
 
 /*!
- * A parsed equivalent of a list of sub-action paths.
- *
- * If @p any is true, then no paths were provided, which typically means any
- * input is acceptable.
- *
- * @ingroup oxr_main
- * @ingroup oxr_input
- */
-struct oxr_subaction_paths
-{
-	bool any;
-#define OXR_SUBPATH_MEMBER(X) bool X;
-	OXR_FOR_EACH_SUBACTION_PATH(OXR_SUBPATH_MEMBER)
-#undef OXR_SUBPATH_MEMBER
-};
-
-/*!
- * Helper function to determine if the set of paths in @p a is a subset of the
- * paths in @p b.
- *
- * @public @memberof oxr_subaction_paths
- */
-static inline bool
-oxr_subaction_paths_is_subset_of(const struct oxr_subaction_paths *a, const struct oxr_subaction_paths *b)
-{
-#define OXR_CHECK_SUBACTION_PATHS(X)                                                                                   \
-	if (a->X && !b->X) {                                                                                           \
-		return false;                                                                                          \
-	}
-	OXR_FOR_EACH_SUBACTION_PATH(OXR_CHECK_SUBACTION_PATHS)
-#undef OXR_CHECK_SUBACTION_PATHS
-	return true;
-}
-
-/*!
  * The data associated with the attachment of an Action Set (@ref
  * oxr_action_set) to as Session (@ref oxr_session).
  *
@@ -2093,8 +1509,8 @@ oxr_subaction_paths_is_subset_of(const struct oxr_subaction_paths *a, const stru
  */
 struct oxr_action_set_attachment
 {
-	//! Owning session.
-	struct oxr_session *sess;
+	//! Owning session action context.
+	struct oxr_session_action_context *sess_context;
 
 	//! Action set refcounted data
 	struct oxr_action_set_ref *act_set_ref;
@@ -2105,6 +1521,17 @@ struct oxr_action_set_attachment
 	//! Which sub-action paths are requested on the latest sync.
 	struct oxr_subaction_paths requested_subaction_paths;
 
+	/*!
+	 * Effective action-set priority from the latest xrSyncActions.
+	 *
+	 * Reset to @ref oxr_action_set_ref::priority at the start of each
+	 * successful focused sync, then overwritten only for action sets in that
+	 * sync's active list (including XR_EXT_active_action_set_priority
+	 * overrides). Used after sync, for example when enumerating bound
+	 * sources, to apply the same priority suppression as input combining.
+	 */
+	uint32_t last_sync_priority;
+
 	//! An array of action attachments we own.
 	struct oxr_action_attachment *act_attachments;
 
@@ -2114,16 +1541,6 @@ struct oxr_action_set_attachment
 	size_t action_attachment_count;
 };
 
-/*!
- * De-initialize an action set attachment and its action attachments.
- *
- * Frees the action attachments, but does not de-allocate the action set
- * attachment.
- *
- * @public @memberof oxr_action_set_attachment
- */
-void
-oxr_action_set_attachment_teardown(struct oxr_action_set_attachment *act_set_attached);
 
 
 /*!
@@ -2151,23 +1568,25 @@ struct oxr_action_state
 };
 
 /*!
- * A input action pair of a @ref xrt_input and a @ref xrt_device, along with the
- * required transform.
+ * A resolved input binding for an action, along with the required transform.
  *
  * @ingroup oxr_input
  *
- * @see xrt_device
+ * @see oxr_io_cache
  * @see xrt_input
  */
 struct oxr_action_input
 {
-	struct xrt_device *xdev;                // Used for poses and transform is null.
-	struct xrt_input *input;                // Ditto
-	enum xrt_input_name dpad_activate_name; // used to activate dpad emulation if present
-	struct xrt_input *dpad_activate;        // used to activate dpad emulation if present
+	//! Cache this input is resolved against (owned by the action context).
+	const struct oxr_io_cache *io_cache;
+	//! Device this input reads from.
+	struct xrt_device_id device_id;
+	//! The resolved input, pointing into @ref oxr_io_cache::inputs.
+	struct xrt_input *input;
+	const struct oxr_binding_point *binding_point;
+	struct oxr_priority_group_state *priority_group_state;
 	struct oxr_input_transform *transforms;
 	size_t transform_count;
-	XrPath bound_path;
 };
 
 /*!
@@ -2180,9 +1599,12 @@ struct oxr_action_input
  */
 struct oxr_action_output
 {
-	struct xrt_device *xdev;
+	//! Cache this output is resolved against (owned by the action context).
+	const struct oxr_io_cache *io_cache;
+	//! Device this output routes to.
+	struct xrt_device_id device_id;
 	enum xrt_output_name name;
-	XrPath bound_path;
+	const struct oxr_binding_point *binding_point;
 };
 
 
@@ -2228,17 +1650,11 @@ struct oxr_action_attachment
 	//! This action's refcounted data
 	struct oxr_action_ref *act_ref;
 
-	/*!
-	 * The corresponding session.
-	 *
-	 * This will always be valid: the session outlives this object because
-	 * it owns act_set_attached.
-	 */
-	struct oxr_session *sess;
+	//! The session attached actions this action attachment belongs to.
+	struct oxr_session_attached_actions *attached_actions;
 
 	//! Unique key for the session hashmap.
 	uint32_t act_key;
-
 
 	/*!
 	 * For pose actions any subaction paths are special treated, at bind
@@ -2270,6 +1686,8 @@ oxr_space_type_is_reference(enum oxr_space_type space_type)
 	case OXR_SPACE_TYPE_REFERENCE_UNBOUNDED_MSFT:
 	case OXR_SPACE_TYPE_REFERENCE_COMBINED_EYE_VARJO:
 	case OXR_SPACE_TYPE_REFERENCE_LOCALIZATION_MAP_ML:
+	case OXR_SPACE_TYPE_REFERENCE_UNBOUNDED_ANDROID:
+	case OXR_SPACE_TYPE_REFERENCE_STATIONARY_EXT:
 		// These are reference spaces.
 		return true;
 
@@ -2316,8 +1734,10 @@ struct oxr_space
 	struct
 	{
 		struct xrt_space *xs;
-		struct xrt_device *xdev;
+		struct xrt_device_id device_id;
 		enum xrt_input_name name;
+
+		bool feature_eye_tracking;
 	} action;
 
 	struct
@@ -2398,33 +1818,6 @@ struct oxr_swapchain
 	XrResult (*release_image)(struct oxr_logger *, struct oxr_swapchain *, const XrSwapchainImageReleaseInfo *);
 };
 
-struct oxr_refcounted
-{
-	struct xrt_reference base;
-	//! Destruction callback
-	void (*destroy)(struct oxr_refcounted *);
-};
-
-/*!
- * Increase the reference count of @p orc.
- */
-static inline void
-oxr_refcounted_ref(struct oxr_refcounted *orc)
-{
-	xrt_reference_inc(&orc->base);
-}
-
-/*!
- * Decrease the reference count of @p orc, destroying it if it reaches 0.
- */
-static inline void
-oxr_refcounted_unref(struct oxr_refcounted *orc)
-{
-	if (xrt_reference_dec_and_is_zero(&orc->base)) {
-		orc->destroy(orc);
-	}
-}
-
 /*!
  * The reference-counted data of an action set.
  *
@@ -2455,11 +1848,7 @@ struct oxr_action_set_ref
 	//! Application supplied action set priority.
 	uint32_t priority;
 
-	struct
-	{
-		struct u_hashset *name_store;
-		struct u_hashset *loc_store;
-	} actions;
+	struct oxr_pair_hashset actions;
 
 	struct oxr_subaction_paths permitted_subaction_paths;
 };
@@ -2481,10 +1870,13 @@ struct oxr_action_set_ref
 struct oxr_action_set
 {
 	//! Common structure for things referred to by OpenXR handles.
-	struct oxr_handle_base handle;
+	struct oxr_handle_parent_base handle;
 
 	//! Owner of this action set.
 	struct oxr_instance *inst;
+
+	//! Reference to the instance action context (reference-counted).
+	struct oxr_instance_action_context *inst_context;
 
 	/*!
 	 * The data for this action set that must live as long as any session we
@@ -2602,33 +1994,6 @@ struct oxr_debug_messenger
 	void *XR_MAY_ALIAS user_data;
 };
 
-/*!
- * A hand tracker.
- *
- * Parent type/handle is @ref oxr_instance
- *
- *
- * @obj{XrHandTrackerEXT}
- * @extends oxr_handle_base
- */
-struct oxr_hand_tracker
-{
-	//! Common structure for things referred to by OpenXR handles.
-	struct oxr_handle_base handle;
-
-	//! Owner of this hand tracker.
-	struct oxr_session *sess;
-
-	//! xrt_device backing this hand tracker
-	struct xrt_device *xdev;
-
-	//! the input name associated with this hand tracker
-	enum xrt_input_name input_name;
-
-	XrHandEXT hand;
-	XrHandJointSetEXT hand_joint_set;
-};
-
 #ifdef OXR_HAVE_FB_passthrough
 
 struct oxr_passthrough
@@ -2716,6 +2081,9 @@ struct oxr_facial_tracker_htc
 
 	//! Type of facial tracking, eyes or lips
 	enum xrt_facial_tracking_type_htc facial_tracking_type;
+
+	//! To track if the feature set has been incremented since creation.
+	bool feature_incremented;
 };
 
 XrResult
@@ -2747,8 +2115,8 @@ struct oxr_body_tracker_fb
 	//! Owner of this face tracker.
 	struct oxr_session *sess;
 
-	//! xrt_device backing this face tracker
-	struct xrt_device *xdev;
+	//! xrt_body_tracker backing this body tracker
+	struct xrt_body_tracker *xbt;
 
 	//! Type of the body joint set e.g. XR_FB_body_tracking or XR_META_body_tracking_full_body
 	enum xrt_body_joint_set_type_fb joint_set_type;
@@ -2773,6 +2141,47 @@ oxr_locate_body_joints_fb(struct oxr_logger *log,
                           XrBodyJointLocationsFB *locations);
 #endif
 
+#ifdef OXR_HAVE_BD_body_tracking
+/*!
+ * BD (PICO) specific Body tracker.
+ *
+ * Parent type/handle is @ref oxr_session
+ *
+ * @obj{XrBodyTrackerBD}
+ * @extends oxr_handle_base
+ */
+struct oxr_body_tracker_bd
+{
+	//! Common structure for things referred to by OpenXR handles.
+	struct oxr_handle_base handle;
+
+	//! Owner of this body tracker.
+	struct oxr_session *sess;
+
+	//! xrt_body_tracker backing this body tracker
+	struct xrt_body_tracker *xbt;
+
+	//! Type of the body joint set (with or without arms)
+	enum xrt_body_joint_set_type_bd joint_set_type;
+};
+
+XrResult
+oxr_create_body_tracker_bd(struct oxr_logger *log,
+                           struct oxr_session *sess,
+                           const XrBodyTrackerCreateInfoBD *createInfo,
+                           struct oxr_body_tracker_bd **out_body_tracker_bd);
+
+XrResult
+oxr_locate_body_joints_bd(struct oxr_logger *log,
+                          struct oxr_body_tracker_bd *body_tracker_bd,
+                          struct oxr_space *base_spc,
+                          const XrBodyJointsLocateInfoBD *locateInfo,
+                          XrBodyJointLocationsBD *locations);
+
+bool
+oxr_system_get_body_tracking_bd_support(struct oxr_logger *log, struct oxr_instance *inst);
+#endif
+
 #ifdef OXR_HAVE_FB_face_tracking2
 /*!
  * FB specific Face tracker2.
@@ -2795,6 +2204,9 @@ struct oxr_face_tracker2_fb
 
 	bool audio_enabled;
 	bool visual_enabled;
+
+	//! To track if the feature set has been incremented since creation.
+	bool feature_incremented;
 };
 
 XrResult
@@ -2838,6 +2250,154 @@ struct oxr_xdev_list
 	uint32_t device_count;
 };
 #endif // OXR_HAVE_MNDX_xdev_space
+
+#ifdef OXR_HAVE_EXT_plane_detection
+/*!
+ * A Plane Detector.
+ *
+ * Parent type/handle is @ref oxr_session
+ *
+ *
+ * @obj{XrPlaneDetectorEXT}
+ * @extends oxr_handle_base
+ */
+struct oxr_plane_detector_ext
+{
+	//! Common structure for things referred to by OpenXR handles.
+	struct oxr_handle_base handle;
+
+	//! Owner of this anchor.
+	struct oxr_session *sess;
+
+	//! Plane detector flags.
+	enum xrt_plane_detector_flags_ext flags;
+
+	//! The last known state of this plane detector.
+	XrPlaneDetectionStateEXT state;
+
+	//! Whether the last DONE plane detection has been retrieved from the xdev.
+	bool retrieved;
+
+	//! The device that this plane detector belongs to.
+	struct xrt_device *xdev;
+
+	//! Detected planes. xrt_plane_detector_locations_ext::relation is kept in xdev space and not updated.
+	struct xrt_plane_detections_ext detections;
+
+	//! Corresponds to xrt_plane_detections_ext::locations, but with OpenXR types and transformed into target space.
+	//! Enables two call idiom.
+	XrPlaneDetectorLocationEXT *xr_locations;
+
+	//! A globally unique id for the current plane detection or 0, generated by the xrt_device.
+	uint64_t detection_id;
+};
+#endif // OXR_HAVE_EXT_plane_detection
+
+#ifdef OXR_HAVE_EXT_future
+/*!
+ * EXT futures.
+ *
+ * Parent type/handle is @ref oxr_instance
+ *
+ * @obj{XrFutureEXT}
+ * @extends oxr_handle_base
+ */
+struct oxr_future_ext
+{
+	//! Common structure for things referred to by OpenXR handles.
+	struct oxr_handle_base handle;
+
+	//! (weak) reference to instance (may or not be a direct parent handle")
+	struct oxr_instance *inst;
+
+	//! Owning session.
+	struct oxr_session *sess;
+
+	//! xrt_future backing this future
+	struct xrt_future *xft;
+};
+
+/*!
+ * To go back to a OpenXR object.
+ *
+ * @relates oxr_future_ext
+ */
+static inline XrFutureEXT
+oxr_future_ext_to_openxr(struct oxr_future_ext *future_ext)
+{
+	return XRT_CAST_PTR_TO_OXR_HANDLE(XrFutureEXT, future_ext);
+}
+
+XrResult
+oxr_future_create(struct oxr_logger *log,
+                  struct oxr_session *sess,
+                  struct xrt_future *xft,
+                  struct oxr_handle_parent_base *parent_handle,
+                  struct oxr_future_ext **out_oxr_future_ext);
+
+XrResult
+oxr_future_invalidate(struct oxr_logger *log, struct oxr_future_ext *oxr_future);
+
+XrResult
+oxr_future_ext_poll(struct oxr_logger *log, const struct oxr_future_ext *oxr_future, XrFuturePollResultEXT *pollResult);
+
+XrResult
+oxr_future_ext_cancel(struct oxr_logger *log, struct oxr_future_ext *oxr_future);
+
+XrResult
+oxr_future_ext_complete(struct oxr_logger *log,
+                        struct oxr_future_ext *oxr_future,
+                        struct xrt_future_result *out_ft_result);
+
+#endif
+
+#ifdef OXR_HAVE_EXT_user_presence
+XrResult
+oxr_event_push_XrEventDataUserPresenceChangedEXT(struct oxr_logger *log, struct oxr_session *sess, bool isUserPresent);
+#endif // OXR_HAVE_EXT_user_presence
+
+#ifdef OXR_HAVE_ANDROID_face_tracking
+/*!
+ * Android specific Facial tracker.
+ *
+ * Parent type/handle is @ref oxr_instance
+ *
+ *
+ * @obj{XrFaceTrackerANDROID}
+ * @extends oxr_handle_base
+ */
+struct oxr_face_tracker_android
+{
+	//! Common structure for things referred to by OpenXR handles.
+	struct oxr_handle_base handle;
+
+	//! Owner of this face tracker.
+	struct oxr_session *sess;
+
+	//! xrt_device backing this face tracker
+	struct xrt_device *xdev;
+
+	//! To track if the feature set has been incremented since creation.
+	bool feature_incremented;
+};
+
+XrResult
+oxr_face_tracker_android_create(struct oxr_logger *log,
+                                struct oxr_session *sess,
+                                const XrFaceTrackerCreateInfoANDROID *createInfo,
+                                XrFaceTrackerANDROID *faceTracker);
+
+XrResult
+oxr_get_face_state_android(struct oxr_logger *log,
+                           struct oxr_face_tracker_android *facial_tracker_android,
+                           const XrFaceStateGetInfoANDROID *getInfo,
+                           XrFaceStateANDROID *faceStateOutput);
+
+XrResult
+oxr_get_face_calibration_state_android(struct oxr_logger *log,
+                                       struct oxr_face_tracker_android *facial_tracker_android,
+                                       XrBool32 *faceIsCalibratedOutput);
+#endif // OXR_HAVE_ANDROID_face_tracking
 
 /*!
  * @}

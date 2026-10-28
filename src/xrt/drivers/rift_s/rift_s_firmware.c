@@ -267,15 +267,15 @@ fail:
 static bool
 json_read_led_point(const cJSON *led_model, struct rift_s_led *led, int n)
 {
-	const cJSON *array;
-	double point[9];
-	char name[32];
-
+	char name[32] = {0};
 	snprintf(name, 32, "Point%d", n);
-	array = u_json_get(led_model, name);
+
+	const cJSON *array = u_json_get(led_model, name);
 	if (!cJSON_IsArray(array) || cJSON_GetArraySize(array) != 9) {
 		return false;
 	}
+
+	double point[9] = {0};
 
 	int j = 0;
 	const cJSON *item = NULL;

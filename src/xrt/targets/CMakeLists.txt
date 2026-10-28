@@ -1,10 +1,13 @@
 # Copyright 2019-2020, Collabora, Ltd.
+# Copyright 2026, NVIDIA CORPORATION.
+# Copyright 2026, Beyley Cardellio
 # SPDX-License-Identifier: BSL-1.0
 
 ######
 # This is where we collect all of the pieces from the different parts of
 # the source tree and build a complete driver or integration part.
 
+add_subdirectory(helpers)
 add_subdirectory(common)
 
 # Monado management library
@@ -14,6 +17,11 @@ endif()
 
 if(XRT_FEATURE_OPENXR)
 	add_subdirectory(openxr)
+	add_subdirectory(binding_inspector)
+endif()
+
+if(XRT_FEATURE_OPENVR)
+	add_subdirectory(openvr)
 endif()
 
 if(XRT_MODULE_MONADO_CLI)

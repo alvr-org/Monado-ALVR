@@ -41,7 +41,7 @@ class MonadoService : Service(), Watchdog.ShutdownListener {
                 // If the surface comes from client, just stop the service when client disconnected
                 // because the surface belongs to the client.
                 if (binder.canDrawOverOtherApps()) BuildConfig.WATCHDOG_TIMEOUT_MILLISECONDS else 0,
-                this
+                this,
             )
         watchdog.startMonitor()
 
@@ -88,7 +88,7 @@ class MonadoService : Service(), Watchdog.ShutdownListener {
                 this,
                 0,
                 Intent(BuildConfig.SHUTDOWN_ACTION).setPackage(packageName),
-                flags
+                flags,
             )
 
         val notification = serviceNotification.buildNotification(this, pendingShutdownIntent)
@@ -97,7 +97,7 @@ class MonadoService : Service(), Watchdog.ShutdownListener {
             startForeground(
                 serviceNotification.getNotificationId(),
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST,
             )
         } else {
             startForeground(serviceNotification.getNotificationId(), notification)

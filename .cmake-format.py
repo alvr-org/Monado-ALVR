@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2021-2022, Collabora, Ltd.
+# SPDX-FileCopyrightText: 2025-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: CC0-1.0
 
 with section("parse"):
@@ -7,7 +8,9 @@ with section("parse"):
     additional_commands = {
         "generate_openxr_runtime_manifest_at_install": {
             "kwargs": {
+                "COMPONENT": 1,
                 "DESTINATION": 1,
+                "LIBMONADO": 1,
                 "MANIFEST_TEMPLATE": 1,
                 "OUT_FILENAME": 1,
                 "RELATIVE_RUNTIME_DIR": 1,
@@ -17,7 +20,20 @@ with section("parse"):
             "pargs": {"flags": ["ABSOLUTE_RUNTIME_PATH"], "nargs": "*"},
         },
         "generate_openxr_runtime_manifest_buildtree": {
-            "kwargs": {"MANIFEST_TEMPLATE": 1, "OUT_FILE": 1, "RUNTIME_TARGET": 1},
+            "kwargs": {
+                "LIBMONADO": 1,
+                "MANIFEST_TEMPLATE": 1,
+                "OUT_FILE": 1,
+                "RUNTIME_TARGET": 1,
+            },
+            "pargs": {"flags": [], "nargs": "*"},
+        },
+        "generate_macro_lists": {
+            "kwargs": {"OUTPUT": 1, "WORKING_DIRECTORY": 1, "INPUTS": "+", "ENUMS": "+"},
+            "pargs": {"flags": ["IGNORE_OTHER_ENUMS", "VERBOSE"], "nargs": "*"},
+        },
+        "monado_set_options": {
+            "kwargs": {"ENABLE": "+", "KEEP": "+", "KEEP_SET": "+"},
             "pargs": {"flags": [], "nargs": "*"},
         },
         "option_with_deps": {

@@ -1,0 +1,128 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"compositor_get_info": {
+		"out": [
+			{"name": "info", "type": "struct xrt_compositor_info"}
+		]
+	},
+
+	"compositor_predict_frame": {
+		"out": [
+			{"name": "frame_id", "type": "int64_t"},
+			{"name": "wake_up_time", "type": "int64_t"},
+			{"name": "predicted_display_time", "type": "int64_t"},
+			{"name": "predicted_display_period", "type": "int64_t"}
+		]
+	},
+
+	"compositor_wait_woke": {
+		"in": [
+			{"name": "frame_id", "type": "int64_t"}
+		]
+	},
+
+	"compositor_begin_frame": {
+		"in": [
+			{"name": "frame_id", "type": "int64_t"}
+		]
+	},
+
+	"compositor_discard_frame": {
+		"in": [
+			{"name": "frame_id", "type": "int64_t"}
+		]
+	},
+
+	"compositor_layer_sync": {
+		"in": [
+			{"name": "slot_id", "type": "uint32_t"}
+		],
+		"in_handles": {"type": "xrt_graphics_sync_handle_t"},
+		"out": [
+			{"name": "free_slot_id", "type": "uint32_t"}
+		]
+	},
+
+	"compositor_layer_sync_with_semaphore": {
+		"in": [
+			{"name": "slot_id", "type": "uint32_t"},
+			{"name": "semaphore_id", "type": "uint32_t"},
+			{"name": "semaphore_value", "type": "uint64_t"}
+		],
+		"out": [
+			{"name": "free_slot_id", "type": "uint32_t"}
+		]
+	},
+
+	"compositor_set_performance_level": {
+		"in": [
+			{"name": "domain", "type": "enum xrt_perf_domain"},
+			{"name": "level", "type": "enum xrt_perf_set_level"}
+		]
+	},
+
+	"compositor_set_thread_hint": {
+		"in": [
+			{"name": "hint", "type": "enum xrt_thread_hint"},
+			{"name": "thread_id", "type": "uint32_t"}
+		]
+	},
+
+	"compositor_get_display_refresh_rate": {
+		"out": [
+			{"name": "out_display_refresh_rate_hz", "type": "float"}
+		]
+	},
+
+	"compositor_request_display_refresh_rate": {
+		"in": [
+			{"name": "display_refresh_rate_hz", "type": "float"}
+		]
+	},
+
+	"compositor_get_reference_bounds_rect": {
+		"in": [
+			{"name": "reference_space_type", "type": "enum xrt_reference_space_type"}
+		],
+		"out": [
+			{"name": "bounds", "type":  "struct xrt_vec2"}
+		]
+	},
+
+	"compositor_create_passthrough": {
+		"in": [
+			{"name": "info", "type": "struct xrt_passthrough_create_info"}
+		]
+	},
+
+	"compositor_create_passthrough_layer": {
+		"in": [
+			{"name": "info", "type": "struct xrt_passthrough_layer_create_info"}
+		]
+	},
+
+	"compositor_destroy_passthrough": {},
+
+	"compositor_semaphore_create": {
+		"out": [
+			{"name": "id", "type": "uint32_t"}
+		],
+		"out_handles": {"type": "xrt_graphics_sync_handle_t"}
+	},
+
+	"compositor_semaphore_destroy": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+
+	"compositor_set_chroma_key_params": {
+		"in": [
+			{"name": "hsv_min", "type": "struct xrt_colour_hsv_f32"},
+			{"name": "hsv_max", "type": "struct xrt_colour_hsv_f32"},
+			{"name": "curve", "type": "float"},
+			{"name": "despill", "type": "float"}
+		]
+	}
+}

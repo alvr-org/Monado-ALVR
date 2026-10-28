@@ -1,7 +1,7 @@
 #!/bin/sh
 # Copyright 2021, Collabora, Ltd.
 # SPDX-License-Identifier: BSL-1.0
-# Author: Moses Turner <moses@collabora.com>
+# Author: Moshi Turner <moshiturner@protonmail.com>
 
 if ! type "git-lfs" > /dev/null; then
   echo "Install git-lfs!"

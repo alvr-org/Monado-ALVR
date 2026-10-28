@@ -27,7 +27,7 @@
 #endif
 
 
-#define LOG_BUFFER_SIZE (1024)
+#define LOG_BUFFER_SIZE (4096)
 
 #ifdef XRT_OS_WINDOWS
 #define DEFAULT_NO_STDERR (true)

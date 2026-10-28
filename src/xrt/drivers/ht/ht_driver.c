@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Camera based hand tracking driver code.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup drv_ht
  */
@@ -28,9 +28,7 @@
 
 #include "tracking/t_hand_tracking.h"
 
-// Save me, Obi-Wan!
-
-#include "../../tracking/hand/mercury/hg_interface.h"
+#include "hand/mercury/hg_interface.h"
 
 #ifdef XRT_BUILD_DRIVER_DEPTHAI
 #include "../depthai/depthai_interface.h"
@@ -145,7 +143,7 @@ userConfigSetDefaults(struct ht_device *htd)
  * xrt_device function implementations
  */
 
-static void
+static xrt_result_t
 ht_device_get_hand_tracking(struct xrt_device *xdev,
                             enum xrt_input_name name,
                             int64_t at_timestamp_ns,
@@ -154,12 +152,13 @@ ht_device_get_hand_tracking(struct xrt_device *xdev,
 {
 	struct ht_device *htd = ht_device(xdev);
 
-	if (name != XRT_INPUT_GENERIC_HAND_TRACKING_LEFT && name != XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT) {
-		HT_ERROR(htd, "unknown input name for hand tracker");
-		return;
+	if (name != XRT_INPUT_HT_UNOBSTRUCTED_LEFT && name != XRT_INPUT_HT_UNOBSTRUCTED_RIGHT) {
+		U_LOG_XDEV_UNSUPPORTED_INPUT(&htd->base, htd->log_level, name);
+		return XRT_ERROR_INPUT_UNSUPPORTED;
 	}
 
 	htd->async->get_hand(htd->async, name, at_timestamp_ns, out_value, out_timestamp_ns);
+	return XRT_SUCCESS;
 }
 
 static void
@@ -211,15 +210,15 @@ ht_device_create_common(struct t_stereo_camera_calibration *calib,
 	snprintf(htd->base.str, XRT_DEVICE_NAME_LEN, "Camera based Hand Tracker");
 	snprintf(htd->base.serial, XRT_DEVICE_NAME_LEN, "Camera based Hand Tracker");
 
-	htd->base.inputs[0].name = XRT_INPUT_GENERIC_HAND_TRACKING_LEFT;
-	htd->base.inputs[1].name = XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT;
+	htd->base.inputs[0].name = XRT_INPUT_HT_UNOBSTRUCTED_LEFT;
+	htd->base.inputs[1].name = XRT_INPUT_HT_UNOBSTRUCTED_RIGHT;
 
 	// Yes, you need all of these. Yes, I tried disabling them all one at a time. You need all of these.
 	htd->base.name = XRT_DEVICE_HAND_TRACKER;
 	htd->base.device_type = XRT_DEVICE_TYPE_HAND_TRACKER;
-	htd->base.orientation_tracking_supported = true;
-	htd->base.position_tracking_supported = true;
-	htd->base.hand_tracking_supported = true;
+	htd->base.supported.orientation_tracking = true;
+	htd->base.supported.position_tracking = true;
+	htd->base.supported.hand_tracking = true;
 
 	htd->sync = sync;
 
@@ -251,6 +250,10 @@ ht_device_create(struct xrt_frame_context *xfctx,
 	}
 
 	sync = t_hand_tracking_sync_mercury_create(calib, create_info, path);
+	if (sync == NULL) {
+		U_LOG_E("Failed to create hand tracking sync!");
+		return -1;
+	}
 
 	struct ht_device *htd = ht_device_create_common(calib, false, xfctx, sync);
 

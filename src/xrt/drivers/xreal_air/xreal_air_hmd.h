@@ -1,9 +1,9 @@
-// Copyright 2023-2024, Tobias Frisch
+// Copyright 2023-2025, Tobias Frisch
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Xreal Air packet parsing implementation.
- * @author Tobias Frisch <thejackimonster@gmail.com>
+ * @author Tobias Frisch <jacki@thejackimonster.de>
  * @ingroup drv_xreal_air
  */
 
@@ -20,15 +20,13 @@
 extern "C" {
 #endif
 
-#define XREAL_AIR_HANDLE_IFACE 3
-#define XREAL_AIR_CONTROL_IFACE 4
-
 #define XREAL_AIR_MSG_R_BRIGHTNESS 0x03
 #define XREAL_AIR_MSG_W_BRIGHTNESS 0x04
 #define XREAL_AIR_MSG_R_DISP_MODE 0x07
 #define XREAL_AIR_MSG_W_DISP_MODE 0x08
 
 #define XREAL_AIR_MSG_P_START_HEARTBEAT 0x6c02
+#define XREAL_AIR_MSG_P_DISPLAY_TOGGLED 0x6C04
 #define XREAL_AIR_MSG_P_BUTTON_PRESSED 0x6C05
 #define XREAL_AIR_MSG_P_END_HEARTBEAT 0x6c12
 #define XREAL_AIR_MSG_P_ASYNC_TEXT_LOG 0x6c09
@@ -41,8 +39,20 @@ extern "C" {
 #define XREAL_AIR_BUTTON_VIRT_MENU_TOGGLE 0x3
 #define XREAL_AIR_BUTTON_VIRT_BRIGHTNESS_UP 0x6
 #define XREAL_AIR_BUTTON_VIRT_BRIGHTNESS_DOWN 0x7
-#define XREAL_AIR_BUTTON_VIRT_MODE_UP 0x8
-#define XREAL_AIR_BUTTON_VIRT_MODE_DOWN 0x9
+#define XREAL_AIR_BUTTON_VIRT_UP 0x8
+#define XREAL_AIR_BUTTON_VIRT_DOWN 0x9
+#define XREAL_AIR_BUTTON_VIRT_MODE_2D 0xA
+#define XREAL_AIR_BUTTON_VIRT_MODE_3D 0xB
+#define XREAL_AIR_BUTTON_VIRT_BLEND_CYCLE 0xC
+#define XREAL_AIR_BUTTON_VIRT_CONTROL_TOGGLE 0xF
+
+#define XREAL_AIR_BLEND_STATE_LOW 0x0
+#define XREAL_AIR_BLEND_STATE_DEFAULT 0x1
+#define XREAL_AIR_BLEND_STATE_MEDIUM 0x2
+#define XREAL_AIR_BLEND_STATE_FULL 0x3
+
+#define XREAL_AIR_CONTROL_MODE_BRIGHTNESS 0x0
+#define XREAL_AIR_CONTROL_MODE_VOLUME 0x1
 
 #define XREAL_AIR_BRIGHTNESS_MIN 0
 #define XREAL_AIR_BRIGHTNESS_MAX 7
@@ -122,7 +132,7 @@ struct xreal_air_parsed_sensor_control_data
 	uint16_t length;
 	uint8_t msgid;
 
-	uint8_t data[56];
+	uint8_t data[512 - 8];
 };
 
 /*!
@@ -147,18 +157,23 @@ struct xreal_air_parsed_control
 struct xrt_device *
 xreal_air_hmd_create_device(struct os_hid_device *sensor_device,
                             struct os_hid_device *control_device,
-                            enum u_logging_level log_level);
+                            enum u_logging_level log_level,
+                            uint16_t max_sensor_buffer_size);
 
 bool
 xreal_air_parse_calibration_buffer(struct xreal_air_parsed_calibration *calibration, const char *buffer, size_t size);
 
 bool
-xreal_air_parse_sensor_packet(struct xreal_air_parsed_sensor *sensor, const uint8_t *buffer, int size);
+xreal_air_parse_sensor_packet(struct xreal_air_parsed_sensor *sensor,
+                              const uint8_t *buffer,
+                              size_t size,
+                              size_t max_size);
 
 bool
 xreal_air_parse_sensor_control_data_packet(struct xreal_air_parsed_sensor_control_data *data,
                                            const uint8_t *buffer,
-                                           int size);
+                                           size_t size,
+                                           size_t max_size);
 
 bool
 xreal_air_parse_control_packet(struct xreal_air_parsed_control *control, const uint8_t *buffer, int size);

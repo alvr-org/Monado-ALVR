@@ -160,7 +160,8 @@ wmr_hmd_controller_create(struct wmr_hmd *hmd,
 
 	// Takes ownership of one reference to the connection, the other will
 	// belong to the returned pointer
-	struct wmr_controller_base *wcb = wmr_controller_create(&conn->base, controller_type, vid, pid, log_level);
+	struct wmr_controller_base *wcb =
+	    wmr_controller_create(&conn->base, controller_type, vid, pid, log_level, hmd->tracking.source);
 	if (wcb == NULL) {
 		WMR_ERROR(conn, "WMR Controller (Tunnelled): Failed to create controller");
 		wmr_hmd_controller_connection_destroy(conn);

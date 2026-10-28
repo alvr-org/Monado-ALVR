@@ -1,5 +1,0 @@
----
-- mr.2322
-- mr.2333
----
-- Doxygen improvements.

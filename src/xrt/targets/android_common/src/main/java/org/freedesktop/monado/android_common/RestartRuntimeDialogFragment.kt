@@ -22,17 +22,19 @@ import androidx.fragment.app.DialogFragment
 class RestartRuntimeDialogFragment : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val message = arguments!!.getString(ARGS_KEY_MESSAGE)
-        val builder = AlertDialog.Builder(requireActivity())
-        builder.setMessage(message).setCancelable(false).setPositiveButton(R.string.restart) {
-            _: DialogInterface?,
-            _: Int ->
-            delayRestart(DELAY_RESTART_DURATION)
-            // ! @todo elegant way to stop service? A bounded service might be restarted by
-            //        framework automatically.
-            Process.killProcess(Process.myPid())
+        with(requireNotNull(arguments)) {
+            val message = this.getString(ARGS_KEY_MESSAGE)
+            val builder = AlertDialog.Builder(requireActivity())
+            builder.setMessage(message).setCancelable(false).setPositiveButton(R.string.restart) {
+                _: DialogInterface?,
+                _: Int ->
+                delayRestart(DELAY_RESTART_DURATION)
+                // ! @todo elegant way to stop service? A bounded service might be restarted by
+                //        framework automatically.
+                Process.killProcess(Process.myPid())
+            }
+            return builder.create()
         }
-        return builder.create()
     }
 
     private fun delayRestart(delayMillis: Long) {

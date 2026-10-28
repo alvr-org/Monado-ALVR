@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Camera based hand tracking driver code.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_ht
  */
 
@@ -137,16 +137,10 @@ ht_async_mainloop(void *ptr)
 			struct xrt_space_relation wrist_rel =
 			    hta->working.hands[i].values.hand_joint_set_default[XRT_HAND_JOINT_WRIST].relation;
 
-			m_relation_history_estimate_motion( //
-			    hta->present.relation_hist[i],  //
-			    &wrist_rel,                     //
-			    hta->working.timestamp,         //
-			    &wrist_rel);                    //
-
-			m_relation_history_push(           //
-			    hta->present.relation_hist[i], //
-			    &wrist_rel,                    //
-			    hta->working.timestamp);       //
+			m_relation_history_push_with_motion_estimation( //
+			    hta->present.relation_hist[i],              //
+			    &wrist_rel,                                 //
+			    hta->working.timestamp);                    //
 		}
 
 		hta->hand_tracking_work_active = false;
@@ -264,10 +258,10 @@ ht_async_get_hand(struct t_hand_tracking_async *ht_async,
                   int64_t *out_timestamp_ns)
 {
 	struct ht_async_impl *hta = ht_async_impl(ht_async);
-	assert(name == XRT_INPUT_GENERIC_HAND_TRACKING_LEFT || name == XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT);
+	assert(name == XRT_INPUT_HT_UNOBSTRUCTED_LEFT || name == XRT_INPUT_HT_UNOBSTRUCTED_RIGHT);
 
 	int idx = 0;
-	if (name == XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT) {
+	if (name == XRT_INPUT_HT_UNOBSTRUCTED_RIGHT) {
 		idx = 1;
 	}
 

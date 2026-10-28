@@ -35,10 +35,12 @@ android_looper_poll_until_activity_resumed(struct _JavaVM *vm, void *activity)
 	}
 
 	struct android_poll_source *source;
-	while (ALooper_pollAll(1000, NULL, NULL, (void **)&source) >= 0) {
+	while (ALooper_pollOnce(1000, NULL, NULL, (void **)&source) >= 0) {
 		if (source) {
 			// Let callback owner handle the event
 			source->process(source->app, source);
+			if (source->app->destroyRequested != 0)
+				break;
 			if (source->app->activityState == APP_CMD_RESUME && source->app->window) {
 				U_LOG_I("Activity is in resume state with window available now");
 				break;

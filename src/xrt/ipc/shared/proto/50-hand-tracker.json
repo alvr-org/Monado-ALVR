@@ -1,0 +1,38 @@
+{
+	"$schema": "../proto.schema.json",
+
+	"hand_tracker_create": {
+		"in": [
+			{"name": "info", "type": "struct ipc_hand_tracker_create_info"}
+		],
+		"out": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	},
+
+	"hand_tracker_locate": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "base_space_id", "type": "uint32_t"},
+			{"name": "base_offset", "type": "struct xrt_pose"},
+			{"name": "at_timestamp_ns", "type": "int64_t"}
+		],
+		"out": [
+			{"name": "location", "type": "struct xrt_hand_tracker_location"}
+		]
+	},
+
+	"hand_tracker_set_output": {
+		"in": [
+			{"name": "id", "type": "uint32_t"},
+			{"name": "name", "type": "enum xrt_output_name"},
+			{"name": "value", "type": "struct xrt_output_value"}
+		]
+	},
+
+	"hand_tracker_destroy": {
+		"in": [
+			{"name": "id", "type": "uint32_t"}
+		]
+	}
+}

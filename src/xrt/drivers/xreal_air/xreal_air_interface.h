@@ -1,9 +1,9 @@
-// Copyright 2023-2024, Tobias Frisch
+// Copyright 2023-2025, Tobias Frisch
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Xreal Air packet parsing implementation.
- * @author Tobias Frisch <thejackimonster@gmail.com>
+ * @author Tobias Frisch <jacki@thejackimonster.de>
  * @ingroup drv_xreal_air
  */
 
@@ -47,6 +47,13 @@ extern "C" {
  * @ingroup drv_xreal_air
  */
 #define XREAL_AIR_2_PRO_PID 0x0432
+
+/*!
+ * Product id for Xreal Air 2 Ultra.
+ *
+ * @ingroup drv_xreal_air
+ */
+#define XREAL_AIR_2_ULTRA_PID 0x0426
 
 /*!
  * Builder setup for Xreal Air glasses.

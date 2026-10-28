@@ -1,4 +1,5 @@
 // Copyright 2020-2023, Collabora, Ltd.
+// Copyright 2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -135,7 +136,9 @@ struct xrt_system *
 ipc_client_system_create(struct ipc_connection *ipc_c, struct xrt_system_compositor *xsysc)
 {
 	struct ipc_client_system *icsys = U_TYPED_CALLOC(struct ipc_client_system);
+
 	xrt_result_t xret = ipc_call_system_get_properties(ipc_c, &icsys->base.properties);
+	IPC_CHK_ONLY_PRINT(ipc_c, xret, "ipc_call_system_get_properties");
 	if (xret != XRT_SUCCESS) {
 		free(icsys);
 		return NULL;

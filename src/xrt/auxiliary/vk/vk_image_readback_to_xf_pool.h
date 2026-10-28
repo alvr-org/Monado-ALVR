@@ -1,10 +1,11 @@
 // Copyright 2022, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief Pool to read back VkImages from the gpu
  *
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup aux_vk
  */
@@ -19,7 +20,7 @@
 #include "xrt/xrt_vulkan_includes.h"
 
 #include "util/u_logging.h"
-#include "util/u_string_list.h"
+#include "util/u_extension_list.h"
 
 #include "vk/vk_helpers.h"
 

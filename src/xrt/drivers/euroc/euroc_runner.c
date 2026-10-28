@@ -7,19 +7,22 @@
  * @ingroup drv_euroc
  */
 
-#include "euroc_driver.h"
-#include "os/os_threading.h"
-#include "os/os_time.h"
-#include "tracking/t_tracking.h"
-#include "util/u_logging.h"
-#include "util/u_misc.h"
-
-#include "xrt/xrt_config_have.h"
 #include "xrt/xrt_config_build.h"
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_frame.h"
 #include "xrt/xrt_frameserver.h"
 #include "xrt/xrt_tracking.h"
+
+#include "os/os_time.h"
+
+#include "tracking/t_tracking.h"
+
+#include "util/u_logging.h"
+#include "util/u_misc.h"
+#include "util/u_pretty_print.h"
+
+#include "euroc_driver.h"
+
 
 #if !defined(XRT_FEATURE_SLAM)
 
@@ -92,7 +95,7 @@ euroc_run_dataset(const char *euroc_path,
 {
 	struct euroc_player_config *ep_config = make_euroc_player_config(euroc_path);
 	struct t_slam_tracker_config *st_config = make_slam_tracker_config(slam_config, output_path);
-	st_config->cam_count = ep_config->dataset.cam_count;
+	st_config->cam_count = ep_config->playback.cam_count;
 
 	// Frame context that will manage SLAM tracker and euroc player lifetimes
 	struct xrt_frame_context xfctx = {0};
@@ -116,13 +119,24 @@ euroc_run_dataset(const char *euroc_path,
 	b.pose.orientation.w = 42; // Make b different from a
 
 	bool tracking = true;
-	bool streaming = xrt_fs_is_running(xfs);
-	while ((streaming || tracking) && !*should_exit) {
+	bool streaming = false;
+	xrt_result_t xret = xrt_fs_is_running(xfs, &streaming);
+	if (xret != XRT_SUCCESS) {
+		streaming = false;
+		U_LOG_E("Failed to get state of stream, got %s", u_str_xrt_result(xret));
+	}
+
+	while ((streaming || tracking) && !(*should_exit)) {
 		os_nanosleep(0.2 * U_TIME_1S_IN_NS);
 		a = b;
 		xrt_tracked_slam_get_tracked_pose(xts, os_monotonic_get_ns(), &b);
 		tracking = memcmp(&a, &b, sizeof(struct xrt_space_relation)) != 0;
-		streaming = xrt_fs_is_running(xfs);
+
+		xret = xrt_fs_is_running(xfs, &streaming);
+		if (xret != XRT_SUCCESS) {
+			streaming = false;
+			U_LOG_E("Failed to get state of stream, got %s", u_str_xrt_result(xret));
+		}
 	}
 
 	xrt_frame_context_destroy_nodes(&xfctx);

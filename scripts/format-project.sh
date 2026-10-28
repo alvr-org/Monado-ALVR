@@ -35,6 +35,7 @@ fi
                 src/xrt/state_trackers \
                 src/xrt/targets \
                 src/xrt/tracking \
+                examples \
                 tests \
                 \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) \
                 -and -not \( -ipath \*/.cxx/\* \) \

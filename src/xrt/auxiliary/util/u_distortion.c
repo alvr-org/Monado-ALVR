@@ -15,6 +15,19 @@
 #include "util/u_device.h"
 #include "util/u_distortion.h"
 
+#include <assert.h>
+
+static inline float
+vertical_offset_meters(const struct u_cardboard_distortion_arguments *args)
+{
+	switch (args->vertical_alignment) {
+	case U_CARDBOARD_VERTICAL_ALIGNMENT_TOP:
+		return args->screen.h_meters - args->tray_to_lens_distance_meters - 0.003f;
+	case U_CARDBOARD_VERTICAL_ALIGNMENT_BOTTOM: return args->tray_to_lens_distance_meters - 0.003f;
+	case U_CARDBOARD_VERTICAL_ALIGNMENT_CENTER:
+	default: return args->screen.h_meters * 0.5f;
+	}
+}
 
 void
 u_distortion_cardboard_calculate(const struct u_cardboard_distortion_arguments *args,
@@ -26,6 +39,9 @@ u_distortion_cardboard_calculate(const struct u_cardboard_distortion_arguments *
 	 */
 
 	uint32_t view_count = parts->view_count;
+
+	// Cardboard always has two views
+	assert(view_count == 2);
 
 	uint32_t w_pixels = args->screen.w_pixels / view_count;
 	uint32_t h_pixels = args->screen.h_pixels;
@@ -61,18 +77,21 @@ u_distortion_cardboard_calculate(const struct u_cardboard_distortion_arguments *
 		values->distortion_k[2] = args->distortion_k[2];
 		values->distortion_k[3] = args->distortion_k[3];
 		values->distortion_k[4] = args->distortion_k[4];
-		values->screen.size.x = args->screen.w_meters;
-		values->screen.size.y = args->screen.h_meters;
-		values->screen.offset.x =
-		    (args->screen.w_meters + pow(-1, i + 1) * args->inter_lens_distance_meters) / view_count;
-		values->screen.offset.y = args->lens_y_center_on_screen_meters;
-		// clang-format on
 
-		// Turn into tanangles
-		values->screen.size.x /= args->screen_to_lens_distance_meters;
-		values->screen.size.y /= args->screen_to_lens_distance_meters;
-		values->screen.offset.x /= args->screen_to_lens_distance_meters;
-		values->screen.offset.y /= args->screen_to_lens_distance_meters;
+		// Divide by view count since each view takes a part of the screen on the X axis
+		values->screen.size.x = args->screen.w_meters / args->screen_to_lens_distance_meters;
+		values->screen.size.y = args->screen.h_meters / args->screen_to_lens_distance_meters;
+
+		if (i == 0) {
+			values->screen.offset.x = ((args->screen.w_meters - args->inter_lens_distance_meters) / 2) /
+			                          args->screen_to_lens_distance_meters;
+		} else if (i == 1) {
+			values->screen.offset.x = ((args->screen.w_meters + args->inter_lens_distance_meters) / 2) /
+			                          args->screen_to_lens_distance_meters;
+		}
+
+		// Cardboard vertical alignment
+		values->screen.offset.y = vertical_offset_meters(args) / args->screen_to_lens_distance_meters;
 
 		// Tanangle to texture coordinates
 		values->texture.size.x = tanf(-args->fov.angle_left) + tanf(args->fov.angle_right);

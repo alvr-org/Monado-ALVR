@@ -17,7 +17,7 @@
 #include "oxr_objects.h"
 #include "oxr_logger.h"
 #include "oxr_two_call.h"
-#include "oxr_handle.h"
+#include "oxr_handle_base.h"
 
 #include "xrt/xrt_instance.h"
 
@@ -85,7 +85,7 @@ oxr_session_populate_gles_android(struct oxr_logger *log,
 #endif
 
 	struct xrt_compositor_native *xcn = sess->xcn;
-	struct xrt_compositor_gl *xcgl = NULL;
+	struct xrt_compositor *xc = NULL;
 	xrt_result_t xret = xrt_gfx_provider_create_gl_egl( //
 	    xcn,                                            //
 	    next->display,                                  //
@@ -93,18 +93,18 @@ oxr_session_populate_gles_android(struct oxr_logger *log,
 	    next->context,                                  //
 	    get_proc_addr,                                  //
 	    renderdoc_enabled,                              //
-	    &xcgl);                                         //
+	    &xc);                                           //
 
 	if (xret == XRT_ERROR_EGL_CONFIG_MISSING) {
 		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
 		                 "XrGraphicsBindingEGLMNDX::config cannot be null when EGL_KHR_no_config_context is "
 		                 "not supported by the display.");
 	}
-	if (xret != XR_SUCCESS || xcgl == NULL) {
+	if (xret != XRT_SUCCESS || xc == NULL) {
 		return oxr_error(log, XR_ERROR_INITIALIZATION_FAILED, "Failed to create an egl client compositor");
 	}
 
-	sess->compositor = &xcgl->base;
+	sess->compositor = xc;
 	sess->create_swapchain = oxr_swapchain_gl_create;
 
 	return XR_SUCCESS;

@@ -1,5 +1,6 @@
 // Copyright 2019-2023, Collabora, Ltd.
 // Copyright 2022, Jan Schmidt
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -16,13 +17,15 @@
 
 #include "xrt/xrt_config_drivers.h"
 #include "xrt/xrt_prober.h"
+#include "xrt/xrt_system.h"
 
-#include "util/u_builders.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
 #include "util/u_logging.h"
-#include "util/u_system_helpers.h"
 #include "util/u_trace_marker.h"
+#include "util/u_builder_search.h"
+
+#include "target_builder_helpers.h"
 
 #ifdef XRT_BUILD_DRIVER_HANDTRACKING
 #include "ht_ctrl_emu/ht_ctrl_emu_interface.h"
@@ -74,9 +77,7 @@ rift_s_estimate_system(struct xrt_builder *xb,
 	U_ZERO(estimate);
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	U_LOG_CHK_AND_RET(rift_s_log_level, xret, "xrt_prober_lock_list");
 
 	struct xrt_prober_device *dev =
 	    u_builder_find_prober_device(xpdevs, xpdev_count, OCULUS_VR_INC_VID, OCULUS_RIFT_S_PID, XRT_BUS_TYPE_USB);
@@ -87,9 +88,9 @@ rift_s_estimate_system(struct xrt_builder *xb,
 	}
 
 	xret = xrt_prober_unlock_list(xp, &xpdevs);
-	assert(xret == XRT_SUCCESS);
+	U_LOG_CHK_AND_RET(rift_s_log_level, xret, "xrt_prober_unlock_list");
 
-	return XRT_SUCCESS;
+	return xret;
 }
 
 static xrt_result_t
@@ -99,15 +100,13 @@ rift_s_open_system_impl(struct xrt_builder *xb,
                         struct xrt_tracking_origin *origin,
                         struct xrt_system_devices *xsysd,
                         struct xrt_frame_context *xfctx,
-                        struct u_builder_roles_helper *ubrh)
+                        struct t_builder_options *tbo)
 {
 	struct xrt_prober_device **xpdevs = NULL;
 	size_t xpdev_count = 0;
 	xrt_result_t xret = XRT_SUCCESS;
 
 	DRV_TRACE_MARKER();
-
-	rift_s_log_level = debug_get_log_option_rift_s_log();
 
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
 	if (xret != XRT_SUCCESS) {
@@ -166,13 +165,13 @@ rift_s_open_system_impl(struct xrt_builder *xb,
 
 	// Create and add to list.
 	struct xrt_device *hmd_xdev = rift_s_system_get_hmd(sys);
-	xsysd->xdevs[xsysd->xdev_count++] = hmd_xdev;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = hmd_xdev;
 
 	struct xrt_device *left_xdev = rift_s_system_get_controller(sys, 0);
-	xsysd->xdevs[xsysd->xdev_count++] = left_xdev;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = left_xdev;
 
 	struct xrt_device *right_xdev = rift_s_system_get_controller(sys, 1);
-	xsysd->xdevs[xsysd->xdev_count++] = right_xdev;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = right_xdev;
 
 
 	struct xrt_device *left_ht = NULL;
@@ -190,8 +189,8 @@ rift_s_open_system_impl(struct xrt_builder *xb,
 		left_ht = two_hands[0];
 		right_ht = two_hands[1];
 
-		xsysd->xdevs[xsysd->xdev_count++] = two_hands[0];
-		xsysd->xdevs[xsysd->xdev_count++] = two_hands[1];
+		xsysd->static_xdevs[xsysd->static_xdev_count++] = two_hands[0];
+		xsysd->static_xdevs[xsysd->static_xdev_count++] = two_hands[1];
 
 		if (debug_get_bool_option_rift_s_hand_tracking_as_controller()) {
 			left_xdev = two_hands[0];
@@ -201,11 +200,11 @@ rift_s_open_system_impl(struct xrt_builder *xb,
 #endif
 
 	// Assign to role(s).
-	ubrh->head = hmd_xdev;
-	ubrh->left = left_xdev;
-	ubrh->right = right_xdev;
-	ubrh->hand_tracking.left = left_ht;
-	ubrh->hand_tracking.right = right_ht;
+	tbo->head = hmd_xdev;
+	tbo->left = left_xdev;
+	tbo->right = right_xdev;
+	tbo->hand_tracking.unobstructed.left = left_ht;
+	tbo->hand_tracking.unobstructed.right = right_ht;
 
 	return XRT_SUCCESS;
 
@@ -237,18 +236,20 @@ rift_s_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 rift_s_builder_create(void)
 {
-	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
+	struct t_builder *ub = U_TYPED_CALLOC(struct t_builder);
+
+	rift_s_log_level = debug_get_log_option_rift_s_log();
 
 	// xrt_builder fields.
 	ub->base.estimate_system = rift_s_estimate_system;
-	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.open_system = t_builder_open_system_static_roles;
 	ub->base.destroy = rift_s_destroy;
 	ub->base.identifier = "rift_s";
 	ub->base.name = "Oculus Rift S";
 	ub->base.driver_identifiers = driver_list;
 	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	// u_builder fields.
+	// t_builder fields.
 	ub->open_system_static_roles = rift_s_open_system_impl;
 
 	return &ub->base;

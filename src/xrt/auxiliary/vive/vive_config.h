@@ -4,7 +4,7 @@
  * @file
  * @brief  vive json header
  * @author Lubosz Sarnecki <lubosz.sarnecki@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_vive
  */
 
@@ -15,6 +15,7 @@
 
 #include "util/u_logging.h"
 #include "util/u_distortion_mesh.h"
+#include "vive/vive_common.h"
 
 
 // public documentation
@@ -39,20 +40,6 @@ extern "C" {
 
 
 /*!
- * Headset variant.
- *
- * @ingroup aux_vive
- */
-enum VIVE_VARIANT
-{
-	VIVE_UNKNOWN = 0,
-	VIVE_VARIANT_VIVE,
-	VIVE_VARIANT_PRO,
-	VIVE_VARIANT_INDEX,
-	VIVE_VARIANT_PRO2,
-};
-
-/*!
  * Controller variant.
  *
  * @ingroup aux_vive
@@ -62,6 +49,8 @@ enum VIVE_CONTROLLER_VARIANT
 	CONTROLLER_VIVE_WAND,
 	CONTROLLER_INDEX_LEFT,
 	CONTROLLER_INDEX_RIGHT,
+	CONTROLLER_FLIPVR_LEFT,
+	CONTROLLER_FLIPVR_RIGHT,
 	CONTROLLER_TRACKER_GEN1,
 	CONTROLLER_TRACKER_GEN2,
 	CONTROLLER_TRACKER_GEN3,
@@ -74,7 +63,7 @@ enum VIVE_CONTROLLER_VARIANT
  *
  * @ingroup aux_vive
  */
-struct index_camera
+struct vive_index_camera
 {
 	// Note! All the values in this struct are directly pasted in from the JSON values.
 	// As such, in my opinion, plus_x, plus_z and position are all "wrong" - all the code I've had to write that
@@ -82,7 +71,7 @@ struct index_camera
 	// I have no idea why those sign flips were necessary - I suppose Valve/HTC just made some weird decisions when
 	// making the config file schemas. I figure it would be very confusing to try to "fix" these values as I'm
 	// parsing them, so if you're writing code downstream of this, beware and expect the values in here to be
-	// exactly the same as those in the compressed JSON. -Moses
+	// exactly the same as those in the compressed JSON. -Moshi
 	struct
 	{
 		struct xrt_vec3 plus_x;
@@ -113,8 +102,9 @@ struct index_camera
  *
  * @ingroup aux_vive
  */
-struct lh_sensor
+struct vive_lh_sensor
 {
+	uint8_t channel;
 	struct xrt_vec3 pos;
 	uint32_t _pad0;
 	struct xrt_vec3 normal;
@@ -128,10 +118,28 @@ struct lh_sensor
  *
  * @ingroup aux_vive
  */
-struct lh_model
+struct vive_lh_model
 {
-	struct lh_sensor *sensors;
-	size_t sensor_count;
+	struct vive_lh_sensor *sensors;
+	uint8_t sensor_count;
+};
+
+/*!
+ * Properties of the IMU sensor.
+ *
+ * @ingroup aux_vive
+ */
+struct vive_imu_properties
+{
+	double acc_range;
+	double gyro_range;
+	struct xrt_vec3 acc_bias;
+	struct xrt_vec3 acc_scale;
+	struct xrt_vec3 gyro_bias;
+	struct xrt_vec3 gyro_scale;
+
+	//! IMU position in tracking space.
+	struct xrt_pose trackref;
 };
 
 /*!
@@ -146,18 +154,7 @@ struct vive_config
 
 	enum VIVE_VARIANT variant;
 
-	struct
-	{
-		double acc_range;
-		double gyro_range;
-		struct xrt_vec3 acc_bias;
-		struct xrt_vec3 acc_scale;
-		struct xrt_vec3 gyro_bias;
-		struct xrt_vec3 gyro_scale;
-
-		//! IMU position in tracking space.
-		struct xrt_pose trackref;
-	} imu;
+	struct vive_imu_properties imu;
 
 	struct
 	{
@@ -196,7 +193,7 @@ struct vive_config
 	struct
 	{
 		//! The two cameras.
-		struct index_camera view[2];
+		struct vive_index_camera view[2];
 
 		//! Left view in right camera space.
 		struct xrt_pose left_in_right;
@@ -208,7 +205,7 @@ struct vive_config
 		bool valid;
 	} cameras;
 
-	struct lh_model lh;
+	struct vive_lh_model lh;
 };
 
 /*!
@@ -234,18 +231,7 @@ struct vive_controller_config
 		char device_serial_number[32];
 	} firmware;
 
-	struct
-	{
-		double acc_range;
-		double gyro_range;
-		struct xrt_vec3 acc_bias;
-		struct xrt_vec3 acc_scale;
-		struct xrt_vec3 gyro_bias;
-		struct xrt_vec3 gyro_scale;
-
-		//! IMU position in tracking space.
-		struct xrt_pose trackref;
-	} imu;
+	struct vive_imu_properties imu;
 };
 
 

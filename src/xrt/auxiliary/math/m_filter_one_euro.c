@@ -4,7 +4,7 @@
 /*!
  * @file
  * @brief  The "One Euro Filter" for filtering interaction data.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jan Schmidt <jan@centricular.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
  * @ingroup aux_math
@@ -278,15 +278,15 @@ m_filter_euro_quat_run(struct m_filter_euro_quat *f, uint64_t ts, const struct x
 
 	// Scale dy with dt through a conversion to angle_axis
 	struct xrt_vec3 dy_aa;
-	math_quat_ln(&dy, &dy_aa);
+	math_quat_ln_so3(&dy, &dy_aa);
 	dy_aa = m_vec3_div_scalar(dy_aa, dt);
-	math_quat_exp(&dy_aa, &dy);
+	math_quat_exp_so3(&dy_aa, &dy);
 
 	f->prev_dy = exp_smooth_quat(alpha_d, dy, f->prev_dy);
 
 	// The magnitud of the smoothed dy (f->prev_dy) is its rotation angle in radians
 	struct xrt_vec3 smooth_dy_aa;
-	math_quat_ln(&f->prev_dy, &smooth_dy_aa);
+	math_quat_ln_so3(&f->prev_dy, &smooth_dy_aa);
 	double smooth_dy_mag = m_vec3_len(smooth_dy_aa);
 
 	double alpha = filter_one_euro_compute_alpha(&f->base, dt, smooth_dy_mag);

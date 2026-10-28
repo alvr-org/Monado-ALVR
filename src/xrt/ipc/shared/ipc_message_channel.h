@@ -65,7 +65,10 @@ ipc_send(struct ipc_message_channel *imc, const void *data, size_t size);
  * @param imc Message channel to use
  * @param[out] out_data Pointer to the buffer to fill with data. Must not be
  * null.
- * @param[in] size Maximum size to read, must be greater than 0
+ * @param[in] size Number of bytes to read. On Unix this function blocks until
+ * exactly @p size bytes are received or an error occurs. On Windows message-mode
+ * pipes, @p size is the maximum number of bytes to read from one message. Must
+ * be greater than 0.
  *
  * @public @memberof ipc_message_channel
  */
@@ -87,7 +90,10 @@ ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size);
  * @param imc           Message channel to use
  * @param[out] out_data Pointer to the buffer to fill with data. Must not be
  *                      null.
- * @param[in] size      Maximum size to read, must be greater than 0
+ * @param[in] size      Exact byte count for this one recvmsg. A short count is
+ *                      an error: unlike ipc_receive, this function does not read
+ *                      the rest of a message the kernel split. Must be greater
+ *                      than 0.
  * @param[out] out_fds  Array of file descriptors to populate. Must not be null.
  * @param[in] fd_count  Number of elements to receive into @p out_fds, must be
  *                      greater than 0 and must match the value provided at the

@@ -1,4 +1,5 @@
 // Copyright 2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -7,20 +8,27 @@
  * @ingroup oxr_main
  */
 
+#include "oxr_objects.h"
+#include "oxr_logger.h"
+#include "oxr_handle_base.h"
+#include "oxr_roles.h"
+#include "xrt/xrt_defines.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 
-#include "oxr_objects.h"
-#include "oxr_logger.h"
-#include "oxr_handle.h"
-#include "xrt/xrt_defines.h"
 
 static XrResult
 oxr_face_tracker2_fb_destroy_cb(struct oxr_logger *log, struct oxr_handle_base *hb)
 {
 	struct oxr_face_tracker2_fb *face_tracker2_fb = (struct oxr_face_tracker2_fb *)hb;
+
+	if (face_tracker2_fb->feature_incremented) {
+		xrt_system_devices_feature_dec(face_tracker2_fb->sess->sys->xsysd, XRT_DEVICE_FEATURE_FACE_TRACKING);
+	}
+
 	free(face_tracker2_fb);
 	return XR_SUCCESS;
 }
@@ -31,16 +39,18 @@ oxr_face_tracker2_fb_create(struct oxr_logger *log,
                             const XrFaceTrackerCreateInfo2FB *createInfo,
                             struct oxr_face_tracker2_fb **out_face_tracker2_fb)
 {
+	xrt_result_t xret;
+
 	if (createInfo->faceExpressionSet != XR_FACE_EXPRESSION_SET2_DEFAULT_FB) {
 		return oxr_error(log, XR_ERROR_FEATURE_UNSUPPORTED, "Unsupported expression set");
 	}
 
-	struct xrt_device *xdev = GET_XDEV_BY_ROLE(sess->sys, face);
+	struct xrt_device *xdev = GET_STATIC_XDEV_BY_ROLE(sess->sys, face);
 	if (xdev == NULL) {
 		return oxr_error(log, XR_ERROR_FEATURE_UNSUPPORTED, "No device found for face tracking role");
 	}
 
-	if (!xdev->face_tracking_supported || xdev->get_face_tracking == NULL) {
+	if (!xdev->supported.face_tracking || xdev->get_face_tracking == NULL) {
 		return oxr_error(log, XR_ERROR_FEATURE_UNSUPPORTED, "Device does not support FB2 face tracking");
 	}
 
@@ -90,6 +100,13 @@ oxr_face_tracker2_fb_create(struct oxr_logger *log,
 	struct oxr_face_tracker2_fb *face_tracker2_fb = NULL;
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, face_tracker2_fb, OXR_XR_DEBUG_FTRACKER, oxr_face_tracker2_fb_destroy_cb,
 	                              &sess->handle);
+
+	xret = xrt_system_devices_feature_inc(sess->sys->xsysd, XRT_DEVICE_FEATURE_FACE_TRACKING);
+	if (xret != XRT_SUCCESS) {
+		oxr_handle_destroy(log, &face_tracker2_fb->handle);
+		return oxr_error(log, XR_ERROR_RUNTIME_FAILURE, "Failed to start face tracking feature");
+	}
+	face_tracker2_fb->feature_incremented = true;
 
 	face_tracker2_fb->sess = sess;
 	face_tracker2_fb->xdev = xdev;

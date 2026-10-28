@@ -21,6 +21,15 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
+
+DEBUG_GET_ONCE_LOG_OPTION(log_level_fake, "U_PACING_COMPOSITOR_FAKE_LOG", U_LOGGING_INFO)
+
+#define UPC_LOG_T(...) U_LOG_IFL_T(debug_get_log_option_log_level_fake(), __VA_ARGS__)
+#define UPC_LOG_D(...) U_LOG_IFL_D(debug_get_log_option_log_level_fake(), __VA_ARGS__)
+#define UPC_LOG_I(...) U_LOG_IFL_I(debug_get_log_option_log_level_fake(), __VA_ARGS__)
+#define UPC_LOG_W(...) U_LOG_IFL_W(debug_get_log_option_log_level_fake(), __VA_ARGS__)
+#define UPC_LOG_E(...) U_LOG_IFL_E(debug_get_log_option_log_level_fake(), __VA_ARGS__)
 
 
 /*
@@ -31,6 +40,7 @@
 
 DEBUG_GET_ONCE_FLOAT_OPTION(present_to_display_offset_ms, "U_PACING_COMP_PRESENT_TO_DISPLAY_OFFSET_MS", 4.0f)
 DEBUG_GET_ONCE_FLOAT_OPTION(min_comp_time_ms, "U_PACING_COMP_MIN_TIME_MS", 3.0f)
+DEBUG_GET_ONCE_FLOAT_OPTION(comp_time_fraction_percent, "U_PACING_COMP_TIME_FRACTION_PERCENT", 20.0f)
 DEBUG_GET_ONCE_BOOL_OPTION(live_stats, "U_PACING_LIVE_STATS", false)
 
 // We keep track of this number of frames.
@@ -153,7 +163,7 @@ get_frame_or_null(struct fake_timing *ft, int64_t frame_id)
 static struct frame *
 get_new_frame(struct fake_timing *ft)
 {
-	int64_t frame_id = ft->frame_id_generator++;
+	int64_t frame_id = ++ft->frame_id_generator;
 
 	uint64_t index = (uint64_t)frame_id % FRAME_COUNT;
 	struct frame *f = &ft->frames[index];
@@ -169,10 +179,16 @@ static int64_t
 predict_next_frame_present_time(struct fake_timing *ft, int64_t now_ns)
 {
 	int64_t time_needed_ns = ft->comp_time_ns;
-	int64_t predicted_present_time_ns = ft->last_present_time_ns + ft->frame_period_ns;
+	int64_t period_ns = ft->frame_period_ns;
+	int64_t predicted_present_time_ns = ft->last_present_time_ns + period_ns;
 
-	while (now_ns + time_needed_ns > predicted_present_time_ns) {
-		predicted_present_time_ns += ft->frame_period_ns;
+	// Jump straight to the first slot at/after the deadline: stepping by one period was
+	// O(uptime) where last_present_time_ns never advances (no vblank feedback, e.g. Android).
+	int64_t deadline_ns = now_ns + time_needed_ns;
+	if (deadline_ns > predicted_present_time_ns) {
+		int64_t behind_ns = deadline_ns - predicted_present_time_ns;
+		int64_t steps = (behind_ns + period_ns - 1) / period_ns;
+		predicted_present_time_ns += steps * period_ns;
 	}
 
 	return predicted_present_time_ns;
@@ -187,9 +203,9 @@ calc_display_time(struct fake_timing *ft, int64_t present_time_ns)
 }
 
 static int64_t
-get_percent_of_time(int64_t time_ns, uint32_t fraction_percent)
+get_percent_of_time(int64_t time_ns, double fraction_percent)
 {
-	double fraction = (double)fraction_percent / 100.0;
+	double fraction = fraction_percent / 100.0;
 	return time_s_to_ns(time_ns_to_s(time_ns) * fraction);
 }
 
@@ -214,7 +230,7 @@ print_and_reset(struct fake_timing *ft)
 	u_pp(dg, "\n");
 	u_ls_ns_print_and_reset(&ft->total_frame, dg);
 
-	U_LOG_IFL_I(U_LOGGING_INFO, "%s", sink.buffer);
+	UPC_LOG_I("%s", sink.buffer);
 }
 
 static void
@@ -460,9 +476,6 @@ u_pc_fake_create(int64_t estimated_frame_period_ns, int64_t now_ns, struct u_pac
 	snprintf(ft->gpu_delay.name, ARRAY_SIZE(ft->gpu_delay.name), "gpu_delay");
 	snprintf(ft->total_frame.name, ARRAY_SIZE(ft->total_frame.name), "total_frame");
 
-	// To make sure the code can start from a non-zero frame id.
-	ft->frame_id_generator = 5;
-
 	// An arbitrary guess, that happens to be based on Index.
 	float present_to_display_offset_ms = debug_get_float_option_present_to_display_offset_ms();
 
@@ -474,11 +487,12 @@ u_pc_fake_create(int64_t estimated_frame_period_ns, int64_t now_ns, struct u_pac
 	    .max = +40.0,
 	};
 
-	// 20% of the frame time.
-	ft->comp_time_ns = get_percent_of_time(estimated_frame_period_ns, 20);
+	// Set comp_time_ms to a percentage of the frame time.
+	float comp_time_fraction_percent = fabsf(debug_get_float_option_comp_time_fraction_percent());
+	ft->comp_time_ns = get_percent_of_time(estimated_frame_period_ns, comp_time_fraction_percent);
 
 	// Or at least a certain amount of time.
-	float min_comp_time_ms_f = debug_get_float_option_min_comp_time_ms();
+	double min_comp_time_ms_f = debug_get_float_option_min_comp_time_ms();
 	int64_t min_comp_time_ns = time_ms_f_to_ns(min_comp_time_ms_f);
 
 	if (ft->comp_time_ns < min_comp_time_ns) {
@@ -492,13 +506,20 @@ u_pc_fake_create(int64_t estimated_frame_period_ns, int64_t now_ns, struct u_pac
 	u_var_add_root(ft, "Compositor timing info", true);
 	u_var_add_draggable_f32(ft, &ft->present_to_display_offset_ms, "Present to display offset(ms)");
 	u_var_add_ro_i64(ft, &ft->frame_period_ns, "Frame period(ns)");
-	u_var_add_ro_i64(ft, &ft->comp_time_ns, "Compositor time(ns)");
+	u_var_add_i64(ft, &ft->comp_time_ns, "Compositor time(ns)");
 	u_var_add_ro_i64(ft, &ft->last_present_time_ns, "Last present time(ns)");
 
 	// Return value.
 	*out_upc = &ft->base;
 
-	U_LOG_I("Created fake timing");
+	UPC_LOG_I(
+	    "Created pacer (non-feedback version aka \"fake\")"
+	    "\n\testimated_frame_period: %fms"
+	    "\n\tpercentage: %f%%"
+	    "\n\tmin_comp_time: %fms"
+	    "\n\tcomp_time: %fms",
+	    time_ns_to_ms_f(estimated_frame_period_ns), comp_time_fraction_percent, min_comp_time_ms_f,
+	    time_ns_to_ms_f(ft->comp_time_ns));
 
 	return XRT_SUCCESS;
 }

@@ -1,4 +1,5 @@
 // Copyright 2019-2023, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -25,10 +26,10 @@
 #include "util/u_sink.h"
 #include "util/u_debug.h"
 #include "util/u_device.h"
-#include "util/u_builders.h"
 #include "util/u_config_json.h"
 #include "util/u_pretty_print.h"
-#include "util/u_system_helpers.h"
+
+#include "b_system_devices.h"
 
 #include "gui_common.h"
 
@@ -48,8 +49,8 @@
 void
 gui_scene_hand_tracking_demo(struct gui_program *p)
 {
-	struct u_system_devices *usysd = u_system_devices_allocate();
-	struct xrt_system_devices *xsysd = &usysd->base;
+	struct b_system_devices *bsysd = b_system_devices_allocate();
+	struct xrt_system_devices *xsysd = &bsysd->base;
 	struct depthai_slam_startup_settings settings = {0};
 	struct xrt_device *ht_dev;
 
@@ -58,7 +59,7 @@ gui_scene_hand_tracking_demo(struct gui_program *p)
 	settings.want_cameras = true;
 	settings.want_imu = false;
 
-	struct xrt_fs *the_fs = depthai_fs_slam(&usysd->xfctx, &settings);
+	struct xrt_fs *the_fs = depthai_fs_slam(&bsysd->xfctx, &settings);
 
 	if (the_fs == NULL) {
 		xrt_system_devices_destroy(&xsysd);
@@ -80,7 +81,7 @@ gui_scene_hand_tracking_demo(struct gui_program *p)
 	struct t_hand_tracking_create_info create_info = {.cams_info = extra_camera_info, .masks_sink = NULL};
 
 	int create_status = ht_device_create( //
-	    &usysd->xfctx,                    //
+	    &bsysd->xfctx,                    //
 	    calib,                            //
 	    create_info,                      //
 	    &hand_sinks,                      //
@@ -91,11 +92,11 @@ gui_scene_hand_tracking_demo(struct gui_program *p)
 		return;
 	}
 
-	xsysd->xdevs[xsysd->xdev_count++] = ht_dev;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = ht_dev;
 
 	struct xrt_slam_sinks gen_lock = {0};
 	u_sink_force_genlock_create( //
-	    &usysd->xfctx,           //
+	    &bsysd->xfctx,           //
 	    hand_sinks->cams[0],     //
 	    hand_sinks->cams[1],     //
 	    &gen_lock.cams[0],       //

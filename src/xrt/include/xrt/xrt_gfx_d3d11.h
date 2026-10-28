@@ -32,7 +32,7 @@ extern "C" {
  * @ingroup xrt_iface
  * @public @memberof xrt_compositor_native
  */
-struct xrt_compositor_d3d11 *
+struct xrt_compositor *
 xrt_gfx_d3d11_provider_create(struct xrt_compositor_native *xcn, ID3D11Device *device);
 
 #endif // XRT_OS_WINDOWS || XRT_DOXYGEN

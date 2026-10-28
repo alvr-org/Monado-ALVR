@@ -38,54 +38,37 @@ struct vk_cmd_first_mip_image
 };
 
 /*!
- * Argument struct for @ref vk_cmd_copy_image_locked.
+ * Structure defining the parameters for a blit operation, sans the image itself.
  *
- * See @ref vk_cmd_first_mip_image for array and mip selection rules.
+ * See @ref vk_cmd_blit_image_info for usage.
  *
  * @ingroup aux_vk
  */
-struct vk_cmd_copy_image_info
+struct vk_cmd_blit_image_params
 {
-	struct
-	{
-		VkImageLayout old_layout;
-		VkAccessFlags src_access_mask;
-		VkPipelineStageFlags src_stage_mask;
-		struct vk_cmd_first_mip_image fm_image;
-	} src;
-	struct
-	{
-		VkImageLayout old_layout;
-		VkAccessFlags src_access_mask;
-		VkPipelineStageFlags src_stage_mask;
-		struct vk_cmd_first_mip_image fm_image;
-	} dst;
-	struct xrt_size size;
+	VkImageLayout layout;
+	VkAccessFlags access_mask;
+	VkPipelineStageFlags stage_mask;
+	struct xrt_rect rect;
 };
 
 /*!
- * Argument struct for @ref vk_cmd_blit_image_locked.
+ * Argument struct for @ref vk_cmd_blit_image_locked and @ref vk_cmd_copy_image_locked.
  *
  * See @ref vk_cmd_first_mip_image for array and mip selection rules.
  *
  * @ingroup aux_vk
  */
-struct vk_cmd_blit_image_info
+struct vk_cmd_image_transfer_info
 {
 	struct
 	{
-		VkImageLayout old_layout;
-		VkAccessFlags src_access_mask;
-		VkPipelineStageFlags src_stage_mask;
-		struct xrt_rect rect;
+		struct vk_cmd_blit_image_params params;
 		struct vk_cmd_first_mip_image fm_image;
 	} src;
 	struct
 	{
-		VkImageLayout old_layout;
-		VkAccessFlags src_access_mask;
-		VkPipelineStageFlags src_stage_mask;
-		struct xrt_rect rect;
+		struct vk_cmd_blit_image_params params;
 		struct vk_cmd_first_mip_image fm_image;
 	} dst;
 };
@@ -167,7 +150,8 @@ vk_cmd_create_and_begin_cmd_buffer_locked(struct vk_bundle *vk,
  * @ingroup aux_vk
  */
 XRT_CHECK_RESULT VkResult
-vk_cmd_submit_locked(struct vk_bundle *vk, uint32_t count, const VkSubmitInfo *infos, VkFence fence);
+vk_cmd_submit_locked(
+    struct vk_bundle *vk, struct vk_bundle_queue *queue, uint32_t count, const VkSubmitInfo *infos, VkFence fence);
 
 /*!
  * A do everything command buffer submission function, the `_locked` suffix
@@ -189,7 +173,10 @@ vk_cmd_submit_locked(struct vk_bundle *vk, uint32_t count, const VkSubmitInfo *i
  * @ingroup aux_vk
  */
 XRT_CHECK_RESULT VkResult
-vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk, VkCommandPool pool, VkCommandBuffer cmd_buffer);
+vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk,
+                                                  struct vk_bundle_queue *queue,
+                                                  VkCommandPool pool,
+                                                  VkCommandBuffer cmd_buffer);
 
 
 /*
@@ -201,7 +188,8 @@ vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk, VkComman
 /*!
  * Performs a copy of a image into a destination image, also does needed barrier
  * operation needed to get images ready for transfer operations. Images will be
- * left in the layout and pipeline needed for transfers.
+ * left in the layout and pipeline needed for transfers. Extents of the source
+ * and destination must be equal.
  *
  * * Src image(s): VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
  * * Dst image(s): VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
@@ -209,7 +197,9 @@ vk_cmd_end_submit_wait_and_free_cmd_buffer_locked(struct vk_bundle *vk, VkComman
  * @ingroup aux_vk
  */
 void
-vk_cmd_copy_image_locked(struct vk_bundle *vk, VkCommandBuffer cmd_buffer, const struct vk_cmd_copy_image_info *info);
+vk_cmd_copy_image_locked(struct vk_bundle *vk,
+                         VkCommandBuffer cmd_buffer,
+                         const struct vk_cmd_image_transfer_info *info);
 
 /*!
  * Performs a blit of a image into a destination image, also does needed barrier
@@ -222,7 +212,24 @@ vk_cmd_copy_image_locked(struct vk_bundle *vk, VkCommandBuffer cmd_buffer, const
  * @ingroup aux_vk
  */
 void
-vk_cmd_blit_image_locked(struct vk_bundle *vk, VkCommandBuffer cmd_buffer, const struct vk_cmd_blit_image_info *info);
+vk_cmd_blit_image_locked(struct vk_bundle *vk,
+                         VkCommandBuffer cmd_buffer,
+                         const struct vk_cmd_image_transfer_info *info);
+
+/*!
+ * Performs a resolve of a image into a destination image, also does needed barrier
+ * operation needed to get images ready for transfer operations. Images will be
+ * left in the layout and pipeline needed for transfers.
+ *
+ * * Src image(s): VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+ * * Dst image(s): VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+ *
+ * @ingroup aux_vk
+ */
+void
+vk_cmd_resolve_image_locked(struct vk_bundle *vk,
+                            VkCommandBuffer cmd_buffer,
+                            const struct vk_cmd_image_transfer_info *info);
 
 /*!
  * Performs a blit of two images to side by side on a destination image, also

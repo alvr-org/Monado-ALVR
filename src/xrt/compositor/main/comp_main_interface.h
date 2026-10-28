@@ -15,6 +15,7 @@
 #include "xrt/xrt_compositor.h"
 
 struct comp_target_factory;
+struct u_pacing_app_factory;
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,11 +32,14 @@ extern "C" {
  * @param xdev The head device
  * @param ctf A compositor target factory to force the output device, must remain valid for the lifetime of the
  * compositor. If NULL, factory is automatically selected
+ * @param upaf A pacing app factory to customize the application pacer, compositor takes ownership.
+ * If NULL, a default factory is used
  * @param out_xsysc The output compositor
  */
 xrt_result_t
 comp_main_create_system_compositor(struct xrt_device *xdev,
                                    const struct comp_target_factory *ctf,
+                                   struct u_pacing_app_factory *upaf,
                                    struct xrt_system_compositor **out_xsysc);
 
 

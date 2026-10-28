@@ -5,7 +5,7 @@
  * @brief  Base implementations for math library.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
- * @author Moses Turner <mosesturner@protonmail.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Nis Madsen <nima_zero_one@protonmail.com>
  * @ingroup aux_math
  */
@@ -182,6 +182,14 @@ math_vec3_translation_from_isometry(const struct xrt_matrix_4x4 *transform, stru
 	map_vec3(*result) = isometry.translation();
 }
 
+extern "C" void
+math_vec3_convert_from_opencv(const struct xrt_vec3 *in, struct xrt_vec3 *out)
+{
+	out->x = in->x;
+	out->y = -in->y;
+	out->z = -in->z;
+}
+
 
 /*
  *
@@ -199,6 +207,14 @@ extern "C" void
 math_vec3_f64_normalize(struct xrt_vec3_f64 *in)
 {
 	map_vec3_f64(*in) = map_vec3_f64(*in).normalized();
+}
+
+extern "C" void
+math_vec3_f64_convert_from_opencv(const struct xrt_vec3_f64 *in, struct xrt_vec3_f64 *out)
+{
+	out->x = in->x;
+	out->y = -in->y;
+	out->z = -in->z;
 }
 
 
@@ -226,7 +242,11 @@ extern "C" void
 math_quat_to_euler_angles(const struct xrt_quat *quat, struct xrt_vec3 *euler_angles)
 {
 	Eigen::Quaternionf eigen_quat(quat->w, quat->x, quat->y, quat->z);
+#if EIGEN_MAJOR_VERSION >= 5
+	Eigen::Vector3f eigen_euler = eigen_quat.toRotationMatrix().canonicalEulerAngles(2, 1, 0);
+#else
 	Eigen::Vector3f eigen_euler = eigen_quat.toRotationMatrix().eulerAngles(2, 1, 0);
+#endif
 
 	euler_angles->x = eigen_euler.x();
 	euler_angles->y = eigen_euler.y();
@@ -307,6 +327,12 @@ math_quat_validate(const struct xrt_quat *quat)
 {
 	const float FLOAT_EPSILON = Eigen::NumTraits<float>::epsilon();
 	return quat_validate(FLOAT_EPSILON, quat);
+}
+
+extern "C" bool
+math_quat_is_identity(const struct xrt_quat *quat, float epsilon)
+{
+	return map_quat(*quat).isApprox(Eigen::Quaternionf::Identity(), epsilon);
 }
 
 extern "C" bool
@@ -991,4 +1017,26 @@ math_pose_transform_point(const struct xrt_pose *transform, const struct xrt_vec
 	assert(out_point != NULL);
 
 	map_vec3(*out_point) = transform_point(*transform, *point);
+}
+
+extern "C" void
+math_pose_convert_from_opencv(const struct xrt_pose *in, struct xrt_pose *out)
+{
+	const struct xrt_pose yz_flip = {
+	    {1.0, 0.0, 0.0, 0.0},
+	    {0.0, 0.0, 0.0},
+	};
+
+	struct xrt_pose tmp;
+	math_pose_transform(&yz_flip, in, &tmp);
+	math_pose_transform(&tmp, &yz_flip, out);
+}
+
+extern "C" void
+math_space_relation_convert_from_opencv(const struct xrt_space_relation *in, struct xrt_space_relation *out)
+{
+	out->relation_flags = in->relation_flags;
+	math_pose_convert_from_opencv(&in->pose, &out->pose);
+	math_vec3_convert_from_opencv(&in->linear_velocity, &out->linear_velocity);
+	math_vec3_convert_from_opencv(&in->angular_velocity, &out->angular_velocity);
 }

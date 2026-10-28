@@ -1,4 +1,5 @@
 // Copyright 2020, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -10,6 +11,7 @@
 
 #include "xrt/xrt_config_os.h"
 
+#include "util/u_debug.h"
 #include "util/u_metrics.h"
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
@@ -21,6 +23,8 @@
 #include "server/ipc_server_interface.h"
 
 #include "target_lists.h"
+
+DEBUG_GET_ONCE_BOOL_OPTION(exit_on_disconnect, "IPC_EXIT_ON_DISCONNECT", false)
 
 
 // Insert the on load constructor to init trace marker.
@@ -37,7 +41,16 @@ main(int argc, char *argv[])
 	u_trace_marker_init();
 	u_metrics_init();
 
-	int ret = ipc_server_main(argc, argv);
+	struct ipc_server_main_info ismi = {
+	    .udgci =
+	        {
+	            .window_title = "Monado! ✨⚡🔥",
+	            .open = U_DEBUG_GUI_OPEN_AUTO,
+	        },
+	    .exit_on_disconnect = debug_get_bool_option_exit_on_disconnect(),
+	};
+
+	int ret = ipc_server_main(argc, argv, &ismi);
 
 	u_metrics_close();
 

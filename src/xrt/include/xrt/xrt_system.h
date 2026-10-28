@@ -1,5 +1,5 @@
 // Copyright 2020-2024, Collabora, Ltd.
-// Copyright 2023, NVIDIA CORPORATION.
+// Copyright 2023-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -14,7 +14,10 @@
 #include "xrt/xrt_compiler.h"
 #include "xrt/xrt_defines.h"
 #include "xrt/xrt_device.h"
-
+#include "xrt/xrt_body_tracker.h"
+#include "xrt/xrt_hand_tracker.h"
+#include "xrt/xrt_io_cache.h"
+#include "xrt/xrt_limits.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +25,7 @@ extern "C" {
 
 struct xrt_instance;
 struct xrt_system_devices;
+struct xrt_space_overseer;
 struct xrt_session;
 struct xrt_compositor_native;
 struct xrt_session_info;
@@ -44,6 +48,7 @@ struct xrt_system_properties
 {
 	uint32_t vendor_id;
 	char name[XRT_MAX_SYSTEM_NAME_SIZE];
+	enum xrt_form_factor form_factor;
 };
 
 /*!
@@ -113,7 +118,7 @@ xrt_system_create_session(struct xrt_system *xsys,
  *
  * @public @memberof xrt_system
  */
-static inline void
+XRT_NONNULL_ALL static inline void
 xrt_system_destroy(struct xrt_system **xsys_ptr)
 {
 	struct xrt_system *xsys = *xsys_ptr;
@@ -133,26 +138,18 @@ xrt_system_destroy(struct xrt_system **xsys_ptr)
  */
 
 /*!
- * Maximum number of devices simultaneously usable by an implementation of
- * @ref xrt_system_devices
- *
- * @ingroup xrt_iface
- */
-#define XRT_SYSTEM_MAX_DEVICES (32)
-
-/*!
- * Data associating a device index (in @ref xrt_system_devices::xdevs) with a
- * given "role" for dynamic role switching.
+ * Data associating a device index (in @ref xrt_system_devices::static_xdevs)
+ * with a given "role" for dynamic role switching.
  *
  * For each of the named roles, a negative value means unpopulated/not available.
  *
  * Populated by a call from the @ref xrt_system_devices interface.
  *
  * When the caller of @ref xrt_system_devices_get_roles sees a change (based on
- * comparing @ref generation_id) the caller must do the needed actions to handle
- * device changes. For example, for the OpenXR state tracker this may include
- * rebinding, queuing a change to the current interaction profile, and queuing
- * the events associated with such a change.
+ * comparing @ref xrt_system_roles::generation_id) the caller must do the needed
+ * actions to handle device changes. For example, for the OpenXR state tracker
+ * this may include rebinding, queuing a change to the current interaction
+ * profile, and queuing the events associated with such a change.
  *
  * @see xrt_system_devices
  * @ingroup xrt_iface
@@ -168,23 +165,25 @@ struct xrt_system_roles
 	 * All valid values are greater then zero; this is to
 	 * make init easier where any cache can start at zero and be guaranteed
 	 * to be replaced with a new @ref xrt_system_roles.
+	 *
+	 * alignas for 32 bit client support, see @ref ipc-design
 	 */
-	uint64_t generation_id;
+	XRT_ALIGNAS(8) uint64_t generation_id;
 
 	/*!
-	 * Index in @ref xrt_system_devices::xdevs for the user's left
+	 * Index in @ref xrt_system_devices::static_xdevs for the user's left
 	 * controller/hand, or negative if none available.
 	 */
 	int32_t left;
 
 	/*!
-	 * Index in @ref xrt_system_devices::xdevs for the user's right
+	 * Index in @ref xrt_system_devices::static_xdevs for the user's right
 	 * controller/hand, or negative if none available.
 	 */
 	int32_t right;
 
 	/*!
-	 * Index in @ref xrt_system_devices::xdevs for the user's gamepad
+	 * Index in @ref xrt_system_devices::static_xdevs for the user's gamepad
 	 * device, or negative if none available.
 	 */
 	int32_t gamepad;
@@ -223,18 +222,19 @@ struct xrt_system_devices
 	 * This is conventionally considered the "owning" reference to the devices.
 	 * Valid entries are contiguous.
 	 */
-	struct xrt_device *xdevs[XRT_SYSTEM_MAX_DEVICES];
+	struct xrt_device *static_xdevs[XRT_SYSTEM_MAX_DEVICES];
 
 	/*!
-	 * The number of elements in @ref xdevs that are valid.
+	 * The number of elements in @ref static_xdevs that are valid in the
+	 * static device list.
 	 */
-	size_t xdev_count;
+	size_t static_xdev_count;
 
 	/*!
 	 * Observing pointers for devices in some static (unchangeable) roles.
 	 *
-	 * All pointers in this struct must also exist in @ref xdevs. The
-	 * association between a member of this struct and a given device
+	 * All pointers in this struct must also exist in @ref static_xdevs.
+	 * The association between a member of this struct and a given device
 	 * cannot change during runtime.
 	 */
 	struct
@@ -271,24 +271,47 @@ struct xrt_system_devices
 		 */
 		struct
 		{
+			struct
+			{
+				/*!
+				 * An observing pointer to the device providing
+				 * unobstructed hand-tracking for the left hand (optional).
+				 *
+				 * can reference the same xrt_device instance as
+				 * @ref hand_tracking::conforming::left, if provides both input types.
+				 */
+				struct xrt_device *left;
 
-			/*!
-			 * An observing pointer to the device providing hand
-			 * tracking for the left hand (optional).
-			 *
-			 * Currently this is used for both optical and
-			 * controller driven hand-tracking.
-			 */
-			struct xrt_device *left;
+				/*!
+				 * An observing pointer to the device providing
+				 * unobstructed hand-tracking for the right hand (optional).
+				 *
+				 * can reference the same xrt_device instance as
+				 * @ref hand_tracking::conforming::right, if provides both input types.
+				 */
+				struct xrt_device *right;
+			} unobstructed;
 
-			/*!
-			 * An observing pointer to the device providing hand
-			 * tracking for the right hand (optional).
-			 *
-			 * Currently this is used for both optical and
-			 * controller driven hand-tracking.
-			 */
-			struct xrt_device *right;
+			struct
+			{
+				/*!
+				 * An observing pointer to the device providing
+				 * conforming (controller) hand-tracking for the left hand (optional).
+				 *
+				 * can reference the same xrt_device instance as
+				 * @ref hand_tracking::unobstructed::left, if provides both input types.
+				 */
+				struct xrt_device *left;
+
+				/*!
+				 * An observing pointer to the device providing
+				 * conforming (controller) hand-tracking for the right hand (optional).
+				 *
+				 * can reference the same xrt_device instance as
+				 * @ref hand_tracking::unobstructed::right, if provides both input types.
+				 */
+				struct xrt_device *right;
+			} conforming;
 		} hand_tracking;
 	} static_roles;
 
@@ -301,6 +324,39 @@ struct xrt_system_devices
 	 * @param[out] out_roles Pointer to xrt_system_roles
 	 */
 	xrt_result_t (*get_roles)(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles);
+
+	/*!
+	 * Create a @ref xrt_body_tracker from this system devices object.
+	 *
+	 * @param xsysd   Pointer to self.
+	 * @param info    Body-tracker creation info.
+	 * @param out_xbt Created body tracker.
+	 */
+	xrt_result_t (*create_body_tracker)(struct xrt_system_devices *xsysd,
+	                                    const struct xrt_body_tracker_create_info *info,
+	                                    struct xrt_body_tracker **out_xbt);
+
+	/*!
+	 * Create a @ref xrt_hand_tracker from this system devices object.
+	 *
+	 * @param xsysd   Pointer to self.
+	 * @param info    Hand-tracker creation info.
+	 * @param out_xht Created hand tracker.
+	 */
+	xrt_result_t (*create_hand_tracker)(struct xrt_system_devices *xsysd,
+	                                    const struct xrt_hand_tracker_create_info *info,
+	                                    struct xrt_hand_tracker **out_xht);
+
+	/*!
+	 * Create a @ref xrt_io_cache from this system devices object.
+	 *
+	 * @param xsysd   Pointer to self.
+	 * @param xso     Space overseer used when creating input spaces.
+	 * @param out_xic Created input/output cache.
+	 */
+	xrt_result_t (*create_io_cache)(struct xrt_system_devices *xsysd,
+	                                struct xrt_space_overseer *xso,
+	                                struct xrt_io_cache **out_xic);
 
 	/*!
 	 * Increment the usage count of a feature.
@@ -337,10 +393,49 @@ struct xrt_system_devices
  *
  * @public @memberof xrt_system_devices
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_system_devices_get_roles(struct xrt_system_devices *xsysd, struct xrt_system_roles *out_roles)
 {
 	return xsysd->get_roles(xsysd, out_roles);
+}
+
+/*!
+ * @copydoc xrt_system_devices::create_body_tracker
+ *
+ * @public @memberof xrt_system_devices
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_system_devices_create_body_tracker(struct xrt_system_devices *xsysd,
+                                       const struct xrt_body_tracker_create_info *info,
+                                       struct xrt_body_tracker **out_xbt)
+{
+	return xsysd->create_body_tracker(xsysd, info, out_xbt);
+}
+
+/*!
+ * @copydoc xrt_system_devices::create_hand_tracker
+ *
+ * @public @memberof xrt_system_devices
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_system_devices_create_hand_tracker(struct xrt_system_devices *xsysd,
+                                       const struct xrt_hand_tracker_create_info *info,
+                                       struct xrt_hand_tracker **out_xht)
+{
+	return xsysd->create_hand_tracker(xsysd, info, out_xht);
+}
+
+/*!
+ * @copydoc xrt_system_devices::create_io_cache
+ *
+ * @public @memberof xrt_system_devices
+ */
+XRT_NONNULL_ALL static inline xrt_result_t
+xrt_system_devices_create_io_cache(struct xrt_system_devices *xsysd,
+                                   struct xrt_space_overseer *xso,
+                                   struct xrt_io_cache **out_xic)
+{
+	return xsysd->create_io_cache(xsysd, xso, out_xic);
 }
 
 /*!
@@ -350,7 +445,7 @@ xrt_system_devices_get_roles(struct xrt_system_devices *xsysd, struct xrt_system
  *
  * @public @memberof xrt_system_devices
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_system_devices_feature_inc(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type)
 {
 	return xsysd->feature_inc(xsysd, type);
@@ -363,7 +458,7 @@ xrt_system_devices_feature_inc(struct xrt_system_devices *xsysd, enum xrt_device
  *
  * @public @memberof xrt_system_devices
  */
-static inline xrt_result_t
+XRT_NONNULL_ALL static inline xrt_result_t
 xrt_system_devices_feature_dec(struct xrt_system_devices *xsysd, enum xrt_device_feature_type type)
 {
 	return xsysd->feature_dec(xsysd, type);
@@ -379,7 +474,7 @@ xrt_system_devices_feature_dec(struct xrt_system_devices *xsysd, enum xrt_device
  *
  * @public @memberof xrt_system_devices
  */
-static inline void
+XRT_NONNULL_ALL static inline void
 xrt_system_devices_destroy(struct xrt_system_devices **xsysd_ptr)
 {
 	struct xrt_system_devices *xsysd = *xsysd_ptr;

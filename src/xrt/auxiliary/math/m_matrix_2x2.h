@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  C matrix_2x2 math library.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  *
  * @see xrt_matrix_2x2
  * @ingroup aux_math

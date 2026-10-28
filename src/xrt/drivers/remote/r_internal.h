@@ -51,6 +51,10 @@ struct r_hub
 
 	uint16_t port;
 	uint32_t view_count;
+	uint32_t w_pixels;
+	uint32_t h_pixels;
+	float w_meters;
+	float h_meters;
 
 	struct os_thread_helper oth;
 

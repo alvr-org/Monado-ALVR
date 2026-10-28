@@ -1,10 +1,11 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Common defines and enums for XRT.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <mosesturner@protonmail.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Nis Madsen <nima_zero_one@protonmail.com>
  * @author Korcan Hussein <korcan.hussein@collabora.com>
  * @ingroup xrt_iface
@@ -13,8 +14,10 @@
 #pragma once
 
 #include "xrt/xrt_compiler.h"
-
 #include "xrt/xrt_results.h"
+
+#include <assert.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -170,6 +173,31 @@ enum xrt_distortion_model
 };
 
 /*!
+ * The type of panel refresh the device has.
+ */
+enum xrt_panel_refresh_type
+{
+	//! entire panel refreshes simultaneously
+	XRT_PANEL_REFRESH_TYPE_GLOBAL = 0,
+	//! panel refreshes progressively along scanout direction, e.g. OLED panels
+	XRT_PANEL_REFRESH_TYPE_ROLLING,
+};
+
+/*!
+ * Screen scanout direction
+ */
+enum xrt_scanout_direction
+{
+	// clang-format off
+	XRT_SCANOUT_DIRECTION_NONE = 0,
+	XRT_SCANOUT_DIRECTION_TOP_TO_BOTTOM,
+	XRT_SCANOUT_DIRECTION_BOTTOM_TO_TOP,
+	XRT_SCANOUT_DIRECTION_LEFT_TO_RIGHT,
+	XRT_SCANOUT_DIRECTION_RIGHT_TO_LEFT,
+	// clang-format on
+};
+
+/*!
  * Common formats, use `u_format_*` functions to reason about them.
  */
 enum xrt_format
@@ -192,6 +220,8 @@ enum xrt_format
 	XRT_FORMAT_UYVY422,
 
 	XRT_FORMAT_MJPEG,
+
+	XRT_FORMAT_BC4,
 };
 
 /*!
@@ -226,10 +256,9 @@ struct xrt_quat
  * @ingroup xrt_iface math
  * @relates xrt_quat
  */
-#define XRT_QUAT_IDENTITY                                                                                              \
-	{                                                                                                              \
-		0.f, 0.f, 0.f, 1.f                                                                                     \
-	}
+// clang-format off
+#define XRT_QUAT_IDENTITY {0.f, 0.f, 0.f, 1.f}
+// clang-format on
 
 /*!
  * A 1 element vector with single floats.
@@ -251,6 +280,16 @@ struct xrt_vec2
 	float x;
 	float y;
 };
+
+/*!
+ * All-zero value for @ref xrt_vec2
+ *
+ * @ingroup xrt_iface math
+ * @relates xrt_vec2
+ */
+// clang-format off
+#define XRT_VEC2_ZERO {0.f, 0.f}
+// clang-format on
 
 /*!
  * Represents a uv triplet for distortion, basically just three xrt_vec2.
@@ -292,40 +331,36 @@ struct xrt_vec3_f64
  * @ingroup xrt_iface math
  * @relates xrt_vec3
  */
-#define XRT_VEC3_ZERO                                                                                                  \
-	{                                                                                                              \
-		0.f, 0.f, 0.f                                                                                          \
-	}
+// clang-format off
+#define XRT_VEC3_ZERO {0.f, 0.f, 0.f}
+// clang-format on
 /*!
  * Value for @ref xrt_vec3 with 1 in the @p x coordinate.
  *
  * @ingroup xrt_iface math
  * @relates xrt_vec3
  */
-#define XRT_VEC3_UNIT_X                                                                                                \
-	{                                                                                                              \
-		1.f, 0.f, 0.f                                                                                          \
-	}
+// clang-format off
+#define XRT_VEC3_UNIT_X {1.f, 0.f, 0.f}
+// clang-format on
 /*!
  * Value for @ref xrt_vec3 with 1 in the @p y coordinate.
  *
  * @ingroup xrt_iface math
  * @relates xrt_vec3
  */
-#define XRT_VEC3_UNIT_Y                                                                                                \
-	{                                                                                                              \
-		0.f, 1.f, 0.f                                                                                          \
-	}
+// clang-format off
+#define XRT_VEC3_UNIT_Y {0.f, 1.f, 0.f}
+// clang-format on
 /*!
  * Value for @ref xrt_vec3 with 1 in the @p z coordinate.
  *
  * @ingroup xrt_iface math
  * @relates xrt_vec3
  */
-#define XRT_VEC3_UNIT_Z                                                                                                \
-	{                                                                                                              \
-		0.f, 0.f, 1.f                                                                                          \
-	}
+// clang-format off
+#define XRT_VEC3_UNIT_Z {0.f, 0.f, 1.f}
+// clang-format on
 
 /*!
  * A 3 element vector with 32 bit integers.
@@ -385,6 +420,19 @@ struct xrt_colour_rgb_f32
 	float r;
 	float g;
 	float b;
+};
+
+/*!
+ * A 3 element HSV colour with floating point channels.
+ * All values are in [0, 1] range, with hue wrapping at 1.
+ *
+ * @ingroup xrt_iface math
+ */
+struct xrt_colour_hsv_f32
+{
+	float h;
+	float s;
+	float v;
 };
 
 /*!
@@ -457,7 +505,7 @@ struct xrt_normalized_rect
 /*!
  * A pose composed of a position and orientation.
  *
- * @see xrt_qaut
+ * @see xrt_quat
  * @see xrt_vec3
  * @ingroup xrt_iface math
  */
@@ -472,10 +520,9 @@ struct xrt_pose
  * @ingroup xrt_iface math
  * @relates xrt_pose
  */
-#define XRT_POSE_IDENTITY                                                                                              \
-	{                                                                                                              \
-		XRT_QUAT_IDENTITY, XRT_VEC3_ZERO                                                                       \
-	}
+// clang-format off
+#define XRT_POSE_IDENTITY {XRT_QUAT_IDENTITY, XRT_VEC3_ZERO}
+// clang-format on
 
 /*!
  * Describes a projection matrix fov.
@@ -670,10 +717,9 @@ struct xrt_space_relation
  * @ingroup xrt_iface math
  * @relates xrt_space_relation
  */
-#define XRT_SPACE_RELATION_ZERO                                                                                        \
-	{                                                                                                              \
-		XRT_SPACE_RELATION_BITMASK_NONE, XRT_POSE_IDENTITY, XRT_VEC3_ZERO, XRT_VEC3_ZERO                       \
-	}
+// clang-format off
+#define XRT_SPACE_RELATION_ZERO {XRT_SPACE_RELATION_BITMASK_NONE, XRT_POSE_IDENTITY, XRT_VEC3_ZERO, XRT_VEC3_ZERO}
+// clang-format on
 
 /*!
  * The maximum number of steps that can be in a relation chain.
@@ -710,12 +756,13 @@ struct xrt_relation_chain
  */
 enum xrt_device_name
 {
-	XRT_DEVICE_INVALID = 0,
+	XRT_DEVICE_INVALID,
 
-	XRT_DEVICE_GENERIC_HMD = 1,
+	XRT_DEVICE_GENERIC_HMD,
 
 	// Vive stuff.
 	XRT_DEVICE_VIVE_PRO,
+	XRT_DEVICE_VIVE_PRO2,
 	XRT_DEVICE_VIVE_WAND,
 	XRT_DEVICE_VIVE_TRACKER, // Generic, only used for bindings.
 	XRT_DEVICE_VIVE_TRACKER_GEN1,
@@ -734,6 +781,7 @@ enum xrt_device_name
 
 	XRT_DEVICE_HP_REVERB_G2_CONTROLLER,
 	XRT_DEVICE_SAMSUNG_ODYSSEY_CONTROLLER,
+	XRT_DEVICE_LOGITECH_MX_INK_CONTROLLER,
 	XRT_DEVICE_ML2_CONTROLLER,
 	XRT_DEVICE_OPPO_MR_CONTROLLER,
 
@@ -744,6 +792,12 @@ enum xrt_device_name
 	XRT_DEVICE_PSMV,
 	XRT_DEVICE_PSSENSE,
 	XRT_DEVICE_HYDRA,
+	XRT_DEVICE_RIFT_REMOTE,
+	XRT_DEVICE_BLUBUR_S1,
+	XRT_DEVICE_PSVR2,
+	XRT_DEVICE_FLIPVR,
+	XRT_DEVICE_CONTACTGLOVE2,
+	XRT_DEVICE_CONTACTGLOVE2_WITH_MAGNETRA2,
 
 	// Other misc stuff.
 	XRT_DEVICE_HAND_TRACKER,
@@ -752,6 +806,9 @@ enum xrt_device_name
 
 	//! XR_EXT_hand_interaction
 	XRT_DEVICE_EXT_HAND_INTERACTION,
+
+	//! XR_ANDROID_face_tracking
+	XRT_DEVICE_ANDROID_FACE_TRACKING,
 
 	//! XR_HTC_facial_tracking
 	XRT_DEVICE_HTC_FACE_TRACKING,
@@ -775,6 +832,12 @@ enum xrt_device_name
 	XRT_DEVICE_TOUCH_CONTROLLER_RIFT_CV1,
 	XRT_DEVICE_TOUCH_CONTROLLER_QUEST_1_RIFT_S,
 	XRT_DEVICE_TOUCH_CONTROLLER_QUEST_2,
+
+	// XR_KHR_generic_controller
+	XRT_DEVICE_GENERIC_CONTROLLER,
+
+	// Hand based controller emulation.
+	XRT_DEVICE_HAND_CTRL_EMU,
 };
 
 /*!
@@ -789,6 +852,7 @@ enum xrt_device_type
 	XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER,
 	XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER,
 	XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER,
+	XRT_DEVICE_TYPE_GAMEPAD,
 	XRT_DEVICE_TYPE_GENERIC_TRACKER,
 	XRT_DEVICE_TYPE_HAND_TRACKER,
 	XRT_DEVICE_TYPE_EYE_TRACKER,
@@ -877,419 +941,6 @@ enum xrt_input_type
  */
 #define XRT_GET_INPUT_ID(name) ((uint32_t)(name >> XRT_INPUT_TYPE_BITWIDTH))
 
-// clang-format off
-#define XRT_INPUT_LIST(_) \
-	/** Standard pose used for rendering */  \
-	_(XRT_INPUT_GENERIC_HEAD_POSE                      , XRT_INPUT_NAME(0x0000, POSE)) \
-	_(XRT_INPUT_GENERIC_HEAD_DETECT                    , XRT_INPUT_NAME(0x0001, BOOLEAN)) \
-	_(XRT_INPUT_GENERIC_HAND_TRACKING_LEFT             , XRT_INPUT_NAME(0x0002, HAND_TRACKING)) \
-	_(XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT            , XRT_INPUT_NAME(0x0004, HAND_TRACKING)) \
-	_(XRT_INPUT_GENERIC_TRACKER_POSE                   , XRT_INPUT_NAME(0x0005, POSE)) \
-	/** XR_EXT_palm_pose */ \
-	_(XRT_INPUT_GENERIC_PALM_POSE                      , XRT_INPUT_NAME(0x0006, POSE)) \
-\
-	/** XR_EXT_eye_gaze_interaction */ \
-	_(XRT_INPUT_GENERIC_EYE_GAZE_POSE                  , XRT_INPUT_NAME(0x0007, POSE)) \
-	/** Standard non-view reference spaces */ \
-	_(XRT_INPUT_GENERIC_LOCAL_SPACE_POSE               , XRT_INPUT_NAME(0x0008, POSE)) \
-	_(XRT_INPUT_GENERIC_LOCAL_FLOOR_SPACE_POSE         , XRT_INPUT_NAME(0x0009, POSE)) \
-	_(XRT_INPUT_GENERIC_STAGE_SPACE_POSE               , XRT_INPUT_NAME(0x000A, POSE)) \
-	_(XRT_INPUT_GENERIC_UNBOUNDED_SPACE_POSE           , XRT_INPUT_NAME(0x000B, POSE)) \
-\
-	_(XRT_INPUT_SIMPLE_SELECT_CLICK                    , XRT_INPUT_NAME(0x0010, BOOLEAN)) \
-	_(XRT_INPUT_SIMPLE_MENU_CLICK                      , XRT_INPUT_NAME(0x0011, BOOLEAN)) \
-	_(XRT_INPUT_SIMPLE_GRIP_POSE                       , XRT_INPUT_NAME(0x0012, POSE)) \
-	_(XRT_INPUT_SIMPLE_AIM_POSE                        , XRT_INPUT_NAME(0x0013, POSE)) \
-\
-	_(XRT_INPUT_PSMV_PS_CLICK                          , XRT_INPUT_NAME(0x0020, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_MOVE_CLICK                        , XRT_INPUT_NAME(0x0021, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_START_CLICK                       , XRT_INPUT_NAME(0x0022, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_SELECT_CLICK                      , XRT_INPUT_NAME(0x0023, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_SQUARE_CLICK                      , XRT_INPUT_NAME(0x0024, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_CROSS_CLICK                       , XRT_INPUT_NAME(0x0025, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_CIRCLE_CLICK                      , XRT_INPUT_NAME(0x0026, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_TRIANGLE_CLICK                    , XRT_INPUT_NAME(0x0027, BOOLEAN)) \
-	_(XRT_INPUT_PSMV_TRIGGER_VALUE                     , XRT_INPUT_NAME(0x0028, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PSMV_GRIP_POSE                         , XRT_INPUT_NAME(0x0029, POSE)) \
-	_(XRT_INPUT_PSMV_AIM_POSE                          , XRT_INPUT_NAME(0x002A, POSE)) \
-	_(XRT_INPUT_PSMV_BODY_CENTER_POSE                  , XRT_INPUT_NAME(0x002B, POSE)) \
-	_(XRT_INPUT_PSMV_BALL_CENTER_POSE                  , XRT_INPUT_NAME(0x002C, POSE)) \
-\
-	_(XRT_INPUT_HYDRA_1_CLICK                          , XRT_INPUT_NAME(0x0030, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_2_CLICK                          , XRT_INPUT_NAME(0x0031, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_3_CLICK                          , XRT_INPUT_NAME(0x0032, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_4_CLICK                          , XRT_INPUT_NAME(0x0033, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_MIDDLE_CLICK                     , XRT_INPUT_NAME(0x0034, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_BUMPER_CLICK                     , XRT_INPUT_NAME(0x0035, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_JOYSTICK_CLICK                   , XRT_INPUT_NAME(0x0036, BOOLEAN)) \
-	_(XRT_INPUT_HYDRA_JOYSTICK_VALUE                   , XRT_INPUT_NAME(0x0037, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_HYDRA_TRIGGER_VALUE                    , XRT_INPUT_NAME(0x0038, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_HYDRA_POSE                             , XRT_INPUT_NAME(0x0039, POSE)) \
-\
-	_(XRT_INPUT_DAYDREAM_TOUCHPAD_CLICK                , XRT_INPUT_NAME(0x0040, BOOLEAN)) \
-	_(XRT_INPUT_DAYDREAM_BAR_CLICK                     , XRT_INPUT_NAME(0x0041, BOOLEAN)) \
-	_(XRT_INPUT_DAYDREAM_CIRCLE_CLICK                  , XRT_INPUT_NAME(0x0042, BOOLEAN)) \
-	_(XRT_INPUT_DAYDREAM_VOLUP_CLICK                   , XRT_INPUT_NAME(0x0043, BOOLEAN)) \
-	_(XRT_INPUT_DAYDREAM_VOLDN_CLICK                   , XRT_INPUT_NAME(0x0044, BOOLEAN)) \
-	_(XRT_INPUT_DAYDREAM_TOUCHPAD                      , XRT_INPUT_NAME(0x0045, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_DAYDREAM_POSE                          , XRT_INPUT_NAME(0x0046, POSE)) \
-	_(XRT_INPUT_DAYDREAM_TOUCHPAD_TOUCH                , XRT_INPUT_NAME(0x0047, BOOLEAN)) \
-\
-	_(XRT_INPUT_INDEX_SYSTEM_CLICK                     , XRT_INPUT_NAME(0x0050, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_SYSTEM_TOUCH                     , XRT_INPUT_NAME(0x0051, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_A_CLICK                          , XRT_INPUT_NAME(0x0052, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_A_TOUCH                          , XRT_INPUT_NAME(0x0053, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_B_CLICK                          , XRT_INPUT_NAME(0x0054, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_B_TOUCH                          , XRT_INPUT_NAME(0x0055, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_SQUEEZE_VALUE                    , XRT_INPUT_NAME(0x0056, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_INDEX_SQUEEZE_FORCE                    , XRT_INPUT_NAME(0x0057, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_INDEX_TRIGGER_CLICK                    , XRT_INPUT_NAME(0x0058, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_TRIGGER_VALUE                    , XRT_INPUT_NAME(0x0059, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_INDEX_TRIGGER_TOUCH                    , XRT_INPUT_NAME(0x005A, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_THUMBSTICK                       , XRT_INPUT_NAME(0x005B, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_INDEX_THUMBSTICK_CLICK                 , XRT_INPUT_NAME(0x005D, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_THUMBSTICK_TOUCH                 , XRT_INPUT_NAME(0x005E, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_TRACKPAD                         , XRT_INPUT_NAME(0x005F, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_INDEX_TRACKPAD_FORCE                   , XRT_INPUT_NAME(0x0061, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_INDEX_TRACKPAD_TOUCH                   , XRT_INPUT_NAME(0x0062, BOOLEAN)) \
-	_(XRT_INPUT_INDEX_GRIP_POSE                        , XRT_INPUT_NAME(0x0063, POSE)) \
-	_(XRT_INPUT_INDEX_AIM_POSE                         , XRT_INPUT_NAME(0x0064, POSE)) \
-\
-	_(XRT_INPUT_VIVE_SYSTEM_CLICK                      , XRT_INPUT_NAME(0x0070, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_SQUEEZE_CLICK                     , XRT_INPUT_NAME(0x0071, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_MENU_CLICK                        , XRT_INPUT_NAME(0x0072, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRIGGER_CLICK                     , XRT_INPUT_NAME(0x0073, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRIGGER_VALUE                     , XRT_INPUT_NAME(0x0074, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_VIVE_TRACKPAD                          , XRT_INPUT_NAME(0x0075, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_VIVE_TRACKPAD_CLICK                    , XRT_INPUT_NAME(0x0076, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKPAD_TOUCH                    , XRT_INPUT_NAME(0x0077, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_GRIP_POSE                         , XRT_INPUT_NAME(0x0078, POSE)) \
-	_(XRT_INPUT_VIVE_AIM_POSE                          , XRT_INPUT_NAME(0x0079, POSE)) \
-\
-	_(XRT_INPUT_VIVEPRO_SYSTEM_CLICK                   , XRT_INPUT_NAME(0x0080, BOOLEAN)) \
-	_(XRT_INPUT_VIVEPRO_VOLUP_CLICK                    , XRT_INPUT_NAME(0x0081, BOOLEAN)) \
-	_(XRT_INPUT_VIVEPRO_VOLDN_CLICK                    , XRT_INPUT_NAME(0x0082, BOOLEAN)) \
-	_(XRT_INPUT_VIVEPRO_MUTE_MIC_CLICK                 , XRT_INPUT_NAME(0x0083, BOOLEAN)) \
-\
-	_(XRT_INPUT_WMR_MENU_CLICK                         , XRT_INPUT_NAME(0x0090, BOOLEAN)) \
-	_(XRT_INPUT_WMR_SQUEEZE_CLICK                      , XRT_INPUT_NAME(0x0091, BOOLEAN)) \
-	_(XRT_INPUT_WMR_TRIGGER_VALUE                      , XRT_INPUT_NAME(0x0092, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_WMR_THUMBSTICK_CLICK                   , XRT_INPUT_NAME(0x0093, BOOLEAN)) \
-	_(XRT_INPUT_WMR_THUMBSTICK                         , XRT_INPUT_NAME(0x0094, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_WMR_TRACKPAD_CLICK                     , XRT_INPUT_NAME(0x0095, BOOLEAN)) \
-	_(XRT_INPUT_WMR_TRACKPAD_TOUCH                     , XRT_INPUT_NAME(0x0096, BOOLEAN)) \
-	_(XRT_INPUT_WMR_TRACKPAD                           , XRT_INPUT_NAME(0x0097, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_WMR_GRIP_POSE                          , XRT_INPUT_NAME(0x0098, POSE)) \
-	_(XRT_INPUT_WMR_AIM_POSE                           , XRT_INPUT_NAME(0x0099, POSE)) \
-	_(XRT_INPUT_WMR_HOME_CLICK                         , XRT_INPUT_NAME(0x009A, BOOLEAN)) \
-\
-	_(XRT_INPUT_XBOX_MENU_CLICK                        , XRT_INPUT_NAME(0x00A0, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_VIEW_CLICK                        , XRT_INPUT_NAME(0x00A1, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_A_CLICK                           , XRT_INPUT_NAME(0x00A2, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_B_CLICK                           , XRT_INPUT_NAME(0x00A3, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_X_CLICK                           , XRT_INPUT_NAME(0x00A4, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_Y_CLICK                           , XRT_INPUT_NAME(0x00A5, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_DPAD_DOWN_CLICK                   , XRT_INPUT_NAME(0x00A6, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_DPAD_RIGHT_CLICK                  , XRT_INPUT_NAME(0x00A7, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_DPAD_UP_CLICK                     , XRT_INPUT_NAME(0x00A8, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_DPAD_LEFT_CLICK                   , XRT_INPUT_NAME(0x00A9, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_SHOULDER_LEFT_CLICK               , XRT_INPUT_NAME(0x00AA, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_SHOULDER_RIGHT_CLICK              , XRT_INPUT_NAME(0x00AB, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_THUMBSTICK_LEFT_CLICK             , XRT_INPUT_NAME(0x00AC, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_THUMBSTICK_LEFT                   , XRT_INPUT_NAME(0x00AD, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_XBOX_THUMBSTICK_RIGHT_CLICK            , XRT_INPUT_NAME(0x00AE, BOOLEAN)) \
-	_(XRT_INPUT_XBOX_THUMBSTICK_RIGHT                  , XRT_INPUT_NAME(0x00AF, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_XBOX_LEFT_TRIGGER_VALUE                , XRT_INPUT_NAME(0x00B0, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_XBOX_RIGHT_TRIGGER_VALUE               , XRT_INPUT_NAME(0x00B1, VEC1_ZERO_TO_ONE)) \
-\
-	_(XRT_INPUT_GO_SYSTEM_CLICK                        , XRT_INPUT_NAME(0x00B0, BOOLEAN)) \
-	_(XRT_INPUT_GO_TRIGGER_CLICK                       , XRT_INPUT_NAME(0x00B1, BOOLEAN)) \
-	_(XRT_INPUT_GO_BACK_CLICK                          , XRT_INPUT_NAME(0x00B2, BOOLEAN)) \
-	_(XRT_INPUT_GO_TRACKPAD_CLICK                      , XRT_INPUT_NAME(0x00B3, BOOLEAN)) \
-	_(XRT_INPUT_GO_TRACKPAD_TOUCH                      , XRT_INPUT_NAME(0x00B4, BOOLEAN)) \
-	_(XRT_INPUT_GO_TRACKPAD                            , XRT_INPUT_NAME(0x00B5, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_GO_GRIP_POSE                           , XRT_INPUT_NAME(0x00B6, POSE)) \
-	_(XRT_INPUT_GO_AIM_POSE                            , XRT_INPUT_NAME(0x00B7, POSE)) \
-\
-	_(XRT_INPUT_TOUCH_X_CLICK                          , XRT_INPUT_NAME(0x00C0, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_X_TOUCH                          , XRT_INPUT_NAME(0x00C1, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_Y_CLICK                          , XRT_INPUT_NAME(0x00C2, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_Y_TOUCH                          , XRT_INPUT_NAME(0x00C3, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_MENU_CLICK                       , XRT_INPUT_NAME(0x00C4, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_A_CLICK                          , XRT_INPUT_NAME(0x00C5, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_A_TOUCH                          , XRT_INPUT_NAME(0x00C6, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_B_CLICK                          , XRT_INPUT_NAME(0x00C7, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_B_TOUCH                          , XRT_INPUT_NAME(0x00C8, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_SYSTEM_CLICK                     , XRT_INPUT_NAME(0x00C9, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_SQUEEZE_VALUE                    , XRT_INPUT_NAME(0x00CA, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_TRIGGER_TOUCH                    , XRT_INPUT_NAME(0x00CB, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_TRIGGER_VALUE                    , XRT_INPUT_NAME(0x00CC, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_THUMBSTICK_CLICK                 , XRT_INPUT_NAME(0x00CD, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_THUMBSTICK_TOUCH                 , XRT_INPUT_NAME(0x00CE, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_THUMBSTICK                       , XRT_INPUT_NAME(0x00CF, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_THUMBREST_TOUCH                  , XRT_INPUT_NAME(0x00D0, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_GRIP_POSE                        , XRT_INPUT_NAME(0x00D1, POSE)) \
-	_(XRT_INPUT_TOUCH_AIM_POSE                         , XRT_INPUT_NAME(0x00D2, POSE)) \
-	_(XRT_INPUT_TOUCH_TRIGGER_PROXIMITY                , XRT_INPUT_NAME(0x00D3, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_THUMB_PROXIMITY                  , XRT_INPUT_NAME(0x00D4, BOOLEAN)) \
-\
-	_(XRT_INPUT_HAND_SELECT_VALUE                      , XRT_INPUT_NAME(0x00E0, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_HAND_SQUEEZE_VALUE                     , XRT_INPUT_NAME(0x00E1, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_HAND_GRIP_POSE                         , XRT_INPUT_NAME(0x00E2, POSE)) \
-	_(XRT_INPUT_HAND_AIM_POSE                          , XRT_INPUT_NAME(0x00E3, POSE)) \
-\
-	_(XRT_INPUT_G2_CONTROLLER_X_CLICK                  , XRT_INPUT_NAME(0x00F0, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_Y_CLICK                  , XRT_INPUT_NAME(0x00F1, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_A_CLICK                  , XRT_INPUT_NAME(0x00F2, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_B_CLICK                  , XRT_INPUT_NAME(0x00F3, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_MENU_CLICK               , XRT_INPUT_NAME(0x00F4, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_SQUEEZE_VALUE            , XRT_INPUT_NAME(0x00F5, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_G2_CONTROLLER_TRIGGER_VALUE            , XRT_INPUT_NAME(0x00F6, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_G2_CONTROLLER_THUMBSTICK_CLICK         , XRT_INPUT_NAME(0x00F7, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_THUMBSTICK               , XRT_INPUT_NAME(0x00F8, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_G2_CONTROLLER_GRIP_POSE                , XRT_INPUT_NAME(0x00F9, POSE)) \
-	_(XRT_INPUT_G2_CONTROLLER_AIM_POSE                 , XRT_INPUT_NAME(0x00FA, POSE)) \
-	_(XRT_INPUT_G2_CONTROLLER_HOME_CLICK               , XRT_INPUT_NAME(0x00FB, BOOLEAN)) \
-	_(XRT_INPUT_G2_CONTROLLER_SQUEEZE_CLICK            , XRT_INPUT_NAME(0x00FC, BOOLEAN)) \
-\
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_MENU_CLICK          , XRT_INPUT_NAME(0x0100, BOOLEAN)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_SQUEEZE_CLICK       , XRT_INPUT_NAME(0x0101, BOOLEAN)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_TRIGGER_VALUE       , XRT_INPUT_NAME(0x0102, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_THUMBSTICK_CLICK    , XRT_INPUT_NAME(0x0103, BOOLEAN)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_THUMBSTICK          , XRT_INPUT_NAME(0x0104, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_TRACKPAD_CLICK      , XRT_INPUT_NAME(0x0105, BOOLEAN)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_TRACKPAD_TOUCH      , XRT_INPUT_NAME(0x0106, BOOLEAN)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_TRACKPAD            , XRT_INPUT_NAME(0x0107, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_GRIP_POSE           , XRT_INPUT_NAME(0x0108, POSE)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_AIM_POSE            , XRT_INPUT_NAME(0x0109, POSE)) \
-	_(XRT_INPUT_ODYSSEY_CONTROLLER_HOME_CLICK          , XRT_INPUT_NAME(0x010A, BOOLEAN)) \
-\
-	_(XRT_INPUT_ML2_CONTROLLER_MENU_CLICK              , XRT_INPUT_NAME(0x0200, BOOLEAN)) \
-	_(XRT_INPUT_ML2_CONTROLLER_SELECT_CLICK            , XRT_INPUT_NAME(0x0201, BOOLEAN)) \
-	_(XRT_INPUT_ML2_CONTROLLER_TRIGGER_CLICK           , XRT_INPUT_NAME(0x0202, BOOLEAN)) \
-	_(XRT_INPUT_ML2_CONTROLLER_TRIGGER_VALUE           , XRT_INPUT_NAME(0x0203, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_ML2_CONTROLLER_TRACKPAD_CLICK          , XRT_INPUT_NAME(0x0204, BOOLEAN)) \
-	_(XRT_INPUT_ML2_CONTROLLER_TRACKPAD_TOUCH          , XRT_INPUT_NAME(0x0205, BOOLEAN)) \
-	_(XRT_INPUT_ML2_CONTROLLER_TRACKPAD_FORCE          , XRT_INPUT_NAME(0x0206, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_ML2_CONTROLLER_TRACKPAD                , XRT_INPUT_NAME(0x0207, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_ML2_CONTROLLER_GRIP_POSE               , XRT_INPUT_NAME(0x0208, POSE)) \
-	_(XRT_INPUT_ML2_CONTROLLER_AIM_POSE                , XRT_INPUT_NAME(0x0209, POSE)) \
-	_(XRT_INPUT_ML2_CONTROLLER_SHOULDER_CLICK          , XRT_INPUT_NAME(0x020A, BOOLEAN)) \
-\
-	_(XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK              , XRT_INPUT_NAME(0x0210, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKER_MENU_CLICK                , XRT_INPUT_NAME(0x0211, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKER_TRIGGER_CLICK             , XRT_INPUT_NAME(0x0212, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK             , XRT_INPUT_NAME(0x0213, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKER_TRIGGER_VALUE             , XRT_INPUT_NAME(0x0214, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_VIVE_TRACKER_TRACKPAD                  , XRT_INPUT_NAME(0x0215, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK            , XRT_INPUT_NAME(0x0216, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKER_TRACKPAD_TOUCH            , XRT_INPUT_NAME(0x0217, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_TRACKER_GRIP_POSE                 , XRT_INPUT_NAME(0x0218, POSE)) \
-\
-	_(XRT_INPUT_PSSENSE_PS_CLICK                       , XRT_INPUT_NAME(0x0300, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_SHARE_CLICK                    , XRT_INPUT_NAME(0x0301, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_OPTIONS_CLICK                  , XRT_INPUT_NAME(0x0302, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_SQUARE_CLICK                   , XRT_INPUT_NAME(0x0303, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_SQUARE_TOUCH                   , XRT_INPUT_NAME(0x0304, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_TRIANGLE_CLICK                 , XRT_INPUT_NAME(0x0305, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_TRIANGLE_TOUCH                 , XRT_INPUT_NAME(0x0306, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_CROSS_CLICK                    , XRT_INPUT_NAME(0x0307, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_CROSS_TOUCH                    , XRT_INPUT_NAME(0x0308, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_CIRCLE_CLICK                   , XRT_INPUT_NAME(0x0309, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_CIRCLE_TOUCH                   , XRT_INPUT_NAME(0x030a, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_SQUEEZE_CLICK                  , XRT_INPUT_NAME(0x030b, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_SQUEEZE_TOUCH                  , XRT_INPUT_NAME(0x030c, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_SQUEEZE_PROXIMITY              , XRT_INPUT_NAME(0x030d, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PSSENSE_TRIGGER_CLICK                  , XRT_INPUT_NAME(0x030e, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_TRIGGER_TOUCH                  , XRT_INPUT_NAME(0x030f, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_TRIGGER_VALUE                  , XRT_INPUT_NAME(0x0310, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PSSENSE_TRIGGER_PROXIMITY              , XRT_INPUT_NAME(0x0311, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PSSENSE_THUMBSTICK                     , XRT_INPUT_NAME(0x0312, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_PSSENSE_THUMBSTICK_CLICK               , XRT_INPUT_NAME(0x0313, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_THUMBSTICK_TOUCH               , XRT_INPUT_NAME(0x0314, BOOLEAN)) \
-	_(XRT_INPUT_PSSENSE_GRIP_POSE                      , XRT_INPUT_NAME(0x0315, POSE)) \
-	_(XRT_INPUT_PSSENSE_AIM_POSE                       , XRT_INPUT_NAME(0x0316, POSE)) \
-\
-	/** XR_EXT_hand_interaction */ \
-	_(XRT_INPUT_HAND_PINCH_POSE                        , XRT_INPUT_NAME(0x0401, POSE)) \
-	_(XRT_INPUT_HAND_POKE_POSE                         , XRT_INPUT_NAME(0x0402, POSE)) \
-	_(XRT_INPUT_HAND_PINCH_VALUE                       , XRT_INPUT_NAME(0x0403, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_HAND_AIM_ACTIVATE_VALUE                , XRT_INPUT_NAME(0x0404, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_HAND_GRASP_VALUE                       , XRT_INPUT_NAME(0x0405, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_HAND_PINCH_READY                       , XRT_INPUT_NAME(0x0406, BOOLEAN)) \
-	_(XRT_INPUT_HAND_AIM_ACTIVATE_READY                , XRT_INPUT_NAME(0x0407, BOOLEAN)) \
-	_(XRT_INPUT_HAND_GRASP_READY                       , XRT_INPUT_NAME(0x0408, BOOLEAN)) \
-\
-	_(XRT_INPUT_OPPO_MR_X_CLICK                        , XRT_INPUT_NAME(0x0500, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_X_TOUCH                        , XRT_INPUT_NAME(0x0501, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_Y_CLICK                        , XRT_INPUT_NAME(0x0502, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_Y_TOUCH                        , XRT_INPUT_NAME(0x0503, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_MENU_CLICK                     , XRT_INPUT_NAME(0x0504, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_HEART_RATE_VALUE               , XRT_INPUT_NAME(0x0505, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_OPPO_MR_A_CLICK                        , XRT_INPUT_NAME(0x0506, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_A_TOUCH                        , XRT_INPUT_NAME(0x0507, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_B_CLICK                        , XRT_INPUT_NAME(0x0508, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_B_TOUCH                        , XRT_INPUT_NAME(0x0509, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_HOME_CLICK                     , XRT_INPUT_NAME(0x050A, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_SQUEEZE_VALUE                  , XRT_INPUT_NAME(0x050B, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_OPPO_MR_TRIGGER_TOUCH                  , XRT_INPUT_NAME(0x050C, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_TRIGGER_VALUE                  , XRT_INPUT_NAME(0x050D, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_OPPO_MR_GRIP_POSE                      , XRT_INPUT_NAME(0x050E, POSE)) \
-	_(XRT_INPUT_OPPO_MR_AIM_POSE                       , XRT_INPUT_NAME(0x050F, POSE)) \
-	_(XRT_INPUT_OPPO_MR_THUMBSTICK_CLICK               , XRT_INPUT_NAME(0x0510, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_THUMBSTICK_TOUCH               , XRT_INPUT_NAME(0x0511, BOOLEAN)) \
-	_(XRT_INPUT_OPPO_MR_THUMBSTICK                     , XRT_INPUT_NAME(0x0512, VEC2_MINUS_ONE_TO_ONE)) \
-\
-	_(XRT_INPUT_GENERIC_FACE_TRACKING                  , XRT_INPUT_NAME(0x0600, FACE_TRACKING)) \
-\
-	_(XRT_INPUT_HTC_EYE_FACE_TRACKING                  , XRT_INPUT_NAME(0x0601, FACE_TRACKING)) \
-	_(XRT_INPUT_HTC_LIP_FACE_TRACKING                  , XRT_INPUT_NAME(0x0602, FACE_TRACKING)) \
-	_(XRT_INPUT_FB_FACE_TRACKING2_AUDIO                , XRT_INPUT_NAME(0x0603, FACE_TRACKING)) \
-	_(XRT_INPUT_FB_FACE_TRACKING2_VISUAL               , XRT_INPUT_NAME(0x0604, FACE_TRACKING)) \
-\
-	_(XRT_INPUT_GENERIC_BODY_TRACKING                  , XRT_INPUT_NAME(0x0700, BODY_TRACKING)) \
-	_(XRT_INPUT_FB_BODY_TRACKING                       , XRT_INPUT_NAME(0x0701, BODY_TRACKING)) \
-\
-	_(XRT_INPUT_PICO_NEO3_X_CLICK                      , XRT_INPUT_NAME(0x0800, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_X_TOUCH                      , XRT_INPUT_NAME(0x0801, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_Y_CLICK                      , XRT_INPUT_NAME(0x0802, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_Y_TOUCH                      , XRT_INPUT_NAME(0x0803, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_MENU_CLICK                   , XRT_INPUT_NAME(0x0804, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_SYSTEM_CLICK                 , XRT_INPUT_NAME(0x0805, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_TRIGGER_CLICK                , XRT_INPUT_NAME(0x0806, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_TRIGGER_VALUE                , XRT_INPUT_NAME(0x0807, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PICO_NEO3_TRIGGER_TOUCH                , XRT_INPUT_NAME(0x0808, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_THUMBSTICK_CLICK             , XRT_INPUT_NAME(0x0809, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_THUMBSTICK_TOUCH             , XRT_INPUT_NAME(0x080A, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_THUMBSTICK                   , XRT_INPUT_NAME(0x080B, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_PICO_NEO3_SQUEEZE_CLICK                , XRT_INPUT_NAME(0x080C, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_SQUEEZE_VALUE                , XRT_INPUT_NAME(0x080D, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PICO_NEO3_GRIP_POSE                    , XRT_INPUT_NAME(0x080E, POSE)) \
-	_(XRT_INPUT_PICO_NEO3_AIM_POSE                     , XRT_INPUT_NAME(0x080F, POSE)) \
-	_(XRT_INPUT_PICO_NEO3_A_CLICK                      , XRT_INPUT_NAME(0x0810, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_A_TOUCH                      , XRT_INPUT_NAME(0x0811, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_B_CLICK                      , XRT_INPUT_NAME(0x0812, BOOLEAN)) \
-	_(XRT_INPUT_PICO_NEO3_B_TOUCH                      , XRT_INPUT_NAME(0x0813, BOOLEAN)) \
-\
-	_(XRT_INPUT_PICO4_X_CLICK                          , XRT_INPUT_NAME(0x0900, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_X_TOUCH                          , XRT_INPUT_NAME(0x0901, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_Y_CLICK                          , XRT_INPUT_NAME(0x0902, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_Y_TOUCH                          , XRT_INPUT_NAME(0x0903, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_SYSTEM_CLICK                     , XRT_INPUT_NAME(0x0905, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_TRIGGER_CLICK                    , XRT_INPUT_NAME(0x0906, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_TRIGGER_VALUE                    , XRT_INPUT_NAME(0x0907, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PICO4_TRIGGER_TOUCH                    , XRT_INPUT_NAME(0x0908, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_THUMBSTICK_CLICK                 , XRT_INPUT_NAME(0x0909, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_THUMBSTICK_TOUCH                 , XRT_INPUT_NAME(0x090A, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_THUMBSTICK                       , XRT_INPUT_NAME(0x090B, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_PICO4_SQUEEZE_CLICK                    , XRT_INPUT_NAME(0x090C, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_SQUEEZE_VALUE                    , XRT_INPUT_NAME(0x090D, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PICO4_GRIP_POSE                        , XRT_INPUT_NAME(0x090E, POSE)) \
-	_(XRT_INPUT_PICO4_AIM_POSE                         , XRT_INPUT_NAME(0x090F, POSE)) \
-	_(XRT_INPUT_PICO4_A_CLICK                          , XRT_INPUT_NAME(0x0910, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_A_TOUCH                          , XRT_INPUT_NAME(0x0911, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_B_CLICK                          , XRT_INPUT_NAME(0x0912, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_B_TOUCH                          , XRT_INPUT_NAME(0x0913, BOOLEAN)) \
-	_(XRT_INPUT_PICO4_MENU_CLICK                       , XRT_INPUT_NAME(0x0914, BOOLEAN)) \
-\
-	_(XRT_INPUT_PICO_G3_MENU_CLICK                     , XRT_INPUT_NAME(0x0A01, BOOLEAN)) \
-	_(XRT_INPUT_PICO_G3_TRIGGER_CLICK                  , XRT_INPUT_NAME(0x0A02, BOOLEAN)) \
-	_(XRT_INPUT_PICO_G3_TRIGGER_VALUE                  , XRT_INPUT_NAME(0x0A03, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_PICO_G3_THUMBSTICK_CLICK               , XRT_INPUT_NAME(0x0A04, BOOLEAN)) \
-	_(XRT_INPUT_PICO_G3_THUMBSTICK_TOUCH               , XRT_INPUT_NAME(0x0A05, BOOLEAN)) \
-	_(XRT_INPUT_PICO_G3_THUMBSTICK                     , XRT_INPUT_NAME(0x0A06, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_PICO_G3_GRIP_POSE                      , XRT_INPUT_NAME(0x0A07, POSE)) \
-	_(XRT_INPUT_PICO_G3_AIM_POSE                       , XRT_INPUT_NAME(0x0A08, POSE)) \
-\
-	_(XRT_INPUT_VIVE_COSMOS_X_CLICK                    , XRT_INPUT_NAME(0x0B00, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_Y_CLICK                    , XRT_INPUT_NAME(0x0B01, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_MENU_CLICK                 , XRT_INPUT_NAME(0x0B02, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_A_CLICK                    , XRT_INPUT_NAME(0x0B03, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_B_CLICK                    , XRT_INPUT_NAME(0x0B04, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_SYSTEM_CLICK               , XRT_INPUT_NAME(0x0B05, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_SHOULDER_CLICK             , XRT_INPUT_NAME(0x0B06, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_SQUEEZE_CLICK              , XRT_INPUT_NAME(0x0B07, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_TRIGGER_CLICK              , XRT_INPUT_NAME(0x0B08, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_TRIGGER_VALUE              , XRT_INPUT_NAME(0x0B09, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_VIVE_COSMOS_THUMBSTICK_CLICK           , XRT_INPUT_NAME(0x0B0A, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_THUMBSTICK_TOUCH           , XRT_INPUT_NAME(0x0B0B, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_COSMOS_THUMBSTICK                 , XRT_INPUT_NAME(0x0B0C, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_VIVE_COSMOS_GRIP_POSE                  , XRT_INPUT_NAME(0x0B0D, POSE)) \
-	_(XRT_INPUT_VIVE_COSMOS_AIM_POSE                   , XRT_INPUT_NAME(0x0B0E, POSE)) \
-\
-	_(XRT_INPUT_VIVE_FOCUS3_X_CLICK                    , XRT_INPUT_NAME(0x0C00, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_Y_CLICK                    , XRT_INPUT_NAME(0x0C01, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_MENU_CLICK                 , XRT_INPUT_NAME(0x0C02, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_A_CLICK                    , XRT_INPUT_NAME(0x0C03, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_B_CLICK                    , XRT_INPUT_NAME(0x0C04, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_SYSTEM_CLICK               , XRT_INPUT_NAME(0x0C05, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_SQUEEZE_CLICK              , XRT_INPUT_NAME(0x0C06, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_SQUEEZE_TOUCH              , XRT_INPUT_NAME(0x0C07, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_SQUEEZE_VALUE              , XRT_INPUT_NAME(0x0C08, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_VIVE_FOCUS3_TRIGGER_CLICK              , XRT_INPUT_NAME(0x0C09, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_TRIGGER_TOUCH              , XRT_INPUT_NAME(0x0C0A, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_TRIGGER_VALUE              , XRT_INPUT_NAME(0x0C0B, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_VIVE_FOCUS3_THUMBSTICK_CLICK           , XRT_INPUT_NAME(0x0C0C, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_THUMBSTICK_TOUCH           , XRT_INPUT_NAME(0x0C0D, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_THUMBSTICK                 , XRT_INPUT_NAME(0x0C0E, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_VIVE_FOCUS3_THUMBREST_TOUCH            , XRT_INPUT_NAME(0x0C0F, BOOLEAN)) \
-	_(XRT_INPUT_VIVE_FOCUS3_GRIP_POSE                  , XRT_INPUT_NAME(0x0C10, POSE)) \
-	_(XRT_INPUT_VIVE_FOCUS3_AIM_POSE                   , XRT_INPUT_NAME(0x0C11, POSE)) \
-\
-	_(XRT_INPUT_TOUCH_PRO_X_CLICK                      , XRT_INPUT_NAME(0x0D00, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_X_TOUCH                      , XRT_INPUT_NAME(0x0D01, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_Y_CLICK                      , XRT_INPUT_NAME(0x0D02, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_Y_TOUCH                      , XRT_INPUT_NAME(0x0D03, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_MENU_CLICK                   , XRT_INPUT_NAME(0x0D04, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_A_CLICK                      , XRT_INPUT_NAME(0x0D05, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_A_TOUCH                      , XRT_INPUT_NAME(0x0D06, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_B_CLICK                      , XRT_INPUT_NAME(0x0D07, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_B_TOUCH                      , XRT_INPUT_NAME(0x0D08, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_SYSTEM_CLICK                 , XRT_INPUT_NAME(0x0D09, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_SQUEEZE_VALUE                , XRT_INPUT_NAME(0x0D0A, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PRO_TRIGGER_TOUCH                , XRT_INPUT_NAME(0x0D0B, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_TRIGGER_VALUE                , XRT_INPUT_NAME(0x0D0C, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PRO_THUMBSTICK_CLICK             , XRT_INPUT_NAME(0x0D0D, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_THUMBSTICK_TOUCH             , XRT_INPUT_NAME(0x0D0E, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_THUMBSTICK                   , XRT_INPUT_NAME(0x0D0F, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PRO_THUMBREST_TOUCH              , XRT_INPUT_NAME(0x0D10, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_THUMBREST_FORCE              , XRT_INPUT_NAME(0x0D11, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PRO_GRIP_POSE                    , XRT_INPUT_NAME(0x0D12, POSE)) \
-	_(XRT_INPUT_TOUCH_PRO_AIM_POSE                     , XRT_INPUT_NAME(0x0D13, POSE)) \
-	_(XRT_INPUT_TOUCH_PRO_TRIGGER_PROXIMITY            , XRT_INPUT_NAME(0x0D14, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_THUMB_PROXIMITY              , XRT_INPUT_NAME(0x0D15, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PRO_TRIGGER_CURL                 , XRT_INPUT_NAME(0x0D16, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PRO_TRIGGER_SLIDE                , XRT_INPUT_NAME(0x0D17, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PRO_STYLUS_FORCE                 , XRT_INPUT_NAME(0x0D18, VEC1_ZERO_TO_ONE)) \
-\
-	_(XRT_INPUT_TOUCH_PLUS_X_CLICK                     , XRT_INPUT_NAME(0x0E00, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_X_TOUCH                     , XRT_INPUT_NAME(0x0E01, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_Y_CLICK                     , XRT_INPUT_NAME(0x0E02, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_Y_TOUCH                     , XRT_INPUT_NAME(0x0E03, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_MENU_CLICK                  , XRT_INPUT_NAME(0x0E04, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_A_CLICK                     , XRT_INPUT_NAME(0x0E05, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_A_TOUCH                     , XRT_INPUT_NAME(0x0E06, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_B_CLICK                     , XRT_INPUT_NAME(0x0E07, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_B_TOUCH                     , XRT_INPUT_NAME(0x0E08, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_SYSTEM_CLICK                , XRT_INPUT_NAME(0x0E09, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_SQUEEZE_VALUE               , XRT_INPUT_NAME(0x0E0A, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PLUS_TRIGGER_TOUCH               , XRT_INPUT_NAME(0x0E0B, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_TRIGGER_PROXIMITY           , XRT_INPUT_NAME(0x0E0C, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_TRIGGER_VALUE               , XRT_INPUT_NAME(0x0E0D, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PLUS_TRIGGER_FORCE               , XRT_INPUT_NAME(0x0E0E, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PLUS_THUMBSTICK_CLICK            , XRT_INPUT_NAME(0x0E0F, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_THUMBSTICK_TOUCH            , XRT_INPUT_NAME(0x0E10, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_THUMBSTICK                  , XRT_INPUT_NAME(0x0E11, VEC2_MINUS_ONE_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PLUS_THUMBREST_TOUCH             , XRT_INPUT_NAME(0x0E12, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_GRIP_POSE                   , XRT_INPUT_NAME(0x0E13, POSE)) \
-	_(XRT_INPUT_TOUCH_PLUS_AIM_POSE                    , XRT_INPUT_NAME(0x0E14, POSE)) \
-	_(XRT_INPUT_TOUCH_PLUS_THUMB_PROXIMITY             , XRT_INPUT_NAME(0x0E15, BOOLEAN)) \
-	_(XRT_INPUT_TOUCH_PLUS_TRIGGER_CURL                , XRT_INPUT_NAME(0x0E16, VEC1_ZERO_TO_ONE)) \
-	_(XRT_INPUT_TOUCH_PLUS_TRIGGER_SLIDE               , XRT_INPUT_NAME(0x0E17, VEC1_ZERO_TO_ONE))
-
-// clang-format on
-
-
 /*!
  * Every internal input source known to monado with a baked in type.
  * Values are maintained in XRT_INPUT_LIST.
@@ -1299,11 +950,503 @@ enum xrt_input_type
  */
 enum xrt_input_name
 {
-#define XRT_INPUT_LIST_TO_NAME_VALUE(NAME, VALUE) NAME = VALUE,
+	// clang-format off
+	//! Not a real input. Sentinel for "no input", distinct from any XRT_INPUT_NAME value.
+	XRT_INPUT_NAME_INVALID                                      = 0,
+	//! Standard pose used for rendering
+	XRT_INPUT_GENERIC_HEAD_POSE                                 = XRT_INPUT_NAME(0x0000, POSE),
+	XRT_INPUT_GENERIC_HEAD_DETECT                               = XRT_INPUT_NAME(0x0001, BOOLEAN),
+	XRT_INPUT_HT_UNOBSTRUCTED_LEFT                              = XRT_INPUT_NAME(0x0002, HAND_TRACKING),
+	XRT_INPUT_HT_UNOBSTRUCTED_RIGHT                             = XRT_INPUT_NAME(0x0003, HAND_TRACKING),
+	XRT_INPUT_HT_CONFORMING_LEFT                                = XRT_INPUT_NAME(0x0004, HAND_TRACKING),
+	XRT_INPUT_HT_CONFORMING_RIGHT                               = XRT_INPUT_NAME(0x0005, HAND_TRACKING),
+	XRT_INPUT_GENERIC_TRACKER_POSE                              = XRT_INPUT_NAME(0x0006, POSE),
+	//! XR_EXT_palm_pose
+	XRT_INPUT_GENERIC_PALM_POSE                                 = XRT_INPUT_NAME(0x0007, POSE),
 
-	XRT_INPUT_LIST(XRT_INPUT_LIST_TO_NAME_VALUE)
+	//! XR_EXT_eye_gaze_interaction
+	XRT_INPUT_GENERIC_EYE_GAZE_POSE                             = XRT_INPUT_NAME(0x0008, POSE),
+	// Standard non-view reference spaces
+	XRT_INPUT_GENERIC_LOCAL_SPACE_POSE                          = XRT_INPUT_NAME(0x0009, POSE),
+	XRT_INPUT_GENERIC_LOCAL_FLOOR_SPACE_POSE                    = XRT_INPUT_NAME(0x000A, POSE),
+	XRT_INPUT_GENERIC_STAGE_SPACE_POSE                          = XRT_INPUT_NAME(0x000B, POSE),
+	XRT_INPUT_GENERIC_UNBOUNDED_SPACE_POSE                      = XRT_INPUT_NAME(0x000C, POSE),
 
-#undef XRT_INPUT_LIST_TO_NAME_VALUE
+	XRT_INPUT_SIMPLE_SELECT_CLICK                               = XRT_INPUT_NAME(0x0010, BOOLEAN),
+	XRT_INPUT_SIMPLE_MENU_CLICK                                 = XRT_INPUT_NAME(0x0011, BOOLEAN),
+	XRT_INPUT_SIMPLE_GRIP_POSE                                  = XRT_INPUT_NAME(0x0012, POSE),
+	XRT_INPUT_SIMPLE_AIM_POSE                                   = XRT_INPUT_NAME(0x0013, POSE),
+
+	// XR_KHR_generic_controller
+	XRT_INPUT_GENERIC_PRIMARY_CLICK                             = XRT_INPUT_NAME(0x0014, BOOLEAN),
+	XRT_INPUT_GENERIC_SECONDARY_CLICK                           = XRT_INPUT_NAME(0x0015, BOOLEAN),
+	XRT_INPUT_GENERIC_THUMBSTICK_CLICK                          = XRT_INPUT_NAME(0x0016, BOOLEAN),
+	XRT_INPUT_GENERIC_THUMBSTICK                                = XRT_INPUT_NAME(0x0017, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_GENERIC_SQUEEZE_VALUE                             = XRT_INPUT_NAME(0x0018, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_GENERIC_TRIGGER_VALUE                             = XRT_INPUT_NAME(0x0019, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_GENERIC_GRIP_POSE                                 = XRT_INPUT_NAME(0x001A, POSE),
+	XRT_INPUT_GENERIC_GRIP_SURFACE_POSE                         = XRT_INPUT_NAME(0x001B, POSE),
+	XRT_INPUT_GENERIC_AIM_POSE                                  = XRT_INPUT_NAME(0x001C, POSE),
+
+	XRT_INPUT_PSMV_PS_CLICK                                     = XRT_INPUT_NAME(0x0020, BOOLEAN),
+	XRT_INPUT_PSMV_MOVE_CLICK                                   = XRT_INPUT_NAME(0x0021, BOOLEAN),
+	XRT_INPUT_PSMV_START_CLICK                                  = XRT_INPUT_NAME(0x0022, BOOLEAN),
+	XRT_INPUT_PSMV_SELECT_CLICK                                 = XRT_INPUT_NAME(0x0023, BOOLEAN),
+	XRT_INPUT_PSMV_SQUARE_CLICK                                 = XRT_INPUT_NAME(0x0024, BOOLEAN),
+	XRT_INPUT_PSMV_CROSS_CLICK                                  = XRT_INPUT_NAME(0x0025, BOOLEAN),
+	XRT_INPUT_PSMV_CIRCLE_CLICK                                 = XRT_INPUT_NAME(0x0026, BOOLEAN),
+	XRT_INPUT_PSMV_TRIANGLE_CLICK                               = XRT_INPUT_NAME(0x0027, BOOLEAN),
+	XRT_INPUT_PSMV_TRIGGER_VALUE                                = XRT_INPUT_NAME(0x0028, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PSMV_GRIP_POSE                                    = XRT_INPUT_NAME(0x0029, POSE),
+	XRT_INPUT_PSMV_AIM_POSE                                     = XRT_INPUT_NAME(0x002A, POSE),
+	XRT_INPUT_PSMV_BODY_CENTER_POSE                             = XRT_INPUT_NAME(0x002B, POSE),
+	XRT_INPUT_PSMV_BALL_CENTER_POSE                             = XRT_INPUT_NAME(0x002C, POSE),
+
+	XRT_INPUT_HYDRA_1_CLICK                                     = XRT_INPUT_NAME(0x0030, BOOLEAN),
+	XRT_INPUT_HYDRA_2_CLICK                                     = XRT_INPUT_NAME(0x0031, BOOLEAN),
+	XRT_INPUT_HYDRA_3_CLICK                                     = XRT_INPUT_NAME(0x0032, BOOLEAN),
+	XRT_INPUT_HYDRA_4_CLICK                                     = XRT_INPUT_NAME(0x0033, BOOLEAN),
+	XRT_INPUT_HYDRA_MIDDLE_CLICK                                = XRT_INPUT_NAME(0x0034, BOOLEAN),
+	XRT_INPUT_HYDRA_BUMPER_CLICK                                = XRT_INPUT_NAME(0x0035, BOOLEAN),
+	XRT_INPUT_HYDRA_JOYSTICK_CLICK                              = XRT_INPUT_NAME(0x0036, BOOLEAN),
+	XRT_INPUT_HYDRA_JOYSTICK_VALUE                              = XRT_INPUT_NAME(0x0037, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_HYDRA_TRIGGER_VALUE                               = XRT_INPUT_NAME(0x0038, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HYDRA_AIM_POSE                                    = XRT_INPUT_NAME(0x0039, POSE),
+	XRT_INPUT_HYDRA_GRIP_POSE                                   = XRT_INPUT_NAME(0x0040, POSE),
+
+	XRT_INPUT_DAYDREAM_TOUCHPAD_CLICK                           = XRT_INPUT_NAME(0x0040, BOOLEAN),
+	XRT_INPUT_DAYDREAM_BAR_CLICK                                = XRT_INPUT_NAME(0x0041, BOOLEAN),
+	XRT_INPUT_DAYDREAM_CIRCLE_CLICK                             = XRT_INPUT_NAME(0x0042, BOOLEAN),
+	XRT_INPUT_DAYDREAM_VOLUP_CLICK                              = XRT_INPUT_NAME(0x0043, BOOLEAN),
+	XRT_INPUT_DAYDREAM_VOLDN_CLICK                              = XRT_INPUT_NAME(0x0044, BOOLEAN),
+	XRT_INPUT_DAYDREAM_TOUCHPAD                                 = XRT_INPUT_NAME(0x0045, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_DAYDREAM_POSE                                     = XRT_INPUT_NAME(0x0046, POSE),
+	XRT_INPUT_DAYDREAM_TOUCHPAD_TOUCH                           = XRT_INPUT_NAME(0x0047, BOOLEAN),
+
+	XRT_INPUT_INDEX_SYSTEM_CLICK                                = XRT_INPUT_NAME(0x0050, BOOLEAN),
+	XRT_INPUT_INDEX_SYSTEM_TOUCH                                = XRT_INPUT_NAME(0x0051, BOOLEAN),
+	XRT_INPUT_INDEX_A_CLICK                                     = XRT_INPUT_NAME(0x0052, BOOLEAN),
+	XRT_INPUT_INDEX_A_TOUCH                                     = XRT_INPUT_NAME(0x0053, BOOLEAN),
+	XRT_INPUT_INDEX_B_CLICK                                     = XRT_INPUT_NAME(0x0054, BOOLEAN),
+	XRT_INPUT_INDEX_B_TOUCH                                     = XRT_INPUT_NAME(0x0055, BOOLEAN),
+	XRT_INPUT_INDEX_SQUEEZE_VALUE                               = XRT_INPUT_NAME(0x0056, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_INDEX_SQUEEZE_FORCE                               = XRT_INPUT_NAME(0x0057, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_INDEX_TRIGGER_CLICK                               = XRT_INPUT_NAME(0x0058, BOOLEAN),
+	XRT_INPUT_INDEX_TRIGGER_VALUE                               = XRT_INPUT_NAME(0x0059, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_INDEX_TRIGGER_TOUCH                               = XRT_INPUT_NAME(0x005A, BOOLEAN),
+	XRT_INPUT_INDEX_THUMBSTICK                                  = XRT_INPUT_NAME(0x005B, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_INDEX_THUMBSTICK_CLICK                            = XRT_INPUT_NAME(0x005D, BOOLEAN),
+	XRT_INPUT_INDEX_THUMBSTICK_TOUCH                            = XRT_INPUT_NAME(0x005E, BOOLEAN),
+	XRT_INPUT_INDEX_TRACKPAD                                    = XRT_INPUT_NAME(0x005F, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_INDEX_TRACKPAD_FORCE                              = XRT_INPUT_NAME(0x0061, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_INDEX_TRACKPAD_TOUCH                              = XRT_INPUT_NAME(0x0062, BOOLEAN),
+	XRT_INPUT_INDEX_GRIP_POSE                                   = XRT_INPUT_NAME(0x0063, POSE),
+	XRT_INPUT_INDEX_AIM_POSE                                    = XRT_INPUT_NAME(0x0064, POSE),
+
+	XRT_INPUT_VIVE_SYSTEM_CLICK                                 = XRT_INPUT_NAME(0x0070, BOOLEAN),
+	XRT_INPUT_VIVE_SQUEEZE_CLICK                                = XRT_INPUT_NAME(0x0071, BOOLEAN),
+	XRT_INPUT_VIVE_MENU_CLICK                                   = XRT_INPUT_NAME(0x0072, BOOLEAN),
+	XRT_INPUT_VIVE_TRIGGER_CLICK                                = XRT_INPUT_NAME(0x0073, BOOLEAN),
+	XRT_INPUT_VIVE_TRIGGER_VALUE                                = XRT_INPUT_NAME(0x0074, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_VIVE_TRACKPAD                                     = XRT_INPUT_NAME(0x0075, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_VIVE_TRACKPAD_CLICK                               = XRT_INPUT_NAME(0x0076, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKPAD_TOUCH                               = XRT_INPUT_NAME(0x0077, BOOLEAN),
+	XRT_INPUT_VIVE_GRIP_POSE                                    = XRT_INPUT_NAME(0x0078, POSE),
+	XRT_INPUT_VIVE_AIM_POSE                                     = XRT_INPUT_NAME(0x0079, POSE),
+
+	XRT_INPUT_VIVE_PRO_SYSTEM_CLICK                             = XRT_INPUT_NAME(0x0080, BOOLEAN),
+	XRT_INPUT_VIVE_PRO_VOLUP_CLICK                              = XRT_INPUT_NAME(0x0081, BOOLEAN),
+	XRT_INPUT_VIVE_PRO_VOLDN_CLICK                              = XRT_INPUT_NAME(0x0082, BOOLEAN),
+	XRT_INPUT_VIVE_PRO_MUTE_MIC_CLICK                           = XRT_INPUT_NAME(0x0083, BOOLEAN),
+
+	XRT_INPUT_WMR_MENU_CLICK                                    = XRT_INPUT_NAME(0x0090, BOOLEAN),
+	XRT_INPUT_WMR_SQUEEZE_CLICK                                 = XRT_INPUT_NAME(0x0091, BOOLEAN),
+	XRT_INPUT_WMR_TRIGGER_VALUE                                 = XRT_INPUT_NAME(0x0092, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_WMR_THUMBSTICK_CLICK                              = XRT_INPUT_NAME(0x0093, BOOLEAN),
+	XRT_INPUT_WMR_THUMBSTICK                                    = XRT_INPUT_NAME(0x0094, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_WMR_TRACKPAD_CLICK                                = XRT_INPUT_NAME(0x0095, BOOLEAN),
+	XRT_INPUT_WMR_TRACKPAD_TOUCH                                = XRT_INPUT_NAME(0x0096, BOOLEAN),
+	XRT_INPUT_WMR_TRACKPAD                                      = XRT_INPUT_NAME(0x0097, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_WMR_GRIP_POSE                                     = XRT_INPUT_NAME(0x0098, POSE),
+	XRT_INPUT_WMR_AIM_POSE                                      = XRT_INPUT_NAME(0x0099, POSE),
+	XRT_INPUT_WMR_HOME_CLICK                                    = XRT_INPUT_NAME(0x009A, BOOLEAN),
+
+	XRT_INPUT_XBOX_MENU_CLICK                                   = XRT_INPUT_NAME(0x00A0, BOOLEAN),
+	XRT_INPUT_XBOX_VIEW_CLICK                                   = XRT_INPUT_NAME(0x00A1, BOOLEAN),
+	XRT_INPUT_XBOX_A_CLICK                                      = XRT_INPUT_NAME(0x00A2, BOOLEAN),
+	XRT_INPUT_XBOX_B_CLICK                                      = XRT_INPUT_NAME(0x00A3, BOOLEAN),
+	XRT_INPUT_XBOX_X_CLICK                                      = XRT_INPUT_NAME(0x00A4, BOOLEAN),
+	XRT_INPUT_XBOX_Y_CLICK                                      = XRT_INPUT_NAME(0x00A5, BOOLEAN),
+	XRT_INPUT_XBOX_DPAD_DOWN_CLICK                              = XRT_INPUT_NAME(0x00A6, BOOLEAN),
+	XRT_INPUT_XBOX_DPAD_RIGHT_CLICK                             = XRT_INPUT_NAME(0x00A7, BOOLEAN),
+	XRT_INPUT_XBOX_DPAD_UP_CLICK                                = XRT_INPUT_NAME(0x00A8, BOOLEAN),
+	XRT_INPUT_XBOX_DPAD_LEFT_CLICK                              = XRT_INPUT_NAME(0x00A9, BOOLEAN),
+	XRT_INPUT_XBOX_SHOULDER_LEFT_CLICK                          = XRT_INPUT_NAME(0x00AA, BOOLEAN),
+	XRT_INPUT_XBOX_SHOULDER_RIGHT_CLICK                         = XRT_INPUT_NAME(0x00AB, BOOLEAN),
+	XRT_INPUT_XBOX_THUMBSTICK_LEFT_CLICK                        = XRT_INPUT_NAME(0x00AC, BOOLEAN),
+	XRT_INPUT_XBOX_THUMBSTICK_LEFT                              = XRT_INPUT_NAME(0x00AD, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_XBOX_THUMBSTICK_RIGHT_CLICK                       = XRT_INPUT_NAME(0x00AE, BOOLEAN),
+	XRT_INPUT_XBOX_THUMBSTICK_RIGHT                             = XRT_INPUT_NAME(0x00AF, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_XBOX_LEFT_TRIGGER_VALUE                           = XRT_INPUT_NAME(0x00B0, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_XBOX_RIGHT_TRIGGER_VALUE                          = XRT_INPUT_NAME(0x00B1, VEC1_ZERO_TO_ONE),
+
+	XRT_INPUT_GO_SYSTEM_CLICK                                   = XRT_INPUT_NAME(0x00B0, BOOLEAN),
+	XRT_INPUT_GO_TRIGGER_CLICK                                  = XRT_INPUT_NAME(0x00B1, BOOLEAN),
+	XRT_INPUT_GO_BACK_CLICK                                     = XRT_INPUT_NAME(0x00B2, BOOLEAN),
+	XRT_INPUT_GO_TRACKPAD_CLICK                                 = XRT_INPUT_NAME(0x00B3, BOOLEAN),
+	XRT_INPUT_GO_TRACKPAD_TOUCH                                 = XRT_INPUT_NAME(0x00B4, BOOLEAN),
+	XRT_INPUT_GO_TRACKPAD                                       = XRT_INPUT_NAME(0x00B5, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_GO_GRIP_POSE                                      = XRT_INPUT_NAME(0x00B6, POSE),
+	XRT_INPUT_GO_AIM_POSE                                       = XRT_INPUT_NAME(0x00B7, POSE),
+
+	XRT_INPUT_TOUCH_X_CLICK                                     = XRT_INPUT_NAME(0x00C0, BOOLEAN),
+	XRT_INPUT_TOUCH_X_TOUCH                                     = XRT_INPUT_NAME(0x00C1, BOOLEAN),
+	XRT_INPUT_TOUCH_Y_CLICK                                     = XRT_INPUT_NAME(0x00C2, BOOLEAN),
+	XRT_INPUT_TOUCH_Y_TOUCH                                     = XRT_INPUT_NAME(0x00C3, BOOLEAN),
+	XRT_INPUT_TOUCH_MENU_CLICK                                  = XRT_INPUT_NAME(0x00C4, BOOLEAN),
+	XRT_INPUT_TOUCH_A_CLICK                                     = XRT_INPUT_NAME(0x00C5, BOOLEAN),
+	XRT_INPUT_TOUCH_A_TOUCH                                     = XRT_INPUT_NAME(0x00C6, BOOLEAN),
+	XRT_INPUT_TOUCH_B_CLICK                                     = XRT_INPUT_NAME(0x00C7, BOOLEAN),
+	XRT_INPUT_TOUCH_B_TOUCH                                     = XRT_INPUT_NAME(0x00C8, BOOLEAN),
+	XRT_INPUT_TOUCH_SYSTEM_CLICK                                = XRT_INPUT_NAME(0x00C9, BOOLEAN),
+	XRT_INPUT_TOUCH_SQUEEZE_VALUE                               = XRT_INPUT_NAME(0x00CA, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_TRIGGER_TOUCH                               = XRT_INPUT_NAME(0x00CB, BOOLEAN),
+	XRT_INPUT_TOUCH_TRIGGER_VALUE                               = XRT_INPUT_NAME(0x00CC, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_THUMBSTICK_CLICK                            = XRT_INPUT_NAME(0x00CD, BOOLEAN),
+	XRT_INPUT_TOUCH_THUMBSTICK_TOUCH                            = XRT_INPUT_NAME(0x00CE, BOOLEAN),
+	XRT_INPUT_TOUCH_THUMBSTICK                                  = XRT_INPUT_NAME(0x00CF, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_TOUCH_THUMBREST_TOUCH                             = XRT_INPUT_NAME(0x00D0, BOOLEAN),
+	XRT_INPUT_TOUCH_GRIP_POSE                                   = XRT_INPUT_NAME(0x00D1, POSE),
+	XRT_INPUT_TOUCH_AIM_POSE                                    = XRT_INPUT_NAME(0x00D2, POSE),
+	XRT_INPUT_TOUCH_TRIGGER_PROXIMITY                           = XRT_INPUT_NAME(0x00D3, BOOLEAN),
+	XRT_INPUT_TOUCH_THUMB_PROXIMITY                             = XRT_INPUT_NAME(0x00D4, BOOLEAN),
+
+	XRT_INPUT_HAND_SELECT_VALUE                                 = XRT_INPUT_NAME(0x00E0, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HAND_SQUEEZE_VALUE                                = XRT_INPUT_NAME(0x00E1, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HAND_GRIP_POSE                                    = XRT_INPUT_NAME(0x00E2, POSE),
+	XRT_INPUT_HAND_AIM_POSE                                     = XRT_INPUT_NAME(0x00E3, POSE),
+
+	XRT_INPUT_G2_CONTROLLER_X_CLICK                             = XRT_INPUT_NAME(0x00F0, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_Y_CLICK                             = XRT_INPUT_NAME(0x00F1, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_A_CLICK                             = XRT_INPUT_NAME(0x00F2, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_B_CLICK                             = XRT_INPUT_NAME(0x00F3, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_MENU_CLICK                          = XRT_INPUT_NAME(0x00F4, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_SQUEEZE_VALUE                       = XRT_INPUT_NAME(0x00F5, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_G2_CONTROLLER_TRIGGER_VALUE                       = XRT_INPUT_NAME(0x00F6, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_G2_CONTROLLER_THUMBSTICK_CLICK                    = XRT_INPUT_NAME(0x00F7, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_THUMBSTICK                          = XRT_INPUT_NAME(0x00F8, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_G2_CONTROLLER_GRIP_POSE                           = XRT_INPUT_NAME(0x00F9, POSE),
+	XRT_INPUT_G2_CONTROLLER_AIM_POSE                            = XRT_INPUT_NAME(0x00FA, POSE),
+	XRT_INPUT_G2_CONTROLLER_HOME_CLICK                          = XRT_INPUT_NAME(0x00FB, BOOLEAN),
+	XRT_INPUT_G2_CONTROLLER_SQUEEZE_CLICK                       = XRT_INPUT_NAME(0x00FC, BOOLEAN),
+
+	XRT_INPUT_ODYSSEY_CONTROLLER_MENU_CLICK                     = XRT_INPUT_NAME(0x0100, BOOLEAN),
+	XRT_INPUT_ODYSSEY_CONTROLLER_SQUEEZE_CLICK                  = XRT_INPUT_NAME(0x0101, BOOLEAN),
+	XRT_INPUT_ODYSSEY_CONTROLLER_TRIGGER_VALUE                  = XRT_INPUT_NAME(0x0102, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_ODYSSEY_CONTROLLER_THUMBSTICK_CLICK               = XRT_INPUT_NAME(0x0103, BOOLEAN),
+	XRT_INPUT_ODYSSEY_CONTROLLER_THUMBSTICK                     = XRT_INPUT_NAME(0x0104, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_ODYSSEY_CONTROLLER_TRACKPAD_CLICK                 = XRT_INPUT_NAME(0x0105, BOOLEAN),
+	XRT_INPUT_ODYSSEY_CONTROLLER_TRACKPAD_TOUCH                 = XRT_INPUT_NAME(0x0106, BOOLEAN),
+	XRT_INPUT_ODYSSEY_CONTROLLER_TRACKPAD                       = XRT_INPUT_NAME(0x0107, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_ODYSSEY_CONTROLLER_GRIP_POSE                      = XRT_INPUT_NAME(0x0108, POSE),
+	XRT_INPUT_ODYSSEY_CONTROLLER_AIM_POSE                       = XRT_INPUT_NAME(0x0109, POSE),
+	XRT_INPUT_ODYSSEY_CONTROLLER_HOME_CLICK                     = XRT_INPUT_NAME(0x010A, BOOLEAN),
+
+	XRT_INPUT_ML2_CONTROLLER_MENU_CLICK                         = XRT_INPUT_NAME(0x0200, BOOLEAN),
+	XRT_INPUT_ML2_CONTROLLER_SELECT_CLICK                       = XRT_INPUT_NAME(0x0201, BOOLEAN),
+	XRT_INPUT_ML2_CONTROLLER_TRIGGER_CLICK                      = XRT_INPUT_NAME(0x0202, BOOLEAN),
+	XRT_INPUT_ML2_CONTROLLER_TRIGGER_VALUE                      = XRT_INPUT_NAME(0x0203, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_ML2_CONTROLLER_TRACKPAD_CLICK                     = XRT_INPUT_NAME(0x0204, BOOLEAN),
+	XRT_INPUT_ML2_CONTROLLER_TRACKPAD_TOUCH                     = XRT_INPUT_NAME(0x0205, BOOLEAN),
+	XRT_INPUT_ML2_CONTROLLER_TRACKPAD_FORCE                     = XRT_INPUT_NAME(0x0206, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_ML2_CONTROLLER_TRACKPAD                           = XRT_INPUT_NAME(0x0207, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_ML2_CONTROLLER_GRIP_POSE                          = XRT_INPUT_NAME(0x0208, POSE),
+	XRT_INPUT_ML2_CONTROLLER_AIM_POSE                           = XRT_INPUT_NAME(0x0209, POSE),
+	XRT_INPUT_ML2_CONTROLLER_SHOULDER_CLICK                     = XRT_INPUT_NAME(0x020A, BOOLEAN),
+
+	XRT_INPUT_VIVE_TRACKER_SYSTEM_CLICK                         = XRT_INPUT_NAME(0x0210, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKER_MENU_CLICK                           = XRT_INPUT_NAME(0x0211, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKER_TRIGGER_CLICK                        = XRT_INPUT_NAME(0x0212, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKER_SQUEEZE_CLICK                        = XRT_INPUT_NAME(0x0213, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKER_TRIGGER_VALUE                        = XRT_INPUT_NAME(0x0214, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_VIVE_TRACKER_TRACKPAD                             = XRT_INPUT_NAME(0x0215, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_VIVE_TRACKER_TRACKPAD_CLICK                       = XRT_INPUT_NAME(0x0216, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKER_TRACKPAD_TOUCH                       = XRT_INPUT_NAME(0x0217, BOOLEAN),
+	XRT_INPUT_VIVE_TRACKER_GRIP_POSE                            = XRT_INPUT_NAME(0x0218, POSE),
+
+	XRT_INPUT_PSSENSE_PS_CLICK                                  = XRT_INPUT_NAME(0x0300, BOOLEAN),
+	XRT_INPUT_PSSENSE_SHARE_CLICK                               = XRT_INPUT_NAME(0x0301, BOOLEAN),
+	XRT_INPUT_PSSENSE_OPTIONS_CLICK                             = XRT_INPUT_NAME(0x0302, BOOLEAN),
+	XRT_INPUT_PSSENSE_SQUARE_CLICK                              = XRT_INPUT_NAME(0x0303, BOOLEAN),
+	XRT_INPUT_PSSENSE_SQUARE_TOUCH                              = XRT_INPUT_NAME(0x0304, BOOLEAN),
+	XRT_INPUT_PSSENSE_TRIANGLE_CLICK                            = XRT_INPUT_NAME(0x0305, BOOLEAN),
+	XRT_INPUT_PSSENSE_TRIANGLE_TOUCH                            = XRT_INPUT_NAME(0x0306, BOOLEAN),
+	XRT_INPUT_PSSENSE_CROSS_CLICK                               = XRT_INPUT_NAME(0x0307, BOOLEAN),
+	XRT_INPUT_PSSENSE_CROSS_TOUCH                               = XRT_INPUT_NAME(0x0308, BOOLEAN),
+	XRT_INPUT_PSSENSE_CIRCLE_CLICK                              = XRT_INPUT_NAME(0x0309, BOOLEAN),
+	XRT_INPUT_PSSENSE_CIRCLE_TOUCH                              = XRT_INPUT_NAME(0x030a, BOOLEAN),
+	XRT_INPUT_PSSENSE_SQUEEZE_CLICK                             = XRT_INPUT_NAME(0x030b, BOOLEAN),
+	XRT_INPUT_PSSENSE_SQUEEZE_TOUCH                             = XRT_INPUT_NAME(0x030c, BOOLEAN),
+	XRT_INPUT_PSSENSE_SQUEEZE_PROXIMITY                         = XRT_INPUT_NAME(0x030d, BOOLEAN),
+	XRT_INPUT_PSSENSE_SQUEEZE_PROXIMITY_FLOAT                   = XRT_INPUT_NAME(0x030e, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PSSENSE_TRIGGER_CLICK                             = XRT_INPUT_NAME(0x030f, BOOLEAN),
+	XRT_INPUT_PSSENSE_TRIGGER_TOUCH                             = XRT_INPUT_NAME(0x0310, BOOLEAN),
+	XRT_INPUT_PSSENSE_TRIGGER_VALUE                             = XRT_INPUT_NAME(0x0311, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PSSENSE_TRIGGER_PROXIMITY                         = XRT_INPUT_NAME(0x0312, BOOLEAN),
+	XRT_INPUT_PSSENSE_TRIGGER_PROXIMITY_FLOAT                   = XRT_INPUT_NAME(0x0313, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PSSENSE_THUMBSTICK                                = XRT_INPUT_NAME(0x0314, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_PSSENSE_THUMBSTICK_CLICK                          = XRT_INPUT_NAME(0x0315, BOOLEAN),
+	XRT_INPUT_PSSENSE_THUMBSTICK_TOUCH                          = XRT_INPUT_NAME(0x0316, BOOLEAN),
+	XRT_INPUT_PSSENSE_GRIP_POSE                                 = XRT_INPUT_NAME(0x0317, POSE),
+	XRT_INPUT_PSSENSE_AIM_POSE                                  = XRT_INPUT_NAME(0x0318, POSE),
+
+	// XR_EXT_hand_interaction
+	XRT_INPUT_HAND_PINCH_POSE                                   = XRT_INPUT_NAME(0x0401, POSE),
+	XRT_INPUT_HAND_POKE_POSE                                    = XRT_INPUT_NAME(0x0402, POSE),
+	XRT_INPUT_HAND_PINCH_VALUE                                  = XRT_INPUT_NAME(0x0403, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HAND_AIM_ACTIVATE_VALUE                           = XRT_INPUT_NAME(0x0404, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HAND_GRASP_VALUE                                  = XRT_INPUT_NAME(0x0405, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HAND_PINCH_READY                                  = XRT_INPUT_NAME(0x0406, BOOLEAN),
+	XRT_INPUT_HAND_AIM_ACTIVATE_READY                           = XRT_INPUT_NAME(0x0407, BOOLEAN),
+	XRT_INPUT_HAND_GRASP_READY                                  = XRT_INPUT_NAME(0x0408, BOOLEAN),
+
+	XRT_INPUT_OPPO_MR_X_CLICK                                   = XRT_INPUT_NAME(0x0500, BOOLEAN),
+	XRT_INPUT_OPPO_MR_X_TOUCH                                   = XRT_INPUT_NAME(0x0501, BOOLEAN),
+	XRT_INPUT_OPPO_MR_Y_CLICK                                   = XRT_INPUT_NAME(0x0502, BOOLEAN),
+	XRT_INPUT_OPPO_MR_Y_TOUCH                                   = XRT_INPUT_NAME(0x0503, BOOLEAN),
+	XRT_INPUT_OPPO_MR_MENU_CLICK                                = XRT_INPUT_NAME(0x0504, BOOLEAN),
+	XRT_INPUT_OPPO_MR_HEART_RATE_VALUE                          = XRT_INPUT_NAME(0x0505, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_OPPO_MR_A_CLICK                                   = XRT_INPUT_NAME(0x0506, BOOLEAN),
+	XRT_INPUT_OPPO_MR_A_TOUCH                                   = XRT_INPUT_NAME(0x0507, BOOLEAN),
+	XRT_INPUT_OPPO_MR_B_CLICK                                   = XRT_INPUT_NAME(0x0508, BOOLEAN),
+	XRT_INPUT_OPPO_MR_B_TOUCH                                   = XRT_INPUT_NAME(0x0509, BOOLEAN),
+	XRT_INPUT_OPPO_MR_HOME_CLICK                                = XRT_INPUT_NAME(0x050A, BOOLEAN),
+	XRT_INPUT_OPPO_MR_SQUEEZE_VALUE                             = XRT_INPUT_NAME(0x050B, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_OPPO_MR_TRIGGER_TOUCH                             = XRT_INPUT_NAME(0x050C, BOOLEAN),
+	XRT_INPUT_OPPO_MR_TRIGGER_VALUE                             = XRT_INPUT_NAME(0x050D, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_OPPO_MR_GRIP_POSE                                 = XRT_INPUT_NAME(0x050E, POSE),
+	XRT_INPUT_OPPO_MR_AIM_POSE                                  = XRT_INPUT_NAME(0x050F, POSE),
+	XRT_INPUT_OPPO_MR_THUMBSTICK_CLICK                          = XRT_INPUT_NAME(0x0510, BOOLEAN),
+	XRT_INPUT_OPPO_MR_THUMBSTICK_TOUCH                          = XRT_INPUT_NAME(0x0511, BOOLEAN),
+	XRT_INPUT_OPPO_MR_THUMBSTICK                                = XRT_INPUT_NAME(0x0512, VEC2_MINUS_ONE_TO_ONE),
+
+	XRT_INPUT_GENERIC_FACE_TRACKING                             = XRT_INPUT_NAME(0x0600, FACE_TRACKING),
+
+	XRT_INPUT_HTC_EYE_FACE_TRACKING                             = XRT_INPUT_NAME(0x0601, FACE_TRACKING),
+	XRT_INPUT_HTC_LIP_FACE_TRACKING                             = XRT_INPUT_NAME(0x0602, FACE_TRACKING),
+	XRT_INPUT_FB_FACE_TRACKING2_AUDIO                           = XRT_INPUT_NAME(0x0603, FACE_TRACKING),
+	XRT_INPUT_FB_FACE_TRACKING2_VISUAL                          = XRT_INPUT_NAME(0x0604, FACE_TRACKING),
+	XRT_INPUT_ANDROID_FACE_TRACKING                             = XRT_INPUT_NAME(0x0605, FACE_TRACKING),
+
+	XRT_INPUT_GENERIC_BODY_TRACKING                             = XRT_INPUT_NAME(0x0700, BODY_TRACKING),
+	XRT_INPUT_FB_BODY_TRACKING                                  = XRT_INPUT_NAME(0x0701, BODY_TRACKING),
+	XRT_INPUT_META_FULL_BODY_TRACKING                           = XRT_INPUT_NAME(0x0702, BODY_TRACKING),
+	XRT_INPUT_BD_BODY_TRACKING                                  = XRT_INPUT_NAME(0x0703, BODY_TRACKING),
+	XRT_INPUT_BD_BODY_TRACKING_WITHOUT_ARM                      = XRT_INPUT_NAME(0x0704, BODY_TRACKING),
+
+	XRT_INPUT_PICO_NEO3_X_CLICK                                 = XRT_INPUT_NAME(0x0800, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_X_TOUCH                                 = XRT_INPUT_NAME(0x0801, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_Y_CLICK                                 = XRT_INPUT_NAME(0x0802, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_Y_TOUCH                                 = XRT_INPUT_NAME(0x0803, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_MENU_CLICK                              = XRT_INPUT_NAME(0x0804, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_SYSTEM_CLICK                            = XRT_INPUT_NAME(0x0805, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_TRIGGER_CLICK                           = XRT_INPUT_NAME(0x0806, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_TRIGGER_VALUE                           = XRT_INPUT_NAME(0x0807, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PICO_NEO3_TRIGGER_TOUCH                           = XRT_INPUT_NAME(0x0808, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_THUMBSTICK_CLICK                        = XRT_INPUT_NAME(0x0809, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_THUMBSTICK_TOUCH                        = XRT_INPUT_NAME(0x080A, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_THUMBSTICK                              = XRT_INPUT_NAME(0x080B, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_PICO_NEO3_SQUEEZE_CLICK                           = XRT_INPUT_NAME(0x080C, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_SQUEEZE_VALUE                           = XRT_INPUT_NAME(0x080D, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PICO_NEO3_GRIP_POSE                               = XRT_INPUT_NAME(0x080E, POSE),
+	XRT_INPUT_PICO_NEO3_AIM_POSE                                = XRT_INPUT_NAME(0x080F, POSE),
+	XRT_INPUT_PICO_NEO3_A_CLICK                                 = XRT_INPUT_NAME(0x0810, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_A_TOUCH                                 = XRT_INPUT_NAME(0x0811, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_B_CLICK                                 = XRT_INPUT_NAME(0x0812, BOOLEAN),
+	XRT_INPUT_PICO_NEO3_B_TOUCH                                 = XRT_INPUT_NAME(0x0813, BOOLEAN),
+
+	XRT_INPUT_PICO4_X_CLICK                                     = XRT_INPUT_NAME(0x0900, BOOLEAN),
+	XRT_INPUT_PICO4_X_TOUCH                                     = XRT_INPUT_NAME(0x0901, BOOLEAN),
+	XRT_INPUT_PICO4_Y_CLICK                                     = XRT_INPUT_NAME(0x0902, BOOLEAN),
+	XRT_INPUT_PICO4_Y_TOUCH                                     = XRT_INPUT_NAME(0x0903, BOOLEAN),
+	XRT_INPUT_PICO4_SYSTEM_CLICK                                = XRT_INPUT_NAME(0x0905, BOOLEAN),
+	XRT_INPUT_PICO4_TRIGGER_CLICK                               = XRT_INPUT_NAME(0x0906, BOOLEAN),
+	XRT_INPUT_PICO4_TRIGGER_VALUE                               = XRT_INPUT_NAME(0x0907, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PICO4_TRIGGER_TOUCH                               = XRT_INPUT_NAME(0x0908, BOOLEAN),
+	XRT_INPUT_PICO4_THUMBSTICK_CLICK                            = XRT_INPUT_NAME(0x0909, BOOLEAN),
+	XRT_INPUT_PICO4_THUMBSTICK_TOUCH                            = XRT_INPUT_NAME(0x090A, BOOLEAN),
+	XRT_INPUT_PICO4_THUMBSTICK                                  = XRT_INPUT_NAME(0x090B, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_PICO4_SQUEEZE_CLICK                               = XRT_INPUT_NAME(0x090C, BOOLEAN),
+	XRT_INPUT_PICO4_SQUEEZE_VALUE                               = XRT_INPUT_NAME(0x090D, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PICO4_GRIP_POSE                                   = XRT_INPUT_NAME(0x090E, POSE),
+	XRT_INPUT_PICO4_AIM_POSE                                    = XRT_INPUT_NAME(0x090F, POSE),
+	XRT_INPUT_PICO4_A_CLICK                                     = XRT_INPUT_NAME(0x0910, BOOLEAN),
+	XRT_INPUT_PICO4_A_TOUCH                                     = XRT_INPUT_NAME(0x0911, BOOLEAN),
+	XRT_INPUT_PICO4_B_CLICK                                     = XRT_INPUT_NAME(0x0912, BOOLEAN),
+	XRT_INPUT_PICO4_B_TOUCH                                     = XRT_INPUT_NAME(0x0913, BOOLEAN),
+	XRT_INPUT_PICO4_MENU_CLICK                                  = XRT_INPUT_NAME(0x0914, BOOLEAN),
+
+	XRT_INPUT_PICO_G3_MENU_CLICK                                = XRT_INPUT_NAME(0x0A01, BOOLEAN),
+	XRT_INPUT_PICO_G3_TRIGGER_CLICK                             = XRT_INPUT_NAME(0x0A02, BOOLEAN),
+	XRT_INPUT_PICO_G3_TRIGGER_VALUE                             = XRT_INPUT_NAME(0x0A03, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_PICO_G3_THUMBSTICK_CLICK                          = XRT_INPUT_NAME(0x0A04, BOOLEAN),
+	XRT_INPUT_PICO_G3_THUMBSTICK_TOUCH                          = XRT_INPUT_NAME(0x0A05, BOOLEAN),
+	XRT_INPUT_PICO_G3_THUMBSTICK                                = XRT_INPUT_NAME(0x0A06, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_PICO_G3_GRIP_POSE                                 = XRT_INPUT_NAME(0x0A07, POSE),
+	XRT_INPUT_PICO_G3_AIM_POSE                                  = XRT_INPUT_NAME(0x0A08, POSE),
+
+	XRT_INPUT_VIVE_COSMOS_X_CLICK                               = XRT_INPUT_NAME(0x0B00, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_Y_CLICK                               = XRT_INPUT_NAME(0x0B01, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_MENU_CLICK                            = XRT_INPUT_NAME(0x0B02, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_A_CLICK                               = XRT_INPUT_NAME(0x0B03, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_B_CLICK                               = XRT_INPUT_NAME(0x0B04, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_SYSTEM_CLICK                          = XRT_INPUT_NAME(0x0B05, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_SHOULDER_CLICK                        = XRT_INPUT_NAME(0x0B06, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_SQUEEZE_CLICK                         = XRT_INPUT_NAME(0x0B07, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_TRIGGER_CLICK                         = XRT_INPUT_NAME(0x0B08, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_TRIGGER_VALUE                         = XRT_INPUT_NAME(0x0B09, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_VIVE_COSMOS_THUMBSTICK_CLICK                      = XRT_INPUT_NAME(0x0B0A, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_THUMBSTICK_TOUCH                      = XRT_INPUT_NAME(0x0B0B, BOOLEAN),
+	XRT_INPUT_VIVE_COSMOS_THUMBSTICK                            = XRT_INPUT_NAME(0x0B0C, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_VIVE_COSMOS_GRIP_POSE                             = XRT_INPUT_NAME(0x0B0D, POSE),
+	XRT_INPUT_VIVE_COSMOS_AIM_POSE                              = XRT_INPUT_NAME(0x0B0E, POSE),
+
+	XRT_INPUT_VIVE_FOCUS3_X_CLICK                               = XRT_INPUT_NAME(0x0C00, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_Y_CLICK                               = XRT_INPUT_NAME(0x0C01, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_MENU_CLICK                            = XRT_INPUT_NAME(0x0C02, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_A_CLICK                               = XRT_INPUT_NAME(0x0C03, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_B_CLICK                               = XRT_INPUT_NAME(0x0C04, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_SYSTEM_CLICK                          = XRT_INPUT_NAME(0x0C05, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_SQUEEZE_CLICK                         = XRT_INPUT_NAME(0x0C06, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_SQUEEZE_TOUCH                         = XRT_INPUT_NAME(0x0C07, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_SQUEEZE_VALUE                         = XRT_INPUT_NAME(0x0C08, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_VIVE_FOCUS3_TRIGGER_CLICK                         = XRT_INPUT_NAME(0x0C09, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_TRIGGER_TOUCH                         = XRT_INPUT_NAME(0x0C0A, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_TRIGGER_VALUE                         = XRT_INPUT_NAME(0x0C0B, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_VIVE_FOCUS3_THUMBSTICK_CLICK                      = XRT_INPUT_NAME(0x0C0C, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_THUMBSTICK_TOUCH                      = XRT_INPUT_NAME(0x0C0D, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_THUMBSTICK                            = XRT_INPUT_NAME(0x0C0E, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_VIVE_FOCUS3_THUMBREST_TOUCH                       = XRT_INPUT_NAME(0x0C0F, BOOLEAN),
+	XRT_INPUT_VIVE_FOCUS3_GRIP_POSE                             = XRT_INPUT_NAME(0x0C10, POSE),
+	XRT_INPUT_VIVE_FOCUS3_AIM_POSE                              = XRT_INPUT_NAME(0x0C11, POSE),
+
+	XRT_INPUT_TOUCH_PRO_X_CLICK                                 = XRT_INPUT_NAME(0x0D00, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_X_TOUCH                                 = XRT_INPUT_NAME(0x0D01, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_Y_CLICK                                 = XRT_INPUT_NAME(0x0D02, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_Y_TOUCH                                 = XRT_INPUT_NAME(0x0D03, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_MENU_CLICK                              = XRT_INPUT_NAME(0x0D04, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_A_CLICK                                 = XRT_INPUT_NAME(0x0D05, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_A_TOUCH                                 = XRT_INPUT_NAME(0x0D06, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_B_CLICK                                 = XRT_INPUT_NAME(0x0D07, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_B_TOUCH                                 = XRT_INPUT_NAME(0x0D08, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_SYSTEM_CLICK                            = XRT_INPUT_NAME(0x0D09, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_SQUEEZE_VALUE                           = XRT_INPUT_NAME(0x0D0A, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PRO_TRIGGER_TOUCH                           = XRT_INPUT_NAME(0x0D0B, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_TRIGGER_VALUE                           = XRT_INPUT_NAME(0x0D0C, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PRO_THUMBSTICK_CLICK                        = XRT_INPUT_NAME(0x0D0D, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_THUMBSTICK_TOUCH                        = XRT_INPUT_NAME(0x0D0E, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_THUMBSTICK                              = XRT_INPUT_NAME(0x0D0F, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_TOUCH_PRO_THUMBREST_TOUCH                         = XRT_INPUT_NAME(0x0D10, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_THUMBREST_FORCE                         = XRT_INPUT_NAME(0x0D11, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PRO_GRIP_POSE                               = XRT_INPUT_NAME(0x0D12, POSE),
+	XRT_INPUT_TOUCH_PRO_AIM_POSE                                = XRT_INPUT_NAME(0x0D13, POSE),
+	XRT_INPUT_TOUCH_PRO_TRIGGER_PROXIMITY                       = XRT_INPUT_NAME(0x0D14, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_THUMB_PROXIMITY                         = XRT_INPUT_NAME(0x0D15, BOOLEAN),
+	XRT_INPUT_TOUCH_PRO_TRIGGER_CURL                            = XRT_INPUT_NAME(0x0D16, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PRO_TRIGGER_SLIDE                           = XRT_INPUT_NAME(0x0D17, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PRO_STYLUS_FORCE                            = XRT_INPUT_NAME(0x0D18, VEC1_ZERO_TO_ONE),
+
+	XRT_INPUT_TOUCH_PLUS_X_CLICK                                = XRT_INPUT_NAME(0x0E00, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_X_TOUCH                                = XRT_INPUT_NAME(0x0E01, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_Y_CLICK                                = XRT_INPUT_NAME(0x0E02, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_Y_TOUCH                                = XRT_INPUT_NAME(0x0E03, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_MENU_CLICK                             = XRT_INPUT_NAME(0x0E04, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_A_CLICK                                = XRT_INPUT_NAME(0x0E05, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_A_TOUCH                                = XRT_INPUT_NAME(0x0E06, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_B_CLICK                                = XRT_INPUT_NAME(0x0E07, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_B_TOUCH                                = XRT_INPUT_NAME(0x0E08, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_SYSTEM_CLICK                           = XRT_INPUT_NAME(0x0E09, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_SQUEEZE_VALUE                          = XRT_INPUT_NAME(0x0E0A, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PLUS_TRIGGER_TOUCH                          = XRT_INPUT_NAME(0x0E0B, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_TRIGGER_PROXIMITY                      = XRT_INPUT_NAME(0x0E0C, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_TRIGGER_VALUE                          = XRT_INPUT_NAME(0x0E0D, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PLUS_TRIGGER_FORCE                          = XRT_INPUT_NAME(0x0E0E, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PLUS_THUMBSTICK_CLICK                       = XRT_INPUT_NAME(0x0E0F, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_THUMBSTICK_TOUCH                       = XRT_INPUT_NAME(0x0E10, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_THUMBSTICK                             = XRT_INPUT_NAME(0x0E11, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_TOUCH_PLUS_THUMBREST_TOUCH                        = XRT_INPUT_NAME(0x0E12, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_GRIP_POSE                              = XRT_INPUT_NAME(0x0E13, POSE),
+	XRT_INPUT_TOUCH_PLUS_AIM_POSE                               = XRT_INPUT_NAME(0x0E14, POSE),
+	XRT_INPUT_TOUCH_PLUS_THUMB_PROXIMITY                        = XRT_INPUT_NAME(0x0E15, BOOLEAN),
+	XRT_INPUT_TOUCH_PLUS_TRIGGER_CURL                           = XRT_INPUT_NAME(0x0E16, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_TOUCH_PLUS_TRIGGER_SLIDE                          = XRT_INPUT_NAME(0x0E17, VEC1_ZERO_TO_ONE),
+
+	XRT_INPUT_RIFT_REMOTE_SELECT_CLICK                          = XRT_INPUT_NAME(0x0F00, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_BACK_CLICK                            = XRT_INPUT_NAME(0x0F01, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_VOLUME_UP_CLICK                       = XRT_INPUT_NAME(0x0F02, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_VOLUME_DOWN_CLICK                     = XRT_INPUT_NAME(0x0F03, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_OCULUS_CLICK                          = XRT_INPUT_NAME(0x0F04, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_DPAD_DOWN_CLICK                       = XRT_INPUT_NAME(0x0F05, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_DPAD_RIGHT_CLICK                      = XRT_INPUT_NAME(0x0F06, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_DPAD_UP_CLICK                         = XRT_INPUT_NAME(0x0F07, BOOLEAN),
+	XRT_INPUT_RIFT_REMOTE_DPAD_LEFT_CLICK                       = XRT_INPUT_NAME(0x0F08, BOOLEAN),
+
+	XRT_INPUT_BLUBUR_S1_MENU_CLICK                              = XRT_INPUT_NAME(0x1000, BOOLEAN),
+
+	XRT_INPUT_PSVR2_SYSTEM_CLICK                                = XRT_INPUT_NAME(0x1100, BOOLEAN),
+
+	XRT_INPUT_HAND_CTRL_EMU_PINCH_BOOL                          = XRT_INPUT_NAME(0x1200, BOOLEAN),
+	XRT_INPUT_HAND_CTRL_EMU_PINCH_VALUE                         = XRT_INPUT_NAME(0x1201, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HAND_CTRL_EMU_GRIP_POSE                           = XRT_INPUT_NAME(0x1202, POSE),
+	XRT_INPUT_HAND_CTRL_EMU_AIM_POSE                            = XRT_INPUT_NAME(0x1203, POSE),
+
+	XRT_INPUT_FLIPVR_A_CLICK                                    = XRT_INPUT_NAME(0x1300, BOOLEAN),
+	XRT_INPUT_FLIPVR_A_TOUCH                                    = XRT_INPUT_NAME(0x1301, BOOLEAN),
+	XRT_INPUT_FLIPVR_B_CLICK                                    = XRT_INPUT_NAME(0X1302, BOOLEAN),
+	XRT_INPUT_FLIPVR_B_TOUCH                                    = XRT_INPUT_NAME(0X1303, BOOLEAN),
+	XRT_INPUT_FLIPVR_X_CLICK                                    = XRT_INPUT_NAME(0X1304, BOOLEAN),
+	XRT_INPUT_FLIPVR_X_TOUCH                                    = XRT_INPUT_NAME(0X1305, BOOLEAN),
+	XRT_INPUT_FLIPVR_Y_CLICK                                    = XRT_INPUT_NAME(0X1306, BOOLEAN),
+	XRT_INPUT_FLIPVR_Y_TOUCH                                    = XRT_INPUT_NAME(0X1307, BOOLEAN),
+	XRT_INPUT_FLIPVR_SYSTEM_CLICK                               = XRT_INPUT_NAME(0X1308, BOOLEAN),
+	XRT_INPUT_FLIPVR_THUMBSTICK_CLICK                           = XRT_INPUT_NAME(0X1309, BOOLEAN),
+	XRT_INPUT_FLIPVR_THUMBSTICK_TOUCH                           = XRT_INPUT_NAME(0X130A, BOOLEAN),
+	XRT_INPUT_FLIPVR_THUMBSTICK                                 = XRT_INPUT_NAME(0X130B, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_FLIPVR_TRIGGER_CLICK                              = XRT_INPUT_NAME(0X130C, BOOLEAN),
+	XRT_INPUT_FLIPVR_TRIGGER_TOUCH                              = XRT_INPUT_NAME(0X130D, BOOLEAN),
+	XRT_INPUT_FLIPVR_TRIGGER_VALUE                              = XRT_INPUT_NAME(0X130E, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_FLIPVR_SQUEEZE_CLICK                              = XRT_INPUT_NAME(0X130F, BOOLEAN),
+	XRT_INPUT_FLIPVR_SQUEEZE_VALUE                              = XRT_INPUT_NAME(0X1310, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_FLIPVR_GRIP_POSE                                  = XRT_INPUT_NAME(0X1311, POSE),
+	XRT_INPUT_FLIPVR_AIM_POSE                                   = XRT_INPUT_NAME(0X1312, POSE),
+
+	XRT_INPUT_MX_INK_GRIP_POSE                                  = XRT_INPUT_NAME(0x1400, POSE),
+	XRT_INPUT_MX_INK_AIM_POSE                                   = XRT_INPUT_NAME(0x1401, POSE),
+	XRT_INPUT_MX_INK_SYSTEM_CLICK                               = XRT_INPUT_NAME(0x1402, BOOLEAN),
+	XRT_INPUT_MX_INK_FRONT_CLICK                                = XRT_INPUT_NAME(0x1403, BOOLEAN),
+	XRT_INPUT_MX_INK_FRONT_DOUBLE_TAP                           = XRT_INPUT_NAME(0x1404, BOOLEAN),
+	XRT_INPUT_MX_INK_MIDDLE_VALUE                               = XRT_INPUT_NAME(0x1405, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_MX_INK_BACK_CLICK                                 = XRT_INPUT_NAME(0x1406, BOOLEAN),
+	XRT_INPUT_MX_INK_BACK_DOUBLE_TAP                            = XRT_INPUT_NAME(0x1407, BOOLEAN),
+	XRT_INPUT_MX_INK_DOCKED                                     = XRT_INPUT_NAME(0x1408, BOOLEAN),
+	XRT_INPUT_MX_INK_TIP_FORCE                                  = XRT_INPUT_NAME(0x1409, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_MX_INK_TIP_POSE                                   = XRT_INPUT_NAME(0x140A, POSE),
+
+	XRT_INPUT_MAGNETRA2_A_CLICK                                 = XRT_INPUT_NAME(0X1500, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_B_CLICK                                 = XRT_INPUT_NAME(0X1501, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_X_CLICK                                 = XRT_INPUT_NAME(0X1502, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_Y_CLICK                                 = XRT_INPUT_NAME(0X1503, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_SYSTEM_CLICK                            = XRT_INPUT_NAME(0X1504, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_PAIRING_CLICK                           = XRT_INPUT_NAME(0X1505, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_TRIGGER_VALUE                           = XRT_INPUT_NAME(0X1506, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_MAGNETRA2_TRIGGER_CLICK                           = XRT_INPUT_NAME(0X1507, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_SQUEEZE_VALUE                           = XRT_INPUT_NAME(0X1508, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_MAGNETRA2_THUMBSTICK                              = XRT_INPUT_NAME(0X1509, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_MAGNETRA2_THUMBSTICK_CLICK                        = XRT_INPUT_NAME(0X150A, BOOLEAN),
+	XRT_INPUT_MAGNETRA2_GRIP_POSE                               = XRT_INPUT_NAME(0X150B, POSE),
+	XRT_INPUT_MAGNETRA2_AIM_POSE                                = XRT_INPUT_NAME(0X150C, POSE),
+
+	// clang-format on
 };
 
 /*!
@@ -1436,6 +1579,41 @@ union xrt_input_value {
 #define XRT_OUTPUT_TYPE_BITMASK 0xffu
 
 /*!
+ * @brief Create an enum value for xrt_output_name that packs an ID and output
+ * type.
+ *
+ * @param id an integer
+ * @param type The suffix of an xrt_output_type value name: `XRT_OUTPUT_TYPE_` is
+ * prepended automatically.
+ *
+ * @see xrt_output_name
+ * @ingroup xrt_iface
+ */
+#define XRT_OUTPUT_NAME(id, type) ((UINT32_C(id) << XRT_OUTPUT_TYPE_BITWIDTH) | (uint32_t)XRT_OUTPUT_TYPE_##type)
+
+/*!
+ * @brief Extract the xrt_output_type from an xrt_output_name.
+ *
+ * @param name An xrt_output_name value
+ *
+ * @relates xrt_output_name
+ * @returns @ref xrt_output_type
+ * @ingroup xrt_iface
+ */
+#define XRT_GET_OUTPUT_TYPE(name) ((enum xrt_output_type)(name & XRT_OUTPUT_TYPE_BITMASK))
+
+/*!
+ * @brief Extract the xrt_output_name id from an xrt_output_name.
+ *
+ * @param name An xrt_output_name value
+ *
+ * @relates xrt_output_name
+ * @returns The extracted id.
+ * @ingroup xrt_iface
+ */
+#define XRT_GET_OUTPUT_ID(name) ((uint32_t)(name >> XRT_OUTPUT_TYPE_BITWIDTH))
+
+/*!
  * Base type of this output.
  *
  * @ingroup xrt_iface
@@ -1448,7 +1626,70 @@ enum xrt_output_type
 	// clang-format on
 };
 
-#define XRT_OUTPUT_NAME(id, type) ((UINT32_C(id) << XRT_OUTPUT_TYPE_BITWIDTH) | (uint32_t)XRT_OUTPUT_TYPE_##type)
+/*!
+ * Name of a output with a baked in type.
+ *
+ * @see xrt_output_type
+ * @ingroup xrt_iface
+ */
+enum xrt_output_name
+{
+	// clang-format off
+	//! Not a real output. Sentinel for "no output", distinct from any XRT_OUTPUT_NAME value.
+	XRT_OUTPUT_NAME_INVALID                                     = 0,
+	// Named outputs. Each value is XRT_OUTPUT_NAME(id, type), so none of these are 0.
+	XRT_OUTPUT_NAME_SIMPLE_VIBRATION                            = XRT_OUTPUT_NAME(0x0010, VIBRATION),
+	XRT_OUTPUT_NAME_PSMV_RUMBLE_VIBRATION                       = XRT_OUTPUT_NAME(0x0020, VIBRATION),
+	XRT_OUTPUT_NAME_INDEX_HAPTIC                                = XRT_OUTPUT_NAME(0x0030, VIBRATION),
+	XRT_OUTPUT_NAME_VIVE_HAPTIC                                 = XRT_OUTPUT_NAME(0x0040, VIBRATION),
+	XRT_OUTPUT_NAME_WMR_HAPTIC                                  = XRT_OUTPUT_NAME(0x0050, VIBRATION),
+
+	XRT_OUTPUT_NAME_XBOX_HAPTIC_LEFT                            = XRT_OUTPUT_NAME(0x0060, VIBRATION),
+	XRT_OUTPUT_NAME_XBOX_HAPTIC_RIGHT                           = XRT_OUTPUT_NAME(0x0061, VIBRATION),
+	XRT_OUTPUT_NAME_XBOX_HAPTIC_LEFT_TRIGGER                    = XRT_OUTPUT_NAME(0x0062, VIBRATION),
+	XRT_OUTPUT_NAME_XBOX_HAPTIC_RIGHT_TRIGGER                   = XRT_OUTPUT_NAME(0x0063, VIBRATION),
+
+	XRT_OUTPUT_NAME_TOUCH_HAPTIC                                = XRT_OUTPUT_NAME(0x0070, VIBRATION),
+
+	XRT_OUTPUT_NAME_FORCE_FEEDBACK_LEFT                         = XRT_OUTPUT_NAME(0x0080, FORCE_FEEDBACK),
+	XRT_OUTPUT_NAME_FORCE_FEEDBACK_RIGHT                        = XRT_OUTPUT_NAME(0x0081, FORCE_FEEDBACK),
+
+	XRT_OUTPUT_NAME_G2_CONTROLLER_HAPTIC                        = XRT_OUTPUT_NAME(0x0090, VIBRATION),
+	XRT_OUTPUT_NAME_ODYSSEY_CONTROLLER_HAPTIC                   = XRT_OUTPUT_NAME(0x00A0, VIBRATION),
+	XRT_OUTPUT_NAME_ML2_CONTROLLER_VIBRATION                    = XRT_OUTPUT_NAME(0x00B0, VIBRATION),
+
+	XRT_OUTPUT_NAME_PSSENSE_VIBRATION                           = XRT_OUTPUT_NAME(0x00C0, VIBRATION),
+	XRT_OUTPUT_NAME_PSSENSE_TRIGGER_FEEDBACK                    = XRT_OUTPUT_NAME(0x00C1, FORCE_FEEDBACK),
+
+	XRT_OUTPUT_NAME_VIVE_TRACKER_HAPTIC                         = XRT_OUTPUT_NAME(0x00D0, VIBRATION),
+
+	XRT_OUTPUT_NAME_OPPO_MR_HAPTIC                              = XRT_OUTPUT_NAME(0x00E0, VIBRATION),
+
+	XRT_OUTPUT_NAME_PICO_NEO3_HAPTIC                            = XRT_OUTPUT_NAME(0x00F0, VIBRATION),
+	XRT_OUTPUT_NAME_PICO4_HAPTIC                                = XRT_OUTPUT_NAME(0x0100, VIBRATION),
+
+	XRT_OUTPUT_NAME_VIVE_COSMOS_HAPTIC                          = XRT_OUTPUT_NAME(0x0200, VIBRATION),
+	XRT_OUTPUT_NAME_VIVE_FOCUS3_HAPTIC                          = XRT_OUTPUT_NAME(0x0300, VIBRATION),
+
+	XRT_OUTPUT_NAME_TOUCH_PRO_HAPTIC                            = XRT_OUTPUT_NAME(0x0400, VIBRATION),
+	XRT_OUTPUT_NAME_TOUCH_PRO_HAPTIC_TRIGGER                    = XRT_OUTPUT_NAME(0x0500, VIBRATION),
+	XRT_OUTPUT_NAME_TOUCH_PRO_HAPTIC_THUMB                      = XRT_OUTPUT_NAME(0x0600, VIBRATION),
+	XRT_OUTPUT_NAME_TOUCH_PLUS_HAPTIC                           = XRT_OUTPUT_NAME(0x0700, VIBRATION),
+
+	XRT_OUTPUT_NAME_PSVR2_HAPTIC                                = XRT_OUTPUT_NAME(0x0800, VIBRATION),
+
+	XRT_OUTPUT_NAME_FLIPVR_HAPTIC                               = XRT_OUTPUT_NAME(0x0900, VIBRATION),
+
+	XRT_OUTPUT_NAME_MX_INK_HAPTIC                               = XRT_OUTPUT_NAME(0x0A00, VIBRATION),
+
+	// XR_KHR_generic_controller
+	XRT_OUTPUT_NAME_GENERIC_VIBRATION                           = XRT_OUTPUT_NAME(0x0B00, VIBRATION),
+
+	XRT_OUTPUT_NAME_CONTACTGLOVE2_HAPTIC                        = XRT_OUTPUT_NAME(0x0C00, VIBRATION),
+
+	// clang-format on
+	// Make sure to add a trailing comma to any new entries.
+};
 
 enum xrt_face_expression2_fb
 {
@@ -1615,23 +1856,113 @@ enum xrt_facial_tracking_type_htc
 #define XRT_FACIAL_EXPRESSION_EYE_COUNT_HTC 14
 #define XRT_FACIAL_EXPRESSION_LIP_COUNT_HTC 37
 
+enum xrt_face_confidence_regions_android
+{
+	XRT_FACE_CONFIDENCE_REGIONS_LOWER_ANDROID = 0,
+	XRT_FACE_CONFIDENCE_REGIONS_LEFT_UPPER_ANDROID = 1,
+	XRT_FACE_CONFIDENCE_REGIONS_RIGHT_UPPER_ANDROID = 2,
+};
+
+enum xrt_face_parameter_indices_android
+{
+	XRT_FACE_PARAMETER_INDICES_BROW_LOWERER_L_ANDROID = 0,
+	XRT_FACE_PARAMETER_INDICES_BROW_LOWERER_R_ANDROID = 1,
+	XRT_FACE_PARAMETER_INDICES_CHEEK_PUFF_L_ANDROID = 2,
+	XRT_FACE_PARAMETER_INDICES_CHEEK_PUFF_R_ANDROID = 3,
+	XRT_FACE_PARAMETER_INDICES_CHEEK_RAISER_L_ANDROID = 4,
+	XRT_FACE_PARAMETER_INDICES_CHEEK_RAISER_R_ANDROID = 5,
+	XRT_FACE_PARAMETER_INDICES_CHEEK_SUCK_L_ANDROID = 6,
+	XRT_FACE_PARAMETER_INDICES_CHEEK_SUCK_R_ANDROID = 7,
+	XRT_FACE_PARAMETER_INDICES_CHIN_RAISER_B_ANDROID = 8,
+	XRT_FACE_PARAMETER_INDICES_CHIN_RAISER_T_ANDROID = 9,
+	XRT_FACE_PARAMETER_INDICES_DIMPLER_L_ANDROID = 10,
+	XRT_FACE_PARAMETER_INDICES_DIMPLER_R_ANDROID = 11,
+	XRT_FACE_PARAMETER_INDICES_EYES_CLOSED_L_ANDROID = 12,
+	XRT_FACE_PARAMETER_INDICES_EYES_CLOSED_R_ANDROID = 13,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_DOWN_L_ANDROID = 14,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_DOWN_R_ANDROID = 15,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_LEFT_L_ANDROID = 16,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_LEFT_R_ANDROID = 17,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_RIGHT_L_ANDROID = 18,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_RIGHT_R_ANDROID = 19,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_UP_L_ANDROID = 20,
+	XRT_FACE_PARAMETER_INDICES_EYES_LOOK_UP_R_ANDROID = 21,
+	XRT_FACE_PARAMETER_INDICES_INNER_BROW_RAISER_L_ANDROID = 22,
+	XRT_FACE_PARAMETER_INDICES_INNER_BROW_RAISER_R_ANDROID = 23,
+	XRT_FACE_PARAMETER_INDICES_JAW_DROP_ANDROID = 24,
+	XRT_FACE_PARAMETER_INDICES_JAW_SIDEWAYS_LEFT_ANDROID = 25,
+	XRT_FACE_PARAMETER_INDICES_JAW_SIDEWAYS_RIGHT_ANDROID = 26,
+	XRT_FACE_PARAMETER_INDICES_JAW_THRUST_ANDROID = 27,
+	XRT_FACE_PARAMETER_INDICES_LID_TIGHTENER_L_ANDROID = 28,
+	XRT_FACE_PARAMETER_INDICES_LID_TIGHTENER_R_ANDROID = 29,
+	XRT_FACE_PARAMETER_INDICES_LIP_CORNER_DEPRESSOR_L_ANDROID = 30,
+	XRT_FACE_PARAMETER_INDICES_LIP_CORNER_DEPRESSOR_R_ANDROID = 31,
+	XRT_FACE_PARAMETER_INDICES_LIP_CORNER_PULLER_L_ANDROID = 32,
+	XRT_FACE_PARAMETER_INDICES_LIP_CORNER_PULLER_R_ANDROID = 33,
+	XRT_FACE_PARAMETER_INDICES_LIP_FUNNELER_LB_ANDROID = 34,
+	XRT_FACE_PARAMETER_INDICES_LIP_FUNNELER_LT_ANDROID = 35,
+	XRT_FACE_PARAMETER_INDICES_LIP_FUNNELER_RB_ANDROID = 36,
+	XRT_FACE_PARAMETER_INDICES_LIP_FUNNELER_RT_ANDROID = 37,
+	XRT_FACE_PARAMETER_INDICES_LIP_PRESSOR_L_ANDROID = 38,
+	XRT_FACE_PARAMETER_INDICES_LIP_PRESSOR_R_ANDROID = 39,
+	XRT_FACE_PARAMETER_INDICES_LIP_PUCKER_L_ANDROID = 40,
+	XRT_FACE_PARAMETER_INDICES_LIP_PUCKER_R_ANDROID = 41,
+	XRT_FACE_PARAMETER_INDICES_LIP_STRETCHER_L_ANDROID = 42,
+	XRT_FACE_PARAMETER_INDICES_LIP_STRETCHER_R_ANDROID = 43,
+	XRT_FACE_PARAMETER_INDICES_LIP_SUCK_LB_ANDROID = 44,
+	XRT_FACE_PARAMETER_INDICES_LIP_SUCK_LT_ANDROID = 45,
+	XRT_FACE_PARAMETER_INDICES_LIP_SUCK_RB_ANDROID = 46,
+	XRT_FACE_PARAMETER_INDICES_LIP_SUCK_RT_ANDROID = 47,
+	XRT_FACE_PARAMETER_INDICES_LIP_TIGHTENER_L_ANDROID = 48,
+	XRT_FACE_PARAMETER_INDICES_LIP_TIGHTENER_R_ANDROID = 49,
+	XRT_FACE_PARAMETER_INDICES_LIPS_TOWARD_ANDROID = 50,
+	XRT_FACE_PARAMETER_INDICES_LOWER_LIP_DEPRESSOR_L_ANDROID = 51,
+	XRT_FACE_PARAMETER_INDICES_LOWER_LIP_DEPRESSOR_R_ANDROID = 52,
+	XRT_FACE_PARAMETER_INDICES_MOUTH_LEFT_ANDROID = 53,
+	XRT_FACE_PARAMETER_INDICES_MOUTH_RIGHT_ANDROID = 54,
+	XRT_FACE_PARAMETER_INDICES_NOSE_WRINKLER_L_ANDROID = 55,
+	XRT_FACE_PARAMETER_INDICES_NOSE_WRINKLER_R_ANDROID = 56,
+	XRT_FACE_PARAMETER_INDICES_OUTER_BROW_RAISER_L_ANDROID = 57,
+	XRT_FACE_PARAMETER_INDICES_OUTER_BROW_RAISER_R_ANDROID = 58,
+	XRT_FACE_PARAMETER_INDICES_UPPER_LID_RAISER_L_ANDROID = 59,
+	XRT_FACE_PARAMETER_INDICES_UPPER_LID_RAISER_R_ANDROID = 60,
+	XRT_FACE_PARAMETER_INDICES_UPPER_LIP_RAISER_L_ANDROID = 61,
+	XRT_FACE_PARAMETER_INDICES_UPPER_LIP_RAISER_R_ANDROID = 62,
+	XRT_FACE_PARAMETER_INDICES_TONGUE_OUT_ANDROID = 63,
+	XRT_FACE_PARAMETER_INDICES_TONGUE_LEFT_ANDROID = 64,
+	XRT_FACE_PARAMETER_INDICES_TONGUE_RIGHT_ANDROID = 65,
+	XRT_FACE_PARAMETER_INDICES_TONGUE_UP_ANDROID = 66,
+	XRT_FACE_PARAMETER_INDICES_TONGUE_DOWN_ANDROID = 67,
+};
+
+enum xrt_face_tracking_state_android
+{
+	XRT_FACE_TRACKING_STATE_PAUSED_ANDROID = 0,
+	XRT_FACE_TRACKING_STATE_STOPPED_ANDROID = 1,
+	XRT_FACE_TRACKING_STATE_TRACKING_ANDROID = 2,
+};
+
+#define XRT_FACE_PARAMETER_COUNT_ANDROID 68
+
+#define XRT_FACE_REGION_CONFIDENCE_COUNT_ANDROID 3
+
 struct xrt_facial_base_expression_set_htc
 {
 	int64_t sample_time_ns;
-	bool is_active;
+	XRT_ALIGNAS(8) bool is_active;
 };
 
 struct xrt_facial_eye_expression_set_htc
 {
 	struct xrt_facial_base_expression_set_htc base;
-	// ordered by xrt_eye_expression_htc
+	/// ordered by @ref xrt_eye_expression_htc
 	float expression_weights[XRT_FACIAL_EXPRESSION_EYE_COUNT_HTC];
 };
 
 struct xrt_facial_lip_expression_set_htc
 {
 	struct xrt_facial_base_expression_set_htc base;
-	// ordered by xrt_lip_expression_htc
+	/// ordered by @ref xrt_lip_expression_htc
 	float expression_weights[XRT_FACIAL_EXPRESSION_LIP_COUNT_HTC];
 };
 
@@ -1641,10 +1972,22 @@ struct xrt_facial_expression_set2_fb
 	float confidences[XRT_FACE_CONFIDENCE2_COUNT_FB];
 
 	enum xrt_face_tracking_data_source2_fb data_source;
-	uint64_t sample_time_ns;
+	int64_t sample_time_ns;
 
-	bool is_valid;
+	XRT_ALIGNAS(8) bool is_valid;
 	bool is_eye_following_blendshapes_valid;
+};
+
+struct xrt_facial_expression_set_android
+{
+	// ordered by xrt_face_parameter_indices_android
+	float parameters[XRT_FACE_PARAMETER_COUNT_ANDROID];
+	float region_confidences[XRT_FACE_REGION_CONFIDENCE_COUNT_ANDROID];
+
+	enum xrt_face_tracking_state_android state;
+	int64_t sample_time_ns;
+
+	XRT_ALIGNAS(8) bool is_valid;
 };
 
 struct xrt_facial_expression_set
@@ -1654,10 +1997,11 @@ struct xrt_facial_expression_set
 		struct xrt_facial_eye_expression_set_htc eye_expression_set_htc;
 		struct xrt_facial_lip_expression_set_htc lip_expression_set_htc;
 		struct xrt_facial_expression_set2_fb face_expression_set2_fb;
+		struct xrt_facial_expression_set_android face_expression_set_android;
 	};
 };
 
-// XR_FB_body_tracking
+/// @addtogroup XR_FB_body_tracking
 enum xrt_body_joint_fb
 {
 	XRT_BODY_JOINT_ROOT_FB = 0,
@@ -1734,14 +2078,126 @@ enum xrt_body_joint_fb
 	XRT_BODY_JOINT_NONE_FB = -1,
 };
 
+/// @addtogroup XR_META_body_tracking_full_body
+enum xrt_full_body_joint_meta
+{
+	XRT_FULL_BODY_JOINT_ROOT_META = 0,
+	XRT_FULL_BODY_JOINT_HIPS_META = 1,
+	XRT_FULL_BODY_JOINT_SPINE_LOWER_META = 2,
+	XRT_FULL_BODY_JOINT_SPINE_MIDDLE_META = 3,
+	XRT_FULL_BODY_JOINT_SPINE_UPPER_META = 4,
+	XRT_FULL_BODY_JOINT_CHEST_META = 5,
+	XRT_FULL_BODY_JOINT_NECK_META = 6,
+	XRT_FULL_BODY_JOINT_HEAD_META = 7,
+	XRT_FULL_BODY_JOINT_LEFT_SHOULDER_META = 8,
+	XRT_FULL_BODY_JOINT_LEFT_SCAPULA_META = 9,
+	XRT_FULL_BODY_JOINT_LEFT_ARM_UPPER_META = 10,
+	XRT_FULL_BODY_JOINT_LEFT_ARM_LOWER_META = 11,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_WRIST_TWIST_META = 12,
+	XRT_FULL_BODY_JOINT_RIGHT_SHOULDER_META = 13,
+	XRT_FULL_BODY_JOINT_RIGHT_SCAPULA_META = 14,
+	XRT_FULL_BODY_JOINT_RIGHT_ARM_UPPER_META = 15,
+	XRT_FULL_BODY_JOINT_RIGHT_ARM_LOWER_META = 16,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_WRIST_TWIST_META = 17,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_PALM_META = 18,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_WRIST_META = 19,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_THUMB_METACARPAL_META = 20,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_THUMB_PROXIMAL_META = 21,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_THUMB_DISTAL_META = 22,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_THUMB_TIP_META = 23,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_INDEX_METACARPAL_META = 24,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_INDEX_PROXIMAL_META = 25,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_INDEX_INTERMEDIATE_META = 26,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_INDEX_DISTAL_META = 27,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_INDEX_TIP_META = 28,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_METACARPAL_META = 29,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_PROXIMAL_META = 30,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_INTERMEDIATE_META = 31,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_DISTAL_META = 32,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_MIDDLE_TIP_META = 33,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_RING_METACARPAL_META = 34,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_RING_PROXIMAL_META = 35,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_RING_INTERMEDIATE_META = 36,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_RING_DISTAL_META = 37,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_RING_TIP_META = 38,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_LITTLE_METACARPAL_META = 39,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_LITTLE_PROXIMAL_META = 40,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_LITTLE_INTERMEDIATE_META = 41,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_LITTLE_DISTAL_META = 42,
+	XRT_FULL_BODY_JOINT_LEFT_HAND_LITTLE_TIP_META = 43,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_PALM_META = 44,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_WRIST_META = 45,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_THUMB_METACARPAL_META = 46,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_THUMB_PROXIMAL_META = 47,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_THUMB_DISTAL_META = 48,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_THUMB_TIP_META = 49,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_INDEX_METACARPAL_META = 50,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_INDEX_PROXIMAL_META = 51,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_INDEX_INTERMEDIATE_META = 52,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_INDEX_DISTAL_META = 53,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_INDEX_TIP_META = 54,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_METACARPAL_META = 55,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_PROXIMAL_META = 56,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_INTERMEDIATE_META = 57,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_DISTAL_META = 58,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_MIDDLE_TIP_META = 59,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_RING_METACARPAL_META = 60,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_RING_PROXIMAL_META = 61,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_RING_INTERMEDIATE_META = 62,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_RING_DISTAL_META = 63,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_RING_TIP_META = 64,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_METACARPAL_META = 65,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_PROXIMAL_META = 66,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_INTERMEDIATE_META = 67,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_DISTAL_META = 68,
+	XRT_FULL_BODY_JOINT_RIGHT_HAND_LITTLE_TIP_META = 69,
+	XRT_FULL_BODY_JOINT_LEFT_UPPER_LEG_META = 70,
+	XRT_FULL_BODY_JOINT_LEFT_LOWER_LEG_META = 71,
+	XRT_FULL_BODY_JOINT_LEFT_FOOT_ANKLE_TWIST_META = 72,
+	XRT_FULL_BODY_JOINT_LEFT_FOOT_ANKLE_META = 73,
+	XRT_FULL_BODY_JOINT_LEFT_FOOT_SUBTALAR_META = 74,
+	XRT_FULL_BODY_JOINT_LEFT_FOOT_TRANSVERSE_META = 75,
+	XRT_FULL_BODY_JOINT_LEFT_FOOT_BALL_META = 76,
+	XRT_FULL_BODY_JOINT_RIGHT_UPPER_LEG_META = 77,
+	XRT_FULL_BODY_JOINT_RIGHT_LOWER_LEG_META = 78,
+	XRT_FULL_BODY_JOINT_RIGHT_FOOT_ANKLE_TWIST_META = 79,
+	XRT_FULL_BODY_JOINT_RIGHT_FOOT_ANKLE_META = 80,
+	XRT_FULL_BODY_JOINT_RIGHT_FOOT_SUBTALAR_META = 81,
+	XRT_FULL_BODY_JOINT_RIGHT_FOOT_TRANSVERSE_META = 82,
+	XRT_FULL_BODY_JOINT_RIGHT_FOOT_BALL_META = 83,
+	XRT_FULL_BODY_JOINT_COUNT_META = 84,
+	XRT_FULL_BODY_JOINT_NONE_META = 85,
+};
+
+/// @addtogroup XR_META_body_tracking_full_body
 enum xrt_body_joint_set_type_fb
 {
 	XRT_BODY_JOINT_SET_UNKNOWN = 0,
 	// XR_FB_body_tracking
 	XRT_BODY_JOINT_SET_DEFAULT_FB,
+	// XR_META_body_tracking_full_body
+	XRT_BODY_JOINT_SET_FULL_BODY_META,
 };
 
-// XR_FB_body_tracking
+/// @addtogroup XR_META_body_tracking_calibration
+enum xrt_body_tracking_calibration_state_meta
+{
+	// Valid calibration, pose is safe to use
+	XRT_BODY_TRACKING_CALIBRATION_STATE_VALID_META = 1,
+	// Calibration is still running, pose may be incorrect
+	XRT_BODY_TRACKING_CALIBRATION_STATE_CALIBRATING_META = 2,
+	// Calibration is invalid, pose is not safe to use
+	XRT_BODY_TRACKING_CALIBRATION_STATE_INVALID_META = 3,
+};
+
+/// @addtogroup XR_META_body_tracking_fidelity
+enum xrt_body_tracking_fidelity_meta
+{
+	XRT_BODY_TRACKING_FIDELITY_LOW_META = 1,
+	XRT_BODY_TRACKING_FIDELITY_HIGH_META = 2,
+};
+
+/// @addtogroup XR_FB_body_tracking
 struct xrt_body_skeleton_joint_fb
 {
 	struct xrt_pose pose;
@@ -1749,11 +2205,18 @@ struct xrt_body_skeleton_joint_fb
 	int32_t parent_joint;
 };
 
-// XR_FB_body_tracking
+/// @addtogroup XR_FB_body_tracking
 struct xrt_body_skeleton_fb
 {
-	// ordered by xrt_body_joint_fb
+	/// ordered by @ref xrt_body_joint_fb
 	struct xrt_body_skeleton_joint_fb joints[XRT_BODY_JOINT_COUNT_FB];
+};
+
+/// @addtogroup  XR_META_body_tracking_full_body
+struct xrt_full_body_skeleton_meta
+{
+	/// ordered by @ref xrt_full_body_joint_meta
+	struct xrt_body_skeleton_joint_fb joints[XRT_FULL_BODY_JOINT_COUNT_META];
 };
 
 // structure is a container to represent the body skeleton in T-pose including the joint hierarchy,
@@ -1762,6 +2225,7 @@ struct xrt_body_skeleton
 {
 	union {
 		struct xrt_body_skeleton_fb body_skeleton_fb;
+		struct xrt_full_body_skeleton_meta full_body_skeleton_meta;
 	};
 };
 
@@ -1775,7 +2239,16 @@ struct xrt_base_body_joint_set_meta
 	int64_t sample_time_ns;
 	float confidence;
 	uint32_t skeleton_changed_count;
-	bool is_active;
+	XRT_ALIGNAS(8) bool is_active;
+
+	struct
+	{
+		// Requires XR_META_body_tracking_calibration, @ref xrt_device_supported::body_tracking_calibration
+		enum xrt_body_tracking_calibration_state_meta calibration_status;
+
+		// Requires XR_META_body_tracking_fidelity, @ref xrt_device_supported::body_tracking_fidelity
+		enum xrt_body_tracking_fidelity_meta fidelity_status;
+	} exts;
 };
 
 // XR_FB_body_tracking
@@ -1786,63 +2259,81 @@ struct xrt_body_joint_set_fb
 	struct xrt_body_joint_location_fb joint_locations[XRT_BODY_JOINT_COUNT_FB];
 };
 
+// XR_META_body_tracking_full_body
+struct xrt_full_body_joint_set_meta
+{
+	struct xrt_base_body_joint_set_meta base;
+	// ordered by xrt_full_body_joint_meta
+	struct xrt_body_joint_location_fb joint_locations[XRT_FULL_BODY_JOINT_COUNT_META];
+};
+
+/*
+ *
+ * XR_BD_body_tracking (PICO body tracking)
+ *
+ */
+
+#define XRT_BODY_JOINT_COUNT_BD 24
+#define XRT_BODY_JOINT_WITHOUT_ARM_COUNT_BD 16
+
+enum xrt_body_joint_bd
+{
+	XRT_BODY_JOINT_PELVIS_BD = 0,
+	XRT_BODY_JOINT_LEFT_HIP_BD = 1,
+	XRT_BODY_JOINT_RIGHT_HIP_BD = 2,
+	XRT_BODY_JOINT_SPINE1_BD = 3,
+	XRT_BODY_JOINT_LEFT_KNEE_BD = 4,
+	XRT_BODY_JOINT_RIGHT_KNEE_BD = 5,
+	XRT_BODY_JOINT_SPINE2_BD = 6,
+	XRT_BODY_JOINT_LEFT_ANKLE_BD = 7,
+	XRT_BODY_JOINT_RIGHT_ANKLE_BD = 8,
+	XRT_BODY_JOINT_SPINE3_BD = 9,
+	XRT_BODY_JOINT_LEFT_FOOT_BD = 10,
+	XRT_BODY_JOINT_RIGHT_FOOT_BD = 11,
+	XRT_BODY_JOINT_NECK_BD = 12,
+	XRT_BODY_JOINT_LEFT_COLLAR_BD = 13,
+	XRT_BODY_JOINT_RIGHT_COLLAR_BD = 14,
+	XRT_BODY_JOINT_HEAD_BD = 15,
+	XRT_BODY_JOINT_LEFT_SHOULDER_BD = 16,
+	XRT_BODY_JOINT_RIGHT_SHOULDER_BD = 17,
+	XRT_BODY_JOINT_LEFT_ELBOW_BD = 18,
+	XRT_BODY_JOINT_RIGHT_ELBOW_BD = 19,
+	XRT_BODY_JOINT_LEFT_WRIST_BD = 20,
+	XRT_BODY_JOINT_RIGHT_WRIST_BD = 21,
+	XRT_BODY_JOINT_LEFT_HAND_BD = 22,
+	XRT_BODY_JOINT_RIGHT_HAND_BD = 23,
+};
+
+enum xrt_body_joint_set_type_bd
+{
+	XRT_BODY_JOINT_SET_UNKNOWN_BD = 0,
+	XRT_BODY_JOINT_SET_BODY_WITHOUT_ARM_BD = 1,
+	XRT_BODY_JOINT_SET_FULL_BODY_BD = 2,
+};
+
+struct xrt_body_joint_location_bd
+{
+	struct xrt_space_relation relation;
+};
+
+struct xrt_body_joint_set_bd
+{
+	int64_t sample_time_ns;
+	struct xrt_body_joint_location_bd joint_locations[XRT_BODY_JOINT_COUNT_BD];
+	XRT_ALIGNAS(8) bool is_active;
+	bool all_joint_poses_tracked;
+};
+
 struct xrt_body_joint_set
 {
 	union {
 		struct xrt_base_body_joint_set_meta base_body_joint_set_meta;
 		struct xrt_body_joint_set_fb body_joint_set_fb;
+		struct xrt_full_body_joint_set_meta full_body_joint_set_meta;
+		struct xrt_body_joint_set_bd body_joint_set_bd;
 	};
 	// in driver global space, without tracking_origin offset
 	struct xrt_space_relation body_pose;
-};
-
-/*!
- * Name of a output with a baked in type.
- *
- * @see xrt_output_type
- * @ingroup xrt_iface
- */
-enum xrt_output_name
-{
-	// clang-format off
-	XRT_OUTPUT_NAME_SIMPLE_VIBRATION            = XRT_OUTPUT_NAME(0x0010, VIBRATION),
-	XRT_OUTPUT_NAME_PSMV_RUMBLE_VIBRATION       = XRT_OUTPUT_NAME(0x0020, VIBRATION),
-	XRT_OUTPUT_NAME_INDEX_HAPTIC                = XRT_OUTPUT_NAME(0x0030, VIBRATION),
-	XRT_OUTPUT_NAME_VIVE_HAPTIC                 = XRT_OUTPUT_NAME(0x0040, VIBRATION),
-	XRT_OUTPUT_NAME_WMR_HAPTIC                  = XRT_OUTPUT_NAME(0x0050, VIBRATION),
-
-	XRT_OUTPUT_NAME_XBOX_HAPTIC_LEFT            = XRT_OUTPUT_NAME(0x0060, VIBRATION),
-	XRT_OUTPUT_NAME_XBOX_HAPTIC_RIGHT           = XRT_OUTPUT_NAME(0x0061, VIBRATION),
-	XRT_OUTPUT_NAME_XBOX_HAPTIC_LEFT_TRIGGER    = XRT_OUTPUT_NAME(0x0062, VIBRATION),
-	XRT_OUTPUT_NAME_XBOX_HAPTIC_RIGHT_TRIGGER   = XRT_OUTPUT_NAME(0x0063, VIBRATION),
-
-	XRT_OUTPUT_NAME_TOUCH_HAPTIC                = XRT_OUTPUT_NAME(0x0070, VIBRATION),
-
-	XRT_OUTPUT_NAME_FORCE_FEEDBACK_LEFT         = XRT_OUTPUT_NAME(0x0080, FORCE_FEEDBACK),
-	XRT_OUTPUT_NAME_FORCE_FEEDBACK_RIGHT        = XRT_OUTPUT_NAME(0x0081, FORCE_FEEDBACK),
-
-	XRT_OUTPUT_NAME_G2_CONTROLLER_HAPTIC        = XRT_OUTPUT_NAME(0x0090, VIBRATION),
-	XRT_OUTPUT_NAME_ODYSSEY_CONTROLLER_HAPTIC   = XRT_OUTPUT_NAME(0x00A0, VIBRATION),
-	XRT_OUTPUT_NAME_ML2_CONTROLLER_VIBRATION    = XRT_OUTPUT_NAME(0x00B0, VIBRATION),
-
-	XRT_OUTPUT_NAME_PSSENSE_VIBRATION           = XRT_OUTPUT_NAME(0x00C0, VIBRATION),
-	XRT_OUTPUT_NAME_PSSENSE_TRIGGER_FEEDBACK    = XRT_OUTPUT_NAME(0x00C1, FORCE_FEEDBACK),
-
-	XRT_OUTPUT_NAME_VIVE_TRACKER_HAPTIC         = XRT_OUTPUT_NAME(0x00D0, VIBRATION),
-
-	XRT_OUTPUT_NAME_OPPO_MR_HAPTIC              = XRT_OUTPUT_NAME(0x00E0, VIBRATION),
-
-	XRT_OUTPUT_NAME_PICO_NEO3_HAPTIC            = XRT_OUTPUT_NAME(0x00F0, VIBRATION),
-	XRT_OUTPUT_NAME_PICO4_HAPTIC                = XRT_OUTPUT_NAME(0x0100, VIBRATION),
-
-	XRT_OUTPUT_NAME_VIVE_COSMOS_HAPTIC          = XRT_OUTPUT_NAME(0x0200, VIBRATION),
-	XRT_OUTPUT_NAME_VIVE_FOCUS3_HAPTIC          = XRT_OUTPUT_NAME(0x0300, VIBRATION),
-
-	XRT_OUTPUT_NAME_TOUCH_PRO_HAPTIC            = XRT_OUTPUT_NAME(0x0400, VIBRATION),
-	XRT_OUTPUT_NAME_TOUCH_PRO_HAPTIC_TRIGGER    = XRT_OUTPUT_NAME(0x0500, VIBRATION),
-	XRT_OUTPUT_NAME_TOUCH_PRO_HAPTIC_THUMB      = XRT_OUTPUT_NAME(0x0600, VIBRATION),
-	XRT_OUTPUT_NAME_TOUCH_PLUS_HAPTIC           = XRT_OUTPUT_NAME(0x0700, VIBRATION)
-	// clang-format on
 };
 
 /*!
@@ -1883,27 +2374,51 @@ struct xrt_output_force_feedback
 	enum xrt_force_feedback_location location;
 };
 
+enum xrt_output_value_type
+{
+	XRT_OUTPUT_VALUE_TYPE_VIBRATION,
+	XRT_OUTPUT_VALUE_TYPE_PCM_VIBRATION,
+	XRT_OUTPUT_VALUE_TYPE_FORCE_FEEDBACK,
+};
+
+struct xrt_output_value_vibration
+{
+	XRT_ALIGNAS(8) float frequency;
+	float amplitude;
+	int64_t duration_ns;
+};
+
+struct xrt_output_value_pcm_vibration
+{
+	uint32_t buffer_size;
+	XRT_ALIGNAS(8) const float *buffer;
+	XRT_ALIGNAS(8) float sample_rate;
+	bool append;
+	uint32_t *samples_consumed;
+};
+
+struct xrt_output_value_force_feedback
+{
+	struct xrt_output_force_feedback force_feedback[5];
+	uint64_t force_feedback_location_count;
+};
+
 /*!
  * A union of all output types.
  *
  * @see xrt_output_type
  * @ingroup xrt_iface math
  */
-union xrt_output_value {
-	struct
-	{
-		float frequency;
-		float amplitude;
-		int64_t duration_ns;
-	} vibration;
+struct xrt_output_value
+{
+	enum xrt_output_value_type type;
 
-	struct
-	{
-		struct xrt_output_force_feedback force_feedback[5];
-		uint64_t force_feedback_location_count;
-	} force_feedback;
+	union {
+		struct xrt_output_value_vibration vibration;
+		struct xrt_output_value_pcm_vibration pcm_vibration;
+		struct xrt_output_value_force_feedback force_feedback;
+	};
 };
-
 
 /*
  *
@@ -1920,6 +2435,18 @@ enum xrt_form_factor
 {
 	XRT_FORM_FACTOR_HMD,      //!< Head mounted display.
 	XRT_FORM_FACTOR_HANDHELD, //!< Handheld display.
+};
+
+/*!
+ * View type to be rendered to by the compositor.
+ */
+enum xrt_view_type
+{
+	XRT_VIEW_TYPE_INVALID = 0,
+	XRT_VIEW_TYPE_MONO = 1,
+	XRT_VIEW_TYPE_STEREO = 2,
+	XRT_VIEW_TYPE_QUAD = 3,
+	XRT_VIEW_TYPE_MAX,
 };
 
 /*!
@@ -1980,6 +2507,20 @@ enum xrt_visibility_mask_type
  *
  */
 
+// @note We're not using U_LOG_RAW because we can't include u_logging.h inside xrt_defines.h without causing problems.
+#if 0
+#define XRT_REFERENCE_DEBUG_PRINT(ACTION, PTR, COUNT)                                                                  \
+	do {                                                                                                           \
+		int32_t __count = (COUNT);                                                                             \
+		printf(#ACTION " %p to %u", (void *)(PTR), __count);                                                   \
+		if (__count < 0) {                                                                                     \
+			XRT_DEBUGBREAK();                                                                              \
+		}                                                                                                      \
+	} while (false)
+#else
+#define XRT_REFERENCE_DEBUG_PRINT(ACTION, PTR, COUNT)
+#endif
+
 /*!
  * Increment the reference, probably want @ref xrt_reference_inc_and_was_zero.
  *
@@ -1989,7 +2530,9 @@ enum xrt_visibility_mask_type
 static inline void
 xrt_reference_inc(struct xrt_reference *xref)
 {
-	xrt_atomic_s32_inc_return(&xref->count);
+	XRT_MAYBE_UNUSED int32_t count = xrt_atomic_s32_inc_return(&xref->count);
+
+	XRT_REFERENCE_DEBUG_PRINT(Incremented, xref, count);
 }
 
 /*!
@@ -2001,7 +2544,9 @@ xrt_reference_inc(struct xrt_reference *xref)
 static inline void
 xrt_reference_dec(struct xrt_reference *xref)
 {
-	xrt_atomic_s32_dec_return(&xref->count);
+	XRT_MAYBE_UNUSED int32_t count = xrt_atomic_s32_dec_return(&xref->count);
+
+	XRT_REFERENCE_DEBUG_PRINT(Decremented, xref, count);
 }
 
 /*!
@@ -2014,6 +2559,9 @@ XRT_CHECK_RESULT static inline bool
 xrt_reference_inc_and_was_zero(struct xrt_reference *xref)
 {
 	int32_t count = xrt_atomic_s32_inc_return(&xref->count);
+
+	XRT_REFERENCE_DEBUG_PRINT(Incremented, xref, count);
+
 	return count == 1;
 }
 
@@ -2027,9 +2575,25 @@ XRT_CHECK_RESULT static inline bool
 xrt_reference_dec_and_is_zero(struct xrt_reference *xref)
 {
 	int32_t count = xrt_atomic_s32_dec_return(&xref->count);
+
+	XRT_REFERENCE_DEBUG_PRINT(Decremented, xref, count);
+
 	return count == 0;
 }
 
+static inline uint32_t
+xrt_view_type_view_count(enum xrt_view_type view_type)
+{
+	switch (view_type) {
+	case XRT_VIEW_TYPE_INVALID:
+	case XRT_VIEW_TYPE_MAX: break;
+	case XRT_VIEW_TYPE_MONO: return 1;
+	case XRT_VIEW_TYPE_STEREO: return 2;
+	case XRT_VIEW_TYPE_QUAD: return 4;
+	}
+
+	return 0;
+}
 
 #ifdef __cplusplus
 }

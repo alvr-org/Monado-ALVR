@@ -1,4 +1,5 @@
 // Copyright 2022, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -94,10 +95,22 @@ struct group
 	//! Pointer to poll of threads.
 	struct u_worker_thread_pool *uwtp;
 
-	//! Number of tasks that is pending or being worked on in this group.
-	size_t current_submitted_tasks_count;
+	/*!
+	 * The number of tasks that are pending execution by a worker.
+	 * They reside in the pool::tasks array.
+	 */
+	uint32_t current_tasks_in_array;
 
-	//! Number of threads that have been released or newly entered wait.
+	/*!
+	 * Number of tasks that are being worked on.
+	 * They live inside of the working thread.
+	 */
+	uint32_t current_working_tasks;
+
+	/*!
+	 * Number of waiting threads that have been released by a worker,
+	 * or a thread that has started waiting (see u_worker_group_wait_all).
+	 */
 	size_t released_count;
 
 	struct
@@ -143,9 +156,15 @@ locked_pool_pop_task(struct pool *p, struct task *out_task)
 			continue;
 		}
 
-		*out_task = p->tasks[i];
+		struct task task = p->tasks[i];
 		p->tasks[i] = (struct task){NULL, NULL, NULL};
+
 		p->tasks_in_array_count--;
+		task.g->current_tasks_in_array--;
+		task.g->current_working_tasks++;
+
+		*out_task = task;
+
 		return;
 	}
 
@@ -164,7 +183,7 @@ locked_pool_push_task(struct pool *p, struct group *g, u_worker_group_func_t fun
 
 		p->tasks[i] = (struct task){g, func, data};
 		p->tasks_in_array_count++;
-		g->current_submitted_tasks_count++;
+		g->current_tasks_in_array++;
 		return;
 	}
 
@@ -201,14 +220,11 @@ locked_pool_wake_worker_if_allowed(struct pool *p)
  */
 
 static bool
-locked_group_should_enter_wait_loop(struct pool *p, struct group *g)
+locked_group_has_tasks_waiting_or_inflight(const struct group *g)
 {
-	if (g->current_submitted_tasks_count == 0) {
+	if (g->current_tasks_in_array == 0 && g->current_working_tasks == 0) {
 		return false;
 	}
-
-	// Enter the loop as a released thread.
-	g->released_count++;
 
 	return true;
 }
@@ -237,7 +253,7 @@ locked_group_should_wait(struct pool *p, struct group *g)
 	 */
 
 	// Tasks available.
-	if (g->current_submitted_tasks_count > 0) {
+	if (locked_group_has_tasks_waiting_or_inflight(g)) {
 
 		// We have been released or newly entered the loop.
 		if (g->released_count > 0) {
@@ -265,7 +281,7 @@ static void
 locked_group_wake_waiter_if_allowed(struct pool *p, struct group *g)
 {
 	// Are there still outstanding tasks?
-	if (g->current_submitted_tasks_count > 0) {
+	if (locked_group_has_tasks_waiting_or_inflight(g)) {
 		return;
 	}
 
@@ -343,6 +359,7 @@ run_func(void *ptr)
 
 	snprintf(t->name, sizeof(t->name), "%s: Worker", p->prefix);
 	U_TRACE_SET_THREAD_NAME(t->name);
+	os_thread_name_self(t->name);
 
 	os_mutex_lock(&p->mutex);
 
@@ -373,8 +390,11 @@ run_func(void *ptr)
 		// No longer working.
 		p->working_count--;
 
-		// Only now decrement the task count on the owning group.
-		task.g->current_submitted_tasks_count--;
+		// We are no longer working on the task.
+		task.g->current_working_tasks--;
+
+		// This must hold true.
+		assert(task.g->current_tasks_in_array <= p->tasks_in_array_count);
 
 		// Wake up any waiter.
 		locked_group_wake_waiter_if_allowed(p, task.g);
@@ -401,8 +421,8 @@ u_worker_thread_pool_create(uint32_t starting_worker_count, uint32_t thread_coun
 	XRT_TRACE_MARKER();
 	int ret;
 
-	assert(starting_worker_count < thread_count);
-	if (starting_worker_count >= thread_count) {
+	assert(starting_worker_count <= thread_count);
+	if (starting_worker_count > thread_count) {
 		return NULL;
 	}
 
@@ -532,10 +552,25 @@ u_worker_group_wait_all(struct u_worker_group *uwg)
 	os_mutex_lock(&p->mutex);
 
 	// Can we early out?
-	if (!locked_group_should_enter_wait_loop(p, g)) {
+	if (!locked_group_has_tasks_waiting_or_inflight(g)) {
 		os_mutex_unlock(&p->mutex);
 		return;
 	}
+
+	/*
+	 * The released_count is tied to the decrement of worker_limit, that is
+	 * when a waiting thread is woken up the worker_limit is decreased, and
+	 * released_count is increased. The waiting thread will then double
+	 * check that it can be released or not, if it can not be released it
+	 * will once again donate this thread and increase the worker_limit.
+	 *
+	 * If it can be released it will decrement released_count and exit the
+	 * loop below.
+	 *
+	 * So if we increment it here, the loop will increase worker_limit
+	 * which is what we want.
+	 */
+	g->released_count++;
 
 	// Wait here until all work been started and completed.
 	while (locked_group_should_wait(p, g)) {

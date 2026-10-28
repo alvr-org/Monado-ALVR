@@ -30,13 +30,13 @@ comfortable with. (Scoop commands may require adding the "extras" bucket.)
     `C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe`
     which gets added to your PATH in a Visual Studio command prompt/PowerShell.
 - Python 3.x
-  - `winget install Python.Python.3`
+  - `winget install Python.Python.3.x` (replace x with the latest Python version).
   - `scoop install python`
 - Vulkan SDK
   - `winget install KhronosGroup.VulkanSDK`
   - `scoop install vulkan`
 - Ninja (build tool, recommended but not strictly required)
-  - Not available from winget
+  - `winget install Ninja-build.Ninja`
   - `scoop install ninja`
   - Recently, bundled with Visual Studio in a path like
     `C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe`

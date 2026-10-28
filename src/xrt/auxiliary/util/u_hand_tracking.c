@@ -20,8 +20,6 @@
 #include "util/u_time.h"
 
 
-#define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
-
 bool
 u_hand_joint_is_metacarpal(enum xrt_hand_joint joint)
 {

@@ -1,4 +1,5 @@
 # Copyright 2020-2021, Collabora, Ltd.
+# Copyright 2025-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
 
 # Generate a header containing defines for each enabled driver
@@ -71,4 +72,28 @@ endif()
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/xrt_openxr_config.h.cmake_in
 	${CMAKE_CURRENT_BINARY_DIR}/xrt_openxr_config.h @ONLY
+	)
+
+set(XRT_ENUM_HEADERS xrt_defines.h xrt_device.h xrt_results.h)
+
+set(XRT_ENUM_NAMES
+    xrt_device_feature_type
+    xrt_result
+    xrt_device_name
+    xrt_input_name
+    xrt_output_name
+	)
+
+# Generate X_macro lists from enum declarations
+generate_macro_lists(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/xrt_macro_lists.h.inc
+	INPUTS ${XRT_ENUM_HEADERS}
+	ENUMS ${XRT_ENUM_NAMES}
+	IGNORE_OTHER_ENUMS
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+
+# Make sure the xrt-interfaces target can depend on the generated header.
+add_custom_target(
+	generate_xrt_macro_lists ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/xrt_macro_lists.h.inc
 	)

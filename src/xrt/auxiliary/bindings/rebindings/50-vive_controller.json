@@ -1,0 +1,35 @@
+{
+	"vive_controller_to_motion_controller": {
+		"source_profile": "/interaction_profiles/htc/vive_controller",
+		"target_profile": "/interaction_profiles/microsoft/motion_controller",
+		"helpers": ["/helper/controller/vive_to_wmr_controller"]
+	},
+	"vive_controller_to_ml2_controller": {
+		"source_profile": "/interaction_profiles/htc/vive_controller",
+		"target_profile": "/interaction_profiles/ml/ml2_controller",
+		"helpers": [
+			"/helper/controller/identity/menu",
+			"/helper/controller/identity/output",
+			"/helper/controller/identity/poses",
+			"/helper/controller/identity/trackpad",
+			"/helper/controller/identity/trigger"
+		],
+		"bindings": {
+			"/user/hand/left/input/squeeze": "/user/hand/left/input/shoulder",
+			"/user/hand/left/input/squeeze/click": "/user/hand/left/input/shoulder/click",
+			"/user/hand/left/input/system": false,
+			"/user/hand/left/input/system/click": false,
+			"/user/hand/left/input/trigger/click": true,
+			"/user/hand/right/input/squeeze": "/user/hand/right/input/shoulder",
+			"/user/hand/right/input/squeeze/click": "/user/hand/right/input/shoulder/click",
+			"/user/hand/right/input/system": false,
+			"/user/hand/right/input/system/click": false,
+			"/user/hand/right/input/trigger/click": true
+		}
+	},
+	"vive_controller_to_odyssey_controller": {
+		"source_profile": "/interaction_profiles/htc/vive_controller",
+		"target_profile": "/interaction_profiles/samsung/odyssey_controller",
+		"helpers": ["/helper/controller/vive_to_wmr_controller"]
+	}
+}

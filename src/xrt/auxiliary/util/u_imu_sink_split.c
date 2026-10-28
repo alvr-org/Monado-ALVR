@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  An @ref xrt_imu_sink splitter.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 

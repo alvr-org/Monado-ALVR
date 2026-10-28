@@ -41,5 +41,10 @@
     - .monado.variables.{{ image_name(distro, image) }}
     - .fdo.{{ "suffixed" if "repo_suffix" in image else "distribution" }}-image@{{distro.name}} # from ci-templates
     - .build-rules
+  retry:
+    {# compensate for flaky runner job startup #}
+    max: 2
+    when:
+      - runner_system_failure
 
 {% endfor -%} {%- endfor %}

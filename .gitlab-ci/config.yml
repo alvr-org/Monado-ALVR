@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileCopyrightText: 2018-2024, Collabora, Ltd. and the Monado contributors
+# SPDX-FileCopyrightText: 2018-2026, Collabora, Ltd. and the Monado contributors
 
 # Please run the following from the repo root after modifying this file:
 #   make -f .gitlab-ci/ci-scripts.mk
 
-fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
+fdo_ci_templates_sha: 5cc6ded703fc990f9d055f0d948ffd4460a9ca40
 
 # These are a mapping, instead of a list/array, so we can merge.
 .default_debian_packages:
@@ -48,6 +48,7 @@ fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
   libuvc-dev:
   libv4l-dev:
   libwayland-dev:
+  libceres-dev:
   # Only used for building packages
   debhelper:
   devscripts:
@@ -60,25 +61,24 @@ fdo_ci_templates_sha: 185ede0e9b9b1924b92306ab8b882a6294e92613
 .android_cmake_defines: &android_cmake_defines
   ANDROID_PLATFORM: 26
   CMAKE_TOOLCHAIN_FILE: /opt/android-ndk/build/cmake/android.toolchain.cmake
-  Eigen3_DIR: /usr/lib/cmake/eigen3/
-  EIGEN3_INCLUDE_DIR: /usr/include/eigen3
+  Eigen3_DIR: /usr/share/eigen3/cmake/
+
 
 # Which build job do we use to build the documentation.
-documentation_build: "debian:cmake"
+documentation_build: "debian:trixie"
 
 # The distributions we'll make an image for
 distributions:
   - name: debian
     images:
       # This image does some extra work.
-      - codename: bookworm
+      - codename: trixie
         script: i386_and_proclamation_container_prep.sh
-        tag: "2024-08-16"
-        deb_version_suffix: bpo12
+        tag: "2026-09-15"
+        deb_version_suffix: bpo13
         packages:
           <<: *default_debian_packages
-          clang-format:
-          codespell:
+          clang-tidy:
           doxygen:
           graphviz:
           pipx:
@@ -87,61 +87,82 @@ distributions:
           # reprepro must always run on the most recent debian-derived distribution so it is aware of all distros we package for.
           # Right now that is bookworm but it will be a new Ubuntu soon.
           reprepro:
+          clang:
         build_jobs:
-          - name: "debian:cmake"
+          - name: "debian:trixie"
             # Generate "changes since last release" and add to changelog,
             # since this is the build that makes our docs.
             before_script:
               - pushd doc/changes
               - proclamation build vNEXT
               - popd
-            artifact_path: build/doc/html/
+            artifact_path:
+              build
             cmake_defines:
               BUILD_DOC: "ON"
+              CMAKE_BUILD_TYPE: "Release"
 
-          - name: "debian:cmake-no-opencv"
+          - name: "debian:trixie:clang"
+            cmake_defines:
+              CMAKE_BUILD_TYPE: "Release"
+              CMAKE_C_COMPILER: /usr/bin/clang
+              CMAKE_CXX_COMPILER: /usr/bin/clang++
+
+          - name: "debian:trixie:opencv-off"
             cmake_defines:
               XRT_HAVE_OPENCV: "OFF"
 
-          - name: "debian:cmake-no-sdl2"
+          - name: "debian:trixie:sdl2-off"
             cmake_defines:
               XRT_HAVE_SDL2: "OFF"
 
-          - name: "debian:cmake-no-service"
+          - name: "debian:trixie:feature-service-off"
             cmake_defines:
               XRT_FEATURE_SERVICE: "OFF"
 
-          - name: "debian:cmake:32bit"
+          - name: "debian:trixie:32bit"
             cmake_defines:
               CMAKE_TOOLCHAIN_FILE: .gitlab-ci/i386.cmake
               # OpenCV doesn't play nicely with us in multi-arch.
               XRT_HAVE_OPENCV: "OFF"
 
-      - codename: bullseye
-        tag: "2024-07-18"
-        script: bullseye_backports.sh
-        deb_version_suffix: bpo11
+      - codename: bookworm
+        script: i386_and_proclamation_container_prep.sh
+        tag: "2026-09-15"
+        deb_version_suffix: bpo12
         packages:
           <<: *default_debian_packages
+          pahole:
+          python3-pip:
+          codespell:
+          clang-format:
         build_jobs:
-          - name: "debian:bullseye:cmake"
+          - name: "debian:bookworm"
+            pahole: true
+            cmake_defines:
+              CMAKE_BUILD_TYPE: Debug
+          - name: "debian:bookworm:32bit"
+            pahole: true
+            cmake_defines:
+              CMAKE_BUILD_TYPE: Debug
+              CMAKE_TOOLCHAIN_FILE: .gitlab-ci/i386.cmake
 
 
       # This one is pretty minimal, compared to the others.
       # Though, we now install the android SDK in it...
-      - codename: bookworm-ndk
-        distro_version: bookworm
+      - codename: trixie-ndk
+        distro_version: trixie
         repo_suffix: ndk
         script: android_container_prep.sh
-        tag: "2024-07-18"
+        tag: "2026-02-18"
         # This must match ext.sharedCompileSdk in build.gradle
-        android_compile_sdk: 34
+        android_compile_sdk: 35
         # This must match buildscript.ext.buildToolsVersion in build.gradle
         android_build_tools: 34.0.0
         # This must match ext.ndk_version in build.gradle
         android_ndk_version: r26d
         # look up on https://developer.android.com/studio/index.html#downloads when updating other versions
-        android_cli_tools: 11076708
+        android_cli_tools: 13114758
 
         packages:
           git:
@@ -156,6 +177,7 @@ distributions:
           ca-certificates:
           glslang-tools:
           default-jdk-headless:
+          clang-tidy:
         build_jobs:
           - name: "ndk:armeabi-v7a"
             cmake_defines:
@@ -166,6 +188,8 @@ distributions:
             cmake_defines:
               <<: *android_cmake_defines
               ANDROID_ABI: arm64-v8a
+            artifact_path:
+              build
 
           - name: android:spotlessCheck
             target: spotlessCheck
@@ -193,38 +217,37 @@ distributions:
       # LTS
       - codename: jammy
         distro_version: "22.04"
-        tag: "2024-07-18"
+        tag: "2026-09-15"
         deb_version_suffix: ubuntu2204
         packages:
           <<: *default_debian_packages
         build_jobs:
-          - name: "ubuntu:jammy:cmake"
+          - name: "ubuntu:jammy"
             cmake_defines:
 
       - codename: noble
         distro_version: "24.04"
-        tag: "2024-07-18"
+        tag: "2026-09-15"
         deb_version_suffix: ubuntu2404
         packages:
           <<: *default_debian_packages
         build_jobs:
-          - name: "ubuntu:noble:cmake"
+          - name: "ubuntu:noble"
             cmake_defines:
 
   - name: arch
     images:
-      - tag: "2024-01-16"
+      - tag: "2026-09-15"
         script: install-arch-additional-deps.sh
         # pipewire-jack wireplumber: Explicitly choose dependencies to avoid pacman asking interactively
         # python-setuptools glu: librealsense
-        # glew boost gtest fmt bc: basalt-monado-git
         # python-attrs: xr-hardware-git
         packages:
           base-devel:
-          pipewire-jack:
-          wireplumber:
           bluez-libs:
+          ceres-solver:
           check:
+          cjson:
           clang:
           cmake:
           diffutils:
@@ -234,44 +257,42 @@ distributions:
           git:
           glfw-x11:
           glslang:
+          glu:
           graphviz:
           gtk3:
           hidapi:
+          libbsd:
           libusb:
           libxrandr:
           mesa:
+          meson:
           ninja:
+          onnxruntime-cpu:
           opencv:
           patch:
+          pipewire-jack:
           pkgconfig:
+          python-attrs:
+          python-setuptools:
           python3:
           qt6-base:
           v4l-utils:
           vulkan-headers:
           vulkan-icd-loader:
-          wget:
-          meson:
-          python-setuptools:
-          glu:
-          glew:
-          boost:
-          gtest:
-          fmt:
-          bc:
           wayland:
-          libbsd:
-          python-attrs:
+          wget:
+          wireplumber:
         build_jobs:
-          - name: "arch:cmake"
+          - name: "arch"
 
-          - name: "arch:cmake:clang"
+          - name: "arch:clang"
             cmake_defines:
               CMAKE_C_COMPILER: /usr/bin/clang
               CMAKE_CXX_COMPILER: /usr/bin/clang++
 
   - name: alpine
     images:
-      - tag: "2024-01-16"
+      - tag: "2026-09-15"
         packages:
           - "cmake"
           - "cmd:glslangValidator"
@@ -295,7 +316,7 @@ distributions:
           - "wayland-protocols"
           - "zlib-dev"
         build_jobs:
-          - name: "alpine:cmake"
+          - name: "alpine"
 
 android:
   platform: 26

@@ -36,6 +36,10 @@ add_library(
 	m_predict.c
 	m_predict.h
 	m_quatexpmap.cpp
+	m_quatexpmap.hpp
+	m_quatexpmap_bigceres.hpp
+	m_quatexpmap_ceres_internal.hpp
+	m_quatexpmap_tinyceres.hpp
 	m_rational.hpp
 	m_relation_history.cpp
 	m_relation_history.h
@@ -46,10 +50,9 @@ add_library(
 	)
 target_link_libraries(
 	aux_math
-	PUBLIC aux-includes aux_util
+	PUBLIC aux-includes aux_util Eigen3::Eigen
 	PRIVATE xrt-optimized-math
 	)
-target_include_directories(aux_math SYSTEM PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 if(MSVC)
 	get_target_property(options aux_math COMPILE_OPTIONS)

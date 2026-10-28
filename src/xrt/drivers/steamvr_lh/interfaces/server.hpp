@@ -115,4 +115,7 @@ class Server
 	virtual void
 	UnknownFunc034()
 	{}
+	virtual void
+	UnknownFunc035()
+	{}
 };

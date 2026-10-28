@@ -6,7 +6,7 @@
  * @brief All the "element-type-independent" code (helper objects, base classes) for a ringbuffer implementation on top
  * of a fixed size array
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 

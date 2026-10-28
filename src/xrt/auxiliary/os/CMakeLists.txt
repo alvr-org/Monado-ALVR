@@ -12,8 +12,10 @@
 add_library(
 	aux_os STATIC
 	os_documentation.h
+	os_fd.h
 	os_hid.h
 	os_hid_hidraw.c
+	os_serial.h
 	os_threading.h
 	os_time.cpp
 	)
@@ -22,6 +24,12 @@ target_link_libraries(aux_os PUBLIC aux-includes xrt-pthreads)
 # Only uses normal Windows libraries, doesn't add anything extra.
 if(WIN32)
 	target_link_libraries(aux_os PRIVATE winmm)
+endif()
+
+if(LINUX)
+	target_sources(aux_os PRIVATE os_serial_linux.c)
+else()
+	target_sources(aux_os PRIVATE os_serial_stubs.c)
 endif()
 
 ####

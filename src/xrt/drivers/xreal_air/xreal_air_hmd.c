@@ -1,9 +1,9 @@
-// Copyright 2023-2024, Tobias Frisch
+// Copyright 2023-2025, Tobias Frisch
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Xreal Air packet parsing implementation.
- * @author Tobias Frisch <thejackimonster@gmail.com>
+ * @author Tobias Frisch <jacki@thejackimonster.de>
  * @ingroup drv_xreal_air
  */
 
@@ -34,7 +34,7 @@
 #define XREAL_AIR_DEBUG(hmd, ...) U_LOG_XDEV_IFL_D(&hmd->base, hmd->log_level, __VA_ARGS__)
 #define XREAL_AIR_ERROR(hmd, ...) U_LOG_XDEV_IFL_E(&hmd->base, hmd->log_level, __VA_ARGS__)
 
-#define SENSOR_BUFFER_SIZE 64
+#define SENSOR_BUFFER_SIZE 512
 #define CONTROL_BUFFER_SIZE 64
 
 #define SENSOR_HEAD 0xFD
@@ -88,9 +88,12 @@ struct xreal_air_hmd
 
 	uint32_t static_id;
 	bool display_on;
+	uint8_t blend_state;
+	uint8_t control_mode;
 	uint8_t imu_stream_state;
 
 	enum u_logging_level log_level;
+	uint16_t max_sensor_buffer_size;
 
 	uint32_t calibration_buffer_len;
 	uint32_t calibration_buffer_pos;
@@ -406,6 +409,7 @@ handle_sensor_control_get_cal_data_length(struct xreal_air_hmd *hmd,
 	    ((data->data[0] << 0u) | (data->data[1] << 8u) | (data->data[2] << 16u) | (data->data[3] << 24u));
 
 	hmd->calibration_buffer_len = calibration_data_length;
+	hmd->calibration_valid = false;
 
 	if (hmd->calibration_buffer_len > 0) {
 		if (hmd->calibration_buffer) {
@@ -426,7 +430,9 @@ static void
 handle_sensor_control_cal_data_get_next_segment(struct xreal_air_hmd *hmd,
                                                 const struct xreal_air_parsed_sensor_control_data *data)
 {
-	if (hmd->calibration_buffer_len == 0) {
+	if (hmd->calibration_valid) {
+		return;
+	} else if (hmd->calibration_buffer_len == 0) {
 		request_sensor_control_get_cal_data_length(hmd);
 		return;
 	}
@@ -437,8 +443,21 @@ handle_sensor_control_cal_data_get_next_segment(struct xreal_air_hmd *hmd,
 		return;
 	}
 
+	uint16_t data_buffer_size = SENSOR_BUFFER_SIZE;
+
+	if (data_buffer_size > hmd->max_sensor_buffer_size) {
+		data_buffer_size = hmd->max_sensor_buffer_size;
+	}
+
+	if (data_buffer_size <= 8) {
+		XREAL_AIR_ERROR(hmd, "Failed to receive next calibration data from buffer!");
+		return;
+	}
+
+	data_buffer_size -= 8;
+
 	const uint32_t remaining = (hmd->calibration_buffer_len - hmd->calibration_buffer_pos);
-	const uint8_t next = (remaining > 56 ? 56 : remaining);
+	const uint16_t next = (remaining > data_buffer_size ? data_buffer_size : remaining);
 
 	if (hmd->calibration_buffer) {
 		memcpy(hmd->calibration_buffer + hmd->calibration_buffer_pos, data->data, next);
@@ -453,6 +472,8 @@ handle_sensor_control_cal_data_get_next_segment(struct xreal_air_hmd *hmd,
 		// Parse calibration data from raw json.
 		if (!xreal_air_parse_calibration_buffer(&hmd->calibration, hmd->calibration_buffer,
 		                                        hmd->calibration_buffer_len)) {
+			hmd->calibration_valid = false;
+
 			XREAL_AIR_ERROR(hmd, "Failed parse calibration data!");
 		} else {
 			hmd->calibration_valid = true;
@@ -481,7 +502,7 @@ handle_sensor_control_start_imu_data(struct xreal_air_hmd *hmd, const struct xre
 
 	if (hmd->static_id == 0) {
 		request_sensor_control_get_static_id(hmd);
-	} else if (!hmd->calibration_valid) {
+	} else if ((!hmd->calibration_valid) && (!hmd->calibration_buffer_len)) {
 		request_sensor_control_get_cal_data_length(hmd);
 	}
 }
@@ -495,17 +516,17 @@ handle_sensor_control_get_static_id(struct xreal_air_hmd *hmd, const struct xrea
 
 	hmd->static_id = static_id;
 
-	if (!hmd->calibration_valid) {
+	if ((!hmd->calibration_valid) && (!hmd->calibration_buffer_len)) {
 		request_sensor_control_get_cal_data_length(hmd);
 	}
 }
 
 static void
-handle_sensor_control_data_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
+handle_sensor_control_data_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, size_t size)
 {
 	struct xreal_air_parsed_sensor_control_data data;
 
-	if (!xreal_air_parse_sensor_control_data_packet(&data, buffer, size)) {
+	if (!xreal_air_parse_sensor_control_data_packet(&data, buffer, size, hmd->max_sensor_buffer_size)) {
 		XREAL_AIR_ERROR(hmd, "Could not decode sensor control data packet");
 	}
 
@@ -526,7 +547,7 @@ handle_sensor_control_data_msg(struct xreal_air_hmd *hmd, unsigned char *buffer,
 }
 
 static void
-handle_sensor_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
+handle_sensor_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, size_t size)
 {
 	if (buffer[0] == 0xAA) {
 		handle_sensor_control_data_msg(hmd, buffer, size);
@@ -536,7 +557,7 @@ handle_sensor_msg(struct xreal_air_hmd *hmd, unsigned char *buffer, int size)
 	timepoint_ns now_ns = (timepoint_ns)os_monotonic_get_ns();
 	uint64_t last_timestamp = hmd->last.timestamp;
 
-	if (!xreal_air_parse_sensor_packet(&hmd->last, buffer, size)) {
+	if (!xreal_air_parse_sensor_packet(&hmd->last, buffer, size, hmd->max_sensor_buffer_size)) {
 		XREAL_AIR_ERROR(hmd, "Could not decode sensor packet");
 	} else {
 		hmd->imu_stream_state = 0x1;
@@ -576,8 +597,13 @@ static void
 sensor_clear_queue(struct xreal_air_hmd *hmd)
 {
 	uint8_t buffer[SENSOR_BUFFER_SIZE];
+	size_t buffer_size = SENSOR_BUFFER_SIZE;
 
-	while (os_hid_read(hmd->hid_sensor, buffer, SENSOR_BUFFER_SIZE, 0) > 0) {
+	if (buffer_size > hmd->max_sensor_buffer_size) {
+		buffer_size = hmd->max_sensor_buffer_size;
+	}
+
+	while (os_hid_read(hmd->hid_sensor, buffer, buffer_size, 0) > 0) {
 		// Just drop the packets.
 	}
 }
@@ -586,13 +612,18 @@ static int
 sensor_read_one_packet(struct xreal_air_hmd *hmd)
 {
 	uint8_t buffer[SENSOR_BUFFER_SIZE];
+	size_t buffer_size = SENSOR_BUFFER_SIZE;
 
-	int size = os_hid_read(hmd->hid_sensor, buffer, SENSOR_BUFFER_SIZE, 0);
+	if (buffer_size > hmd->max_sensor_buffer_size) {
+		buffer_size = hmd->max_sensor_buffer_size;
+	}
+
+	int size = os_hid_read(hmd->hid_sensor, buffer, buffer_size, 0);
 	if (size <= 0) {
 		return size;
 	}
 
-	handle_sensor_msg(hmd, buffer, size);
+	handle_sensor_msg(hmd, buffer, (size_t)size);
 	return 0;
 }
 
@@ -711,6 +742,15 @@ handle_control_heartbeat_start(struct xreal_air_hmd *hmd, const struct xreal_air
 }
 
 static void
+handle_control_display_toggled(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
+{
+	// State of display
+	const uint8_t display_state = control->data[0];
+
+	hmd->display_on = (display_state != 0);
+}
+
+static void
 handle_control_button(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_control *control)
 {
 	// Physical button
@@ -736,22 +776,54 @@ handle_control_button(struct xreal_air_hmd *hmd, const struct xreal_air_parsed_c
 		hmd->wants.brightness = brightness;
 		break;
 	}
-	case XREAL_AIR_BUTTON_VIRT_MODE_UP: {
+	case XREAL_AIR_BUTTON_VIRT_UP: {
+		switch (hmd->control_mode) {
+		case XREAL_AIR_CONTROL_MODE_BRIGHTNESS: break;
+		case XREAL_AIR_CONTROL_MODE_VOLUME: break;
+		default: {
+			XREAL_AIR_ERROR(hmd, "Got unknown mode increase, 0x%02x (0x%02x)", hmd->control_mode, value);
+			break;
+		}
+		}
+
+		break;
+	}
+	case XREAL_AIR_BUTTON_VIRT_DOWN: {
+		switch (hmd->control_mode) {
+		case XREAL_AIR_CONTROL_MODE_BRIGHTNESS: break;
+		case XREAL_AIR_CONTROL_MODE_VOLUME: break;
+		default: {
+			XREAL_AIR_ERROR(hmd, "Got unknown mode decrease, 0x%02x (0x%02x)", hmd->control_mode, value);
+			break;
+		}
+		}
+
+		break;
+	}
+	case XREAL_AIR_BUTTON_VIRT_MODE_2D: {
 		const uint8_t display_mode = hmd->state.display_mode;
 
-		if (display_mode == XREAL_AIR_DISPLAY_MODE_2D) {
+		if (display_mode != XREAL_AIR_DISPLAY_MODE_2D) {
+			hmd->wants.display_mode = XREAL_AIR_DISPLAY_MODE_2D;
+		}
+
+		break;
+	}
+	case XREAL_AIR_BUTTON_VIRT_MODE_3D: {
+		const uint8_t display_mode = hmd->state.display_mode;
+
+		if (display_mode != XREAL_AIR_DISPLAY_MODE_3D) {
 			hmd->wants.display_mode = XREAL_AIR_DISPLAY_MODE_3D;
 		}
 
 		break;
 	}
-	case XREAL_AIR_BUTTON_VIRT_MODE_DOWN: {
-		const uint8_t display_mode = hmd->state.display_mode;
-
-		if (display_mode == XREAL_AIR_DISPLAY_MODE_3D) {
-			hmd->wants.display_mode = XREAL_AIR_DISPLAY_MODE_2D;
-		}
-
+	case XREAL_AIR_BUTTON_VIRT_BLEND_CYCLE: {
+		hmd->blend_state = value;
+		break;
+	}
+	case XREAL_AIR_BUTTON_VIRT_CONTROL_TOGGLE: {
+		hmd->control_mode = value;
 		break;
 	}
 	default: {
@@ -785,6 +857,7 @@ handle_control_action_locked(struct xreal_air_hmd *hmd, const struct xreal_air_p
 	case XREAL_AIR_MSG_R_DISP_MODE: handle_control_display_mode(hmd, control); break;
 	case XREAL_AIR_MSG_W_DISP_MODE: break;
 	case XREAL_AIR_MSG_P_START_HEARTBEAT: handle_control_heartbeat_start(hmd, control); break;
+	case XREAL_AIR_MSG_P_DISPLAY_TOGGLED: handle_control_display_toggled(hmd, control); break;
 	case XREAL_AIR_MSG_P_BUTTON_PRESSED: handle_control_button(hmd, control); break;
 	case XREAL_AIR_MSG_P_ASYNC_TEXT_LOG: handle_control_async_text(hmd, control); break;
 	case XREAL_AIR_MSG_P_END_HEARTBEAT: handle_control_heartbeat_end(hmd, control); break;
@@ -1065,17 +1138,22 @@ xreal_air_hmd_get_tracked_pose(struct xrt_device *xdev,
 	const enum xrt_space_relation_flags flags = (enum xrt_space_relation_flags)(
 	    XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT);
 
-	struct xrt_space_relation relation;
-	U_ZERO(&relation); // Clear out the relation.
+	struct xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
 	relation.relation_flags = flags;
 
 	m_relation_history_get(hmd->relation_hist, at_timestamp_ns, &relation);
 	relation.relation_flags = flags; // Needed after history_get
 
 	*out_relation = relation;
+	struct xrt_quat *orientation = &out_relation->pose.orientation;
 
 	// Make sure that the orientation is valid.
-	math_quat_normalize(&out_relation->pose.orientation);
+	if (math_quat_dot(orientation, orientation) > 0.0f) {
+		math_quat_normalize(orientation);
+	} else {
+		orientation->w = 1.0f;
+	}
+
 	return XRT_SUCCESS;
 }
 
@@ -1088,13 +1166,6 @@ xreal_air_hmd_destroy(struct xrt_device *xdev)
 	u_device_free(&hmd->base);
 }
 
-static bool
-xreal_air_hmd_compute_distortion(
-    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
-{
-	return u_compute_distortion_none(u, v, result);
-}
-
 /*
  *
  * Exported functions.
@@ -1104,7 +1175,8 @@ xreal_air_hmd_compute_distortion(
 struct xrt_device *
 xreal_air_hmd_create_device(struct os_hid_device *sensor_device,
                             struct os_hid_device *control_device,
-                            enum u_logging_level log_level)
+                            enum u_logging_level log_level,
+                            uint16_t max_sensor_buffer_size)
 {
 	enum u_device_alloc_flags flags =
 	    (enum u_device_alloc_flags)(U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE);
@@ -1112,16 +1184,17 @@ xreal_air_hmd_create_device(struct os_hid_device *sensor_device,
 	int ret;
 
 	hmd->log_level = log_level;
+	hmd->max_sensor_buffer_size = max_sensor_buffer_size;
 	hmd->base.update_inputs = xreal_air_hmd_update_inputs;
 	hmd->base.get_tracked_pose = xreal_air_hmd_get_tracked_pose;
 	hmd->base.get_view_poses = u_device_get_view_poses;
-	hmd->base.compute_distortion = xreal_air_hmd_compute_distortion;
+	hmd->base.compute_distortion = u_distortion_mesh_none;
 	hmd->base.destroy = xreal_air_hmd_destroy;
 	hmd->base.name = XRT_DEVICE_GENERIC_HMD;
 	hmd->base.device_type = XRT_DEVICE_TYPE_HMD;
 	hmd->base.inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
-	hmd->base.orientation_tracking_supported = true;
-	hmd->base.position_tracking_supported = false;
+	hmd->base.supported.orientation_tracking = true;
+	hmd->base.supported.position_tracking = false;
 
 	// Set up display details refresh rate
 	hmd->base.hmd->screens[0].nominal_frame_interval_ns = time_s_to_ns(1.0f / 60.0f);
@@ -1134,6 +1207,8 @@ xreal_air_hmd_create_device(struct os_hid_device *sensor_device,
 
 	hmd->static_id = 0;
 	hmd->display_on = false;
+	hmd->blend_state = XREAL_AIR_BLEND_STATE_DEFAULT;
+	hmd->control_mode = XREAL_AIR_CONTROL_MODE_BRIGHTNESS;
 	hmd->imu_stream_state = 0;
 
 	hmd->calibration_buffer = NULL;

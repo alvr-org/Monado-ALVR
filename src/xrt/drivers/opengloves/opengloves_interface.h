@@ -1,4 +1,5 @@
 // Copyright 2019-2022, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -9,11 +10,14 @@
 
 #pragma once
 
+#include "xrt/xrt_compiler.h"
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct u_system_devices;
+struct xrt_device;
 
 /*!
  * @defgroup drv_opengloves OpenGloves Driver for VR Gloves

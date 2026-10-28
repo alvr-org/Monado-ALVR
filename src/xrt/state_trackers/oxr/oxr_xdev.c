@@ -1,4 +1,5 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -6,6 +7,8 @@
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup oxr_main
  */
+
+#include "xrt/xrt_defines.h"
 
 #include "os/os_time.h"
 
@@ -15,10 +18,10 @@
 #include "util/u_time.h"
 #include "util/u_misc.h"
 
+#include "oxr_handle_base.h"
 #include "oxr_objects.h"
 #include "oxr_logger.h"
-#include "oxr_handle.h"
-#include "xrt/xrt_defines.h"
+#include "oxr_chain.h"
 
 #include <stdio.h>
 
@@ -57,11 +60,29 @@ find_suitable_pose_name(struct xrt_device *xdev)
 		case XRT_INPUT_PICO_NEO3_GRIP_POSE: return name;
 		case XRT_INPUT_PICO4_GRIP_POSE: return name;
 		case XRT_INPUT_OPPO_MR_GRIP_POSE: return name;
+		case XRT_INPUT_HYDRA_GRIP_POSE: return name;
+		case XRT_INPUT_FLIPVR_GRIP_POSE: return name;
+		case XRT_INPUT_MAGNETRA2_GRIP_POSE: return name;
+		case XRT_INPUT_PSSENSE_GRIP_POSE: return name;
 		default: break;
 		}
 	}
 
 	return 0;
+}
+
+static bool
+can_create_hand_tracker(struct xrt_device *xdev,
+                        enum xrt_input_name unobstructed_name,
+                        enum xrt_input_name conforming_name)
+{
+	if (xdev == NULL || !xdev->supported.hand_tracking) {
+		return false;
+	}
+
+	struct xrt_input *input = NULL;
+	return oxr_xdev_find_input(xdev, unobstructed_name, &input) ||
+	       oxr_xdev_find_input(xdev, conforming_name, &input);
 }
 #endif
 
@@ -122,26 +143,6 @@ oxr_xdev_find_output(struct xrt_device *xdev, enum xrt_output_name name, struct 
 	return false;
 }
 
-void
-oxr_xdev_get_hand_tracking_at(struct oxr_logger *log,
-                              struct oxr_instance *inst,
-                              struct xrt_device *xdev,
-                              enum xrt_input_name name,
-                              XrTime at_time,
-                              struct xrt_hand_joint_set *out_value)
-{
-	//! Convert at_time to monotonic and give to device.
-	int64_t at_timestamp_ns = time_state_ts_to_monotonic_ns(inst->timekeeping, at_time);
-
-	struct xrt_hand_joint_set value;
-
-	int64_t ignored;
-
-	xrt_device_get_hand_tracking(xdev, name, at_timestamp_ns, &value, &ignored);
-
-	*out_value = value;
-}
-
 
 /*
  *
@@ -168,7 +169,7 @@ oxr_xdev_list_create(struct oxr_logger *log,
                      struct oxr_xdev_list **out_xdl)
 {
 	struct xrt_system_devices *xsysd = sess->sys->xsysd;
-	uint32_t count = xsysd->xdev_count;
+	uint32_t count = xsysd->static_xdev_count;
 
 	struct oxr_xdev_list *xdl = NULL;
 	OXR_ALLOCATE_HANDLE_OR_RETURN(log, xdl, OXR_XR_DEBUG_XDEVLIST, oxr_xdev_list_destroy, &sess->handle);
@@ -189,7 +190,7 @@ oxr_xdev_list_create(struct oxr_logger *log,
 	uint64_t id_gen = 42;
 
 	for (uint32_t i = 0; i < count; i++) {
-		struct xrt_device *xdev = xsysd->xdevs[i];
+		struct xrt_device *xdev = xsysd->static_xdevs[i];
 		enum xrt_input_name name = find_suitable_pose_name(xdev);
 
 		xdl->ids[i] = id_gen++;
@@ -225,6 +226,15 @@ oxr_xdev_list_get_properties(struct oxr_logger *log,
 	snprintf(properties->serial, ARRAY_SIZE(properties->serial), "%s", xdev->serial);
 	properties->canCreateSpace = can_create_space;
 
+	XrXDevHandTrackingPropertiesMNDX *hand_tracking_properties = OXR_GET_OUTPUT_FROM_CHAIN(
+	    properties, XR_TYPE_XDEV_HAND_TRACKING_PROPERTIES_MNDX, XrXDevHandTrackingPropertiesMNDX);
+	if (hand_tracking_properties != NULL) {
+		hand_tracking_properties->canCreateHandTrackerLeft =
+		    can_create_hand_tracker(xdev, XRT_INPUT_HT_UNOBSTRUCTED_LEFT, XRT_INPUT_HT_CONFORMING_LEFT);
+		hand_tracking_properties->canCreateHandTrackerRight =
+		    can_create_hand_tracker(xdev, XRT_INPUT_HT_UNOBSTRUCTED_RIGHT, XRT_INPUT_HT_CONFORMING_RIGHT);
+	}
+
 	return XR_SUCCESS;
 }
 
@@ -250,6 +260,26 @@ oxr_xdev_list_space_create(struct oxr_logger *log,
 	enum xrt_input_name name = xdl->names[index];
 
 	return oxr_space_xdev_pose_create(log, xdl->sess, xdev, name, pose, out_space);
+}
+
+bool
+oxr_xdev_list_get_xdev(struct oxr_logger *log, struct oxr_xdev_list *xdl, XrXDevIdMNDX id, struct xrt_device **out_xdev)
+{
+	uint32_t index = 0;
+	for (; index < xdl->device_count; index++) {
+		if (id != xdl->ids[index]) {
+			continue;
+		}
+		break;
+	}
+
+	if (index >= xdl->device_count) {
+		return false;
+	}
+
+	*out_xdev = xdl->xdevs[index];
+
+	return true;
 }
 
 #endif // OXR_HAVE_MNDX_xdev_space

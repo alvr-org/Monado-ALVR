@@ -55,6 +55,9 @@ static void
 p_udev_enumerate_hidraw(struct prober *p, struct udev *udev);
 
 static void
+p_udev_enumerate_tty(struct prober *p, struct udev *udev);
+
+static void
 p_udev_add_hidraw(struct prober_device *pdev, uint32_t interface, const char *path);
 
 static int
@@ -131,6 +134,8 @@ p_udev_probe(struct prober *p)
 	p_udev_enumerate_v4l2(p, udev);
 
 	p_udev_enumerate_hidraw(p, udev);
+
+	p_udev_enumerate_tty(p, udev);
 
 	udev_unref(udev);
 
@@ -369,6 +374,14 @@ p_udev_add_v4l(struct prober_device *pdev, uint32_t v4l_index, uint32_t usb_ifac
 #endif
 }
 
+static bool
+device_is_virtual(struct udev_device *raw_dev)
+{
+	const char *prop_id_path = udev_device_get_property_value(raw_dev, "ID_PATH");
+
+	return (prop_id_path == NULL);
+}
+
 static void
 p_udev_enumerate_hidraw(struct prober *p, struct udev *udev)
 {
@@ -388,7 +401,7 @@ p_udev_enumerate_hidraw(struct prober *p, struct udev *udev)
 		struct udev_device *raw_dev = NULL;
 		uint16_t vendor_id;
 		uint16_t product_id;
-		uint16_t interface;
+		uint16_t interface = 0;
 		uint8_t dev_class = 0;
 		uint16_t usb_bus = 0;
 		uint16_t usb_addr = 0;
@@ -428,14 +441,16 @@ p_udev_enumerate_hidraw(struct prober *p, struct udev *udev)
 		default: P_ERROR(p, "Unknown hidraw bus_type: '%i', ignoring.", bus_type); goto next;
 		}
 
-		// HID interface.
-		ret = p_udev_get_interface_number(raw_dev, &interface);
-		if (ret != 0) {
-			P_ERROR(p,
-			        "In enumerating hidraw devices: "
-			        "Failed to get interface number for '%s'",
-			        sysfs_path);
-			goto next;
+		// Get USB interface number for non-virtual devices.
+		if (!device_is_virtual(raw_dev)) {
+			ret = p_udev_get_interface_number(raw_dev, &interface);
+			if (ret != 0) {
+				P_ERROR(p,
+				        "In enumerating hidraw devices: "
+				        "Failed to get interface number for '%s'",
+				        sysfs_path);
+				goto next;
+			}
 		}
 
 		if (bus_type == HIDRAW_BUS_BLUETOOTH) {
@@ -483,14 +498,83 @@ p_udev_enumerate_hidraw(struct prober *p, struct udev *udev)
 }
 
 static void
-p_udev_add_hidraw(struct prober_device *pdev, uint32_t interface, const char *path)
+p_udev_enumerate_tty(struct prober *p, struct udev *udev)
+{
+	struct udev_enumerate *enumerate;
+	struct udev_list_entry *devices;
+	struct udev_list_entry *dev_list_entry;
+
+	enumerate = udev_enumerate_new(udev);
+	udev_enumerate_add_match_subsystem(enumerate, "tty");
+	udev_enumerate_scan_devices(enumerate);
+
+	devices = udev_enumerate_get_list_entry(enumerate);
+
+	udev_list_entry_foreach(dev_list_entry, devices)
+	{
+		struct udev_device *raw_dev = NULL;
+		const char *sysfs_path;
+		const char *dev_path;
+
+		// Where in the sysfs is.
+		sysfs_path = udev_list_entry_get_name(dev_list_entry);
+		// Raw sysfs node.
+		raw_dev = udev_device_new_from_syspath(udev, sysfs_path);
+		// The thing we will open.
+		dev_path = udev_device_get_devnode(raw_dev);
+
+		P_TRACE(p, "tty\n\t\tptr: %p\n\t\tsysfs_path: '%s'\n\t\tdev_path: '%s'", (void *)raw_dev, sysfs_path,
+		        dev_path);
+
+		struct prober_device *pdev = NULL;
+		uint8_t dev_class = 0;
+		uint16_t vendor_id = 0;
+		uint16_t product_id = 0;
+		uint16_t usb_bus = 0;
+		uint16_t usb_addr = 0;
+		struct udev_device *usb_device = NULL;
+		int ret;
+
+		// Try to get USB parent info for VID/PID
+		ret = p_udev_try_usb_relation_get_address(raw_dev, &dev_class, &vendor_id, &product_id, &usb_bus,
+		                                          &usb_addr, &usb_device);
+		if (ret == 0) {
+			// USB-backed serial device: use vendor/product ids
+			P_TRACE(p,
+			        "tty (usb)\n"
+			        "\t\tdev_path:     '%s'\n"
+			        "\t\tvendor_id:    %04x\n"
+			        "\t\tproduct_id:   %04x",
+			        dev_path, vendor_id, product_id);
+
+			ret = p_dev_get_usb_dev(p, usb_bus, usb_addr, vendor_id, product_id, &pdev);
+			if (ret != 0) {
+				P_ERROR(p, "p_dev_get_usb_device failed!");
+				goto next;
+			}
+
+			pdev->serial.path = strdup(dev_path);
+		} else {
+			// Non-USB serial device, currently left as a TODO
+			P_TRACE(p, "Skipping non-usb tty: '%s'", dev_path);
+		}
+
+	next:
+		udev_device_unref(raw_dev);
+	}
+
+	udev_enumerate_unref(enumerate);
+}
+
+static void
+p_udev_add_hidraw(struct prober_device *pdev, uint32_t hid_iface, const char *path)
 {
 	U_ARRAY_REALLOC_OR_FREE(pdev->hidraws, struct prober_hidraw, (pdev->num_hidraws + 1));
 
 	struct prober_hidraw *hidraw = &pdev->hidraws[pdev->num_hidraws++];
 	U_ZERO(hidraw);
 
-	hidraw->interface = interface;
+	hidraw->hid_iface = hid_iface;
 	hidraw->path = strdup(path);
 }
 
@@ -647,6 +731,15 @@ p_udev_try_usb_relation_get_address(struct udev_device *raw_dev,
 	}
 
 	// Not directly sitting on the interface
+	int search_depth = 2;
+	while (search_depth-- > 0 && usb_interface != parent_dev) {
+		parent_dev = udev_device_get_parent(parent_dev);
+		if (parent_dev == NULL) {
+			return -1;
+		}
+	}
+
+	// Not sitting on the interface after walking up?
 	if (usb_interface != parent_dev) {
 		return -1;
 	}

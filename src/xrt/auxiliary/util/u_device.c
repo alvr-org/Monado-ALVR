@@ -1,17 +1,23 @@
-// Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2019-2025, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  Misc helpers for device drivers.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
+ * @author Simon Zeni <simon.zeni@collabora.com>
  * @ingroup aux_util
  */
 
-#include "util/u_logging.h"
 #include "util/u_device.h"
+#include "util/u_debug.h"
+#include "util/u_device_id.h"
+#include "util/u_device_ni.h"
+#include "util/u_logging.h"
 #include "util/u_misc.h"
+#include "util/u_visibility_mask.h"
 
 #include "math/m_mathinclude.h"
 #include "math/m_api.h"
@@ -21,6 +27,17 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <limits.h>
+
+
+/*
+ *
+ * Env variable options.
+ *
+ */
+
+DEBUG_GET_ONCE_OPTION(head_serial, "XRT_DEVICE_HEAD_SERIAL", NULL)
+DEBUG_GET_ONCE_OPTION(left_serial, "XRT_DEVICE_LEFT_SERIAL", NULL)
+DEBUG_GET_ONCE_OPTION(right_serial, "XRT_DEVICE_RIGHT_SERIAL", NULL)
 
 
 /*
@@ -203,24 +220,25 @@ u_device_setup_one_eye(struct xrt_device *xdev, const struct u_device_simple_inf
 bool
 u_device_setup_split_side_by_side(struct xrt_device *xdev, const struct u_device_simple_info *info)
 {
+	const uint32_t view_count = xdev->hmd->view_count;
+
 	// 1 or 2 views supported.
-	assert(xdev->hmd->view_count > 0);
-	assert(xdev->hmd->view_count <= 2);
-	assert(xdev->hmd->view_count <= XRT_MAX_VIEWS);
+	if (view_count == 0 || view_count > XRT_MAX_VIEWS) {
+		U_LOG_E("view count '%u' not supported", view_count);
+		return false;
+	}
 
-	uint32_t view_count = xdev->hmd->view_count;
+	const uint32_t w_pixels = info->display.w_pixels / view_count;
+	const uint32_t h_pixels = info->display.h_pixels;
+	const float w_meters = info->display.w_meters / view_count;
+	const float h_meters = info->display.h_meters;
 
-	uint32_t w_pixels = info->display.w_pixels / view_count;
-	uint32_t h_pixels = info->display.h_pixels;
-	float w_meters = info->display.w_meters / view_count;
-	float h_meters = info->display.h_meters;
-
-	float lens_center_x_meters[2] = {
+	const float lens_center_x_meters[2] = {
 	    w_meters - info->lens_horizontal_separation_meters / 2.0f,
 	    info->lens_horizontal_separation_meters / 2.0f,
 	};
 
-	float lens_center_y_meters[2] = {
+	const float lens_center_y_meters[2] = {
 	    info->lens_vertical_position_meters,
 	    info->lens_vertical_position_meters,
 	};
@@ -248,14 +266,12 @@ u_device_setup_split_side_by_side(struct xrt_device *xdev, const struct u_device
 		xdev->hmd->views[i].rot = u_device_rotation_ident;
 	}
 
-	{
-		/* right eye */
-		if (!math_compute_fovs(w_meters, lens_center_x_meters[view_count - 1], info->fov[view_count - 1],
-		                       h_meters, lens_center_y_meters[view_count - 1], 0,
-		                       &xdev->hmd->distortion.fov[view_count - 1])) {
-			return false;
-		}
+	/* right eye */
+	if (!math_compute_fovs(w_meters, lens_center_x_meters[view_count - 1], info->fov[view_count - 1], h_meters,
+	                       lens_center_y_meters[view_count - 1], 0, &xdev->hmd->distortion.fov[view_count - 1])) {
+		return false;
 	}
+
 	if (view_count == 2) {
 		/* left eye - mirroring right eye */
 		xdev->hmd->distortion.fov[0].angle_up = xdev->hmd->distortion.fov[1].angle_up;
@@ -295,6 +311,8 @@ u_device_allocate(enum u_device_alloc_flags flags, size_t size, size_t input_cou
 	// Do the allocation
 	char *ptr = U_TYPED_ARRAY_CALLOC(char, total_size);
 	struct xrt_device *xdev = (struct xrt_device *)ptr;
+
+	u_device_id_assign(xdev);
 
 	if (input_count > 0) {
 		xdev->input_count = input_count;
@@ -357,16 +375,51 @@ try_move_assignment(struct xrt_device **xdevs, int *hand, int *other_hand)
 	}
 }
 
+static bool
+input_name_is_face_tracker(enum xrt_input_name name)
+{
+	switch (name) {
+	case XRT_INPUT_FB_FACE_TRACKING2_VISUAL:
+	case XRT_INPUT_FB_FACE_TRACKING2_AUDIO:
+	case XRT_INPUT_ANDROID_FACE_TRACKING:
+	case XRT_INPUT_HTC_EYE_FACE_TRACKING:
+	case XRT_INPUT_HTC_LIP_FACE_TRACKING: return true;
+	default: return false;
+	}
+}
+
 void
-u_device_assign_xdev_roles(struct xrt_device **xdevs, size_t xdev_count, int *head, int *left, int *right)
+u_device_assign_xdev_roles(
+    struct xrt_device **xdevs, size_t xdev_count, int *head, int *eyes, int *face, int *left, int *right, int *gamepad)
 {
 	*head = XRT_DEVICE_ROLE_UNASSIGNED;
+	*eyes = XRT_DEVICE_ROLE_UNASSIGNED;
+	*face = XRT_DEVICE_ROLE_UNASSIGNED;
 	*left = XRT_DEVICE_ROLE_UNASSIGNED;
 	*right = XRT_DEVICE_ROLE_UNASSIGNED;
+	*gamepad = XRT_DEVICE_ROLE_UNASSIGNED;
 	assert(xdev_count < INT_MAX);
 
+	const char *head_serial = debug_get_option_head_serial();
+	const char *left_serial = debug_get_option_left_serial();
+	const char *right_serial = debug_get_option_right_serial();
+
 	for (size_t i = 0; i < xdev_count; i++) {
-		if (xdevs[i] == NULL) {
+		struct xrt_device *xdev = xdevs[i];
+		if (xdev == NULL) {
+			continue;
+		}
+
+		if (head_serial != NULL && (strncmp(xdev->serial, head_serial, XRT_DEVICE_NAME_LEN) == 0)) {
+			*head = (int)i;
+			continue;
+		}
+		if (left_serial != NULL && (strncmp(xdev->serial, left_serial, XRT_DEVICE_NAME_LEN) == 0)) {
+			*left = (int)i;
+			continue;
+		}
+		if (right_serial != NULL && (strncmp(xdev->serial, right_serial, XRT_DEVICE_NAME_LEN) == 0)) {
+			*right = (int)i;
 			continue;
 		}
 
@@ -374,6 +427,16 @@ u_device_assign_xdev_roles(struct xrt_device **xdevs, size_t xdev_count, int *he
 		case XRT_DEVICE_TYPE_HMD:
 			if (*head == XRT_DEVICE_ROLE_UNASSIGNED) {
 				*head = (int)i;
+			}
+			break;
+		case XRT_DEVICE_TYPE_EYE_TRACKER:
+			if (*eyes == XRT_DEVICE_ROLE_UNASSIGNED) {
+				*eyes = (int)i;
+			}
+			break;
+		case XRT_DEVICE_TYPE_FACE_TRACKER:
+			if (*face == XRT_DEVICE_ROLE_UNASSIGNED) {
+				*face = (int)i;
 			}
 			break;
 		case XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER:
@@ -386,6 +449,11 @@ u_device_assign_xdev_roles(struct xrt_device **xdevs, size_t xdev_count, int *he
 			try_move_assignment(xdevs, right, left);
 			if (*right == XRT_DEVICE_ROLE_UNASSIGNED) {
 				*right = (int)i;
+			}
+			break;
+		case XRT_DEVICE_TYPE_GAMEPAD:
+			if (*gamepad == XRT_DEVICE_ROLE_UNASSIGNED) {
+				*gamepad = (int)i;
 			}
 			break;
 		case XRT_DEVICE_TYPE_ANY_HAND_CONTROLLER:
@@ -414,6 +482,25 @@ u_device_assign_xdev_roles(struct xrt_device **xdevs, size_t xdev_count, int *he
 				*right = (int)i;
 			}
 			break;
+		}
+	}
+
+	// fill unassigned hand/face with other devices that contain the correct inputs for eye/face tracking
+	for (size_t i = 0; i < xdev_count; i++) {
+		struct xrt_device *xdev = xdevs[i];
+
+		if (xdev == NULL) {
+			continue;
+		}
+
+		for (size_t j = 0; j < xdev->input_count; j++) {
+			enum xrt_input_name input_name = xdev->inputs[j].name;
+			if (*eyes == XRT_DEVICE_ROLE_UNASSIGNED && input_name == XRT_INPUT_GENERIC_EYE_GAZE_POSE) {
+				*eyes = (int)i;
+			}
+			if (*face == XRT_DEVICE_ROLE_UNASSIGNED && input_name_is_face_tracker(input_name)) {
+				*face = (int)i;
+			}
 		}
 	}
 }
@@ -449,16 +536,21 @@ u_device_get_view_pose(const struct xrt_vec3 *eye_relation, uint32_t view_index,
  *
  */
 
-void
+xrt_result_t
 u_device_get_view_poses(struct xrt_device *xdev,
                         const struct xrt_vec3 *default_eye_relation,
                         int64_t at_timestamp_ns,
+                        enum xrt_view_type view_type,
                         uint32_t view_count,
                         struct xrt_space_relation *out_head_relation,
                         struct xrt_fov *out_fovs,
                         struct xrt_pose *out_poses)
 {
-	xrt_device_get_tracked_pose(xdev, XRT_INPUT_GENERIC_HEAD_POSE, at_timestamp_ns, out_head_relation);
+	xrt_result_t xret =
+	    xrt_device_get_tracked_pose(xdev, XRT_INPUT_GENERIC_HEAD_POSE, at_timestamp_ns, out_head_relation);
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
 
 	for (uint32_t i = 0; i < view_count && i < ARRAY_SIZE(xdev->hmd->views); i++) {
 		out_fovs[i] = xdev->hmd->distortion.fov[i];
@@ -467,8 +559,20 @@ u_device_get_view_poses(struct xrt_device *xdev,
 	for (uint32_t i = 0; i < view_count; i++) {
 		u_device_get_view_pose(default_eye_relation, i, &out_poses[i]);
 	}
+
+	return XRT_SUCCESS;
 }
 
+xrt_result_t
+u_device_get_visibility_mask(struct xrt_device *xdev,
+                             enum xrt_visibility_mask_type type,
+                             uint32_t view_index,
+                             struct xrt_visibility_mask **out_mask)
+{
+	const struct xrt_fov fov = xdev->hmd->distortion.fov[view_index];
+	u_visibility_mask_get_default(type, &fov, out_mask);
+	return XRT_SUCCESS;
+}
 
 /*
  *
@@ -486,68 +590,72 @@ u_device_noop_update_inputs(struct xrt_device *xdev)
 
 /*
  *
- * Not implemented function helpers.
+ * Helper function to fill in defaults.
  *
  */
 
-#define E(FN) U_LOG_E("Function " #FN " is not implemented for '%s'", xdev->str)
-
 void
-u_device_ni_get_hand_tracking(struct xrt_device *xdev,
-                              enum xrt_input_name name,
-                              uint64_t desired_timestamp_ns,
-                              struct xrt_hand_joint_set *out_value,
-                              uint64_t *out_timestamp_ns)
+u_device_populate_function_pointers(struct xrt_device *xdev,
+                                    u_device_get_tracked_pose_function_t get_tracked_pose_fn,
+                                    u_device_destroy_function_t destroy_fn)
 {
-	E(get_hand_tracking);
-}
+	if (xdev->id.val == 0) {
+		u_device_id_assign(xdev);
+	}
 
-void
-u_device_ni_set_output(struct xrt_device *xdev, enum xrt_output_name name, const union xrt_output_value *value)
-{
-	E(get_hand_tracking);
-}
+	if (get_tracked_pose_fn == NULL) {
+		U_LOG_E("Got get_tracked_pose_fn == NULL!");
+		assert(get_tracked_pose_fn != NULL);
+	}
 
-void
-u_device_ni_get_view_poses(struct xrt_device *xdev,
-                           const struct xrt_vec3 *default_eye_relation,
-                           int64_t at_timestamp_ns,
-                           uint32_t view_count,
-                           struct xrt_space_relation *out_head_relation,
-                           struct xrt_fov *out_fovs,
-                           struct xrt_pose *out_poses)
-{
-	E(get_hand_tracking);
-}
+	if (destroy_fn == NULL) {
+		U_LOG_E("Got destroy_fn == NULL!");
+		assert(destroy_fn != NULL);
+	}
 
-bool
-u_device_ni_compute_distortion(
-    struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out_result)
-{
-	E(compute_distortion);
-	return false;
-}
+	/*
+	 * This must be implemented by the xrt_device, but not necessarily by
+	 * the driver so use noop version.
+	 */
+	xdev->update_inputs = u_device_noop_update_inputs;
 
-xrt_result_t
-u_device_ni_get_visibility_mask(struct xrt_device *xdev,
-                                enum xrt_visibility_mask_type type,
-                                uint32_t view_index,
-                                struct xrt_visibility_mask **out_mask)
-{
-	E(get_visibility_mask);
-	return XRT_ERROR_NOT_IMPLEMENTED;
-}
+	// This must be implemented by the driver.
+	xdev->get_tracked_pose = get_tracked_pose_fn;
 
-bool
-u_device_ni_is_form_factor_available(struct xrt_device *xdev, enum xrt_form_factor form_factor)
-{
-	E(is_form_factor_available);
-	return false;
-}
+	/*
+	 * These are not required to be implemented by the xrt_device, so use
+	 * not implemented versions, and let the driver override if needed.
+	 */
+	xdev->get_hand_tracking = u_device_ni_get_hand_tracking;
+	xdev->get_face_tracking = u_device_ni_get_face_tracking;
+	xdev->get_face_calibration_state_android = u_device_ni_get_face_calibration_state_android;
+	xdev->get_body_skeleton = u_device_ni_get_body_skeleton;
+	xdev->get_body_joints = u_device_ni_get_body_joints;
+	xdev->reset_body_tracking_calibration_meta = u_device_ni_reset_body_tracking_calibration_meta;
+	xdev->set_body_tracking_calibration_override_meta = u_device_ni_set_body_tracking_calibration_override_meta;
+	xdev->set_output = u_device_ni_set_output;
+	xdev->get_output_limits = u_device_ni_get_output_limits;
+	xdev->begin_plane_detection_ext = u_device_ni_begin_plane_detection_ext;
+	xdev->destroy_plane_detection_ext = u_device_ni_destroy_plane_detection_ext;
+	xdev->get_plane_detection_state_ext = u_device_ni_get_plane_detection_state_ext;
+	xdev->get_plane_detections_ext = u_device_ni_get_plane_detections_ext;
+	xdev->get_view_poses = u_device_ni_get_view_poses;
+	xdev->compute_distortion = u_device_ni_compute_distortion;
+	xdev->ref_space_usage = u_device_ni_ref_space_usage;
+	xdev->is_form_factor_available = u_device_ni_is_form_factor_available;
+	xdev->get_battery_status = u_device_ni_get_battery_status;
+	xdev->get_brightness = u_device_ni_get_brightness;
+	xdev->set_brightness = u_device_ni_set_brightness;
+	xdev->get_compositor_info = u_device_ni_get_compositor_info;
+	xdev->begin_feature = u_device_ni_begin_feature;
+	xdev->end_feature = u_device_ni_end_feature;
+	xdev->notify_chirality = u_device_ni_notify_chirality;
 
-xrt_result_t
-u_device_ni_get_battery_status(struct xrt_device *xdev, bool *out_present, bool *out_charging, float *out_charge)
-{
-	E(get_battery_status);
-	return XRT_ERROR_NOT_IMPLEMENTED;
+	/*
+	 * Same as above, but have default implementation that must available.
+	 */
+	xdev->get_visibility_mask = u_device_get_visibility_mask;
+
+	// This must be implemented by the driver.
+	xdev->destroy = destroy_fn;
 }

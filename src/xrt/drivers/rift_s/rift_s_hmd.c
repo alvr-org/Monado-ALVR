@@ -40,8 +40,6 @@
 
 #include "rift_s_hmd.h"
 
-#define DEG_TO_RAD(D) ((D)*M_PI / 180.)
-
 
 static xrt_result_t
 rift_s_get_tracked_pose(struct xrt_device *xdev,
@@ -88,7 +86,7 @@ rift_s_hmd_handle_report(struct rift_s_hmd *hmd, timepoint_ns local_ts, rift_s_h
 		/* Avoid wrap-around on 32-bit device times */
 		dt = report->timestamp - hmd->last_imu_timestamp32;
 	} else {
-		hmd->last_imu_timestamp_ns = (timepoint_ns)(report->timestamp) * OS_NS_PER_USEC;
+		hmd->last_imu_timestamp_ns = (timepoint_ns)(report->timestamp) * U_TIME_1US_IN_NS;
 		hmd->last_imu_timestamp32 = report->timestamp;
 	}
 
@@ -97,7 +95,7 @@ rift_s_hmd_handle_report(struct rift_s_hmd *hmd, timepoint_ns local_ts, rift_s_h
 	 * is USB packet arrival time, which is after the last IMU sample was captured,
 	 * so calculate the correct imu timestamp accordingly */
 	uint64_t packet_duration_us = (n_samples - 1) * TICK_LEN_US + dt;
-	uint64_t end_imu_timestamp_ns = hmd->last_imu_timestamp_ns + (OS_NS_PER_USEC * packet_duration_us);
+	uint64_t end_imu_timestamp_ns = hmd->last_imu_timestamp_ns + (U_TIME_1US_IN_NS * packet_duration_us);
 
 	rift_s_tracker_clock_update(hmd->tracker, end_imu_timestamp_ns, local_ts);
 
@@ -145,17 +143,18 @@ rift_s_hmd_handle_report(struct rift_s_hmd *hmd, timepoint_ns local_ts, rift_s_h
 		// Send the sample to the pose tracker
 		rift_s_tracker_imu_update(hmd->tracker, hmd->last_imu_timestamp_ns, &accel, &gyro);
 
-		hmd->last_imu_timestamp_ns += (uint64_t)dt * OS_NS_PER_USEC;
+		hmd->last_imu_timestamp_ns += (uint64_t)dt * U_TIME_1US_IN_NS;
 		hmd->last_imu_timestamp32 += dt;
 		dt = TICK_LEN_US;
 	}
 }
 
-static bool
+static xrt_result_t
 rift_s_compute_distortion(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
 {
 	struct rift_s_hmd *hmd = (struct rift_s_hmd *)(xdev);
-	return u_compute_distortion_panotools(&hmd->distortion_vals[view], u, v, result);
+	u_compute_distortion_panotools(&hmd->distortion_vals[view], u, v, result);
+	return XRT_SUCCESS;
 }
 
 #if 0

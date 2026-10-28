@@ -1,4 +1,5 @@
-// Copyright 2022-2023, Collabora, Ltd.
+// Copyright 2022-2026, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -9,16 +10,15 @@
 
 #include "xrt/xrt_config_drivers.h"
 #include "xrt/xrt_prober.h"
+#include "xrt/xrt_system.h"
 
 #include "util/u_misc.h"
 #include "util/u_debug.h"
 #include "util/u_logging.h"
-#include "util/u_builders.h"
 #include "util/u_config_json.h"
 #include "util/u_pretty_print.h"
-#include "util/u_space_overseer.h"
-#include "util/u_system_helpers.h"
 
+#include "target_builder_helpers.h"
 #include "target_builder_interface.h"
 
 #include "wmr/wmr_common.h"
@@ -68,6 +68,7 @@ print_hmd(u_pp_delegate_t dg,
 	case WMR_HEADSET_SAMSUNG_800ZAA: u_pp(dg, "Samsung 800ZAA"); break;
 	case WMR_HEADSET_LENOVO_EXPLORER: u_pp(dg, "Lenovo Explorer"); break;
 	case WMR_HEADSET_MEDION_ERAZER_X1000: u_pp(dg, "Medion Erazer X1000"); break;
+	case WMR_HEADSET_FUJITSU_FMVHDS1: u_pp(dg, "Fujitsu FMVHDS1"); break;
 	default: u_pp(dg, "Unknown (VID: %04x, PID: 0x%04x)", c->vendor_id, c->product_id); break;
 	}
 }
@@ -116,9 +117,7 @@ wmr_estimate_system(struct xrt_builder *xb,
 
 	// Lock the device list
 	xret = xrt_prober_lock_list(xp, &xpdevs, &xpdev_count);
-	if (xret != XRT_SUCCESS) {
-		return xret;
-	}
+	U_LOG_CHK_AND_RET(log_level, xret, "xrt_prober_lock_list");
 
 
 	/*
@@ -146,7 +145,7 @@ wmr_estimate_system(struct xrt_builder *xb,
 	 */
 
 	xret = xrt_prober_unlock_list(xp, &xpdevs);
-	assert(xret == XRT_SUCCESS);
+	U_LOG_CHK_AND_RET(log_level, xret, "xrt_prober_unlock_list");
 
 
 	/*
@@ -182,14 +181,13 @@ wmr_open_system_impl(struct xrt_builder *xb,
                      struct xrt_tracking_origin *origin,
                      struct xrt_system_devices *xsysd,
                      struct xrt_frame_context *xfctx,
-                     struct u_builder_roles_helper *ubrh)
+                     struct t_builder_options *tbo)
 {
 	enum u_logging_level log_level = debug_get_log_option_wmr_log();
 	struct wmr_bt_controllers_search_results ctrls = {0};
 	struct wmr_headset_search_results whsr = {0};
 	struct xrt_prober_device **xpdevs = NULL;
 	size_t xpdev_count = 0;
-	xrt_result_t xret_unlock = XRT_SUCCESS;
 	xrt_result_t xret = XRT_SUCCESS;
 
 	/*
@@ -220,8 +218,11 @@ wmr_open_system_impl(struct xrt_builder *xb,
 		U_LOG_IFL_E(log_level, "Could not find headset devices! (holo %p, companion %p)",
 		            (void *)whsr.xpdev_holo, (void *)whsr.xpdev_companion);
 
-		xret = XRT_ERROR_DEVICE_CREATION_FAILED;
-		goto error;
+		if (xrt_prober_unlock_list(xp, &xpdevs) != XRT_SUCCESS) {
+			U_LOG_IFL_E(log_level, "xrt_prober_unlock_list failed");
+		}
+
+		return XRT_ERROR_DEVICE_CREATION_FAILED;
 	}
 
 
@@ -269,22 +270,22 @@ wmr_open_system_impl(struct xrt_builder *xb,
 	 * Tidy
 	 */
 
-	xret_unlock = xrt_prober_unlock_list(xp, &xpdevs);
-	assert(xret_unlock == XRT_SUCCESS);
-	(void)xret_unlock;
+	if (xrt_prober_unlock_list(xp, &xpdevs) != XRT_SUCCESS) {
+		U_LOG_IFL_E(log_level, "xrt_prober_unlock_list failed");
+	}
 
-	xsysd->xdevs[xsysd->xdev_count++] = head;
+	xsysd->static_xdevs[xsysd->static_xdev_count++] = head;
 	if (left != NULL) {
-		xsysd->xdevs[xsysd->xdev_count++] = left;
+		xsysd->static_xdevs[xsysd->static_xdev_count++] = left;
 	}
 	if (right != NULL) {
-		xsysd->xdevs[xsysd->xdev_count++] = right;
+		xsysd->static_xdevs[xsysd->static_xdev_count++] = right;
 	}
 	if (ht_left != NULL) {
-		xsysd->xdevs[xsysd->xdev_count++] = ht_left;
+		xsysd->static_xdevs[xsysd->static_xdev_count++] = ht_left;
 	}
 	if (ht_right != NULL) {
-		xsysd->xdevs[xsysd->xdev_count++] = ht_right;
+		xsysd->static_xdevs[xsysd->static_xdev_count++] = ht_right;
 	}
 
 	// Use hand tracking if no controllers.
@@ -297,11 +298,11 @@ wmr_open_system_impl(struct xrt_builder *xb,
 
 
 	// Assign to role(s).
-	ubrh->head = head;
-	ubrh->left = left;
-	ubrh->right = right;
-	ubrh->hand_tracking.left = ht_left;
-	ubrh->hand_tracking.right = ht_right;
+	tbo->head = head;
+	tbo->left = left;
+	tbo->right = right;
+	tbo->hand_tracking.unobstructed.left = ht_left;
+	tbo->hand_tracking.unobstructed.right = ht_right;
 
 	return XRT_SUCCESS;
 
@@ -310,8 +311,9 @@ error:
 	xrt_device_destroy(&left);
 	xrt_device_destroy(&right);
 
-	xret_unlock = xrt_prober_unlock_list(xp, &xpdevs);
-	assert(xret_unlock == XRT_SUCCESS);
+	if (xrt_prober_unlock_list(xp, &xpdevs) != XRT_SUCCESS) {
+		U_LOG_IFL_E(log_level, "xrt_prober_unlock_list failed");
+	}
 
 	return xret;
 }
@@ -332,18 +334,18 @@ wmr_destroy(struct xrt_builder *xb)
 struct xrt_builder *
 t_builder_wmr_create(void)
 {
-	struct u_builder *ub = U_TYPED_CALLOC(struct u_builder);
+	struct t_builder *ub = U_TYPED_CALLOC(struct t_builder);
 
 	// xrt_builder fields.
 	ub->base.estimate_system = wmr_estimate_system;
-	ub->base.open_system = u_builder_open_system_static_roles;
+	ub->base.open_system = t_builder_open_system_static_roles;
 	ub->base.destroy = wmr_destroy;
 	ub->base.identifier = "wmr";
 	ub->base.name = "Windows Mixed Reality";
 	ub->base.driver_identifiers = driver_list;
 	ub->base.driver_identifier_count = ARRAY_SIZE(driver_list);
 
-	// u_builder fields.
+	// t_builder fields.
 	ub->open_system_static_roles = wmr_open_system_impl;
 
 	return &ub->base;

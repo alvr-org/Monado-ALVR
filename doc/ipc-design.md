@@ -228,3 +228,12 @@ for details.
 [SCM_RIGHTS]: https://man7.org/linux/man-pages/man3/cmsg.3.html
 [win32handles]: https://lackingrhoticity.blogspot.com/2015/05/passing-fds-handles-between-processes.html
 [WinSCM_RIGHTS]: https://devblogs.microsoft.com/commandline/af_unix-comes-to-windows/#unsupportedunavailable
+
+## 32 bits client support on 64 bits server
+
+On 64 bits system, the server process will typically be a 64 bits executable,
+clients may be 32 or 64 bits. As IPC either through socket or shared memory will
+share C struct directly, we must pay attention to memory layout.
+
+All data types must be fixed size and alignments must be based on the 64 bits
+targets. On Linux this mostly means `alignas(8)` must be used for (u)int64_t.

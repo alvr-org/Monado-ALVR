@@ -60,6 +60,8 @@ vec3_f32_destroy(struct m_ff_vec3_f32 *ff)
 	ff->latest = 0;
 }
 
+#define COMPUTE_INDEX(ff, num) (((ff)->latest + (num)) % (ff)->num)
+
 
 /*
  *
@@ -108,13 +110,26 @@ m_ff_vec3_f32_push(struct m_ff_vec3_f32 *ff, const struct xrt_vec3 *sample, uint
 }
 
 bool
+m_ff_vec3_f32_get_timestamp(struct m_ff_vec3_f32 *ff, size_t num, uint64_t *out_timestamp_ns)
+{
+	if (num >= ff->num) {
+		return false;
+	}
+
+	size_t pos = COMPUTE_INDEX(ff, num);
+	*out_timestamp_ns = ff->timestamps_ns[pos];
+
+	return true;
+}
+
+bool
 m_ff_vec3_f32_get(struct m_ff_vec3_f32 *ff, size_t num, struct xrt_vec3 *out_sample, uint64_t *out_timestamp_ns)
 {
 	if (num >= ff->num) {
 		return false;
 	}
 
-	size_t pos = (ff->latest + num) % ff->num;
+	size_t pos = COMPUTE_INDEX(ff, num);
 	*out_sample = ff->samples[pos];
 	*out_timestamp_ns = ff->timestamps_ns[pos];
 
@@ -274,7 +289,7 @@ m_ff_f64_get(struct m_ff_f64 *ff, size_t num, double *out_sample, uint64_t *out_
 		return false;
 	}
 
-	size_t pos = (ff->latest + num) % ff->num;
+	size_t pos = COMPUTE_INDEX(ff, num);
 	*out_sample = ff->samples[pos];
 	*out_timestamp_ns = ff->timestamps_ns[pos];
 

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  A @ref xrt_imu_sink that forces the samples to be monotonically increasing.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 

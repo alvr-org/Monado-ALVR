@@ -6,7 +6,7 @@ SPDX-License-Identifier: BSL-1.0
 -->
 
 The control flow in Monado for allocating the images/buffers used for a given
-@ref XrSwapchain can vary widely based on a number of factors.
+`XrSwapchain` can vary widely based on a number of factors.
 
 ## Simple in-process
 
@@ -23,7 +23,7 @@ implementations, uses Vulkan to allocate exportable images.
 
 ## Simple out-of-process
 
-The usual model on desktop is that the images for a given @ref XrSwapchain are
+The usual model on desktop is that the images for a given `XrSwapchain` are
 allocated in the service, as shown below.
 
 @mermaid{swapchain_allocation_ipc}

@@ -12,10 +12,7 @@ add_library(t_ht_mercury_model STATIC hg_model.cpp)
 
 target_link_libraries(t_ht_mercury_model PRIVATE aux_math aux_tracking aux_os aux_util)
 
-target_include_directories(
-	t_ht_mercury_model SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
-	)
-
+target_include_directories(t_ht_mercury_model SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(
 	t_ht_mercury_model
 	PRIVATE
@@ -23,6 +20,7 @@ target_link_libraries(
 		aux_tracking
 		aux_os
 		aux_util
+		aux_onnx
 		xrt-optimized-math
 		${OpenCV_LIBRARIES}
 		ONNXRuntime::ONNXRuntime
@@ -33,9 +31,7 @@ add_library(t_ht_mercury_distorter STATIC hg_image_distorter.cpp)
 
 target_link_libraries(t_ht_mercury_distorter PRIVATE aux_math aux_tracking aux_os aux_util)
 
-target_include_directories(
-	t_ht_mercury_distorter SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
-	)
+target_include_directories(t_ht_mercury_distorter SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS})
 
 target_link_libraries(
 	t_ht_mercury_distorter
@@ -44,13 +40,21 @@ target_link_libraries(
 		aux_tracking
 		aux_os
 		aux_util
+		aux_onnx
 		xrt-optimized-math
 		${OpenCV_LIBRARIES}
 		ONNXRuntime::ONNXRuntime # no, wrong
 	)
 
 # t_ht_mercury
-add_library(t_ht_mercury STATIC hg_sync.cpp hg_sync.hpp hg_interface.h kine_common.hpp)
+add_library(
+	t_ht_mercury STATIC
+	hg_sync.cpp
+	hg_sync.hpp
+	hg_hand_size_opt.cpp
+	hg_interface.h
+	kine_common.hpp
+	)
 
 target_link_libraries(
 	t_ht_mercury
@@ -60,6 +64,7 @@ target_link_libraries(
 		aux_tracking
 		aux_os
 		aux_util
+		aux_onnx
 		ONNXRuntime::ONNXRuntime
 		t_ht_mercury_kine_lm
 		t_ht_mercury_model
@@ -71,9 +76,7 @@ target_link_libraries(
 target_include_directories(t_ht_mercury INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(XRT_HAVE_OPENCV)
-	target_include_directories(
-		t_ht_mercury SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR}
-		)
+	target_include_directories(t_ht_mercury SYSTEM PRIVATE ${OpenCV_INCLUDE_DIRS})
 	target_link_libraries(t_ht_mercury PUBLIC ${OpenCV_LIBRARIES})
 endif()
 

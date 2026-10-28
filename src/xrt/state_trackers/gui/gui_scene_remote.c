@@ -413,7 +413,12 @@ scene_render(struct gui_scene *scene, struct gui_program *p)
 	igBegin("Remote control", NULL, 0);
 
 #ifdef XRT_BUILD_DRIVER_REMOTE
-	if (gr->rc.fd < 0) {
+#ifdef XRT_OS_WINDOWS
+	bool socket_invalid = gr->rc.fd == INVALID_SOCKET;
+#else
+	bool socket_invalid = gr->rc.fd < 0;
+#endif
+	if (socket_invalid) {
 		on_not_connected(gr, p);
 	} else {
 		on_connected(gr, p);
@@ -451,7 +456,11 @@ gui_scene_remote(struct gui_program *p, const char *address)
 
 	gr->base.render = scene_render;
 	gr->base.destroy = scene_destroy;
+#ifdef XRT_OS_WINDOWS
+	gr->rc.fd = INVALID_SOCKET;
+#else
 	gr->rc.fd = -1;
+#endif
 
 	// GUI input defaults.
 	if (address != NULL) {
@@ -460,6 +469,9 @@ gui_scene_remote(struct gui_program *p, const char *address)
 		snprintf(gr->address, sizeof(gr->address), "localhost");
 	}
 	gr->port = 4242;
+
+	gr->reset.header = R_HEADER_VALUE;
+	gr->data.header = R_HEADER_VALUE;
 
 	gui_scene_push_front(p, &gr->base);
 }

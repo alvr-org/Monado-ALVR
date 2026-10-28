@@ -149,6 +149,11 @@ android_instance_base_init(struct android_instance_base *aib,
 void
 android_instance_base_cleanup(struct android_instance_base *aib, struct xrt_instance *xinst)
 {
+	if (xinst->android_instance == NULL) {
+		// Already cleaned up or never initialized.
+		return;
+	}
+
 	assert(&(aib->base) == xinst->android_instance);
 	android_lifecycle_callbacks_destroy(&aib->lifecycle_callbacks);
 

@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Mercury ML models!
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_ht
  */
 
@@ -19,16 +19,7 @@
 
 namespace xrt::tracking::hand::mercury {
 
-#define ORT(expr)                                                                                                      \
-	do {                                                                                                           \
-		OrtStatus *status = wrap->api->expr;                                                                   \
-		if (status != nullptr) {                                                                               \
-			const char *msg = wrap->api->GetErrorMessage(status);                                          \
-			HG_ERROR(hgt, "[%s:%d]: %s\n", __FILE__, __LINE__, msg);                                       \
-			wrap->api->ReleaseStatus(status);                                                              \
-			assert(false);                                                                                 \
-		}                                                                                                      \
-	} while (0)
+using namespace xrt::auxiliary::onnx;
 
 static cv::Matx23f
 blackbar(const cv::Mat &in, enum t_camera_orientation rot, cv::Mat &out, xrt_size out_size)
@@ -162,7 +153,6 @@ hand_depth_center_of_mass(struct HandTracking *hgt, float data[22], float *out_d
 			HG_DEBUG(hgt, "%f", data[i]);
 		}
 
-		avg_location_px_coord = fmin(21.0, fmax(0.0, avg_location_px_coord));
 		return false;
 	}
 
@@ -264,28 +254,16 @@ normalizeGrayscaleImage(cv::Mat &data_in, cv::Mat &data_out)
 }
 
 void
-setup_ort_api(HandTracking *hgt, onnx_wrap *wrap, std::filesystem::path path)
+setup_ort_api(HandTracking *hgt, onnx_state *state, const std::filesystem::path &path)
 {
-	wrap->api = OrtGetApiBase()->GetApi(ORT_API_VERSION);
-	OrtSessionOptions *opts = nullptr;
-
-	ORT(CreateSessionOptions(&opts));
-
-	ORT(SetSessionGraphOptimizationLevel(opts, ORT_ENABLE_ALL));
-	ORT(SetIntraOpNumThreads(opts, 1));
-
-	ORT(CreateEnv(ORT_LOGGING_LEVEL_FATAL, "monado_ht", &wrap->env));
-
-	ORT(CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeDefault, &wrap->meminfo));
-
-	ORT(CreateSession(wrap->env, path.c_str(), opts, &wrap->session));
-	assert(wrap->session != NULL);
-	wrap->api->ReleaseSessionOptions(opts);
+	state->wrap = std::make_unique<OnnxWrapper>(hgt->log_level, path.string(), "monado_ht");
 }
 
 void
-setup_model_image_input(HandTracking *hgt, onnx_wrap *wrap, const char *name, int64_t w, int64_t h)
+setup_model_image_input(HandTracking *hgt, onnx_state *state, const char *name, int64_t w, int64_t h)
 {
+	OnnxWrapper &wrap = *state->wrap;
+
 	model_input_wrap inputimg = {};
 	inputimg.name = name;
 	inputimg.dimensions[0] = 1;
@@ -296,24 +274,24 @@ setup_model_image_input(HandTracking *hgt, onnx_wrap *wrap, const char *name, in
 	size_t data_size = w * h * sizeof(float);
 	inputimg.data = (float *)malloc(data_size);
 
-	ORT(CreateTensorWithDataAsOrtValue(wrap->meminfo,                       //
-	                                   inputimg.data,                       //
-	                                   data_size,                           //
-	                                   inputimg.dimensions,                 //
-	                                   inputimg.num_dimensions,             //
-	                                   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
-	                                   &inputimg.tensor));
+	ORT_SAFE(wrap, CreateTensorWithDataAsOrtValue(wrap.meminfo,                        //
+	                                              inputimg.data,                       //
+	                                              data_size,                           //
+	                                              inputimg.dimensions,                 //
+	                                              inputimg.num_dimensions,             //
+	                                              ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
+	                                              &inputimg.tensor));
 
 	assert(inputimg.tensor);
 	int is_tensor;
-	ORT(IsTensor(inputimg.tensor, &is_tensor));
+	ORT_SAFE(wrap, IsTensor(inputimg.tensor, &is_tensor));
 	assert(is_tensor);
 
-	wrap->wraps.push_back(inputimg);
+	state->wraps.push_back(inputimg);
 }
 
 void
-init_hand_detection(HandTracking *hgt, onnx_wrap *wrap)
+init_hand_detection(HandTracking *hgt, onnx_state *wrap)
 {
 	std::filesystem::path path = hgt->models_folder;
 
@@ -327,15 +305,13 @@ init_hand_detection(HandTracking *hgt, onnx_wrap *wrap)
 }
 
 
-void
-run_hand_detection(void *ptr)
+static void
+run_hand_detection_unsafe(hand_detection_run_info *info)
 {
-	XRT_TRACE_MARKER();
-
-	hand_detection_run_info *info = (hand_detection_run_info *)ptr;
 	ht_view *view = info->view;
 	HandTracking *hgt = view->hgt;
-	onnx_wrap *wrap = &view->detection;
+	onnx_state *state = &view->detection;
+	OnnxWrapper &wrap = *state->wrap;
 
 	cv::Mat &orig_data = view->run_model_on_this;
 
@@ -348,24 +324,26 @@ run_hand_detection(void *ptr)
 	cv::Matx23f go_back = blackbar(orig_data, view->camera_info.camera_orientation, binned_uint8, desired_bin_size);
 
 	cv::Mat binned_float_wrapper_mat(cv::Size(kDetectionInputSize, kDetectionInputSize),
-	                                 CV_32FC1,            //
-	                                 wrap->wraps[0].data, //
+	                                 CV_32FC1,             //
+	                                 state->wraps[0].data, //
 	                                 kDetectionInputSize * sizeof(float));
 
 	normalizeGrayscaleImage(binned_uint8, binned_float_wrapper_mat);
 
-	const OrtValue *inputs[] = {wrap->wraps[0].tensor};
-	const char *input_names[] = {wrap->wraps[0].name};
+	const OrtValue *inputs[] = {state->wraps[0].tensor};
+	const char *input_names[] = {state->wraps[0].name};
 
 	OrtValue *output_tensors[] = {nullptr, nullptr, nullptr, nullptr};
 	const char *output_names[] = {"hand_exists", "cx", "cy", "size"};
 
+	// Actually run the inference step
 	{
 		XRT_TRACE_IDENT(model);
 		static_assert(ARRAY_SIZE(input_names) == ARRAY_SIZE(inputs));
 		static_assert(ARRAY_SIZE(output_names) == ARRAY_SIZE(output_tensors));
-		ORT(Run(wrap->session, nullptr, input_names, inputs, ARRAY_SIZE(input_names), output_names,
-		        ARRAY_SIZE(output_names), output_tensors));
+		// TODO ignoring errors, leaks OrtStatus on error
+		ORT_SAFE(wrap, Run(wrap.session, nullptr, input_names, inputs, ARRAY_SIZE(input_names), output_names,
+		                   ARRAY_SIZE(output_names), output_tensors));
 	}
 
 	float *hand_exists = nullptr;
@@ -373,13 +351,12 @@ run_hand_detection(void *ptr)
 	float *cy = nullptr;
 	float *sizee = nullptr;
 
-	ORT(GetTensorMutableData(output_tensors[0], (void **)&hand_exists));
-	ORT(GetTensorMutableData(output_tensors[1], (void **)&cx));
-	ORT(GetTensorMutableData(output_tensors[2], (void **)&cy));
-	ORT(GetTensorMutableData(output_tensors[3], (void **)&sizee));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[0], (void **)&hand_exists));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[1], (void **)&cx));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[2], (void **)&cy));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[3], (void **)&sizee));
 
-
-
+	// transform the output from the way the model returns it, to something useful to us.
 	for (int hand_idx = 0; hand_idx < 2; hand_idx++) {
 		hand_region_of_interest &output = info->outputs[hand_idx];
 
@@ -388,10 +365,12 @@ run_hand_detection(void *ptr)
 		if (output.found) {
 			output.hand_detection_confidence = hand_exists[hand_idx];
 
+			// remap from [-1, 1] to [0, 1] for location
 			xrt_vec2 _pt = {};
 			_pt.x = math_map_ranges(cx[hand_idx], -1, 1, 0, kDetectionInputSize);
 			_pt.y = math_map_ranges(cy[hand_idx], -1, 1, 0, kDetectionInputSize);
 
+			// remap size up to "pixels in input image"
 			float size = sizee[hand_idx];
 
 
@@ -403,6 +382,7 @@ run_hand_detection(void *ptr)
 
 			cv::Mat &debug_frame = view->debug_out_to_this;
 
+			// further transform location from [0, 1] to pixel in input image
 			_pt = transformVecBy2x3(_pt, go_back);
 
 			output.center_px = _pt;
@@ -424,40 +404,43 @@ run_hand_detection(void *ptr)
 		}
 	}
 
+	// Free output values allocated during Run()
 	for (size_t i = 0; i < ARRAY_SIZE(output_tensors); i++) {
-		wrap->api->ReleaseValue(output_tensors[i]);
+		wrap.api->ReleaseValue(output_tensors[i]);
 	}
 }
 
 void
-init_keypoint_estimation(HandTracking *hgt, onnx_wrap *wrap)
+run_hand_detection(void *ptr)
+{
+	XRT_TRACE_MARKER();
+
+	hand_detection_run_info *info = (hand_detection_run_info *)ptr;
+	try {
+		run_hand_detection_unsafe(info);
+	} catch (const std::exception &e) {
+		HG_ERROR(info->view->hgt, "Exception while running hand detection: %s", e.what());
+
+		// Report nothing found if hand detection hits an exception
+		for (auto &output : info->outputs) {
+			output.found = false;
+		}
+	}
+}
+
+void
+init_keypoint_estimation(HandTracking *hgt, onnx_state *state)
 {
 
 	std::filesystem::path path = hgt->models_folder;
 
 	path /= "grayscale_keypoint_jan18.onnx";
 
-	wrap->wraps.clear();
+	state->wraps.clear();
 
+	state->wrap = std::make_unique<OnnxWrapper>(hgt->log_level, path.string(), "monado_ht");
 
-	wrap->api = OrtGetApiBase()->GetApi(ORT_API_VERSION);
-
-
-	OrtSessionOptions *opts = nullptr;
-	ORT(CreateSessionOptions(&opts));
-
-	// TODO review options, config for threads?
-	ORT(SetSessionGraphOptimizationLevel(opts, ORT_ENABLE_ALL));
-	ORT(SetIntraOpNumThreads(opts, 1));
-
-
-	ORT(CreateEnv(ORT_LOGGING_LEVEL_FATAL, "monado_ht", &wrap->env));
-
-	ORT(CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeDefault, &wrap->meminfo));
-
-	// HG_DEBUG(this->device, "Loading hand detection model from file '%s'", path.c_str());
-	ORT(CreateSession(wrap->env, path.c_str(), opts, &wrap->session));
-	assert(wrap->session != NULL);
+	OnnxWrapper &wrap = *state->wrap;
 
 	// size_t input_size = wrap->input_shape[0] * wrap->input_shape[1] * wrap->input_shape[2] *
 	// wrap->input_shape[3];
@@ -476,20 +459,20 @@ init_keypoint_estimation(HandTracking *hgt, onnx_wrap *wrap)
 
 
 
-		ORT(CreateTensorWithDataAsOrtValue(wrap->meminfo,                       //
-		                                   inputimg.data,                       //
-		                                   128 * 128 * sizeof(float),           //
-		                                   inputimg.dimensions,                 //
-		                                   inputimg.num_dimensions,             //
-		                                   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
-		                                   &inputimg.tensor));
+		ORT_SAFE(wrap, CreateTensorWithDataAsOrtValue(wrap.meminfo,                        //
+		                                              inputimg.data,                       //
+		                                              128 * 128 * sizeof(float),           //
+		                                              inputimg.dimensions,                 //
+		                                              inputimg.num_dimensions,             //
+		                                              ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
+		                                              &inputimg.tensor));
 
 		assert(inputimg.tensor);
 		int is_tensor;
-		ORT(IsTensor(inputimg.tensor, &is_tensor));
+		ORT_SAFE(wrap, IsTensor(inputimg.tensor, &is_tensor));
 		assert(is_tensor);
 
-		wrap->wraps.push_back(inputimg);
+		state->wraps.push_back(inputimg);
 	}
 
 	{
@@ -503,19 +486,19 @@ init_keypoint_estimation(HandTracking *hgt, onnx_wrap *wrap)
 
 
 
-		ORT(CreateTensorWithDataAsOrtValue(wrap->meminfo,                       //
-		                                   inputimg.data,                       //
-		                                   1 * 42 * sizeof(float),              //
-		                                   inputimg.dimensions,                 //
-		                                   inputimg.num_dimensions,             //
-		                                   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
-		                                   &inputimg.tensor));
+		ORT_SAFE(wrap, CreateTensorWithDataAsOrtValue(wrap.meminfo,                        //
+		                                              inputimg.data,                       //
+		                                              1 * 42 * sizeof(float),              //
+		                                              inputimg.dimensions,                 //
+		                                              inputimg.num_dimensions,             //
+		                                              ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
+		                                              &inputimg.tensor));
 
 		assert(inputimg.tensor);
 		int is_tensor;
-		ORT(IsTensor(inputimg.tensor, &is_tensor));
+		ORT_SAFE(wrap, IsTensor(inputimg.tensor, &is_tensor));
 		assert(is_tensor);
-		wrap->wraps.push_back(inputimg);
+		state->wraps.push_back(inputimg);
 	}
 
 	{
@@ -528,23 +511,20 @@ init_keypoint_estimation(HandTracking *hgt, onnx_wrap *wrap)
 
 
 
-		ORT(CreateTensorWithDataAsOrtValue(wrap->meminfo,                       //
-		                                   inputimg.data,                       //
-		                                   1 * sizeof(float),                   //
-		                                   inputimg.dimensions,                 //
-		                                   inputimg.num_dimensions,             //
-		                                   ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
-		                                   &inputimg.tensor));
+		ORT_SAFE(wrap, CreateTensorWithDataAsOrtValue(wrap.meminfo,                        //
+		                                              inputimg.data,                       //
+		                                              1 * sizeof(float),                   //
+		                                              inputimg.dimensions,                 //
+		                                              inputimg.num_dimensions,             //
+		                                              ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, //
+		                                              &inputimg.tensor));
 
 		assert(inputimg.tensor);
 		int is_tensor;
-		ORT(IsTensor(inputimg.tensor, &is_tensor));
+		ORT_SAFE(wrap, IsTensor(inputimg.tensor, &is_tensor));
 		assert(is_tensor);
-		wrap->wraps.push_back(inputimg);
+		state->wraps.push_back(inputimg);
 	}
-
-
-	wrap->api->ReleaseSessionOptions(opts);
 }
 
 enum xrt_hand_joint joints_ml_to_xr[21]{
@@ -633,13 +613,12 @@ set_predicted_zero(float *data)
 	}
 }
 
-void
-run_keypoint_estimation(void *ptr)
+static void
+run_keypoint_estimation_unsafe(keypoint_estimation_run_info &info)
 {
-	XRT_TRACE_MARKER();
-	keypoint_estimation_run_info info = *(keypoint_estimation_run_info *)ptr;
+	onnx_state *state = &info.view->keypoint[info.hand_idx];
+	OnnxWrapper &wrap = *state->wrap;
 
-	onnx_wrap *wrap = &info.view->keypoint[info.hand_idx];
 	struct HandTracking *hgt = info.view->hgt;
 
 	int view_idx = info.view->view;
@@ -709,8 +688,8 @@ run_keypoint_estimation(void *ptr)
 		make_projection_instructions_angular(center, hand_idx, angle,
 		                                     hgt->tuneable_values.after_detection_fac.val, twist, instr);
 
-		wrap->wraps[2].data[0] = 0.0f;
-		set_predicted_zero(wrap->wraps[1].data);
+		state->wraps[2].data[0] = 0.0f;
+		set_predicted_zero(state->wraps[1].data);
 	} else {
 		Eigen::Array<float, 3, 21> keypoints_in_camera;
 
@@ -736,17 +715,17 @@ run_keypoint_estimation(void *ptr)
 
 		if (hgt->tuneable_values.enable_pose_predicted_input) {
 			for (int ml_joint_idx = 0; ml_joint_idx < 21; ml_joint_idx++) {
-				float *data = wrap->wraps[1].data;
+				float *data = state->wraps[1].data;
 				data[(ml_joint_idx * 2) + 0] = bleh[ml_joint_idx].pos_2d.x;
 				data[(ml_joint_idx * 2) + 1] = bleh[ml_joint_idx].pos_2d.y;
 				// data[(ml_joint_idx * 2) + 2] = bleh[ml_joint_idx].depth_relative_to_midpxm;
 			}
 
 
-			wrap->wraps[2].data[0] = 1.0f;
+			state->wraps[2].data[0] = 1.0f;
 		} else {
-			wrap->wraps[2].data[0] = 0.0f;
-			set_predicted_zero(wrap->wraps[1].data);
+			state->wraps[2].data[0] = 0.0f;
+			set_predicted_zero(state->wraps[1].data);
 		}
 	}
 
@@ -764,7 +743,7 @@ run_keypoint_estimation(void *ptr)
 		XRT_TRACE_IDENT(convert_format);
 
 		// here!
-		cv::Mat data_128x128_float(cv::Size(128, 128), CV_32FC1, wrap->wraps[0].data, 128 * sizeof(float));
+		cv::Mat data_128x128_float(cv::Size(128, 128), CV_32FC1, state->wraps[0].data, 128 * sizeof(float));
 
 		is_hand = is_hand && normalizeGrayscaleImage(data_128x128_uint8, data_128x128_float);
 	}
@@ -773,18 +752,18 @@ run_keypoint_estimation(void *ptr)
 	// Ending here
 
 
-	const OrtValue *inputs[] = {wrap->wraps[0].tensor, wrap->wraps[1].tensor, wrap->wraps[2].tensor};
-	const char *input_names[] = {wrap->wraps[0].name, wrap->wraps[1].name, wrap->wraps[2].name};
+	const OrtValue *inputs[] = {state->wraps[0].tensor, state->wraps[1].tensor, state->wraps[2].tensor};
+	const char *input_names[] = {state->wraps[0].name, state->wraps[1].name, state->wraps[2].name};
+	static_assert(ARRAY_SIZE(input_names) == ARRAY_SIZE(inputs));
 
 	OrtValue *output_tensors[] = {nullptr, nullptr, nullptr, nullptr};
 	const char *output_names[] = {"heatmap_xy", "heatmap_depth", "scalar_extras", "curls"};
+	static_assert(ARRAY_SIZE(output_names) == ARRAY_SIZE(output_tensors));
 
 	{
 		XRT_TRACE_IDENT(model);
-		assert(ARRAY_SIZE(input_names) == ARRAY_SIZE(inputs));
-		assert(ARRAY_SIZE(output_names) == ARRAY_SIZE(output_tensors));
-		ORT(Run(wrap->session, nullptr, input_names, inputs, ARRAY_SIZE(input_names), output_names,
-		        ARRAY_SIZE(output_names), output_tensors));
+		ORT_SAFE(wrap, Run(wrap.session, nullptr, input_names, inputs, ARRAY_SIZE(input_names), output_names,
+		                   ARRAY_SIZE(output_names), output_tensors));
 	}
 
 	// To here
@@ -795,7 +774,7 @@ run_keypoint_estimation(void *ptr)
 	float *out_data = nullptr;
 
 
-	ORT(GetTensorMutableData(output_tensors[0], (void **)&out_data));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[0], (void **)&out_data));
 
 	// I don't know why this was added
 	// float *confidences = info.view->keypoint_outputs.views[hand_idx].confidences;
@@ -811,7 +790,7 @@ run_keypoint_estimation(void *ptr)
 
 		// This will be optimized out if nan checking is disabled in hg_numerics_checker
 		for (size_t x = 0; x < plane_size; x++) {
-			CHECK_NOT_NAN(data[i]);
+			CHECK_NOT_NAN(data[x]);
 		}
 
 
@@ -840,7 +819,7 @@ run_keypoint_estimation(void *ptr)
 
 
 	float *out_data_depth = nullptr;
-	ORT(GetTensorMutableData(output_tensors[1], (void **)&out_data_depth));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[1], (void **)&out_data_depth));
 
 	for (int joint_idx = 0; joint_idx < 21; joint_idx++) {
 		float *p_ptr = &out_data_depth[(joint_idx * 22)];
@@ -861,17 +840,17 @@ run_keypoint_estimation(void *ptr)
 	}
 
 	float *out_data_extras = nullptr;
-	ORT(GetTensorMutableData(output_tensors[2], (void **)&out_data_extras));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[2], (void **)&out_data_extras));
 
 	float is_hand_explicit = out_data_extras[0];
 
-	is_hand_explicit = (1.0) / (1.0 + powf(2.71828182845904523536, -is_hand_explicit));
+	is_hand_explicit = (1.0) / (1.0 + expf(-is_hand_explicit));
 
 	// When the model is sure, it's _really_ sure.
 	// Index was fine with 0.99.
 	// North Star seemed to need 0.97.
 	if (is_hand_explicit < 0.97) {
-		U_LOG_D("Not hand! %f", is_hand_explicit);
+		HG_DEBUG(hgt, "Not hand! %f", is_hand_explicit);
 		is_hand = false;
 	}
 
@@ -879,7 +858,7 @@ run_keypoint_estimation(void *ptr)
 
 
 	float *out_data_curls = nullptr;
-	ORT(GetTensorMutableData(output_tensors[3], (void **)&out_data_curls));
+	ORT_SAFE(wrap, GetTensorMutableData(output_tensors[3], (void **)&out_data_curls));
 
 	for (int i = 0; i < 5; i++) {
 		float curl = out_data_curls[i];
@@ -892,7 +871,7 @@ run_keypoint_estimation(void *ptr)
 		variance += 0.01;
 
 		this_output.curls[i].value = curl;
-		this_output.curls[i].variance = curl;
+		this_output.curls[i].variance = variance;
 	}
 
 
@@ -967,20 +946,35 @@ run_keypoint_estimation(void *ptr)
 	}
 
 	for (size_t i = 0; i < ARRAY_SIZE(output_tensors); i++) {
-		wrap->api->ReleaseValue(output_tensors[i]);
+		wrap.api->ReleaseValue(output_tensors[i]);
 	}
 }
 
 void
-release_onnx_wrap(onnx_wrap *wrap)
+run_keypoint_estimation(void *ptr)
 {
-	wrap->api->ReleaseMemoryInfo(wrap->meminfo);
-	wrap->api->ReleaseSession(wrap->session);
-	for (model_input_wrap &a : wrap->wraps) {
-		wrap->api->ReleaseValue(a.tensor);
+	XRT_TRACE_MARKER();
+	keypoint_estimation_run_info info = *(keypoint_estimation_run_info *)ptr;
+
+	try {
+		run_keypoint_estimation_unsafe(info);
+	} catch (const std::exception &e) {
+		HG_ERROR(info.view->hgt, "Exception while running keypoint estimation: %s", e.what());
+
+		// Report not active if keypoint estimation hits an exception
+		info.view->hgt->keypoint_outputs[info.hand_idx].views[info.view->view].active = false;
+	}
+}
+
+void
+release_onnx_state(onnx_state *state)
+{
+	OnnxWrapper &wrap = *state->wrap;
+
+	for (model_input_wrap &a : state->wraps) {
+		wrap.api->ReleaseValue(a.tensor);
 		free(a.data);
 	}
-	wrap->api->ReleaseEnv(wrap->env);
 }
 
 } // namespace xrt::tracking::hand::mercury

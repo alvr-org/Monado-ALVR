@@ -1,4 +1,5 @@
 // Copyright 2021, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,6 +9,8 @@
 
 #include <iostream>
 #include <xrt/xrt_device.hpp>
+
+#include "util/u_device_id.h"
 
 #include "catch_amalgamated.hpp"
 
@@ -20,6 +23,7 @@ struct silly_device
 
 	silly_device(bool &destroyed_) : destroyed(&destroyed_)
 	{
+		u_device_id_assign(&base);
 		base.destroy = [](xrt_device *xdev) { delete reinterpret_cast<silly_device *>(xdev); };
 	}
 	~silly_device()

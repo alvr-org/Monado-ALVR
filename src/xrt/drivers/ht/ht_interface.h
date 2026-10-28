@@ -4,7 +4,7 @@
  * @file
  * @brief  Interface to camera based hand tracking driver code.
  * @author Christoph Haag <christoph.haag@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_ht
  */
 

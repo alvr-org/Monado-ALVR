@@ -1,4 +1,5 @@
 // Copyright 2018-2022, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -10,6 +11,9 @@
 #pragma once
 
 #include "util/u_pretty_print.h"
+
+// we need no platform-specific defines from OpenXR.
+#include "openxr/openxr.h"
 
 
 #ifdef __cplusplus

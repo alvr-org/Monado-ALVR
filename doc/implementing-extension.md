@@ -9,11 +9,8 @@ Khronos often adds new functionality to the OpenXR specification as extensions.
 
 The general steps to implement an OpenXR extension in Monado are as follows.
 
-* Edit scripts/generate_oxr_ext_support.py. Usually you only need to add an
-  entry to the `EXTENSIONS` list at the top.
-* Run the script `python scripts/generate_oxr_ext_support.py`.
-* Format the regenerated file with
-  `clang-format -i src/xrt/state_trackers/oxr/oxr_extension_support.h`.
+* Edit `src/xrt/state_trackers/oxr/oxr_extension_support/oxr_extension_support.py`.
+  Usually you only need to add an entry to the `EXTENSIONS` list at the top.
 * Add entry points for each new function in
   `src/xrt/state_trackers/oxr/oxr_api_negotiate.c`.
 * Add Monado internal prototypes for the new functions in

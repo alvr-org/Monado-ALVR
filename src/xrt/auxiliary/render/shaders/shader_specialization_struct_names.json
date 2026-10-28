@@ -1,0 +1,18 @@
+{
+	"distortion": {
+		"struct": "render_distortion_spec",
+		"short_name": "render_distortion"
+	},
+	"layer": {
+		"struct": "render_layer_spec",
+		"short_name": "render_layer"
+	},
+	"blit": {
+		"struct": "render_blit_spec",
+		"short_name": "render_blit"
+	},
+	"blit_ms": {
+		"struct": "render_blit_ms_spec",
+		"short_name": "render_blit_ms"
+	}
+}

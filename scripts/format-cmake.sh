@@ -22,7 +22,11 @@ fi
         doc \
         src/xrt \
         src/external/CMakeLists.txt \
+        src/external/imgui/CMakeLists.txt \
+        src/external/openxr_includes/CMakeLists.txt \
+        src/external/vulkan/CMakeLists.txt \
         src/CMakeLists.txt \
+	examples \
         tests \
         \( -name "CMakeLists.txt" -o -name "*.cmake" \) \
         ! -name ".cmake" \

@@ -82,7 +82,7 @@ android_prober_autoprobe(struct xrt_auto_prober *xap,
  */
 
 struct xrt_auto_prober *
-android_create_auto_prober()
+android_create_auto_prober(void)
 {
 	struct android_prober *p = U_TYPED_CALLOC(struct android_prober);
 	p->base.name = "Android";

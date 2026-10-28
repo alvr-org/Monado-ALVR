@@ -18,11 +18,9 @@
 #include "util/u_var.h"
 #include "util/u_misc.h"
 #include "util/u_debug.h"
-#include "util/u_format.h"
-#include "util/u_frame.h"
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
-
+#include "util/u_frameserver.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -320,14 +318,14 @@ vf_fs_mainloop(void *ptr)
  *
  */
 
-static bool
+static xrt_result_t
 vf_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count)
 {
 	struct vf_fs *vid = vf_fs(xfs);
 
 	struct xrt_fs_mode *modes = U_TYPED_ARRAY_CALLOC(struct xrt_fs_mode, 1);
 	if (modes == NULL) {
-		return false;
+		return XRT_ERROR_ALLOCATION;
 	}
 
 	modes[0].width = vid->width;
@@ -338,18 +336,18 @@ vf_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32
 	*out_modes = modes;
 	*out_count = 1;
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 vf_fs_configure_capture(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp)
 {
 	// struct vf_fs *vid = vf_fs(xfs);
 	//! @todo
-	return false;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 vf_fs_stream_start(struct xrt_fs *xfs,
                    struct xrt_frame_sink *xs,
                    enum xrt_fs_capture_type capture_type,
@@ -367,26 +365,26 @@ vf_fs_stream_start(struct xrt_fs *xfs,
 	VF_TRACE(vid, "info: Started!");
 
 	// we're off to the races!
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 vf_fs_stream_stop(struct xrt_fs *xfs)
 {
 	struct vf_fs *vid = vf_fs(xfs);
 
 	if (!vid->is_running) {
-		return true;
+		return XRT_SUCCESS;
 	}
 
 	vid->is_running = false;
 	gst_element_set_state(vid->source, GST_STATE_PAUSED);
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
-vf_fs_is_running(struct xrt_fs *xfs)
+static xrt_result_t
+vf_fs_is_running(struct xrt_fs *xfs, bool *out_is_running)
 {
 	struct vf_fs *vid = vf_fs(xfs);
 
@@ -394,7 +392,9 @@ vf_fs_is_running(struct xrt_fs *xfs)
 	GstState pending;
 	gst_element_get_state(vid->source, &current, &pending, 0);
 
-	return current == GST_STATE_PLAYING;
+	(*out_is_running) = current == GST_STATE_PLAYING;
+
+	return XRT_SUCCESS;
 }
 
 static void
@@ -495,6 +495,7 @@ alloc_and_init_common(struct xrt_frame_context *xfctx,      //
 	VF_DEBUG(vid, "Got first sample");
 	gst_element_set_state(vid->source, GST_STATE_PAUSED);
 
+	u_frameserver_populate_function_pointers(&vid->base);
 	vid->base.enumerate_modes = vf_fs_enumerate_modes;
 	vid->base.configure_capture = vf_fs_configure_capture;
 	vid->base.stream_start = vf_fs_stream_start;

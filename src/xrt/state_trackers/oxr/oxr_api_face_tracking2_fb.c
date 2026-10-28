@@ -7,11 +7,6 @@
  * @ingroup oxr_api
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
-
 #include "openxr/openxr.h"
 #include "util/u_trace_marker.h"
 
@@ -20,7 +15,13 @@
 
 #include "oxr_api_funcs.h"
 #include "oxr_api_verify.h"
-#include "oxr_handle.h"
+#include "oxr_handle_base.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
 
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrCreateFaceTracker2FB(XrSession session,

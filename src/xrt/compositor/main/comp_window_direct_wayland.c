@@ -100,12 +100,24 @@ direct_wayland_lease_device_destroy(struct direct_wayland_lease_device *dev)
 	free(dev);
 }
 
+static inline struct vk_bundle *
+get_vk(struct comp_window_direct_wayland *cww)
+{
+	return &cww->base.base.c->base.vk;
+}
+
 static void
 comp_window_direct_wayland_destroy(struct comp_target *w)
 {
 	struct comp_window_direct_wayland *w_wayland = (struct comp_window_direct_wayland *)w;
 
 	comp_target_swapchain_cleanup(&w_wayland->base);
+
+	if (w_wayland->vk_display != VK_NULL_HANDLE) {
+		struct vk_bundle *vk = get_vk(w_wayland);
+		vk->vkReleaseDisplayEXT(vk->physical_device, w_wayland->vk_display);
+		w_wayland->vk_display = VK_NULL_HANDLE;
+	}
 
 	struct direct_wayland_lease_device *dev = w_wayland->devices, *next_dev;
 	while (dev) {
@@ -124,12 +136,6 @@ comp_window_direct_wayland_destroy(struct comp_target *w)
 		wl_display_disconnect(w_wayland->display);
 	}
 	free(w_wayland);
-}
-
-static inline struct vk_bundle *
-get_vk(struct comp_window_direct_wayland *cww)
-{
-	return &cww->base.base.c->base.vk;
 }
 
 static void

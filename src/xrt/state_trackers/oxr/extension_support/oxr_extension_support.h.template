@@ -1,0 +1,42 @@
+// Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
+// SPDX-License-Identifier: BSL-1.0
+/*!
+ * @file
+ * @brief  Macros for generating extension-related tables and code and
+ * inspecting Monado's extension support.
+ *
+ * GENERATED CODE - see src/xrt/state_trackers/oxr/extension_support/!
+ *
+ * To add support for a new extension, edit oxr_extension_support.py and
+ * rebuild.
+ *
+ * @author Rylie Pavlik <rylie.pavlik@collabora.com>
+ */
+
+#pragma once
+
+#include "xrt/xrt_config_build.h"
+#include "xrt/xrt_openxr_includes.h"
+
+// Per-extension defines (OXR_HAVE_* and OXR_EXTENSION_SUPPORT_*() macros)
+$ext_defines
+
+/*!
+ * Call this, passing a macro taking two parameters, to
+ * generate tables, code, etc. related to OpenXR extensions.
+ * Upon including invoking OXR_EXTENSION_SUPPORT_GENERATE() with some
+ * MY_HANDLE_EXTENSION(mixed_case, all_caps), MY_HANDLE_EXTENSION will be called
+ * for each extension implemented in Monado and supported in this build:
+ *
+ * - The first parameter is the name of the extension without the leading XR_
+ *   prefix: e.g. `KHR_opengl_enable`
+ * - The second parameter is the same text as the first, but in all uppercase,
+ *   since this transform cannot be done in the C preprocessor, and some
+ *   extension-related entities use this instead of the exact extension name.
+ *
+ * Implementation note: This macro calls another macro for each extension: that
+ * macro is either defined to call your provided macro, or defined to nothing,
+ * depending on if the extension is supported in this build.
+ */
+$generate_macro

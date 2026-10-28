@@ -9,12 +9,12 @@
 
 #pragma once
 
-#cmakedefine XR_USE_GRAPHICS_API_VULKAN
-#cmakedefine XR_USE_GRAPHICS_API_OPENGL
-#cmakedefine XR_USE_GRAPHICS_API_OPENGL_ES
-#cmakedefine XR_USE_PLATFORM_EGL
-#cmakedefine XR_USE_PLATFORM_XLIB
 #cmakedefine XR_USE_GRAPHICS_API_D3D11
 #cmakedefine XR_USE_GRAPHICS_API_D3D12
+#cmakedefine XR_USE_GRAPHICS_API_OPENGL
+#cmakedefine XR_USE_GRAPHICS_API_OPENGL_ES
+#cmakedefine XR_USE_GRAPHICS_API_VULKAN
 #cmakedefine XR_USE_PLATFORM_ANDROID
+#cmakedefine XR_USE_PLATFORM_EGL
 #cmakedefine XR_USE_PLATFORM_WIN32
+#cmakedefine XR_USE_PLATFORM_XLIB

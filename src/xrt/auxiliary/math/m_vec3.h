@@ -6,7 +6,7 @@
  * @brief  C vec3 math library.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Nova King <technobaboo@gmail.com>
- * @author Moses Turner <moses@collabora.com>>
+ * @author Moshi Turner <moshiturner@protonmail.com>>
  *
  * @see xrt_vec3
  * @ingroup aux_math

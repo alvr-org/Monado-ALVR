@@ -17,17 +17,30 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
 }
 
 
 rootProject.name = 'monado'
 
+// Typically required by all Monado-based runtimes on AOSP platforms
 include ':src:xrt:auxiliary'
 project(':src:xrt:auxiliary').projectDir = new File(rootDir, 'src/xrt/auxiliary/android')
 
+// Only used by Google Cardboard support in the installable Monado
+include ':src:xrt:auxiliary:cardboard'
+project(':src:xrt:auxiliary:cardboard').projectDir = new File(rootDir, 'src/xrt/auxiliary/android_cardboard')
+
+// Required for out-of-process builds
 include ':src:xrt:ipc'
 project(':src:xrt:ipc').projectDir = new File(rootDir, 'src/xrt/ipc/android')
 
+// Typically required by all Monado-based runtimes on AOSP platforms
+// Use dependency injection to customize
 include ':src:xrt:targets:android_common'
+
+// End-level (leaf) target - builds on android_common with dependency injection
+// to make an installable APK providing a runtime with a Cardboard-like experience
+// by default.
 include ':src:xrt:targets:openxr_android'

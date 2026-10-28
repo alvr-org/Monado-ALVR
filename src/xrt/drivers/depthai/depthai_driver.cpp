@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  DepthAI frameserver implementation.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @ingroup drv_depthai
  */
@@ -24,6 +24,7 @@
 #include "util/u_format.h"
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
+#include "util/u_frameserver.h"
 
 #ifdef XRT_OS_LINUX
 #include "util/u_linux.h"
@@ -480,7 +481,7 @@ depthai_mainloop(void *ptr)
 	struct depthai_fs *depthai = (struct depthai_fs *)ptr;
 
 	U_TRACE_SET_THREAD_NAME("DepthAI: Image");
-	os_thread_helper_name(&depthai->image_thread, "DepthAI: Image");
+	os_thread_name_self("DepthAI: Image");
 
 	DEPTHAI_DEBUG(depthai, "DepthAI: Image thread called");
 
@@ -620,7 +621,7 @@ depthai_imu_mainloop(void *ptr)
 	struct depthai_fs *depthai = (struct depthai_fs *)ptr;
 
 	U_TRACE_SET_THREAD_NAME("DepthAI: IMU");
-	os_thread_helper_name(&depthai->imu_thread, "DepthAI: IMU");
+	os_thread_name_self("DepthAI: IMU");
 
 #ifdef XRT_OS_LINUX
 	// Try to raise priority of this thread.
@@ -981,7 +982,7 @@ depthai_fs(struct xrt_fs *xfs)
 	return (struct depthai_fs *)xfs;
 }
 
-static bool
+static xrt_result_t
 depthai_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, uint32_t *out_count)
 {
 	struct depthai_fs *depthai = depthai_fs(xfs);
@@ -989,7 +990,7 @@ depthai_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, u
 
 	struct xrt_fs_mode *modes = U_TYPED_ARRAY_CALLOC(struct xrt_fs_mode, 1);
 	if (modes == NULL) {
-		return false;
+		return XRT_ERROR_ALLOCATION;
 	}
 
 	modes[0].width = depthai->width;
@@ -1000,20 +1001,20 @@ depthai_fs_enumerate_modes(struct xrt_fs *xfs, struct xrt_fs_mode **out_modes, u
 	*out_modes = modes;
 	*out_count = 1;
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 depthai_fs_configure_capture(struct xrt_fs *xfs, struct xrt_fs_capture_parameters *cp)
 {
 	struct depthai_fs *depthai = depthai_fs(xfs);
 	DEPTHAI_DEBUG(depthai, "DepthAI: Configure capture called");
 
-	// Noop
-	return false;
+	// Noop, no parameters are supported.
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 depthai_fs_stream_start(struct xrt_fs *xfs,
                         struct xrt_frame_sink *xs,
                         enum xrt_fs_capture_type capture_type,
@@ -1022,7 +1023,11 @@ depthai_fs_stream_start(struct xrt_fs *xfs,
 	struct depthai_fs *depthai = depthai_fs(xfs);
 	DEPTHAI_DEBUG(depthai, "DepthAI: Stream start called");
 
-	assert(descriptor_index == 0);
+	if (descriptor_index != 0) {
+		DEPTHAI_ERROR(depthai, "Tried to start stream with invalid descriptor index %d", descriptor_index);
+		return XRT_ERROR_INVALID_ARGUMENT;
+	}
+
 	(void)capture_type; // Don't care about this one just yet.
 
 	depthai->sink[0] = xs; // 0 == CamA-4L / RGB
@@ -1032,10 +1037,10 @@ depthai_fs_stream_start(struct xrt_fs *xfs,
 
 	os_thread_helper_start(&depthai->image_thread, depthai_mainloop, depthai);
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 depthai_fs_slam_stream_start(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks)
 {
 	struct depthai_fs *depthai = depthai_fs(xfs);
@@ -1045,6 +1050,7 @@ depthai_fs_slam_stream_start(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks)
 	depthai->sink[1] = sinks->cams[0]; // 1 == CamB-2L / Left Gray
 	depthai->sink[2] = sinks->cams[1]; // 2 == CamC-2L / Right Gray
 	depthai->sink[3] = nullptr;        // 3 == CamD-4L
+
 	if (depthai->want_cameras && sinks->cams[0] != NULL && sinks->cams[1] != NULL) {
 		os_thread_helper_start(&depthai->image_thread, depthai_mainloop, depthai);
 	}
@@ -1052,10 +1058,11 @@ depthai_fs_slam_stream_start(struct xrt_fs *xfs, struct xrt_slam_sinks *sinks)
 		os_thread_helper_start(&depthai->imu_thread, depthai_imu_mainloop, depthai);
 		depthai->imu_sink = sinks->imu;
 	}
-	return true;
+
+	return XRT_SUCCESS;
 }
 
-static bool
+static xrt_result_t
 depthai_fs_stream_stop(struct xrt_fs *xfs)
 {
 	struct depthai_fs *depthai = depthai_fs(xfs);
@@ -1065,19 +1072,19 @@ depthai_fs_stream_stop(struct xrt_fs *xfs)
 	os_thread_helper_stop_and_wait(&depthai->image_thread);
 	os_thread_helper_stop_and_wait(&depthai->imu_thread);
 
-	return true;
+	return XRT_SUCCESS;
 }
 
-static bool
-depthai_fs_is_running(struct xrt_fs *xfs)
+static xrt_result_t
+depthai_fs_is_running(struct xrt_fs *xfs, bool *out_is_running)
 {
 	struct depthai_fs *depthai = depthai_fs(xfs);
 
 	os_thread_helper_lock(&depthai->image_thread);
-	bool running = os_thread_helper_is_running_locked(&depthai->image_thread);
+	(*out_is_running) = os_thread_helper_is_running_locked(&depthai->image_thread);
 	os_thread_helper_unlock(&depthai->image_thread);
 
-	return running;
+	return XRT_SUCCESS;
 }
 
 
@@ -1127,6 +1134,7 @@ depthai_create_and_do_minimal_setup(void)
 	}
 
 	struct depthai_fs *depthai = U_TYPED_CALLOC(struct depthai_fs);
+	u_frameserver_populate_function_pointers(&depthai->base);
 	depthai->base.enumerate_modes = depthai_fs_enumerate_modes;
 	depthai->base.configure_capture = depthai_fs_configure_capture;
 	depthai->base.stream_start = depthai_fs_stream_start;

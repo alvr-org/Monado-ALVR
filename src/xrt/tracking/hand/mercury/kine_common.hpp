@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief  Random common stuff for Mercury kinematic optimizers
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 

@@ -396,10 +396,10 @@ array_get_first_elem_of_type(const DBusMessageIter *in_parent, int of_type, DBus
 static int
 array_find_variant_value(const DBusMessageIter *first_elm, const char *key, DBusMessageIter *out_value)
 {
-	const char *str;
 
 	for_each(elm, *first_elm)
 	{
+		const char *str = NULL;
 		dict_get_string_and_varient_child(&elm, &str, out_value);
 
 		if (strcmp(key, str) == 0) {
@@ -522,11 +522,8 @@ dbus_has_name(DBusConnection *conn, const char *name)
 static int
 device_has_uuid(const DBusMessageIter *dict, const char *uuid, const char **out_path_str)
 {
-	DBusMessageIter iface_elm;
-	DBusMessageIter first_elm;
-	const char *iface_str;
-	const char *path_str;
-
+	const char *path_str = NULL;
+	DBusMessageIter first_elm = {0};
 	int ret = dict_get_string_and_array_elm(dict, &path_str, &first_elm);
 	if (ret < 0) {
 		return ret;
@@ -534,13 +531,15 @@ device_has_uuid(const DBusMessageIter *dict, const char *uuid, const char **out_
 
 	for_each(elm, first_elm)
 	{
+		const char *iface_str = NULL;
+		DBusMessageIter iface_elm = {0};
 		dict_get_string_and_array_elm(&elm, &iface_str, &iface_elm);
 
 		if (strcmp(iface_str, "org.bluez.Device1") != 0) {
 			continue;
 		}
 
-		DBusMessageIter value;
+		DBusMessageIter value = {0};
 		int ret = array_find_variant_value(&iface_elm, "UUIDs", &value);
 		if (ret <= 0) {
 			continue;
@@ -567,7 +566,7 @@ device_has_uuid(const DBusMessageIter *dict, const char *uuid, const char **out_
 static int
 gatt_iface_get_flag_notifiable(const DBusMessageIter *iface_elm, bool *out_bool)
 {
-	DBusMessageIter value;
+	DBusMessageIter value = {0};
 	int ret = array_find_variant_value(iface_elm, "Flags", &value);
 	if (ret <= 0) {
 		return ret;
@@ -594,7 +593,7 @@ gatt_iface_get_flag_notifiable(const DBusMessageIter *iface_elm, bool *out_bool)
 static int
 gatt_iface_get_uuid(const DBusMessageIter *iface_elm, const char **out_str)
 {
-	DBusMessageIter value;
+	DBusMessageIter value = {0};
 	int ret = array_find_variant_value(iface_elm, "UUID", &value);
 	if (ret <= 0) {
 		return ret;
@@ -618,11 +617,8 @@ gatt_iface_get_uuid(const DBusMessageIter *iface_elm, const char **out_str)
 static int
 gatt_char_has_uuid(const DBusMessageIter *dict, const char *uuid, const char **out_path_str, bool *out_notifiable)
 {
-	DBusMessageIter first_elm;
-	DBusMessageIter iface_elm;
-	const char *iface_str;
-	const char *path_str;
-	const char *uuid_str;
+	const char *path_str = NULL;
+	DBusMessageIter first_elm = {0};
 
 	int ret = dict_get_string_and_array_elm(dict, &path_str, &first_elm);
 	if (ret < 0) {
@@ -631,11 +627,16 @@ gatt_char_has_uuid(const DBusMessageIter *dict, const char *uuid, const char **o
 
 	for_each(elm, first_elm)
 	{
+		const char *iface_str = NULL;
+		DBusMessageIter iface_elm = {0};
+
 		dict_get_string_and_array_elm(&elm, &iface_str, &iface_elm);
 
 		if (strcmp(iface_str, "org.bluez.GattCharacteristic1") != 0) {
 			continue;
 		}
+
+		const char *uuid_str = NULL;
 
 		if (gatt_iface_get_uuid(&iface_elm, &uuid_str) <= 0) {
 			continue;

@@ -5,7 +5,7 @@
  * @brief  An @ref xrt_frame_sink that does gst things.
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Aaron Boxer <aaron.boxer@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_util
  */
 

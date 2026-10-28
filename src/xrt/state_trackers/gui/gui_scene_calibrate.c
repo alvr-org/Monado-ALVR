@@ -231,8 +231,9 @@ scene_render_select(struct gui_scene *scene, struct gui_program *p)
 #ifdef XRT_HAVE_OPENCV
 	igBegin("Params", NULL, 0);
 
-	igCombo_Str("Type", (int *)&cs->settings->camera_type,
-	            "Regular Mono\0Regular Stereo (Side-by-Side)\0SLAM Stereo\0PS4\0Leap Motion Controller\0\0", -1);
+	igCombo_Str(
+	    "Type", (int *)&cs->settings->camera_type,
+	    "Regular Mono (disabled)\0Regular Stereo (Side-by-Side)\0SLAM Stereo\0PS4\0Leap Motion Controller\0\0", -1);
 
 	switch (cs->settings->camera_type) {
 	case XRT_SETTINGS_CAMERA_TYPE_REGULAR_MONO:
@@ -305,9 +306,21 @@ scene_render_select(struct gui_scene *scene, struct gui_program *p)
 	default: assert(false);
 	}
 
-	static ImVec2 button_dims = {0, 0};
 	igSeparator();
+
+	if (cs->settings->camera_type == XRT_SETTINGS_CAMERA_TYPE_REGULAR_MONO) {
+		igPushStyleVar_Float(ImGuiStyleVar_Alpha, 0.6f);
+		igPushItemFlag(ImGuiItemFlags_Disabled, true);
+	}
+
+	const ImVec2 button_dims = {0, 0};
 	bool pressed = igButton("Done", button_dims);
+
+	if (cs->settings->camera_type == XRT_SETTINGS_CAMERA_TYPE_REGULAR_MONO) {
+		igPopItemFlag();
+		igPopStyleVar(1);
+	}
+
 	igEnd();
 
 	if (!pressed) {
@@ -353,7 +366,7 @@ scene_render_select(struct gui_scene *scene, struct gui_program *p)
 
 	if (cs->settings->camera_type == XRT_SETTINGS_CAMERA_TYPE_SLAM) {
 		struct xrt_frame_sink *tmp = cali;
-		struct xrt_slam_sinks sinks;
+		struct xrt_slam_sinks sinks = {0};
 		sinks.cam_count = 2;
 		u_sink_combiner_create(cs->xfctx, tmp, &sinks.cams[0], &sinks.cams[1]);
 

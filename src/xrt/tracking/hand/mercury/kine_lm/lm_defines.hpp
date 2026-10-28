@@ -3,7 +3,7 @@
 /*!
  * @file
  * @brief Defines for Levenberg-Marquardt kinematic optimizer
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @author Charlton Rodda <charlton.rodda@collabora.com>
  * @ingroup tracking
  */

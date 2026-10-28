@@ -1,0 +1,56 @@
+// Copyright 2020-2025, Collabora, Ltd.
+// SPDX-License-Identifier: BSL-1.0
+/*!
+ * @file
+ * @brief  Generated IPC protocol header.
+ * @author Jakob Bornecrantz <jakob@collabora.com>
+ * @ingroup ipc
+ */
+
+#pragma once
+
+#include "xrt/xrt_compiler.h"
+#include "xrt/xrt_defines.h"
+#include "xrt/xrt_device.h"
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+struct ipc_connection;
+
+typedef enum ipc_command
+{
+	IPC_ERR = 0,
+$ipc_commands
+} ipc_command_t;
+
+struct ipc_command_msg
+{
+	enum ipc_command cmd;
+};
+
+struct ipc_result_reply
+{
+	xrt_result_t result;
+};
+
+static inline const char *
+ipc_cmd_to_str(ipc_command_t id)
+{
+	switch (id) {
+	case IPC_ERR: return "IPC_ERR";
+$ipc_cmd_cases
+	default: return "IPC_UNKNOWN";
+	}
+}
+
+#pragma pack (push, 1)
+$ipc_msg_structs
+#pragma pack (pop)
+
+#ifdef __cplusplus
+}
+#endif

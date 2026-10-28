@@ -203,6 +203,11 @@ TEST(Class_call_staticMethod_byName)
     jni::Object Tests
  */
 
+// Must run before loading JVM
+TEST(Object_noDestructorException)
+{
+    jni::Object o;
+}
 
 TEST(Object_defaultConstructor_isNull)
 {
@@ -302,6 +307,21 @@ TEST(Object_call_byNameWithArgs)
 
     ASSERT(str.call<wchar_t>("charAt", 1) == L'e');
     ASSERT(str2.call<wchar_t>("charAt", 1) == L'e');
+}
+
+TEST(Object_call_returningArray) {
+    jni::Object str = jni::Class("java/lang/String").newInstance("Testing");
+
+    {
+        auto getBytes =
+            jni::Class("java/lang/String").getMethod("getBytes", "()[B");
+        auto bytes = str.call<jni::Array<jni::byte_t>>(getBytes);
+        ASSERT(bytes.getLength() == 7);
+    }
+    {
+        auto bytes = str.call<jni::Array<jni::byte_t>>("getBytes");
+        ASSERT(bytes.getLength() == 7);
+    }
 }
 
 TEST(Object_makeLocalReference)
@@ -559,6 +579,9 @@ TEST(Arg_ObjectPtr)
 
 int main()
 {
+    // Tests that depend on having no JVM
+    RUN_TEST(Object_noDestructorException);
+
     // jni::Vm Tests
     RUN_TEST(Vm_detectsJreInstall);
     RUN_TEST(Vm_notAllowedMultipleVms);
@@ -593,6 +616,7 @@ int main()
         RUN_TEST(Object_call_byName);
         RUN_TEST(Object_call_withArgs);
         RUN_TEST(Object_call_byNameWithArgs);
+        RUN_TEST(Object_call_returningArray);
         RUN_TEST(Object_makeLocalReference);
 
         // jni::Enum Tests

@@ -1,4 +1,5 @@
 // Copyright 2023-2024, Collabora, Ltd.
+// Copyright 2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -17,7 +18,7 @@ extern "C" {
 
 // Extension number 445 (444 prefix)
 #define XR_MNDX_xdev_space 1
-#define XR_MNDX_xdev_space_SPEC_VERSION 1
+#define XR_MNDX_xdev_space_SPEC_VERSION 3
 #define XR_MNDX_XDEV_SPACE_EXTENSION_NAME "XR_MNDX_xdev_space"
 
 
@@ -55,6 +56,15 @@ typedef struct XrXDevPropertiesMNDX {
     XrBool32              canCreateSpace;
 } XrXDevPropertiesMNDX;
 
+XR_STRUCT_ENUM(XR_TYPE_XDEV_HAND_TRACKING_PROPERTIES_MNDX, 1000444007);
+// XrXDevHandTrackingPropertiesMNDX extends XrXDevPropertiesMNDX.
+typedef struct XrXDevHandTrackingPropertiesMNDX {
+    XrStructureType       type;
+    void* XR_MAY_ALIAS    next;
+    XrBool32              canCreateHandTrackerLeft;
+    XrBool32              canCreateHandTrackerRight;
+} XrXDevHandTrackingPropertiesMNDX;
+
 XR_STRUCT_ENUM(XR_TYPE_CREATE_XDEV_SPACE_INFO_MNDX, 1000444005);
 typedef struct XrCreateXDevSpaceInfoMNDX {
     XrStructureType             type;
@@ -64,6 +74,18 @@ typedef struct XrCreateXDevSpaceInfoMNDX {
     XrPosef                     offset;
 } XrCreateXDevSpaceInfoMNDX;
 
+XR_STRUCT_ENUM(XR_TYPE_CREATE_HAND_TRACKER_XDEV_MNDX, 1000444006);
+/*!
+ * XrCreateHandTrackerXDevMNDX extends XrHandTrackerCreateInfoEXT when calling
+ * xrCreateHandTrackerEXT. When chained, it requests that the hand tracker uses
+ * the specified xdev rather than the runtime's default hand-tracking device.
+ */
+typedef struct XrCreateHandTrackerXDevMNDX {
+    XrStructureType             type;
+    const void* XR_MAY_ALIAS    next;
+    XrXDevListMNDX              xdevList;
+    XrXDevIdMNDX                id;
+} XrCreateHandTrackerXDevMNDX;
 
 typedef XrResult (XRAPI_PTR *PFN_xrCreateXDevListMNDX)(XrSession session, const XrCreateXDevListInfoMNDX *info, XrXDevListMNDX *xdevList);
 typedef XrResult (XRAPI_PTR *PFN_xrGetXDevListGenerationNumberMNDX)(XrXDevListMNDX xdevList, uint64_t *outGeneration);

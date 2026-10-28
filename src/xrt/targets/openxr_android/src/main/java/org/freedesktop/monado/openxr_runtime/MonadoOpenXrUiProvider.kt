@@ -38,7 +38,7 @@ class MonadoOpenXrUiProvider @Inject constructor(@ApplicationContext val context
             Intent.makeMainActivity(
                 ComponentName.createRelative(context, AboutActivity::class.qualifiedName!!)
             ),
-            flags
+            flags,
         )
     }
 }

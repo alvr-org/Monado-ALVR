@@ -7,7 +7,7 @@
  * Copied out of Ceres's `rotation.h` with some modifications.
  * @author Kier Mierle <kier@google.com>
  * @author Sameer Agarwal <sameeragarwal@google.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup tracking
  */
 

@@ -6,7 +6,7 @@
  * @author Pete Black <pblack@collabora.com>
  * @author Jakob Bornecrantz <jakob@collabora.com>
  * @author Rylie Pavlik <rylie.pavlik@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup aux_tracking
  */
 
@@ -61,6 +61,11 @@ struct xrt_tracked_slam;
  */
 enum t_camera_distortion_model
 {
+	/*!
+	 * A perfect pinhole camera with no distortion.
+	 */
+	T_DISTORTION_PINHOLE,
+
 	/*!
 	 * OpenCV's radial-tangential distortion model. Exactly equivalent to the distortion model from OpenCV's calib3d
 	 * module with just the first five parameters. This may be reinterpreted as RT8 with the last three parameters
@@ -129,6 +134,19 @@ enum t_camera_distortion_model
 	 * \f[(k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6, cod_x, cod_y, rpmax)\f]
 	 */
 	T_DISTORTION_WMR,
+
+	/*!
+	 * The Oculus Rift CV1 constellation sensor's lens model (LensModel "type 6" in Oculus'
+	 * runtime). Despite superficially resembling Kannala-Brandt, it is a distinct model: the
+	 * normalized image radius @p r is used *directly* as the field angle and passed through
+	 * @p tan, rather than KB's \f$\theta = \operatorname{atan}(r)\f$. It also carries tangential
+	 * decentering and a 4th-order affine gain on that decentering, which KB4 lacks.
+	 *
+	 * Parameters:
+	 *
+	 * \f[(k_1, k_2, k_3, k_4, p_1, p_2, g_3, g_4)\f]
+	 */
+	T_DISTORTION_RIFT_CV1,
 };
 
 
@@ -141,11 +159,13 @@ static inline const char *
 t_stringify_camera_distortion_model(const enum t_camera_distortion_model model)
 {
 	switch (model) {
+	case T_DISTORTION_PINHOLE: return "T_DISTORTION_PINHOLE"; break;
 	case T_DISTORTION_OPENCV_RADTAN_5: return "T_DISTORTION_OPENCV_RADTAN_5"; break;
 	case T_DISTORTION_OPENCV_RADTAN_8: return "T_DISTORTION_OPENCV_RADTAN_8"; break;
 	case T_DISTORTION_OPENCV_RADTAN_14: return "T_DISTORTION_OPENCV_RADTAN_14"; break;
 	case T_DISTORTION_WMR: return "T_DISTORTION_WMR"; break;
 	case T_DISTORTION_FISHEYE_KB4: return "T_DISTORTION_FISHEYE_KB4"; break;
+	case T_DISTORTION_RIFT_CV1: return "T_DISTORTION_RIFT_CV1"; break;
 	default: U_LOG_E("Invalid distortion_model! %d", model); return "INVALID";
 	}
 }
@@ -161,12 +181,29 @@ static inline size_t
 t_num_params_from_distortion_model(const enum t_camera_distortion_model model)
 {
 	switch (model) {
+	case T_DISTORTION_PINHOLE: return 0; break;
 	case T_DISTORTION_OPENCV_RADTAN_5: return 5; break;
 	case T_DISTORTION_OPENCV_RADTAN_8: return 8; break;
 	case T_DISTORTION_OPENCV_RADTAN_14: return 14; break;
 	case T_DISTORTION_WMR: return 11; break;
 	case T_DISTORTION_FISHEYE_KB4: return 4; break;
+	case T_DISTORTION_RIFT_CV1: return 8; break; // k1..k4, p1, p2, g3, g4
 	default: U_LOG_E("Invalid distortion_model! %d", model); return 0;
+	}
+}
+
+static inline bool
+t_camera_distortion_model_is_fisheye(enum t_camera_distortion_model model)
+{
+	switch (model) {
+	case T_DISTORTION_FISHEYE_KB4:
+	case T_DISTORTION_RIFT_CV1: return true;
+	case T_DISTORTION_PINHOLE:
+	case T_DISTORTION_OPENCV_RADTAN_5:
+	case T_DISTORTION_OPENCV_RADTAN_8:
+	case T_DISTORTION_OPENCV_RADTAN_14:
+	case T_DISTORTION_WMR: return false;
+	default: U_LOG_E("Invalid distortion_model! %d", model); return false;
 	}
 }
 
@@ -216,6 +253,15 @@ struct t_camera_calibration_wmr_params
 };
 
 /*!
+ * Parameters for @ref T_DISTORTION_RIFT_CV1
+ * @ingroup aux_tracking
+ */
+struct t_camera_calibration_cv1_params
+{
+	double k1, k2, k3, k4, p1, p2, g3, g4;
+};
+
+/*!
  * @brief Essential calibration data for a single camera, or single lens/sensor
  * of a stereo camera.
  */
@@ -233,13 +279,31 @@ struct t_camera_calibration
 		struct t_camera_calibration_rt14_params rt14;
 		struct t_camera_calibration_kb4_params kb4;
 		struct t_camera_calibration_wmr_params wmr;
+		struct t_camera_calibration_cv1_params cv1;
 		double distortion_parameters_as_array[XRT_DISTORTION_MAX_DIM];
 	};
-
 
 	//! Distortion model that this camera uses.
 	enum t_camera_distortion_model distortion_model;
 };
+
+/*!
+ * Fills in a basic intrinsics matrix using the standard set of parameters.
+ */
+static inline void
+t_camera_calibration_fill_intrinsics(
+    struct t_camera_calibration *calibration, double fx, double fy, double cx, double cy)
+{
+	double intrinsics[3][3] = {
+	    // clang-format off
+	    {fx,  0.0, cx},
+	    {0.0, fy,  cy},
+	    {0.0, 0.0, 1.0},
+	    // clang-format on
+	};
+
+	memcpy(calibration->intrinsics, intrinsics, sizeof(intrinsics));
+}
 
 /*!
  * Stereo camera calibration data to be given to trackers.
@@ -474,15 +538,18 @@ t_convert_in_place_h8s8v8_to_r8g8b8(uint32_t width, uint32_t height, size_t stri
 #define T_HSV_SIZE 32
 #define T_HSV_STEP (256 / T_HSV_SIZE)
 
+// @todo Remove this when clang-format is updated in CI
+// clang-format off
 #define T_HSV_DEFAULT_PARAMS()                                                                                         \
 	{                                                                                                              \
-		{                                                                                                      \
-		    {165, 30, 160, 100},                                                                               \
-		    {135, 30, 160, 100},                                                                               \
-		    {95, 30, 160, 100},                                                                                \
-		},                                                                                                     \
-		    {128, 80},                                                                                         \
+	    {                                                                                                          \
+	        {165, 30, 160, 100},                                                                                   \
+	        {135, 30, 160, 100},                                                                                   \
+	        {95, 30, 160, 100},                                                                                    \
+	    },                                                                                                         \
+	    {128, 80},                                                                                                 \
 	}
+// clang-format on
 
 struct t_hsv_filter_color
 {
@@ -595,12 +662,12 @@ t_psvr_create(struct xrt_frame_context *xfctx,
  */
 enum t_slam_prediction_type
 {
-	SLAM_PRED_NONE = 0,    //!< No prediction, always return the last SLAM tracked pose
-	SLAM_PRED_SP_SO_SA_SL, //!< Predicts from last two SLAM poses only
-	SLAM_PRED_SP_SO_IA_SL, //!< Predicts from last SLAM pose with angular velocity computed from IMU
-	SLAM_PRED_SP_SO_IA_IL, //!< Predicts from last SLAM pose with angular and linear velocity computed from IMU
-	SLAM_PRED_IP_IO_IA_IL, //!< Predicts from a pose that is the last SLAM pose with the IMU samples that came after
-	                       //!< it integrated on top; velocities from latest IMU sample.
+	SLAM_PRED_NONE = 0,       //!< No prediction, always return the last SLAM tracked pose
+	SLAM_PRED_POSE_ONLY,      //!< Predicts from last two SLAM poses only
+	SLAM_PRED_GYRO,           //!< Predicts from last SLAM pose with angular velocity computed from IMU
+	SLAM_PRED_ACCEL_GYRO,     //!< Predicts from last SLAM pose with angular and linear velocity computed from IMU
+	SLAM_PRED_DEAD_RECKONING, //!< Predicts from a pose that is the last SLAM pose with the IMU samples that came
+	                          //!< after it integrated on top; velocities from latest IMU sample.
 	SLAM_PRED_COUNT,
 };
 
@@ -634,9 +701,9 @@ struct t_slam_imu_calibration
  */
 struct t_slam_calibration
 {
-	struct t_slam_imu_calibration imu;                                 //!< IMU calibration data
-	struct t_slam_camera_calibration cams[XRT_TRACKING_MAX_SLAM_CAMS]; //!< Calib data of `cam_count` cams
-	int cam_count;                                                     //!< Number of cameras
+	struct t_slam_imu_calibration imu;                            //!< IMU calibration data
+	struct t_slam_camera_calibration cams[XRT_TRACKING_MAX_CAMS]; //!< Calib data of `cam_count` cams
+	int cam_count;                                                //!< Number of cameras
 };
 
 /*!

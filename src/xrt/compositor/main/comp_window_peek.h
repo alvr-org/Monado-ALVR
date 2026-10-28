@@ -1,4 +1,5 @@
 // Copyright 2022, Simon Zeni <simon@bl4ckb0ne.ca>
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -52,6 +53,16 @@ comp_window_peek_blit(struct comp_window_peek *w, VkImage src, int32_t width, in
  */
 enum comp_window_peek_eye
 comp_window_peek_get_eye(struct comp_window_peek *w);
+
+/*!
+ * Gets the required vulkan instance extensions for comp_window_peek support
+ *
+ * @param[inout] out_required_builder  builder for the list of required instance extensions to enable,
+ *                                     the builder may already contain some/all of the required, duplicates will
+ *                                     not be added.
+ */
+bool
+comp_window_peek_get_vk_instance_exts(struct u_extension_list_builder *out_required_builder);
 
 #ifdef __cplusplus
 }

@@ -19,6 +19,14 @@
 #include "arduino/arduino_interface.h"
 #endif
 
+#ifdef XRT_BUILD_DRIVER_BLUBUR_S1
+#include "blubur_s1/blubur_s1_interface.h"
+#endif
+
+#ifdef XRT_BUILD_DRIVER_CONTACTGLOVE
+#include "contactglove/contactglove_interface.h"
+#endif
+
 #ifdef XRT_BUILD_DRIVER_SIMULATED
 #include "simulated/simulated_interface.h"
 #endif
@@ -43,8 +51,8 @@
 #include "psvr/psvr_interface.h"
 #endif
 
-#ifdef XRT_BUILD_DRIVER_RIFT_S
-#include "rift_s/rift_s_interface.h"
+#ifdef XRT_BUILD_DRIVER_PSVR2
+#include "psvr2/psvr2_interface.h"
 #endif
 
 #ifdef XRT_BUILD_DRIVER_ROKID
@@ -119,9 +127,17 @@ xrt_builder_create_func_t target_builder_list[] = {
     t_builder_simulated_create,
 #endif // T_BUILDER_SIMULATED
 
+#ifdef XRT_BUILD_DRIVER_RIFT
+    rift_builder_create,
+#endif // XRT_BUILD_DRIVER_RIFT
+
 #ifdef XRT_BUILD_DRIVER_RIFT_S
     rift_s_builder_create,
 #endif // XRT_BUILD_DRIVER_RIFT_S
+
+#ifdef XRT_BUILD_DRIVER_PSVR2
+    t_builder_psvr2_create,
+#endif // XRT_BUILD_DRIVER_PSVR2
 
 #ifdef T_BUILDER_RGB_TRACKING
     t_builder_rgb_tracking_create,
@@ -177,19 +193,26 @@ xrt_builder_create_func_t target_builder_list[] = {
  * assign sequential elements of out_xdevs to the created devices.
  */
 struct xrt_prober_entry target_entry_list[] = {
+#ifdef XRT_BUILD_DRIVER_CONTACTGLOVE
+    {CONTACTGLOVE2_VID, CONTACTGLOVE2_PID, contactglove2_found, "ContactGlove2", "contactglove"},
+#endif // XRT_BUILD_DRIVER_BLUBUR_S1
+
 #ifdef XRT_BUILD_DRIVER_PSMV
     {PSMV_VID, PSMV_PID_ZCM1, psmv_found, "PS Move Controller (ZCM1)", "psmv"},
     {PSMV_VID, PSMV_PID_ZCM2, psmv_found, "PS Move Controller (ZCM2)", "psmv"},
 #endif // XRT_BUILD_DRIVER_PSMV
 
-#ifdef XRT_BUILD_DRIVER_PSSENSE
-    {PSSENSE_VID, PSSENSE_PID_LEFT, pssense_found, "PlayStation VR2 Sense Controller (L)", "pssense"},
-    {PSSENSE_VID, PSSENSE_PID_RIGHT, pssense_found, "PlayStation VR2 Sense Controller (R)", "pssense"},
-#endif // XRT_BUILD_DRIVER_PSSENSE
+#ifdef XRT_BUILD_DRIVER_BLUBUR_S1
+    {BLUBUR_S1_VID, BLUBUR_S1_PID, blubur_s1_found, "Blubur S1", "blubur_s1"},
+#endif // XRT_BUILD_DRIVER_BLUBUR_S1
 
 #ifdef XRT_BUILD_DRIVER_ROKID
     {ROKID_VID, ROKID_PID, rokid_found, "Rokid Air or Max", "rokid"},
 #endif // XRT_BUILD_DRIVER_ROKID
+
+#ifdef XRT_BUILD_DRIVER_PSVR2
+    {PSVR2_VID, PSVR2_PID, psvr2_found, "PlayStation VR2 HMD", "psvr2"},
+#endif // XRT_BUILD_DRIVER_PSVR2
 
 #ifdef XRT_BUILD_DRIVER_HYDRA
     {HYDRA_VID, HYDRA_PID, hydra_found, "Razer Hydra", "hydra"},

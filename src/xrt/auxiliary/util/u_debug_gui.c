@@ -1,22 +1,24 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2024-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief  SDL2 Debug UI implementation
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  */
 
 #include "xrt/xrt_system.h"
 #include "xrt/xrt_instance.h"
 #include "xrt/xrt_config_build.h"
+#include "math/m_api.h"
+#include "util/u_debug_gui.h"
+
 
 #ifndef XRT_FEATURE_DEBUG_GUI
 
-struct u_debug_gui;
-
 int
-u_debug_gui_create(struct u_debug_gui **out_debug_ui)
+u_debug_gui_create(const struct u_debug_gui_create_info *udgci, struct u_debug_gui **out_debug_ui)
 {
 	return 0;
 }
@@ -72,6 +74,9 @@ struct u_debug_gui
 {
 	struct gui_program base;
 
+	//! Information passed in at create.
+	struct u_debug_gui_create_info udgci;
+
 	SDL_GLContext ctx;
 	SDL_Window *win;
 
@@ -79,6 +84,8 @@ struct u_debug_gui
 
 	bool sdl_initialized;
 	char layout_file[1024];
+
+	float gui_scale;
 
 #ifdef XRT_BUILD_DRIVER_QWERTY
 	bool qwerty_enabled;
@@ -97,7 +104,6 @@ sdl2_window_init(struct u_debug_gui *p)
 {
 	XRT_TRACE_MARKER();
 
-	const char *title = "Monado! ✨⚡🔥";
 	int x = SDL_WINDOWPOS_UNDEFINED;
 	int y = SDL_WINDOWPOS_UNDEFINED;
 	int w = 1920;
@@ -121,7 +127,7 @@ sdl2_window_init(struct u_debug_gui *p)
 	window_flags |= SDL_WINDOW_MAXIMIZED;
 #endif
 
-	p->win = SDL_CreateWindow(title, x, y, w, h, window_flags);
+	p->win = SDL_CreateWindow(p->udgci.window_title, x, y, w, h, window_flags);
 	if (p->win == NULL) {
 		U_LOG_E("Failed to create window!");
 		return;
@@ -148,6 +154,17 @@ sdl2_window_init(struct u_debug_gui *p)
 
 	// Start the scene.
 	gui_scene_debug(&p->base);
+
+	// Set imgui interface scale percentage
+	p->gui_scale = 1.0f; // Fallback (default) value
+	int disp_idx = SDL_GetWindowDisplayIndex(p->win);
+	if (disp_idx >= 0) {
+		float dpi;
+		if (SDL_GetDisplayDPI(disp_idx, &dpi, NULL, NULL) >= 0) {
+			// 96.0f is the base 100% GUI scale reported by SDL2
+			p->gui_scale = CLAMP(dpi / 96.0f, 1.0f, 3.0f); // up to 300%
+		}
+	}
 }
 
 static void
@@ -163,7 +180,7 @@ sdl2_loop_events(struct u_debug_gui *p)
 #ifdef XRT_BUILD_DRIVER_QWERTY
 		// Caution here, qwerty driver is being accessed by the main thread as well
 		if (p->qwerty_enabled) {
-			qwerty_process_event(p->base.xsysd->xdevs, p->base.xsysd->xdev_count, event);
+			qwerty_process_event(p->base.xsysd->static_xdevs, p->base.xsysd->static_xdev_count, event);
 		}
 #endif
 
@@ -233,7 +250,7 @@ sdl2_loop(struct u_debug_gui *p)
 	igCreateContext(NULL);
 
 	// Local state
-	ImGuiIO *io = igGetIO();
+	ImGuiIO *io = igGetIO_Nil();
 
 	// Make window layout file "imgui.ini" live in config dir
 	XRT_MAYBE_UNUSED int res = u_file_get_path_in_config_dir("imgui.ini", p->layout_file, sizeof(p->layout_file));
@@ -251,7 +268,10 @@ sdl2_loop(struct u_debug_gui *p)
 	ImGui_ImplOpenGL3_Init(NULL);
 
 	// Setup Dear ImGui style
-	igStyleColorsDark(NULL);
+	ImGuiStyle *style = igGetStyle();
+	style->FontScaleMain = p->gui_scale;
+	ImGuiStyle_ScaleAllSizes(style, p->gui_scale);
+	igStyleColorsDark(style);
 
 	// Setup the plot context.
 	ImPlotContext *plot_ctx = ImPlot_CreateContext();
@@ -289,9 +309,6 @@ sdl2_loop(struct u_debug_gui *p)
 		XRT_TRACE_BEGIN(swap);
 		SDL_GL_SwapWindow(p->win);
 		XRT_TRACE_END(swap);
-
-		// Update prober things.
-		gui_prober_update(&p->base);
 	}
 
 	// Cleanup
@@ -343,13 +360,18 @@ u_debug_gui_run_thread(void *ptr)
 }
 
 int
-u_debug_gui_create(struct u_debug_gui **out_debug_gui)
+u_debug_gui_create(const struct u_debug_gui_create_info *udgci, struct u_debug_gui **out_debug_gui)
 {
 	XRT_TRACE_MARKER();
 
-	// Enabled?
-	if (!debug_get_bool_option_gui()) {
-		return 0;
+	switch (udgci->open) {
+	case U_DEBUG_GUI_OPEN_AUTO:
+		if (!debug_get_bool_option_gui()) {
+			return 0;
+		}
+		break;
+	case U_DEBUG_GUI_OPEN_ALWAYS: break;
+	case U_DEBUG_GUI_OPEN_NEVER: return 0; // No-op
 	}
 
 	// Need to do this as early as possible.
@@ -359,6 +381,9 @@ u_debug_gui_create(struct u_debug_gui **out_debug_gui)
 	if (p == NULL) {
 		return -1;
 	}
+
+	// Copy the data.
+	p->udgci = *udgci;
 
 	os_thread_helper_init(&p->oth);
 

@@ -1,4 +1,5 @@
 // Copyright 2019, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -10,7 +11,11 @@
 #include "util/u_debug.h"
 #include "comp_settings.h"
 
+#ifdef XRT_OS_ANDROID
 #define USE_COMPUTE_DEFAULT false
+#else
+#define USE_COMPUTE_DEFAULT true
+#endif
 
 // clang-format off
 DEBUG_GET_ONCE_LOG_OPTION(log, "XRT_COMPOSITOR_LOG", U_LOGGING_INFO)
@@ -25,6 +30,7 @@ DEBUG_GET_ONCE_BOOL_OPTION(force_wayland, "XRT_COMPOSITOR_FORCE_WAYLAND", false)
 DEBUG_GET_ONCE_NUM_OPTION(force_gpu_index, "XRT_COMPOSITOR_FORCE_GPU_INDEX", -1)
 DEBUG_GET_ONCE_NUM_OPTION(force_client_gpu_index, "XRT_COMPOSITOR_FORCE_CLIENT_GPU_INDEX", -1)
 DEBUG_GET_ONCE_NUM_OPTION(desired_mode, "XRT_COMPOSITOR_DESIRED_MODE", -1)
+DEBUG_GET_ONCE_OPTION(present_mode, "XRT_COMPOSITOR_PRESENT_MODE", "fifo")
 DEBUG_GET_ONCE_NUM_OPTION(scale_percentage, "XRT_COMPOSITOR_SCALE_PERCENTAGE", 140)
 DEBUG_GET_ONCE_BOOL_OPTION(xcb_fullscreen, "XRT_COMPOSITOR_XCB_FULLSCREEN", false)
 DEBUG_GET_ONCE_NUM_OPTION(xcb_display, "XRT_COMPOSITOR_XCB_DISPLAY", -1)
@@ -47,6 +53,37 @@ add_format(struct comp_settings *s, VkFormat format)
 	s->format_count = count;
 }
 
+static VkPresentModeKHR
+get_desired_present_mode(void)
+{
+	const char *present_mode_str = debug_get_option_present_mode();
+
+	if (present_mode_str == NULL || present_mode_str[0] == '\0' || strcmp(present_mode_str, "fifo") == 0 ||
+	    strcmp(present_mode_str, "FIFO") == 0) {
+		return VK_PRESENT_MODE_FIFO_KHR;
+	} else if (strcmp(present_mode_str, "fifo_relaxed") == 0 || strcmp(present_mode_str, "FIFO_RELAXED") == 0) {
+		return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+	} else if (strcmp(present_mode_str, "immediate") == 0 || strcmp(present_mode_str, "IMMEDIATE") == 0) {
+		return VK_PRESENT_MODE_IMMEDIATE_KHR;
+	} else if (strcmp(present_mode_str, "mailbox") == 0 || strcmp(present_mode_str, "MAILBOX") == 0) {
+		return VK_PRESENT_MODE_MAILBOX_KHR;
+	}
+
+#ifdef VK_KHR_shared_presentable_image
+	if (strcmp(present_mode_str, "shared_continuous_refresh") == 0 ||
+	    strcmp(present_mode_str, "SHARED_CONTINUOUS_REFRESH") == 0) {
+		return VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR;
+	}
+	if (strcmp(present_mode_str, "shared_demand_refresh") == 0 ||
+	    strcmp(present_mode_str, "SHARED_DEMAND_REFRESH") == 0) {
+		return VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR;
+	}
+#endif
+
+	U_LOG_E("Unrecognized present mode: %s", present_mode_str);
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+
 
 /*
  *
@@ -67,19 +104,24 @@ comp_settings_init(struct comp_settings *s, struct xrt_device *xdev)
 	s->use_compute = debug_get_bool_option_compute();
 
 	if (s->use_compute) {
-		// This was the default before, keep it first.
+		// Tested working with a PSVR2 and a patched Mesa. Native format of the PSVR2. 10-bit formats should be
+		// preferred in all cases for lower colour banding.
+		add_format(s, VK_FORMAT_A2B10G10R10_UNORM_PACK32);
+
+		// Default 8-bit channel 32-bit pixel format, most commonly supported UNORM format across Windows and
+		// Linux.
 		add_format(s, VK_FORMAT_B8G8R8A8_UNORM);
 
-		// This is according to GPU info more supported.
-		add_format(s, VK_FORMAT_B8G8R8A8_UNORM);
+		// Next most common UNORM format.
+		add_format(s, VK_FORMAT_R8G8B8A8_UNORM);
 
 		// Seen on some NVIDIA cards.
 		add_format(s, VK_FORMAT_A8B8G8R8_UNORM_PACK32);
 
-		// Untested: 30 bit format, should we move this higher up?
-		add_format(s, VK_FORMAT_A2B10G10R10_UNORM_PACK32);
+		// 32-bit formats should be preferred over a 64-bit format, for performance/memory reasons.
+		add_format(s, VK_FORMAT_R16G16B16A16_SFLOAT);
 
-		// Untested: Super constrained platforms.
+		// Untested: Super constrained platforms. Absolute last resort.
 		add_format(s, VK_FORMAT_A1R5G5B5_UNORM_PACK16);
 	} else {
 #if defined(XRT_OS_ANDROID)
@@ -103,6 +145,13 @@ comp_settings_init(struct comp_settings *s, struct xrt_device *xdev)
 
 		// Fallback
 		add_format(s, VK_FORMAT_R8G8B8A8_SRGB);
+#elif defined(XRT_OS_OSX)
+		/*
+		 * On MacOS the most ubiquitous sRGB format is B8G8R8A8_SRGB,
+		 * and it's the only sRGB (non-linear) format available.
+		 * https://vulkan.gpuinfo.org/listsurfaceformats.php?platform=macos
+		 */
+		add_format(s, VK_FORMAT_B8G8R8A8_SRGB);
 #else
 #error "Need to pick default swapchain format for this platform!"
 #endif
@@ -113,7 +162,7 @@ comp_settings_init(struct comp_settings *s, struct xrt_device *xdev)
 
 	s->display = debug_get_num_option_xcb_display();
 	s->color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-	s->present_mode = VK_PRESENT_MODE_FIFO_KHR;
+	s->present_mode = get_desired_present_mode();
 	s->fullscreen = debug_get_bool_option_xcb_fullscreen();
 	s->preferred.width = xdev->hmd->screens[0].w_pixels;
 	s->preferred.height = xdev->hmd->screens[0].h_pixels;

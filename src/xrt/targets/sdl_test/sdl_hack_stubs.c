@@ -13,7 +13,7 @@ struct xrt_system_devices;
 
 
 int
-u_debug_gui_create(void **out_hack)
+u_debug_gui_create(void *hack, void **out_hack)
 {
 	return 0;
 }

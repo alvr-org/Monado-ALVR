@@ -4,7 +4,7 @@
  * @file
  * @brief  OpenGL helper functions for drawing GUI elements.
  * @author Jakob Bornecrantz <jakob@collabora.com>
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup gui
  */
 
@@ -68,9 +68,11 @@ gui_ogl_draw_background(uint32_t width, uint32_t height, uint32_t tex_id, bool r
 	get_uvs(&uv0, &uv1, rotate_180, flip_y);
 
 	const ImU32 white = 0xffffffff;
-	ImTextureID id = (ImTextureID)(intptr_t)tex_id;
+	ImTextureRef_c ref = {
+	    ._TexID = tex_id,
+	};
 
-	ImGuiIO *io = igGetIO();
+	ImGuiIO *io = igGetIO_Nil();
 
 	float in_w = (float)width;
 	float in_h = (float)height;
@@ -91,6 +93,8 @@ gui_ogl_draw_background(uint32_t width, uint32_t height, uint32_t tex_id, bool r
 	ImVec2 p_min = {translate_x, translate_y};
 	ImVec2 p_max = {translate_x + inside_w, translate_y + inside_h};
 
-	ImDrawList *bg = igGetBackgroundDrawList_Nil();
-	ImDrawList_AddImage(bg, id, p_min, p_max, uv0, uv1, white);
+	ImGuiViewport *viewport = igGetMainViewport();
+
+	ImDrawList *bg = igGetBackgroundDrawList(viewport);
+	ImDrawList_AddImage(bg, ref, p_min, p_max, uv0, uv1, white);
 }

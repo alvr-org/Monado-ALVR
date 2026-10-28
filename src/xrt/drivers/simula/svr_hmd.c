@@ -1,10 +1,10 @@
 // Copyright 2020-2023, Collabora, Ltd.
-// Copyright 2020, Moses Turner.
+// Copyright 2020, Moshi Turner.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
  * @brief SimulaVR driver code.
- * @author Moses Turner <moses@collabora.com>
+ * @author Moshi Turner <moshiturner@protonmail.com>
  * @ingroup drv_svr
  */
 
@@ -97,12 +97,11 @@ svr_hmd_get_tracked_pose(struct xrt_device *xdev,
 	return XRT_SUCCESS;
 }
 
-#define DEG_TO_RAD(DEG) (DEG * M_PI / 180.)
-
-static void
+static xrt_result_t
 svr_hmd_get_view_poses(struct xrt_device *xdev,
                        const struct xrt_vec3 *default_eye_relation,
                        int64_t at_timestamp_ns,
+                       enum xrt_view_type view_type,
                        uint32_t view_count,
                        struct xrt_space_relation *out_head_relation,
                        struct xrt_fov *out_fovs,
@@ -111,14 +110,18 @@ svr_hmd_get_view_poses(struct xrt_device *xdev,
 	//!@todo: default_eye_relation inherits from the env var OXR_DEBUG_IPD_MM / oxr_session.c
 	// probably needs a lot more attention
 
-	u_device_get_view_poses(  //
-	    xdev,                 //
-	    default_eye_relation, //
-	    at_timestamp_ns,      //
-	    view_count,           //
-	    out_head_relation,    //
-	    out_fovs,             //
-	    out_poses);           //
+	xrt_result_t xret = u_device_get_view_poses( //
+	    xdev,                                    //
+	    default_eye_relation,                    //
+	    at_timestamp_ns,                         //
+	    view_type,                               //
+	    view_count,                              //
+	    out_head_relation,                       //
+	    out_fovs,                                //
+	    out_poses);                              //
+	if (xret != XRT_SUCCESS) {
+		return xret;
+	}
 
 	//!@todo you may need to invert this - I can't test locally
 	float turn_vals[2] = {5.0, -5.0};
@@ -126,10 +129,12 @@ svr_hmd_get_view_poses(struct xrt_device *xdev,
 		struct xrt_vec3 y_up = (struct xrt_vec3)XRT_VEC3_UNIT_Y;
 		math_quat_from_angle_vector(DEG_TO_RAD(turn_vals[i]), &y_up, &out_poses[i].orientation);
 	}
+
+	return XRT_SUCCESS;
 }
 
 //!@todo: remove hard-coding and move to u_distortion_mesh
-bool
+static xrt_result_t
 svr_mesh_calc(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *result)
 {
 	struct svr_hmd *svr = svr_hmd(xdev);
@@ -203,7 +208,7 @@ svr_mesh_calc(struct xrt_device *xdev, uint32_t view, float u, float v, struct x
 	result->g = tc[1];
 	result->b = tc[2];
 
-	return true;
+	return XRT_SUCCESS;
 }
 
 
@@ -234,13 +239,12 @@ svr_hmd_create(struct svr_two_displays_distortion *distortion)
 	svr->base.name = XRT_DEVICE_GENERIC_HMD;
 
 	// Sorta a lie, we have to do this to make the state tracker happy. (Should multi.c override these?)
-	svr->base.orientation_tracking_supported = true;
-	svr->base.position_tracking_supported = true;
+	svr->base.supported.orientation_tracking = true;
+	svr->base.supported.position_tracking = true;
 
 	svr->base.device_type = XRT_DEVICE_TYPE_HMD;
 
 	svr->base.hmd->screens[0].nominal_frame_interval_ns = (uint64_t)time_s_to_ns(1.0f / 90.0f);
-
 
 	// Print name.
 	snprintf(svr->base.str, XRT_DEVICE_NAME_LEN, "SimulaVR HMD");
@@ -271,7 +275,7 @@ svr_hmd_create(struct svr_two_displays_distortion *distortion)
 
 	// Setup variable tracker.
 	u_var_add_root(svr, "Simula HMD", true);
-	svr->base.orientation_tracking_supported = true;
+	svr->base.supported.orientation_tracking = true;
 	svr->base.device_type = XRT_DEVICE_TYPE_HMD;
 
 	size_t idx = 0;

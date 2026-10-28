@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-# Copyright 2020-2023, Collabora, Ltd.
+# Copyright 2020-2025, Collabora, Ltd.
+# Copyright 2024-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: BSL-1.0
-"""Generate code from a JSON file describing interaction profiles and
-bindings."""
+"""Parse a JSON file describing interaction profiles and bindings."""
 
-import argparse
 import json
 import copy
 from operator import attrgetter
+
+def wl(f, *args, endNewLine=True):
+    """Write lines"""
+    s = '\n'.join(args)
+    if endNewLine:
+        s += '\n'
+    f.write(s)
 
 def find_component_in_list_by_name(name, component_list, subaction_path=None, identifier_json_path=None):
     """Find a component with the given name in a list of components."""
@@ -109,6 +115,38 @@ class DPad:
         self.activate_component = activate_component
 
 
+def resolve_monado_binding(profile_name, identifier_json_path, json_subpath, component_name):
+    """Look up the Monado enum for one component.
+
+    ``false`` means the OpenXR path is exposed with no Monado input or output.
+    A missing key is an error: the component name and the monado_bindings key
+    have to be the same string.
+    """
+    if "monado_bindings" not in json_subpath:
+        raise RuntimeError(
+            f"Interaction profile {profile_name} path {identifier_json_path} "
+            f"has no monado_bindings object.")
+
+    monado_bindings = json_subpath["monado_bindings"]
+    if component_name not in monado_bindings:
+        raise RuntimeError(
+            f"Interaction profile {profile_name} path {identifier_json_path} "
+            f"component '{component_name}' is missing from monado_bindings. "
+            f"Use an XRT_INPUT or XRT_OUTPUT name, or false for no Monado mapping.")
+
+    monado_binding = monado_bindings[component_name]
+    # JSON false is the explicit "expose the path, bind no device input" case.
+    if monado_binding is False:
+        return None
+    if isinstance(monado_binding, str):
+        return monado_binding
+
+    raise RuntimeError(
+        f"Interaction profile {profile_name} path {identifier_json_path} "
+        f"component '{component_name}' has monado_bindings value {monado_binding!r}. "
+        f"Use an XRT_INPUT or XRT_OUTPUT name, or false for no Monado mapping.")
+
+
 class Component:
     """Components correspond with the standard OpenXR components click, touch,
     force, value, x, y, twist, pose
@@ -116,6 +154,7 @@ class Component:
 
     @classmethod
     def parse_components(component_cls,
+                         profile_name,
                          subaction_path,
                          identifier_json_path,
                          json_subpath):
@@ -130,7 +169,10 @@ class Component:
                     json_subpath["dpad_emulation"]["position"] == component_name):
                 matched_dpad_emulation = json_subpath["dpad_emulation"]
 
-            monado_binding = json_subpath["monado_bindings"].get(component_name, None)
+            monado_binding = resolve_monado_binding(profile_name,
+                                                    identifier_json_path,
+                                                    json_subpath,
+                                                    component_name)
 
             steamvr_path = steamvr_subpath_name(identifier_json_path, json_subpath["type"])
             if "steamvr_path" in json_subpath:
@@ -173,22 +215,19 @@ class Component:
         self.components_for_subpath = components_for_subpath
 
     def get_full_openxr_paths(self):
-        """A group of paths that derive from the same component.
-        For example .../thumbstick, .../thumbstick/x, .../thumbstick/y
-        """
-        paths = []
-
+        """Concrete OpenXR component paths for this component."""
         basepath = self.subaction_path + self.identifier_json_path
 
         if self.component_name == "position":
-            paths.append(basepath + "/" + "x")
-            paths.append(basepath + "/" + "y")
-            paths.append(basepath)
-        else:
-            paths.append(basepath + "/" + self.component_name)
-            paths.append(basepath)
+            return [
+                basepath + "/x",
+                basepath + "/y",
+            ]
 
-        return paths
+        if self.component_name == "haptic":
+            return [basepath]
+
+        return [basepath + "/" + self.component_name]
 
     def get_full_path(self):
         return self.subaction_path + self.identifier_json_path + '/' + self.component_name
@@ -212,7 +251,7 @@ class Identifier:
     """
 
     @classmethod
-    def parse_identifiers(indentifer_cls, json_profile):
+    def parse_identifiers(indentifer_cls, profile_name, json_profile):
         """Turn a profile's input paths into a list of Component objects."""
 
         json_subaction_paths = json_profile["subaction_paths"]
@@ -231,7 +270,8 @@ class Identifier:
                 # Full path to the identifier
                 identifier_path = subaction_path + json_path
 
-                component_list = Component.parse_components(subaction_path,
+                component_list = Component.parse_components(profile_name,
+                                                            subaction_path,
                                                             json_path,
                                                             json_subpath)
 
@@ -262,7 +302,17 @@ class Identifier:
         self.components = component_list
         self.dpad = dpad
         return
-    
+
+
+def is_valid_version(version):
+    """Returns whether the version is a valid version that is > 0.0"""
+    if version is None:
+        return False
+    # 0.0 is a placeholder for "no particular version"
+    if version["major"] == '0' and version["minor"] == '0':
+        return False
+    return True
+
 
 class FeatureSet:
     """An AND of requirements (versions and/or extensions) under which a binding becomes available"""
@@ -283,10 +333,10 @@ class FeatureSet:
         if other.required_extensions.issuperset(self.required_extensions):
             # other requires extensions we don't
             return False
-        if check_promoted(other.required_version) and not check_promoted(self.required_version):
+        if is_valid_version(other.required_version) and not is_valid_version(self.required_version):
             # other bounds version, we don't
             return False
-        if check_promoted(other.required_version) and check_promoted(self.required_version):
+        if is_valid_version(other.required_version) and is_valid_version(self.required_version):
             if other.required_version["major"] != self.required_version["major"]:
                 # different major versions - not fully implemented, but this seems right
                 return False
@@ -299,9 +349,9 @@ class FeatureSet:
     def and_also(self, other):
         result = copy.deepcopy(self)
         result.required_extensions = self.required_extensions | other.required_extensions
-        if not check_promoted(result.required_version):
+        if not is_valid_version(result.required_version):
             result.required_version = other.required_version
-        elif check_promoted(other.required_version):
+        elif is_valid_version(other.required_version):
             if result.required_version["major"] != other.required_version["major"]:
                 raise NotImplementedError("Major version mismatch not handled")
             if int(result.required_version["minor"]) < int(other.required_version["minor"]):
@@ -317,7 +367,7 @@ class Availability:
         if not optimize:
             self.feature_sets = set(feature_sets)
             return
-            
+
         self.feature_sets = set()
         for feature_set in feature_sets:
             self.add_in_place(feature_set)
@@ -387,7 +437,7 @@ class Profile:
                 self.openxr_version_promoted = { "major" : promoted.get("major"), "minor" : promoted.get("minor") }
 
         self.is_virtual = profile_name.startswith("/virtual_profiles/")
-        self.identifiers = Identifier.parse_identifiers(json_profile)
+        self.identifiers = Identifier.parse_identifiers(profile_name, json_profile)
 
         self.steamvr_controller_type = None
         if "steamvr_controllertype" in json_profile:
@@ -397,6 +447,9 @@ class Profile:
         collector = PathsByLengthCollector()
         for component in self.components:
             collector.add_paths(component.get_full_openxr_paths())
+        for identifier in self.identifiers:
+            if any(component.component_name not in ["pose", "haptic"] for component in identifier.components):
+                collector.add_path(identifier.identifier_path)
         self.subpaths_by_length = collector.to_dict_of_lists()
 
         collector = PathsByLengthCollector()
@@ -466,7 +519,7 @@ class Profile:
     def availability(self):
         result = Availability(feature_sets=[])
         has_requirements = False
-        if check_promoted(self.openxr_version_promoted):
+        if is_valid_version(self.openxr_version_promoted):
             result.add_in_place(FeatureSet(required_version=self.openxr_version_promoted))
             has_requirements = True
         if self.extension_name is not None:
@@ -476,9 +529,6 @@ class Profile:
             result.add_in_place(FeatureSet())
 
         return result
-
-
-oxr_verify_extension_status_struct_name = "oxr_verify_extension_status"
 
 
 class Bindings:
@@ -531,7 +581,8 @@ class Bindings:
                 return True
         return False
 
-header = '''// Copyright 2020-2022, Collabora, Ltd.
+
+header = '''// Copyright 2020-2025, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -542,495 +593,3 @@ header = '''// Copyright 2020-2022, Collabora, Ltd.
  * @ingroup {group}
  */
 '''
-
-func_start = '''
-bool
-{name}(const struct oxr_extension_status *exts, XrVersion openxr_version, const char *str, size_t length)
-{{
-'''
-
-
-def write_verify_func_begin(f, name):
-    f.write(func_start.format(
-        name=name, ext_status_struct_name=oxr_verify_extension_status_struct_name))
-
-
-def write_verify_func_end(f):
-    f.write("\treturn false;\n}\n")
-
-
-if_strcmp = '''if (strcmp(str, "{check}") == 0) {{
-{exttab}\t\t\treturn true;
-{exttab}\t\t}} else '''
-
-def check_promoted(openxr_version_promoted):
-    # If required version is 0.0, we can skip checking that the instance uses a more recent version
-    return openxr_version_promoted is not None and not (openxr_version_promoted["major"] == '0' and openxr_version_promoted["minor"] == '0')
-
-def write_verify_switch_body(f, dict_of_lists, profile, profile_name, tab_char):
-    """Generate function to check if a string is in a set of strings.
-    Input is a file to write the code into, a dict where keys are length and
-    the values are lists of strings of that length. And a suffix if any."""
-    f.write(f"{tab_char}\tswitch (length) {{\n")
-    for length in sorted(dict_of_lists.keys()):
-        f.write(f"{tab_char}\tcase {str(length)}:\n\t\t{tab_char}")
-        for path in sorted(dict_of_lists[length]):
-            f.write(if_strcmp.format(exttab=tab_char, check=path))
-        f.write(f"{{\n{tab_char}\t\t\tbreak;\n{tab_char}\t\t}}\n")
-    f.write(f"{tab_char}\tdefault: break;\n{tab_char}\t}}\n")
-
-def write_verify_func_switch(f, dict_of_lists, profile, profile_name, availability):
-    """Generate function to check if a string is in a set of strings.
-    Input is a file to write the code into, a dict where keys are length and
-    the values are lists of strings of that length. And a suffix if any."""
-    if len(dict_of_lists) == 0:
-        return
-
-    f.write(f"\t// generated from: {profile_name}\n")
-
-    # Example: pico neo 3 can be enabled by either enabling XR_BD_controller_interaction ext or using OpenXR 1.1+.
-    # Disabling OXR_HAVE_BD_controller_interaction should NOT remove pico neo from OpenXR 1.1+ (it makes "exts->BD_controller_interaction" invalid C code).
-    # Therefore separate code blocks for ext and version checks generated to avoid ifdef hell.
-    feature_sets = sorted(availability.feature_sets, key=FeatureSet.as_tuple)
-    for feature_set in feature_sets:
-        requires_version = check_promoted(feature_set.required_version)
-        requires_extensions = bool(feature_set.required_extensions)
-
-        tab_char = ''
-        closing = []
-
-        if requires_version:
-            tab_char += '\t'
-            f.write(f'{tab_char}if (openxr_version >= XR_MAKE_VERSION({feature_set.required_version["major"]}, {feature_set.required_version["minor"]}, 0)) {{\n')
-            closing.append(f'{tab_char}}}\n')
-
-        if requires_extensions:
-            tab_char += '\t'
-            exts = sorted(feature_set.required_extensions)
-            ext_defines = ' && '.join(f'defined(OXR_HAVE_{ext})' for ext in exts)
-            f.write(f'#if {ext_defines}\n')
-            f.write(f'{tab_char}if ('+' && '.join(f'exts->{ext}' for ext in exts)+') {\n')
-            closing.append(f'{tab_char}}}\n#endif // {ext_defines}\n')
-
-        write_verify_switch_body(f, dict_of_lists, profile, profile_name, tab_char)
-        
-        for closer in reversed(closing):
-            f.write(closer)
-
-def write_verify_func_body(f, profile, dict_name, availability):
-    if profile is None or dict_name is None or len(dict_name) == 0:
-        return
-    write_verify_func_switch(f, getattr(
-        profile, dict_name), profile, profile.name, availability)
-    if profile.parent_profiles is None:
-        return
-    for pp in sorted(profile.parent_profiles, key=attrgetter("name")):
-        write_verify_func_body(f, pp, dict_name, availability.intersection(pp.availability()))
-
-
-def write_verify_func(f, profile, dict_name, suffix):
-    write_verify_func_begin(
-        f, f"oxr_verify_{profile.validation_func_name}{suffix}")
-    write_verify_func_body(f, profile, dict_name, profile.availability())
-    write_verify_func_end(f)
-
-
-def generate_verify_functions(f, profile):
-    write_verify_func(f, profile, "subpaths_by_length", "_subpath")
-    write_verify_func(f, profile, "dpad_paths_by_length", "_dpad_path")
-    write_verify_func(f, profile, "dpad_emulators_by_length", "_dpad_emulator")
-
-    f.write(f'''
-void
-oxr_verify_{profile.validation_func_name}_ext(const struct oxr_extension_status *extensions, XrVersion openxr_version, bool *out_supported, bool *out_enabled)
-{{
-''')
-    is_promoted = check_promoted(profile.openxr_version_promoted)
-    if is_promoted:
-        f.write(f'\tif (openxr_version >= XR_MAKE_VERSION({profile.openxr_version_promoted["major"]}, {profile.openxr_version_promoted["minor"]}, 0)) {{\n')
-        f.write(f'\t\t*out_supported = true;\n')
-        f.write(f'\t\t*out_enabled = true;\n')
-        f.write(f'\t\treturn;\n')
-        f.write(f'\t}}')
-
-
-    if profile.extension_name is not None:
-        f.write(f'''
-#ifdef OXR_HAVE_{profile.extension_name}
-\t*out_supported = true;
-\t*out_enabled = extensions->{profile.extension_name};
-#else
-\t*out_supported = false;
-\t*out_enabled = false;
-#endif // OXR_HAVE_{profile.extension_name}
-''')
-
-    else:
-        f.write(f'''
-\t*out_supported = true;
-\t*out_enabled = true;
-''')
-
-    f.write(f'''}}
-''')
-
-
-def generate_bindings_c(file, b):
-    """Generate the file to verify subpaths on a interaction profile."""
-    f = open(file, "w")
-    f.write(header.format(brief='Generated bindings data', group='oxr_main'))
-    f.write('''
-#include "b_generated_bindings.h"
-#include <string.h>
-#include <oxr_objects.h>
-
-// clang-format off
-''')
-
-    for profile in b.profiles:
-        generate_verify_functions(f, profile)
-
-    f.write(
-        f'\n\nstruct profile_template profile_templates[{len(b.profiles)}] = {{ // array of profile_template\n')
-    for profile in b.profiles:
-        hw_name = str(profile.name.split("/")[-1])
-        vendor_name = str(profile.name.split("/")[-2])
-        fname = vendor_name + "_" + hw_name + "_profile.json"
-        controller_type = "monado_" + vendor_name + "_" + hw_name
-
-        binding_count = len(profile.components)
-        f.write(f'\t{{ // profile_template\n')
-        f.write(f'\t\t.name = {profile.monado_device_enum},\n')
-        f.write(f'\t\t.path = "{profile.name}",\n')
-        f.write(f'\t\t.localized_name = "{profile.localized_name}",\n')
-        f.write(f'\t\t.steamvr_input_profile_path = "{fname}",\n')
-        f.write(f'\t\t.steamvr_controller_type = "{controller_type}",\n')
-        f.write(f'\t\t.binding_count = {binding_count},\n')
-        f.write(
-            f'\t\t.bindings = (struct binding_template[]){{ // array of binding_template\n')
-
-        component: Component
-        for idx, component in enumerate(profile.components):
-
-            # @todo Doesn't handle pose yet.
-            steamvr_path = component.steamvr_path
-            if component.component_name in ["click", "touch", "force", "value", "proximity"]:
-                steamvr_path += "/" + component.component_name
-
-            f.write(f'\t\t\t{{ // binding_template {idx}\n')
-            f.write(f'\t\t\t\t.subaction_path = "{component.subaction_path}",\n')
-            f.write(f'\t\t\t\t.steamvr_path = "{steamvr_path}",\n')
-            f.write(
-                f'\t\t\t\t.localized_name = "{component.subpath_localized_name}",\n')
-
-            f.write('\t\t\t\t.paths = { // array of paths\n')
-            for path in component.get_full_openxr_paths():
-                f.write(f'\t\t\t\t\t"{path}",\n')
-            f.write('\t\t\t\t\tNULL\n')
-            f.write('\t\t\t\t}, // /array of paths\n')
-
-            # print("component", component.__dict__)
-
-            component_str = component.component_name
-
-            # controllers can have input that we don't have bindings for
-            if component.monado_binding:
-                monado_binding = component.monado_binding
-
-                if component.is_input() and monado_binding is not None:
-                    f.write(f'\t\t\t\t.input = {monado_binding},\n')
-                else:
-                    f.write(f'\t\t\t\t.input = 0,\n')
-
-                if component.has_dpad_emulation() and "activate" in component.dpad_emulation:
-                    activate_component = find_component_in_list_by_name(
-                        component.dpad_emulation["activate"], profile.components,
-                        subaction_path=component.subaction_path,
-                        identifier_json_path=component.identifier_json_path)
-                    f.write(
-                        f'\t\t\t\t.dpad_activate = {activate_component.monado_binding},\n')
-                else:
-                    f.write(f'\t\t\t\t.dpad_activate = 0,\n')
-
-                if component.is_output() and monado_binding is not None:
-                    f.write(f'\t\t\t\t.output = {monado_binding},\n')
-                else:
-                    f.write(f'\t\t\t\t.output = 0,\n')
-            f.write(f'\t\t\t}}, // /binding_template {idx}\n')
-
-        f.write('\t\t}, // /array of binding_template\n')
-
-        dpads = []
-        for idx, identifier in enumerate(profile.identifiers):
-            if identifier.dpad:
-                dpads.append(identifier)
-
-#        for identifier in dpads:
-#            print(identifier.path, identifier.dpad_position_component)
-
-        dpad_count = len(dpads)
-        f.write(f'\t\t.dpad_count = {dpad_count},\n')
-        if len(dpads) == 0:
-            f.write(f'\t\t.dpads = NULL,\n')
-        else:
-            f.write(
-                f'\t\t.dpads = (struct dpad_emulation[]){{ // array of dpad_emulation\n')
-            for idx, identifier in enumerate(dpads):
-                f.write('\t\t\t{\n')
-                f.write(f'\t\t\t\t.subaction_path = "{identifier.subaction_path}",\n')
-                f.write('\t\t\t\t.paths = {\n')
-                for path in identifier.dpad.paths:
-                    f.write(f'\t\t\t\t\t"{path}",\n')
-                f.write('\t\t\t\t},\n')
-                f.write(f'\t\t\t\t.position = {identifier.dpad.position_component.monado_binding},\n')
-                if identifier.dpad.activate_component:
-                    f.write(f'\t\t\t\t.activate = {identifier.dpad.activate_component.monado_binding},\n')
-                else:
-                    f.write(f'\t\t\t\t.activate = 0')
-
-                f.write('\t\t\t},\n')
-            f.write('\t\t}, // /array of dpad_emulation\n')
-
-        f.write(f'\t\t.openxr_version.promoted.major = {profile.openxr_version_promoted["major"]},\n')
-        f.write(f'\t\t.openxr_version.promoted.minor = {profile.openxr_version_promoted["minor"]},\n')
-
-        fn_prefixes = ["subpath", "dpad_path", "dpad_emulator"]
-        for prefix in fn_prefixes:
-            f.write(f'\t\t.{prefix}_fn = oxr_verify_{profile.validation_func_name}_{prefix},\n')
-        f.write(f'\t\t.ext_verify_fn = oxr_verify_{profile.validation_func_name}_ext,\n')
-        if profile.extension_name is None:
-            f.write(f'\t\t.extension_name = NULL,\n')
-        else:
-            f.write(f'\t\t.extension_name = "{profile.extension_name}",\n')
-        f.write('\t}, // /profile_template\n')
-
-    f.write('}; // /array of profile_template\n\n')
-
-    inputs = set()
-    outputs = set()
-    for profile in b.profiles:
-        component: Component
-        for idx, component in enumerate(profile.components):
-
-            if not component.monado_binding:
-                continue
-
-            if component.subpath_type == "vibration":
-                outputs.add(component.monado_binding)
-            else:
-                inputs.add(component.monado_binding)
-
-    # special cased bindings that are never directly used in the input profiles
-    inputs.add("XRT_INPUT_GENERIC_HEAD_POSE")
-    inputs.add("XRT_INPUT_GENERIC_HEAD_DETECT")
-    inputs.add("XRT_INPUT_GENERIC_HAND_TRACKING_LEFT")
-    inputs.add("XRT_INPUT_GENERIC_HAND_TRACKING_RIGHT")
-    inputs.add("XRT_INPUT_GENERIC_TRACKER_POSE")
-
-    f.write('const char *\n')
-    f.write('xrt_input_name_string(enum xrt_input_name input)\n')
-    f.write('{\n')
-    f.write('\tswitch(input)\n')
-    f.write('\t{\n')
-    for input in sorted(inputs):
-        f.write(f'\tcase {input}: return "{input}";\n')
-    f.write(f'\tdefault: return "UNKNOWN";\n')
-    f.write('\t}\n')
-    f.write('}\n')
-
-    f.write('enum xrt_input_name\n')
-    f.write('xrt_input_name_enum(const char *input)\n')
-    f.write('{\n')
-    for input in sorted(inputs):
-        f.write(f'\tif(strcmp("{input}", input) == 0) return {input};\n')
-    f.write(f'\treturn XRT_INPUT_GENERIC_TRACKER_POSE;\n')
-    f.write('}\n')
-
-    f.write('const char *\n')
-    f.write('xrt_output_name_string(enum xrt_output_name output)\n')
-    f.write('{\n')
-    f.write('\tswitch(output)\n')
-    f.write('\t{\n')
-    for output in sorted(outputs):
-        f.write(f'\tcase {output}: return "{output}";\n')
-    f.write(f'\tdefault: return "UNKNOWN";\n')
-    f.write('\t}\n')
-    f.write('}\n')
-
-    f.write('enum xrt_output_name\n')
-    f.write('xrt_output_name_enum(const char *output)\n')
-    f.write('{\n')
-    for output in sorted(outputs):
-        f.write(f'\tif(strcmp("{output}", output) == 0) return {output};\n')
-    f.write(f'\treturn XRT_OUTPUT_NAME_SIMPLE_VIBRATION;\n')
-    f.write('}\n')
-
-    f.write(f'''
-
-static const struct oxr_bindings_path_cache internal_path_cache = {{
-\t.path_cache = {{''')
-    for profile_index, _ in enumerate(b.profiles):
-        f.write(f'''
-\t\t{{
-\t\t\t.path_cache = &profile_templates[{profile_index}].path_cache,
-\t\t\t.path_cache_name = &profile_templates[{profile_index}].path,
-\t\t}},\n''')
-        profile_index += 1
-    f.write(f'''\t}}
-}};
-
-void oxr_get_interaction_profile_path_cache(const struct oxr_bindings_path_cache **out_path_cache)
-{{
-    *out_path_cache = &internal_path_cache;
-}}
-''')
-    f.write("\n// clang-format on\n")
-
-    f.close()
-
-
-def generate_bindings_h(file, b):
-    """Generate header for the verify subpaths functions."""
-    f = open(file, "w")
-    f.write(header.format(brief='Generated bindings data header',
-                          group='oxr_api'))
-    f.write(f'''
-#pragma once
-
-#include <stddef.h>
-
-#include "xrt/xrt_defines.h"
-
-typedef uint64_t XrPath; // OpenXR typedef
-typedef uint64_t XrVersion; // OpenXR typedef
-
-struct oxr_extension_status;
-
-#define OXR_BINDINGS_PROFILE_TEMPLATE_COUNT {len(b.profiles)}
-
-struct oxr_bindings_path_cache_element {{
-    //! Pointer to XrPath
-    XrPath *path_cache;
-    //! Pointer to char*
-    const char **path_cache_name;
-}};
-
-struct oxr_bindings_path_cache {{
-    // wrapped in a struct solely to reduce the C pointer soup
-    struct oxr_bindings_path_cache_element path_cache[OXR_BINDINGS_PROFILE_TEMPLATE_COUNT];
-}};
-
-void oxr_get_interaction_profile_path_cache(const struct oxr_bindings_path_cache **out_path_cache);
-
-// clang-format off
-''')
-
-    fn_prefixes = ["_subpath", "_dpad_path", "_dpad_emulator"]
-    for profile in b.profiles:
-        for fn_suffix in fn_prefixes:
-            f.write(
-                f"\nbool\noxr_verify_{profile.validation_func_name}{fn_suffix}(const struct oxr_extension_status *extensions, XrVersion openxr_major_minor, const char *str, size_t length);\n")
-        f.write(f'''\nvoid\noxr_verify_{profile.validation_func_name}_ext(const struct oxr_extension_status *extensions, XrVersion openxr_version, bool *out_supported, bool *out_enabled);\n''')
-
-    f.write(f'''
-#define PATHS_PER_BINDING_TEMPLATE 16
-
-enum oxr_dpad_binding_point
-{{
-\tOXR_DPAD_BINDING_POINT_NONE,
-\tOXR_DPAD_BINDING_POINT_UP,
-\tOXR_DPAD_BINDING_POINT_DOWN,
-\tOXR_DPAD_BINDING_POINT_LEFT,
-\tOXR_DPAD_BINDING_POINT_RIGHT,
-}};
-
-struct dpad_emulation
-{{
-\tconst char *subaction_path;
-\tconst char *paths[PATHS_PER_BINDING_TEMPLATE];
-\tenum xrt_input_name position;
-\tenum xrt_input_name activate; // Can be zero
-}};
-
-struct binding_template
-{{
-\tconst char *subaction_path;
-\tconst char *steamvr_path;
-\tconst char *localized_name;
-\tconst char *paths[PATHS_PER_BINDING_TEMPLATE];
-\tenum xrt_input_name input;
-\tenum xrt_input_name dpad_activate;
-\tenum xrt_output_name output;
-}};
-
-typedef bool (*path_verify_fn_t)(const struct oxr_extension_status *extensions, XrVersion openxr_version, const char *, size_t);
-typedef void (*ext_verify_fn_t)(const struct oxr_extension_status *extensions, XrVersion openxr_version, bool *out_supported, bool *out_enabled);
-
-struct profile_template
-{{
-\tenum xrt_device_name name;
-\tconst char *path;
-\tconst char *localized_name;
-\tconst char *steamvr_input_profile_path;
-\tconst char *steamvr_controller_type;
-\tstruct binding_template *bindings;
-\tsize_t binding_count;
-\tstruct dpad_emulation *dpads;
-\tsize_t dpad_count;
-\tstruct {{
-\t\tstruct {{
-\t\t\tuint32_t major;
-\t\t\tuint32_t minor;
-\t\t}} promoted;
-\t}} openxr_version;
-\t// Only valid after path cache entries are initialized via oxr_get_interaction_profile_path_cache.
-\tXrPath path_cache;
-
-\tpath_verify_fn_t subpath_fn;
-\tpath_verify_fn_t dpad_path_fn;
-\tpath_verify_fn_t dpad_emulator_fn;
-\text_verify_fn_t ext_verify_fn;
-\tconst char *extension_name;
-}};
-
-extern struct profile_template profile_templates[OXR_BINDINGS_PROFILE_TEMPLATE_COUNT];
-
-''')
-
-    f.write('const char *\n')
-    f.write('xrt_input_name_string(enum xrt_input_name input);\n\n')
-
-    f.write('enum xrt_input_name\n')
-    f.write('xrt_input_name_enum(const char *input);\n\n')
-
-    f.write('const char *\n')
-    f.write('xrt_output_name_string(enum xrt_output_name output);\n\n')
-
-    f.write('enum xrt_output_name\n')
-    f.write('xrt_output_name_enum(const char *output);\n\n')
-
-    f.write("\n// clang-format on\n")
-    f.close()
-
-
-def main():
-    """Handle command line and generate a file."""
-    parser = argparse.ArgumentParser(description='Bindings generator.')
-    parser.add_argument(
-        'bindings', help='Bindings file to use')
-    parser.add_argument(
-        'output', type=str, nargs='+',
-        help='Output file, uses the name to choose output type')
-    args = parser.parse_args()
-
-    bindings = Bindings.load_and_parse(args.bindings)
-
-    for output in args.output:
-        if output.endswith("generated_bindings.c"):
-            generate_bindings_c(output, bindings)
-        if output.endswith("generated_bindings.h"):
-            generate_bindings_h(output, bindings)
-
-
-if __name__ == "__main__":
-    main()

@@ -24,7 +24,7 @@ extern "C" {
  * @ingroup xrt_iface
  * @public @memberof xrt_compositor_native
  */
-struct xrt_compositor_gl *
+struct xrt_compositor *
 xrt_gfx_provider_create_gl_win32(struct xrt_compositor_native *xcn, void *hDC, void *hGLRC);
 
 

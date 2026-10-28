@@ -1,4 +1,5 @@
 // Copyright 2019-2024, Collabora, Ltd.
+// Copyright 2025-2026, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -17,12 +18,11 @@
 #include "util/u_index_fifo.h"
 #include "util/u_logging.h"
 #include "util/u_frame_times_widget.h"
-#include "util/u_native_images_debug.h"
-
 #include "util/comp_base.h"
 #include "util/comp_sync.h"
 #include "util/comp_scratch.h"
 #include "util/comp_swapchain.h"
+#include "util/comp_high_level_scratch.h"
 
 #include "render/render_interface.h"
 
@@ -89,6 +89,11 @@ struct comp_compositor
 {
 	struct comp_base base;
 
+	//! The active view configurations
+	struct xrt_view_config view_configs[XRT_MAX_COMPOSITOR_VIEW_CONFIGS_COUNT];
+	//! The amount of view configs
+	uint32_t view_config_count;
+
 	//! The settings.
 	struct comp_settings settings;
 
@@ -109,6 +114,9 @@ struct comp_compositor
 
 	//! Renderer helper.
 	struct comp_renderer *r;
+
+	//! Duration of a frame at current refresh rate.
+	int64_t frame_interval_ns;
 
 	//! Timestamp of last-rendered (immersive) frame.
 	int64_t last_frame_time_ns;
@@ -140,11 +148,8 @@ struct comp_compositor
 		struct comp_frame rendering;
 	} frame;
 
-	struct
-	{
-		// Per-view scratch images.
-		struct comp_scratch_single_images views[2];
-	} scratch;
+	// Scratch images for the renderer.
+	struct chl_scratch scratch;
 
 	struct
 	{
@@ -153,8 +158,6 @@ struct comp_compositor
 
 		//! Should the fast path be disabled.
 		bool disable_fast_path;
-
-		struct u_swapchain_debug sc;
 	} debug;
 
 	//! If true, part of the compositor startup will be delayed until a session is started

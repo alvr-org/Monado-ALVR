@@ -10,6 +10,7 @@
 #include "util/u_var.h"
 #include "gui_sdl2.h"
 #include "util/u_trace_marker.h"
+#include <string.h>
 
 U_TRACE_TARGET_SETUP(U_TRACE_WHICH_SERVICE)
 
@@ -38,7 +39,14 @@ main(int argc, char **argv)
 
 	// First scene to start with.
 	if (argc >= 2 && strcmp("debug", argv[1]) == 0) {
-		// We have created a prober select devices now.
+		/*
+		 * We have created a prober select devices now, only create
+		 * devices if we have a instance and no system devices.
+		 */
+		if (p.base.instance != NULL && p.base.xsysd == NULL) {
+			gui_prober_select(&p.base);
+		}
+
 		gui_scene_debug(&p.base);
 	} else if (argc >= 2 && strcmp("calibrate", argv[1]) == 0) {
 		gui_scene_select_video_calibrate(&p.base);

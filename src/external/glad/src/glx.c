@@ -171,7 +171,7 @@ static GLADapiproc glad_glx_get_proc_from_userptr(void *userptr, const char* nam
 }
 
 static int glad_glx_find_extensions(Display *display, int screen) {
-    GLAD_UNUSED(glad_glx_has_extension);
+    GLAD_UNUSED(&glad_glx_has_extension);
     return 1;
 }
 

@@ -10,6 +10,7 @@ EXPORTS
     mnd_root_set_client_primary
     mnd_root_set_client_focused
     mnd_root_toggle_client_io_active
+    mnd_root_set_client_io_blocks
     mnd_root_get_device_count
     mnd_root_get_device_info
     mnd_root_get_device_from_role
@@ -21,3 +22,6 @@ EXPORTS
     mnd_root_get_tracking_origin_count
     mnd_root_get_tracking_origin_name
     mnd_root_get_device_battery_status
+    mnd_root_get_device_brightness
+    mnd_root_set_device_brightness
+    mnd_root_comp_set_chroma_key_params

@@ -56,7 +56,7 @@ xrt_gfx_vk_get_versions(struct xrt_api_requirements *ver);
  * @ingroup xrt_iface
  * @public @memberof xrt_compositor_native
  */
-struct xrt_compositor_vk *
+struct xrt_compositor *
 xrt_gfx_vk_provider_create(struct xrt_compositor_native *xcn,
                            VkInstance instance,
                            PFN_vkGetInstanceProcAddr get_instance_proc_addr,

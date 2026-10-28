@@ -1,0 +1,111 @@
+# Copyright 2026, Stanislav Aleksandrov.
+# Copyright 2026, NVIDIA CORPORATION.
+# SPDX-License-Identifier: BSL-1.0
+#
+# =============================================================================
+# OpenXR install manifest generation (install-time script)
+# =============================================================================
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# Installed OpenXR runtime manifests must describe where the loader finds the
+# runtime library. That depends on install-layout options chosen at configure
+# time (absolute path, path relative to the manifest, or bare soname) and, for
+# absolute paths, on the effective install prefix at install time.
+#
+# We generate the manifest with a Python helper, but the generation cannot run
+# only at configure time or as an ordinary build step:
+#
+# - Configure-time generation bakes in CMAKE_INSTALL_PREFIX from configure.
+#   It misses "cmake --install --prefix /other/path" overrides.
+#
+# - Build-time generation has the same prefix problem and needs extra stamp
+#   files or always-on custom targets to rerun when options change.
+#
+# This script is therefore generated once per manifest at configure time via
+# configure_file(), then executed by install(SCRIPT) when "cmake --install"
+# runs. At that moment CMAKE_INSTALL_PREFIX reflects the prefix in effect for
+# this install (including --prefix), so absolute library_path values are
+# correct in the installed manifest.
+#
+# HOW IT WORKS
+# ------------
+# 1. GenerateOpenXRRuntimeManifest.cmake sets @_genmanifest_*@ / @_oxr_*@
+#    placeholders below and writes this file into the build tree.
+# 2. install(SCRIPT ...) registers that generated file with the install rules.
+# 3. On "cmake --install", CMake runs the script in script mode.
+# 4. The script calls cmake/generate_openxr_runtime_manifest.py in "installed"
+#    mode, writing JSON into the build tree.
+# 5. The script installs that JSON under the configured destination.
+#
+# Path-type and layout options (@_oxr_path_type@, relative dirs, filenames) are
+# fixed at configure time. Only the install prefix for absolute paths is taken
+# from ${CMAKE_INSTALL_PREFIX} when this script runs.
+#
+# HOW THIS DIFFERS FROM THE BUILDTREE MANIFEST
+# --------------------------------------------
+# generate_openxr_runtime_manifest_buildtree() serves local development: it
+# emits a manifest with absolute paths to not-yet-installed libraries in the
+# build tree. That manifest must exist after "cmake --build" without running
+# install, and paths come from $<TARGET_FILE:...> at link time. It is wired as
+# a POST_BUILD step on the runtime target, not install(SCRIPT).
+#
+# In short:
+#   buildtree  -> build time, $<TARGET_FILE>, dev manifest in build dir
+#   this file  -> install time, layout options + install prefix, shipped manifest
+#
+# =============================================================================
+
+set(_OXR_MANIFEST_SCRIPT "@_OXR_MANIFEST_SCRIPT@")
+set(_OXR_MANIFEST_FILE "@_manifest_file@")
+set(_OXR_MANIFEST_TEMPLATE "@_genmanifest_MANIFEST_TEMPLATE@")
+set(_OXR_MANIFEST_DESTINATION "@_genmanifest_DESTINATION@")
+set(_OXR_RUNTIME_FILENAME "@_runtime_filename@")
+set(_OXR_RELATIVE_RUNTIME_DIR "@_genmanifest_RELATIVE_RUNTIME_DIR@")
+set(_OXR_LIBMONADO_FILENAME "@_libmonado_filename@")
+set(_OXR_PATH_TYPE "@_oxr_path_type@")
+set(_OXR_RUNTIME_DIR_RELATIVE_TO_MANIFEST "@_genmanifest_RUNTIME_DIR_RELATIVE_TO_MANIFEST@")
+set(_OXR_WIN32 "@WIN32@")
+set(_OXR_PYTHON_EXECUTABLE "@Python3_EXECUTABLE@")
+
+set(_genmanifest_cmd
+    "${_OXR_PYTHON_EXECUTABLE}"
+    "${_OXR_MANIFEST_SCRIPT}"
+    installed
+    --out-file
+    "${_OXR_MANIFEST_FILE}"
+    --runtime-filename
+    "${_OXR_RUNTIME_FILENAME}"
+    --relative-runtime-dir
+    "${_OXR_RELATIVE_RUNTIME_DIR}"
+    --template
+    "${_OXR_MANIFEST_TEMPLATE}"
+    --path-type
+    "${_OXR_PATH_TYPE}"
+    )
+
+if(_OXR_PATH_TYPE STREQUAL "absolute")
+    list(APPEND _genmanifest_cmd --install-prefix "${CMAKE_INSTALL_PREFIX}")
+elseif(_OXR_PATH_TYPE STREQUAL "relative")
+    list(APPEND _genmanifest_cmd
+         --runtime-dir-relative-to-manifest
+         "${_OXR_RUNTIME_DIR_RELATIVE_TO_MANIFEST}")
+endif()
+if(_OXR_LIBMONADO_FILENAME)
+    list(APPEND _genmanifest_cmd --libmonado-filename "${_OXR_LIBMONADO_FILENAME}")
+endif()
+if(_OXR_WIN32)
+    list(APPEND _genmanifest_cmd --win32)
+endif()
+
+execute_process(COMMAND ${_genmanifest_cmd} RESULT_VARIABLE _oxr_manifest_result)
+if(NOT _oxr_manifest_result EQUAL 0)
+    message(FATAL_ERROR "Failed to generate OpenXR runtime manifest")
+endif()
+
+file(
+    INSTALL
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/${_OXR_MANIFEST_DESTINATION}"
+    TYPE FILE
+    FILES "${_OXR_MANIFEST_FILE}"
+    )

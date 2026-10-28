@@ -61,7 +61,7 @@ function Create-Args {
 }
 
 $python_args = @(
-    (Join-Path $IwyuBinDir "iwyu_tool.py") 
+    (Join-Path $IwyuBinDir "iwyu_tool.py")
     "-p"
     "build"
     "src/xrt"

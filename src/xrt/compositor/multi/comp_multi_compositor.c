@@ -1,4 +1,5 @@
 // Copyright 2019-2021, Collabora, Ltd.
+// Copyright 2024-2025, NVIDIA CORPORATION.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -8,6 +9,7 @@
  * @ingroup comp_multi
  */
 
+#include "util/u_logging.h"
 #include "xrt/xrt_session.h"
 
 #include "os/os_time.h"
@@ -38,6 +40,9 @@
 #include "android/android_custom_surface.h"
 #include "android/android_globals.h"
 #endif
+
+DEBUG_GET_ONCE_LOG_OPTION(app_frame_lag_level, "XRT_APP_FRAME_LAG_LOG_AS_LEVEL", U_LOGGING_DEBUG)
+#define LOG_FRAME_LAG(...) U_LOG_IFL(debug_get_log_option_app_frame_lag_level(), u_log_get_global_level(), __VA_ARGS__)
 
 /*
  *
@@ -123,7 +128,7 @@ is_pushed_or_waiting_locked(struct multi_compositor *mc)
 }
 
 static void
-wait_fence(struct xrt_compositor_fence **xcf_ptr)
+wait_fence(struct multi_compositor *mc, struct xrt_compositor_fence **xcf_ptr)
 {
 	COMP_TRACE_MARKER();
 	xrt_result_t ret = XRT_SUCCESS;
@@ -138,7 +143,7 @@ wait_fence(struct xrt_compositor_fence **xcf_ptr)
 		}
 
 		U_LOG_W("Waiting on client fence timed out > 100ms!");
-	} while (true);
+	} while (os_thread_helper_is_running(&mc->wait_thread.oth));
 
 	xrt_compositor_fence_destroy(xcf_ptr);
 
@@ -148,7 +153,7 @@ wait_fence(struct xrt_compositor_fence **xcf_ptr)
 }
 
 static void
-wait_semaphore(struct xrt_compositor_semaphore **xcsem_ptr, uint64_t value)
+wait_semaphore(struct multi_compositor *mc, struct xrt_compositor_semaphore **xcsem_ptr, uint64_t value)
 {
 	COMP_TRACE_MARKER();
 	xrt_result_t ret = XRT_SUCCESS;
@@ -163,7 +168,7 @@ wait_semaphore(struct xrt_compositor_semaphore **xcsem_ptr, uint64_t value)
 		}
 
 		U_LOG_W("Waiting on client semaphore value '%" PRIu64 "' timed out > 100ms!", value);
-	} while (true);
+	} while (os_thread_helper_is_running(&mc->wait_thread.oth));
 
 	xrt_compositor_semaphore_reference(xcsem_ptr, NULL);
 
@@ -187,8 +192,8 @@ wait_for_scheduled_free(struct multi_compositor *mc)
 
 		// This frame is for the next frame, drop the old one no matter what.
 		if (time_is_within_half_ms(mc->progress.data.display_time_ns, mc->slot_next_frame_display)) {
-			U_LOG_W("%.3fms: Dropping old missed frame in favour for completed new frame",
-			        time_ns_to_ms_f(now_ns));
+			LOG_FRAME_LAG("%.3fms: Dropping old missed frame in favour for completed new frame",
+			              time_ns_to_ms_f(now_ns));
 			break;
 		}
 
@@ -240,7 +245,7 @@ run_func(void *ptr)
 	struct multi_compositor *mc = (struct multi_compositor *)ptr;
 
 	U_TRACE_SET_THREAD_NAME("Multi Client Module: Waiter");
-	os_thread_helper_name(&mc->wait_thread.oth, "Multi Client Module: Waiter");
+	os_thread_name_self("Multi Client Module: Waiter");
 
 	os_thread_helper_lock(&mc->wait_thread.oth);
 
@@ -288,10 +293,10 @@ run_func(void *ptr)
 		os_thread_helper_unlock(&mc->wait_thread.oth);
 
 		if (xcsem != NULL) {
-			wait_semaphore(&xcsem, value);
+			wait_semaphore(mc, &xcsem, value);
 		}
 		if (xcf != NULL) {
-			wait_fence(&xcf);
+			wait_fence(mc, &xcf);
 		}
 
 		// Sample time outside of lock.
@@ -476,6 +481,7 @@ multi_compositor_begin_session(struct xrt_compositor *xc, const struct xrt_begin
 	if (!mc->state.session_active) {
 		multi_system_compositor_update_session_status(mc->msc, true);
 		mc->state.session_active = true;
+		mc->state.session_view_type = info->view_type;
 	}
 
 	return XRT_SUCCESS;
@@ -610,6 +616,8 @@ multi_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 
 	os_mutex_lock(&mc->msc->list_and_timing_lock);
 	u_pa_mark_discarded(mc->upa, frame_id, now_ns);
+	// Need to drop delivered frame as it shouldn't be reused.
+	multi_compositor_retire_delivered_locked(mc, now_ns);
 	os_mutex_unlock(&mc->msc->list_and_timing_lock);
 
 	return XRT_SUCCESS;
@@ -787,7 +795,7 @@ multi_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handl
 		    &xcf);                                 //
 		/*!
 		 * If import_fence succeeded, we have transferred ownership to
-		 * the compositor no need to do anything more. If the call
+		 * the compositor; no need to do anything more. If the call
 		 * failed we need to close the handle.
 		 */
 		if (xret == XRT_SUCCESS) {
@@ -923,7 +931,7 @@ log_frame_time_diff(int64_t frame_time_ns, int64_t display_time_ns)
 		late = true;
 	}
 
-	U_LOG_W("Frame %s by %.2fms!", late ? "late" : "early", time_ns_to_ms_f(diff_ns));
+	LOG_FRAME_LAG("Frame %s by %.2fms!", late ? "late" : "early", time_ns_to_ms_f(diff_ns));
 }
 
 void
@@ -969,6 +977,9 @@ multi_compositor_create(struct multi_system_compositor *msc,
 	COMP_TRACE_MARKER();
 
 	struct multi_compositor *mc = U_TYPED_CALLOC(struct multi_compositor);
+
+	// Initialize state - base session is anything that's not an overlay
+	mc->state.is_base_session = !xsi->is_overlay;
 
 	mc->base.base.get_swapchain_create_properties = multi_compositor_get_swapchain_create_properties;
 	mc->base.base.create_swapchain = multi_compositor_create_swapchain;

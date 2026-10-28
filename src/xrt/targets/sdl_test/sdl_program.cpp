@@ -1,4 +1,4 @@
-﻿// Copyright 2020-2022, Collabora, Ltd.
+// Copyright 2020-2022, Collabora, Ltd.
 // SPDX-License-Identifier: BSL-1.0
 /*!
  * @file
@@ -13,6 +13,7 @@
 
 #include "sdl_internal.hpp"
 
+#include <cstdio>
 
 void
 sdl_create_window(struct sdl_program *sp)

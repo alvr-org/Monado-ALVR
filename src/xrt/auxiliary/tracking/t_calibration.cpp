@@ -20,8 +20,15 @@
 #include "tracking/t_calibration_opencv.hpp"
 
 #include <opencv2/opencv.hpp>
+
+#if CV_VERSION_MAJOR >= 5
+#include <opencv2/geometry/3d.hpp>
+#include <opencv2/geometry/2d.hpp>
+#endif
+
 #include <sys/stat.h>
 #include <utility>
+#include <stdexcept>
 
 #if CV_MAJOR_VERSION >= 4
 #define SB_CHEESBOARD_CORNERS_SUPPORTED
@@ -147,8 +154,8 @@ public:
 	//! Number of frames to capture before restarting.
 	uint32_t num_collect_restart = 1;
 
-	//! Is the camera fisheye.
-	bool use_fisheye = false;
+	//! Distortion model to use.
+	enum t_camera_distortion_model distortion_model = T_DISTORTION_OPENCV_RADTAN_5;
 	//! From parameters.
 	bool stereo_sbs = false;
 
@@ -575,14 +582,14 @@ process_stereo_samples(class Calibration &c, int cols, int rows)
 	cv::Size image_size(cols, rows);
 	cv::Size new_image_size(cols, rows);
 
-	StereoCameraCalibrationWrapper wrapped(c.use_fisheye ? T_DISTORTION_FISHEYE_KB4 : T_DISTORTION_OPENCV_RADTAN_5);
+	StereoCameraCalibrationWrapper wrapped(c.distortion_model);
 	wrapped.view[0].image_size_pixels.w = image_size.width;
 	wrapped.view[0].image_size_pixels.h = image_size.height;
 	wrapped.view[1].image_size_pixels = wrapped.view[0].image_size_pixels;
 
 
 	float rp_error = 0.0f;
-	if (c.use_fisheye) {
+	if (t_camera_distortion_model_is_opencv_fisheye(c.distortion_model)) {
 		int flags = 0;
 		flags |= cv::fisheye::CALIB_FIX_SKEW;
 		flags |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
@@ -599,7 +606,7 @@ process_stereo_samples(class Calibration &c, int cols, int rows)
 		                                        wrapped.camera_rotation_mat,    // R
 		                                        wrapped.camera_translation_mat, // T
 		                                        flags);
-	} else {
+	} else if (t_camera_distortion_model_is_opencv_non_fisheye(c.distortion_model)) {
 		// non-fisheye version
 		int flags = 0;
 
@@ -617,6 +624,8 @@ process_stereo_samples(class Calibration &c, int cols, int rows)
 		                               wrapped.camera_essential_mat,   // E
 		                               wrapped.camera_fundamental_mat, // F
 		                               flags);                         // flags
+	} else {
+		assert(!"Unsupported distortion model");
 	}
 
 	// Tell the user what has happened.
@@ -636,7 +645,7 @@ process_stereo_samples(class Calibration &c, int cols, int rows)
 	std::cout << "calibration rp_error: " << rp_error << "\n";
 	to_stdout("camera_rotation", wrapped.camera_rotation_mat);
 	to_stdout("camera_translation", wrapped.camera_translation_mat);
-	if (!c.use_fisheye) {
+	if (!t_camera_distortion_model_is_fisheye(c.distortion_model)) {
 		to_stdout("camera_essential", wrapped.camera_essential_mat);
 		to_stdout("camera_fundamental", wrapped.camera_fundamental_mat);
 	}
@@ -683,7 +692,7 @@ process_view_samples(class Calibration &c, struct ViewState &view, int cols, int
 		U_LOG_RAW("};");
 	}
 
-	if (c.use_fisheye) {
+	if (t_camera_distortion_model_is_opencv_fisheye(c.distortion_model)) {
 		int crit_flag = 0;
 		crit_flag |= cv::TermCriteria::EPS;
 		crit_flag |= cv::TermCriteria::COUNT;
@@ -718,7 +727,7 @@ process_view_samples(class Calibration &c, struct ViewState &view, int cols, int
 		// Probably a busted work-around for busted function.
 		new_intrinsics_mat.at<double>(0, 2) = (cols - 1) / 2.0;
 		new_intrinsics_mat.at<double>(1, 2) = (rows - 1) / 2.0;
-	} else {
+	} else if (t_camera_distortion_model_is_opencv_non_fisheye(c.distortion_model)) {
 		int flags = 0;
 
 		// Go all out.
@@ -747,6 +756,8 @@ process_view_samples(class Calibration &c, struct ViewState &view, int cols, int
 		                                                   cv::Size(),     // newImgSize
 		                                                   NULL,           // validPixROI
 		                                                   false);         // centerPrincipalPoint
+	} else {
+		assert(!"Unsupported distortion model");
 	}
 
 	P("CALIBRATION DONE RP ERROR %f", rp_error);
@@ -759,7 +770,7 @@ process_view_samples(class Calibration &c, struct ViewState &view, int cols, int
 		std::cout << "distortion_mat:\n" << distortion_mat << "\n";
 	// clang-format on
 
-	if (c.use_fisheye) {
+	if (t_camera_distortion_model_is_opencv_fisheye(c.distortion_model)) {
 		cv::fisheye::initUndistortRectifyMap(intrinsics_mat,     // K
 		                                     distortion_mat,     // D
 		                                     cv::Matx33d::eye(), // R
@@ -771,7 +782,7 @@ process_view_samples(class Calibration &c, struct ViewState &view, int cols, int
 
 		// Set the maps as valid.
 		view.maps_valid = true;
-	} else {
+	} else if (t_camera_distortion_model_is_opencv_non_fisheye(c.distortion_model)) {
 		cv::initUndistortRectifyMap( //
 		    intrinsics_mat,          // K
 		    distortion_mat,          // D
@@ -784,6 +795,8 @@ process_view_samples(class Calibration &c, struct ViewState &view, int cols, int
 
 		// Set the maps as valid.
 		view.maps_valid = true;
+	} else {
+		assert(!"Unsupported distortion model");
 	}
 
 	c.state.calibrated = true;
@@ -1276,7 +1289,6 @@ t_calibration_stereo_create(struct xrt_frame_context *xfctx,
 	*out_sink = &c.base;
 
 	// Copy the parameters.
-	c.use_fisheye = params->use_fisheye;
 	c.stereo_sbs = params->stereo_sbs;
 	c.board.pattern = params->pattern;
 	switch (params->pattern) {
@@ -1323,6 +1335,7 @@ t_calibration_stereo_create(struct xrt_frame_context *xfctx,
 	c.mirror_rgb_image = params->mirror_rgb_image;
 	c.save_images = params->save_images;
 	c.status = status;
+	c.distortion_model = params->use_fisheye ? T_DISTORTION_FISHEYE_KB4 : T_DISTORTION_OPENCV_RADTAN_5;
 
 
 	// Setup a initial message.
@@ -1412,55 +1425,26 @@ populateCacheMats(const cv::Size &size,
 }
 
 NormalizedCoordsCache::NormalizedCoordsCache(cv::Size size, // NOLINT // small, pass by value
-                                             const cv::Matx33d &intrinsics,
-                                             const cv::Matx<double, 5, 1> &distortion)
+                                             t_camera_distortion_model distortion_model,
+                                             cv::InputArray intrinsics,
+                                             cv::InputArray distortion,
+                                             cv::InputArray rectification,
+                                             cv::InputArray new_camera_or_projection_matrix)
 {
 	std::vector<cv::Vec2f> outputCoords;
 	std::vector<cv::Vec2f> inputCoords = generateInputCoordsAndReserveOutputCoords(size, outputCoords);
+
 	// Undistort/reproject those coordinates in one call, to make use of
 	// cached internal/intermediate computations.
-	cv::undistortPoints(inputCoords, outputCoords, intrinsics, distortion);
-
-	populateCacheMats(size, inputCoords, outputCoords, cacheX_, cacheY_);
-}
-NormalizedCoordsCache::NormalizedCoordsCache(cv::Size size, // NOLINT // small, pass by value
-                                             const cv::Matx33d &intrinsics,
-                                             const cv::Matx<double, 5, 1> &distortion,
-                                             const cv::Matx33d &rectification,
-                                             const cv::Matx33d &new_camera_matrix)
-{
-	std::vector<cv::Vec2f> outputCoords;
-	std::vector<cv::Vec2f> inputCoords = generateInputCoordsAndReserveOutputCoords(size, outputCoords);
-	// Undistort/reproject those coordinates in one call, to make use of
-	// cached internal/intermediate computations.
-	cv::undistortPoints(inputCoords, outputCoords, intrinsics, distortion, rectification, new_camera_matrix);
-
-	populateCacheMats(size, inputCoords, outputCoords, cacheX_, cacheY_);
-}
-
-NormalizedCoordsCache::NormalizedCoordsCache(cv::Size size, // NOLINT // small, pass by value
-                                             const cv::Matx33d &intrinsics,
-                                             const cv::Matx<double, 5, 1> &distortion,
-                                             const cv::Matx33d &rectification,
-                                             const cv::Matx<double, 3, 4> &new_projection_matrix)
-{
-	std::vector<cv::Vec2f> outputCoords;
-	std::vector<cv::Vec2f> inputCoords = generateInputCoordsAndReserveOutputCoords(size, outputCoords);
-	// Undistort/reproject those coordinates in one call, to make use of
-	// cached internal/intermediate computations.
-	cv::undistortPoints(inputCoords, outputCoords, intrinsics, distortion, rectification, new_projection_matrix);
-
-	populateCacheMats(size, inputCoords, outputCoords, cacheX_, cacheY_);
-}
-NormalizedCoordsCache::NormalizedCoordsCache(cv::Size size, // NOLINT // small, pass by value
-                                             const cv::Mat &intrinsics,
-                                             const cv::Mat &distortion)
-{
-	std::vector<cv::Vec2f> outputCoords;
-	std::vector<cv::Vec2f> inputCoords = generateInputCoordsAndReserveOutputCoords(size, outputCoords);
-	// Undistort/reproject those coordinates in one call, to make use of
-	// cached internal/intermediate computations.
-	cv::undistortPoints(inputCoords, outputCoords, intrinsics, distortion);
+	if (t_camera_distortion_model_is_opencv_fisheye(distortion_model)) {
+		cv::fisheye::undistortPoints(inputCoords, outputCoords, intrinsics, distortion, rectification,
+		                             new_camera_or_projection_matrix);
+	} else if (t_camera_distortion_model_is_opencv_non_fisheye(distortion_model)) {
+		cv::undistortPoints(inputCoords, outputCoords, intrinsics, distortion, rectification,
+		                    new_camera_or_projection_matrix);
+	} else {
+		throw std::invalid_argument("unsupported distortion model");
+	}
 
 	populateCacheMats(size, inputCoords, outputCoords, cacheX_, cacheY_);
 }
@@ -1490,7 +1474,7 @@ cv::Vec3f
 NormalizedCoordsCache::getNormalizedVector(cv::Point2f origCoords) const
 {
 	// cameras traditionally look along -z, so we want negative sqrt
-	auto pt = getNormalizedImageCoords(std::move(origCoords));
+	auto pt = getNormalizedImageCoords(origCoords);
 	auto z = -std::sqrt(1.f - pt.dot(pt));
 	return {pt[0], pt[1], z};
 }

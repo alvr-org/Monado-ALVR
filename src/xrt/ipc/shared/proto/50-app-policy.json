@@ -1,0 +1,90 @@
+{
+    "$schema": "../proto.schema.json",
+    "app_instance_create": {
+        "in": [],
+        "out": [
+            {
+                "name": "id",
+                "type": "uint32_t"
+            }
+        ]
+    },
+    "app_instance_destroy": {
+        "in": [
+            {
+                "name": "id",
+                "type": "uint32_t"
+            }
+        ]
+    },
+    "app_instance_create_app_system": {
+        "in": [
+            {
+                "name": "xainst_id",
+                "type": "uint32_t"
+            }
+        ],
+        "out": [
+            {
+                "name": "xasys_id",
+                "type": "uint32_t"
+            }
+        ]
+    },
+    "app_system_destroy": {
+        "in": [
+            {
+                "name": "id",
+                "type": "uint32_t"
+            }
+        ]
+    },
+    "app_system_poll_events": {
+        "in": [
+            {
+                "name": "id",
+                "type": "uint32_t"
+            }
+        ],
+        "out": [
+            {
+                "name": "xasyse",
+                "type": "struct xrt_app_system_event"
+            }
+        ]
+    },
+    "app_system_get_recommended_view_configuration": {
+        "in": [
+            {
+                "name": "id",
+                "type": "uint32_t"
+            },
+            {
+                "name": "view_type",
+                "type": "enum xrt_view_type"
+            }
+        ],
+        "out": [
+            {
+                "name": "view_config",
+                "type": "struct xrt_recommended_view_config"
+            }
+        ]
+    },
+    "app_system_set_recommended_view_configuration": {
+        "in": [
+            {
+                "name": "id",
+                "type": "uint32_t"
+            },
+            {
+                "name": "view_type",
+                "type": "enum xrt_view_type"
+            },
+            {
+                "name": "view_config",
+                "type": "struct xrt_recommended_view_config"
+            }
+        ]
+    }
+}

@@ -29,6 +29,7 @@
 #include "wmr_common.h"
 #include "wmr_controller_base.h"
 #include "wmr_config_key.h"
+#include "wmr_source.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -491,6 +492,31 @@ wmr_controller_base_get_tracked_pose(struct xrt_device *xdev,
 }
 
 void
+wmr_controller_base_handle_imu_sample(struct wmr_controller_base *wcb,
+                                      uint64_t time_ns,
+                                      uint64_t timestamp_ticks,
+                                      const struct xrt_vec3 *acc,
+                                      const struct xrt_vec3 *gyro)
+{
+	uint64_t sample_time_ns = timestamp_ticks * WMR_MOTION_CONTROLLER_NS_PER_TICK;
+
+	m_imu_3dof_update(&wcb->fusion, sample_time_ns, acc, gyro);
+
+	wcb->last_imu_timestamp_ns = time_ns;
+	wcb->last_angular_velocity = *gyro;
+
+	if (wcb->source) { // Redirect IMU sample to WMR data source
+		assert(wcb->base.device_type == XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER ||
+		       wcb->base.device_type == XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER);
+		wmr_source_push_imu_packet(wcb->source,
+		                           wcb->base.device_type == XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER
+		                               ? WMR_LEFT_CTRL_IMU_INDEX
+		                               : WMR_RIGHT_CTRL_IMU_INDEX,
+		                           sample_time_ns, *acc, *gyro);
+	}
+}
+
+void
 wmr_controller_base_deinit(struct wmr_controller_base *wcb)
 {
 	DRV_TRACE_MARKER();
@@ -526,13 +552,16 @@ bool
 wmr_controller_base_init(struct wmr_controller_base *wcb,
                          struct wmr_controller_connection *conn,
                          enum xrt_device_type controller_type,
-                         enum u_logging_level log_level)
+                         enum u_logging_level log_level,
+                         u_device_destroy_function_t destroy_fn,
+                         struct xrt_fs *src)
 {
 	DRV_TRACE_MARKER();
 
 	wcb->log_level = log_level;
 	wcb->wcc = conn;
 	wcb->receive_bytes = receive_bytes;
+	wcb->source = src;
 
 	if (controller_type == XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER) {
 		snprintf(wcb->base.str, ARRAY_SIZE(wcb->base.str), "WMR Left Controller");
@@ -544,13 +573,14 @@ wmr_controller_base_init(struct wmr_controller_base *wcb,
 		snprintf(wcb->base.serial, XRT_DEVICE_NAME_LEN, "Right Controller");
 	}
 
-	wcb->base.get_tracked_pose = wmr_controller_base_get_tracked_pose;
+	// Set all functions.
+	u_device_populate_function_pointers(&wcb->base, wmr_controller_base_get_tracked_pose, destroy_fn);
 
 	wcb->base.name = XRT_DEVICE_WMR_CONTROLLER;
 	wcb->base.device_type = controller_type;
-	wcb->base.orientation_tracking_supported = true;
-	wcb->base.position_tracking_supported = false;
-	wcb->base.hand_tracking_supported = false;
+	wcb->base.supported.orientation_tracking = true;
+	wcb->base.supported.position_tracking = false;
+	wcb->base.supported.hand_tracking = false;
 
 	m_imu_3dof_init(&wcb->fusion, M_IMU_3DOF_USE_GRAVITY_DUR_20MS);
 
